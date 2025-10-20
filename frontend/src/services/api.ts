@@ -696,15 +696,29 @@ class ApiClient {
     programId: string;
     isClassRep?: boolean;
     promoCode?: string;
-  }): Promise<{ sessionId: string; sessionUrl: string }> {
-    const res = await this.request<{ sessionId: string; sessionUrl: string }>(
-      `/purchases/create-checkout-session`,
-      {
-        method: "POST",
-        body: JSON.stringify(params),
+  }): Promise<{
+    sessionId: string | null;
+    sessionUrl: string | null;
+    orderId?: string;
+    isFree?: boolean;
+  }> {
+    const res = await this.request<{
+      sessionId: string | null;
+      sessionUrl: string | null;
+      orderId?: string;
+      isFree?: boolean;
+    }>(`/purchases/create-checkout-session`, {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
+    return (
+      res.data || {
+        sessionId: null,
+        sessionUrl: null,
+        orderId: "",
+        isFree: false,
       }
     );
-    return res.data || { sessionId: "", sessionUrl: "" };
   }
 
   async getMyPurchases(): Promise<unknown[]> {
@@ -817,7 +831,28 @@ class ApiClient {
       },
     });
     // Backend returns {success: true, codes: [...]} directly, not wrapped in data
-    return { codes: (res as any).codes || [] };
+    type CodesResponse = {
+      codes?: Array<{
+        _id: string;
+        code: string;
+        type: "bundle_discount" | "staff_access";
+        discountAmount?: number;
+        discountPercent?: number;
+        ownerId: string;
+        allowedProgramIds?: string[];
+        isActive: boolean;
+        isUsed: boolean;
+        expiresAt?: string;
+        usedAt?: string;
+        usedForProgramId?: string;
+        usedForProgramTitle?: string;
+        createdAt: string;
+        createdBy: string;
+      }>;
+    };
+    return {
+      codes: (res as CodesResponse).codes || [],
+    };
   }
 
   /**
@@ -973,9 +1008,38 @@ class ApiClient {
 
     // Backend returns {success: true, codes: [...], pagination: {...}} directly
     // NOT wrapped in a data property
+    type AllCodesResponse = {
+      codes?: Array<{
+        _id: string;
+        code: string;
+        type: "bundle_discount" | "staff_access";
+        discountAmount?: number;
+        discountPercent?: number;
+        ownerId: string;
+        ownerEmail?: string;
+        ownerName?: string;
+        allowedProgramIds?: string[];
+        isActive: boolean;
+        isUsed: boolean;
+        expiresAt?: string;
+        usedAt?: string;
+        usedForProgramId?: string;
+        usedForProgramTitle?: string;
+        createdAt: string;
+        createdBy: string;
+      }>;
+      pagination?: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+      };
+    };
+
+    const response = res as AllCodesResponse;
     return {
-      codes: (res as any).codes || [],
-      pagination: (res as any).pagination || {
+      codes: response.codes || [],
+      pagination: response.pagination || {
         page: 1,
         limit: 20,
         total: 0,
@@ -1011,6 +1075,7 @@ class ApiClient {
    */
   async createStaffPromoCode(payload: {
     userId: string;
+    discountPercent: number;
     allowedProgramIds?: string[];
     expiresAt?: string;
   }): Promise<{

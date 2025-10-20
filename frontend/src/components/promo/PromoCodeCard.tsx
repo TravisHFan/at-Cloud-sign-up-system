@@ -17,6 +17,8 @@ export interface PromoCodeCardProps {
   expiresAt?: string; // ISO date string
   isUsed: boolean;
   usedForProgramTitle?: string;
+  allowedProgramIds?: string[]; // List of program IDs this code is valid for
+  allowedProgramTitles?: string[]; // List of program titles this code is valid for
   onCopy?: () => void;
   onUse?: () => void;
 }
@@ -29,6 +31,8 @@ export default function PromoCodeCard({
   expiresAt,
   isUsed,
   usedForProgramTitle,
+  allowedProgramIds,
+  allowedProgramTitles,
   onCopy,
   onUse,
 }: PromoCodeCardProps) {
@@ -127,7 +131,7 @@ export default function PromoCodeCard({
         <div className="flex-1">
           <div
             className={`
-              font-mono text-2xl font-bold tracking-wider uppercase
+              font-mono text-xl font-bold tracking-wider uppercase
               ${
                 status === "expired"
                   ? "line-through text-gray-500"
@@ -143,7 +147,7 @@ export default function PromoCodeCard({
 
       {/* Discount Amount */}
       <div className="mb-2">
-        <div className="text-3xl font-extrabold text-gray-900">
+        <div className="text-2xl font-extrabold text-gray-900">
           {discountDisplay}
         </div>
       </div>
@@ -172,14 +176,37 @@ export default function PromoCodeCard({
           </div>
         )}
 
-        {/* Valid for any program (bundle) or all programs (staff) */}
+        {/* Valid for programs */}
         {status === "active" && (
           <div className="flex items-start text-sm text-gray-600">
             <CheckCircleIcon className="h-4 w-4 mr-2 flex-shrink-0 mt-0.5" />
             <span>
-              {type === "bundle_discount"
-                ? "Valid for any program"
-                : "Valid for all paid programs"}
+              {(() => {
+                // Check if code is restricted to specific programs
+                if (allowedProgramIds && allowedProgramIds.length > 0) {
+                  if (allowedProgramTitles && allowedProgramTitles.length > 0) {
+                    // Show program titles if available
+                    if (allowedProgramTitles.length === 1) {
+                      return `Valid for: ${allowedProgramTitles[0]}`;
+                    } else {
+                      return `Valid for ${allowedProgramTitles.length} specific programs`;
+                    }
+                  } else {
+                    return `Valid for ${
+                      allowedProgramIds.length
+                    } specific program${
+                      allowedProgramIds.length > 1 ? "s" : ""
+                    }`;
+                  }
+                }
+
+                // No restrictions - valid for all
+                if (type === "bundle_discount") {
+                  return "Valid for any program";
+                } else {
+                  return "Valid for all paid programs";
+                }
+              })()}
             </span>
           </div>
         )}

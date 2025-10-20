@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import {
   PageHeader,
   Badge,
@@ -11,15 +12,67 @@ import {
   MagnifyingGlassIcon,
   ClipboardDocumentIcon,
   XMarkIcon,
-  UserIcon,
   CalendarIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  LightBulbIcon,
+  ClipboardDocumentListIcon,
 } from "@heroicons/react/24/outline";
 import { CheckIcon } from "@heroicons/react/24/solid";
 import { apiClient } from "../services/api";
 import { formatDistanceToNow } from "date-fns";
 import ConfirmationModal from "../components/common/ConfirmationModal";
+import UserSelectionModal, {
+  type SelectedUser,
+} from "../components/admin/UserSelectionModal";
 
 type AdminTabType = "all" | "create-staff" | "bundle-config";
+
+// Type definitions for API responses
+interface PromoCodeResponse {
+  _id: string;
+  code: string;
+  type: "bundle_discount" | "staff_access";
+  discountAmount?: number;
+  discountPercent?: number;
+  ownerId: string;
+  ownerEmail?: string;
+  ownerName?: string;
+  allowedProgramIds?: string[];
+  isActive: boolean;
+  isUsed: boolean;
+  expiresAt?: string;
+  usedAt?: string;
+  usedForProgramId?: string;
+  usedForProgramTitle?: string;
+  createdAt: string;
+  createdBy: string;
+}
+
+interface ProgramDTO {
+  _id?: string;
+  id: string;
+  title: string;
+  programType: "EMBA Mentor Circles" | "Effective Communication Workshops";
+  hostedBy?: string;
+  period?: {
+    startYear?: string;
+    startMonth?: string;
+    endYear?: string;
+    endMonth?: string;
+  };
+  introduction?: string;
+  flyerUrl?: string;
+  earlyBirdDeadline?: string;
+  isFree?: boolean;
+  fullPriceTicket: number;
+  classRepDiscount?: number;
+  earlyBirdDiscount?: number;
+  events?: string[];
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export default function AdminPromoCodes() {
   const [activeTab, setActiveTab] = useState<AdminTabType>("all");
@@ -37,7 +90,7 @@ export default function AdminPromoCodes() {
           <nav className="flex -mb-px">
             <button
               onClick={() => setActiveTab("all")}
-              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+              className={`px-6 py-4 text-base font-medium border-b-2 transition-colors ${
                 activeTab === "all"
                   ? "border-purple-600 text-purple-600"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -47,7 +100,7 @@ export default function AdminPromoCodes() {
             </button>
             <button
               onClick={() => setActiveTab("create-staff")}
-              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
+              className={`px-6 py-4 text-base font-medium border-b-2 transition-colors flex items-center gap-2 ${
                 activeTab === "create-staff"
                   ? "border-purple-600 text-purple-600"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -58,7 +111,7 @@ export default function AdminPromoCodes() {
             </button>
             <button
               onClick={() => setActiveTab("bundle-config")}
-              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+              className={`px-6 py-4 text-base font-medium border-b-2 transition-colors ${
                 activeTab === "bundle-config"
                   ? "border-purple-600 text-purple-600"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -82,7 +135,7 @@ export default function AdminPromoCodes() {
 
 // Tab 1: View All Codes
 function AllCodesTab() {
-  const [codes, setCodes] = useState<any[]>([]);
+  const [codes, setCodes] = useState<PromoCodeResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -121,16 +174,18 @@ function AllCodesTab() {
   const [isReactivating, setIsReactivating] = useState(false);
 
   // Fetch codes
-  useEffect(() => {
-    fetchCodes();
-  }, [typeFilter, statusFilter, searchQuery, currentPage]);
-
-  const fetchCodes = async () => {
+  const fetchCodes = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const filters: any = {
+      const filters: {
+        page: number;
+        limit: number;
+        type?: "bundle_discount" | "staff_access";
+        status?: "active" | "used" | "expired";
+        search?: string;
+      } = {
         page: currentPage,
         limit,
       };
@@ -144,13 +199,19 @@ function AllCodesTab() {
       setCodes(response.codes);
       setTotalPages(response.pagination.totalPages);
       setTotalCodes(response.pagination.total);
-    } catch (err: any) {
-      setError(err.message || "Failed to fetch promo codes");
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to fetch promo codes";
+      setError(errorMessage);
       setCodes([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, typeFilter, statusFilter, searchQuery]);
+
+  useEffect(() => {
+    fetchCodes();
+  }, [fetchCodes]);
 
   const handleCopyCode = async (code: string) => {
     try {
@@ -176,8 +237,10 @@ function AllCodesTab() {
       fetchCodes(); // Refresh list
       setShowDeactivateModal(false);
       setCodeToDeactivate(null);
-    } catch (err: any) {
-      alert(`Failed to deactivate code: ${err.message}`);
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to deactivate code";
+      alert(`Failed to deactivate code: ${errorMessage}`);
     } finally {
       setIsDeactivating(false);
     }
@@ -202,8 +265,10 @@ function AllCodesTab() {
       fetchCodes(); // Refresh list
       setShowReactivateModal(false);
       setCodeToReactivate(null);
-    } catch (err: any) {
-      alert(`Failed to reactivate code: ${err.message}`);
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to reactivate code";
+      alert(`Failed to reactivate code: ${errorMessage}`);
     } finally {
       setIsReactivating(false);
     }
@@ -214,7 +279,7 @@ function AllCodesTab() {
     setCodeToReactivate(null);
   };
 
-  const getStatusBadge = (promoCode: any) => {
+  const getStatusBadge = (promoCode: PromoCodeResponse) => {
     const now = new Date();
     const isExpired =
       promoCode.expiresAt && new Date(promoCode.expiresAt) < now;
@@ -238,7 +303,7 @@ function AllCodesTab() {
     );
   };
 
-  const formatDiscount = (promoCode: any) => {
+  const formatDiscount = (promoCode: PromoCodeResponse) => {
     if (promoCode.discountPercent) {
       return `${promoCode.discountPercent}% off`;
     } else if (promoCode.discountAmount) {
@@ -308,7 +373,9 @@ function AllCodesTab() {
           <select
             value={typeFilter}
             onChange={(e) => {
-              setTypeFilter(e.target.value as any);
+              setTypeFilter(
+                e.target.value as "all" | "bundle_discount" | "staff_access"
+              );
               setCurrentPage(1);
             }}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
@@ -327,7 +394,9 @@ function AllCodesTab() {
           <select
             value={statusFilter}
             onChange={(e) => {
-              setStatusFilter(e.target.value as any);
+              setStatusFilter(
+                e.target.value as "all" | "active" | "used" | "expired"
+              );
               setCurrentPage(1);
             }}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
@@ -541,18 +610,17 @@ function CreateStaffCodeTab() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [createdCode, setCreatedCode] = useState<any>(null);
+  const [createdCode, setCreatedCode] = useState<PromoCodeResponse | null>(
+    null
+  );
 
   // Form fields
-  const [userSearch, setUserSearch] = useState("");
-  const [selectedUser, setSelectedUser] = useState<any>(null);
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [searchingUsers, setSearchingUsers] = useState(false);
-  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<SelectedUser | null>(null);
 
   const [programMode, setProgramMode] = useState<"all" | "specific">("all");
   const [selectedPrograms, setSelectedPrograms] = useState<string[]>([]);
-  const [programs, setPrograms] = useState<any[]>([]);
+  const [programs, setPrograms] = useState<ProgramDTO[]>([]);
   const [loadingPrograms, setLoadingPrograms] = useState(false);
 
   const [expirationMode, setExpirationMode] = useState<"never" | "custom">(
@@ -567,26 +635,11 @@ function CreateStaffCodeTab() {
     loadPrograms();
   }, []);
 
-  // Search users with debounce
-  useEffect(() => {
-    if (userSearch.trim().length < 2) {
-      setSearchResults([]);
-      setShowUserDropdown(false);
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      searchUsers();
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [userSearch]);
-
   const loadPrograms = async () => {
     try {
       setLoadingPrograms(true);
       const response = await apiClient.listPrograms();
-      setPrograms(response as any[]);
+      setPrograms(response as ProgramDTO[]);
     } catch (err) {
       console.error("Failed to load programs:", err);
     } finally {
@@ -594,30 +647,13 @@ function CreateStaffCodeTab() {
     }
   };
 
-  const searchUsers = async () => {
-    try {
-      setSearchingUsers(true);
-      const response = await apiClient.searchUsers(userSearch);
-      setSearchResults(response.results as any[]);
-      setShowUserDropdown(true);
-    } catch (err) {
-      console.error("Failed to search users:", err);
-      setSearchResults([]);
-    } finally {
-      setSearchingUsers(false);
-    }
-  };
-
-  const selectUser = (user: any) => {
+  const handleUserSelect = (user: SelectedUser) => {
     setSelectedUser(user);
-    setUserSearch(`${user.firstName} ${user.lastName} (${user.email})`);
-    setShowUserDropdown(false);
+    setShowUserModal(false);
   };
 
   const clearUserSelection = () => {
     setSelectedUser(null);
-    setUserSearch("");
-    setSearchResults([]);
   };
 
   const toggleProgram = (programId: string) => {
@@ -650,8 +686,14 @@ function CreateStaffCodeTab() {
       setLoading(true);
       setError(null);
 
-      const payload: any = {
-        userId: selectedUser._id || selectedUser.id,
+      const payload: {
+        userId: string;
+        discountPercent: number;
+        allowedProgramIds?: string[];
+        expiresAt?: string;
+      } = {
+        userId: selectedUser.id,
+        discountPercent: 100, // Staff codes are always 100% discount
       };
 
       if (programMode === "specific") {
@@ -669,12 +711,17 @@ function CreateStaffCodeTab() {
 
       // Reset form
       clearUserSelection();
+      setShowUserModal(false);
       setProgramMode("all");
       setSelectedPrograms([]);
       setExpirationMode("never");
       setExpirationDate("");
-    } catch (err: any) {
-      setError(err.message || "Failed to create staff promo code");
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Failed to create staff promo code";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -714,81 +761,74 @@ function CreateStaffCodeTab() {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* User Selection */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-base font-medium text-gray-700 mb-2">
             Select User <span className="text-red-500">*</span>
           </label>
-          <div className="relative">
-            <div className="flex gap-2">
-              <div className="flex-1 relative">
-                <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search by name or email..."
-                  value={userSearch}
-                  onChange={(e) => setUserSearch(e.target.value)}
-                  onFocus={() =>
-                    userSearch.length >= 2 && setShowUserDropdown(true)
-                  }
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  disabled={selectedUser !== null}
-                />
-                {searchingUsers && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <LoadingSpinner size="sm" />
-                  </div>
-                )}
-              </div>
-              {selectedUser && (
-                <button
-                  type="button"
-                  onClick={clearUserSelection}
-                  className="px-4 py-2 text-red-600 hover:bg-red-50 border border-red-300 rounded-lg transition-colors"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
 
-            {/* User Dropdown */}
-            {showUserDropdown && searchResults.length > 0 && (
-              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                {searchResults.map((user) => (
+          {!selectedUser ? (
+            <button
+              type="button"
+              onClick={() => setShowUserModal(true)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-50 hover:bg-purple-100 border-2 border-dashed border-purple-300 hover:border-purple-400 rounded-lg transition-colors text-purple-700 font-medium"
+            >
+              <PlusIcon className="w-5 h-5" />
+              <span>Select User</span>
+            </button>
+          ) : (
+            <div className="space-y-2">
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={
+                        selectedUser.avatar ||
+                        `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                          selectedUser.firstName + " " + selectedUser.lastName
+                        )}&background=9333ea&color=fff`
+                      }
+                      alt={`${selectedUser.firstName} ${selectedUser.lastName}`}
+                      className="w-10 h-10 rounded-full object-cover"
+                    />
+                    <div>
+                      <div className="font-medium text-gray-900">
+                        {selectedUser.firstName} {selectedUser.lastName}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        {selectedUser.email}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {selectedUser.role}
+                        {selectedUser.roleInAtCloud && (
+                          <span> • {selectedUser.roleInAtCloud}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                   <button
-                    key={user._id || user.id}
                     type="button"
-                    onClick={() => selectUser(user)}
-                    className="w-full px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                    onClick={clearUserSelection}
+                    className="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 border border-red-300 rounded-lg transition-colors"
                   >
-                    <div className="font-medium text-gray-900">
-                      {user.firstName} {user.lastName}
-                    </div>
-                    <div className="text-sm text-gray-500">{user.email}</div>
+                    Clear
                   </button>
-                ))}
-              </div>
-            )}
-
-            {selectedUser && (
-              <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <CheckIcon className="w-5 h-5 text-green-600" />
-                  <div>
-                    <div className="font-medium text-gray-900">
-                      {selectedUser.firstName} {selectedUser.lastName}
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      {selectedUser.email}
-                    </div>
-                  </div>
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
+
+        {/* User Selection Modal */}
+        <UserSelectionModal
+          isOpen={showUserModal}
+          onClose={() => setShowUserModal(false)}
+          onSelect={handleUserSelect}
+          title="Select User for Staff Code"
+          description="Choose a user who will receive the 100% discount staff access code"
+        />
 
         {/* Program Selection */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-base font-medium text-gray-700 mb-2">
             Program Access
           </label>
           <div className="space-y-3">
@@ -800,7 +840,7 @@ function CreateStaffCodeTab() {
                   onChange={() => setProgramMode("all")}
                   className="mr-2"
                 />
-                <span className="text-sm text-gray-700">All programs</span>
+                <span className="text-base text-gray-700">All programs</span>
               </label>
               <label className="flex items-center">
                 <input
@@ -809,7 +849,9 @@ function CreateStaffCodeTab() {
                   onChange={() => setProgramMode("specific")}
                   className="mr-2"
                 />
-                <span className="text-sm text-gray-700">Specific programs</span>
+                <span className="text-base text-gray-700">
+                  Specific programs
+                </span>
               </label>
             </div>
 
@@ -854,7 +896,7 @@ function CreateStaffCodeTab() {
 
         {/* Expiration Date */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-base font-medium text-gray-700 mb-2">
             Expiration
           </label>
           <div className="space-y-3">
@@ -866,7 +908,7 @@ function CreateStaffCodeTab() {
                   onChange={() => setExpirationMode("never")}
                   className="mr-2"
                 />
-                <span className="text-sm text-gray-700">Never expires</span>
+                <span className="text-base text-gray-700">Never expires</span>
               </label>
               <label className="flex items-center">
                 <input
@@ -875,7 +917,7 @@ function CreateStaffCodeTab() {
                   onChange={() => setExpirationMode("custom")}
                   className="mr-2"
                 />
-                <span className="text-sm text-gray-700">Custom date</span>
+                <span className="text-base text-gray-700">Custom date</span>
               </label>
             </div>
 
@@ -925,96 +967,120 @@ function CreateStaffCodeTab() {
       </form>
 
       {/* Success Modal */}
-      {success && createdCode && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <div className="text-center">
-              <div className="text-6xl mb-4">🎉</div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                Staff Code Created!
-              </h3>
-              <p className="text-gray-600 mb-6">
-                The promo code has been generated successfully.
-              </p>
-
-              {/* Code Display */}
-              <div className="bg-gray-50 border-2 border-gray-300 rounded-lg p-4 mb-6">
-                <div className="text-sm text-gray-500 mb-1">Promo Code</div>
-                <div className="font-mono text-3xl font-bold text-purple-600 mb-3">
-                  {createdCode.code}
+      {success &&
+        createdCode &&
+        createPortal(
+          <div className="fixed top-0 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+              <div className="text-center">
+                <div className="flex justify-center mb-4">
+                  <CheckCircleIcon className="w-16 h-16 text-green-500" />
                 </div>
-                <button
-                  onClick={handleCopyCode}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-                >
-                  {copiedCode ? (
-                    <>
-                      <CheckIcon className="w-5 h-5" />
-                      Copied!
-                    </>
-                  ) : (
-                    <>
-                      <ClipboardDocumentIcon className="w-5 h-5" />
-                      Copy Code
-                    </>
-                  )}
-                </button>
-              </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  Staff Code Created!
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  The promo code has been generated successfully.
+                </p>
 
-              {/* Code Details */}
-              <div className="text-left bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <div className="text-sm space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Owner:</span>
-                    <span className="font-medium text-gray-900">
-                      {createdCode.ownerName || createdCode.ownerEmail}
-                    </span>
+                {/* Code Display */}
+                <div className="bg-gray-50 border-2 border-gray-300 rounded-lg p-4 mb-6">
+                  <div className="text-sm text-gray-500 mb-1">Promo Code</div>
+                  <div className="font-mono text-3xl font-bold text-purple-600 mb-3">
+                    {createdCode.code}
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Discount:</span>
-                    <span className="font-medium text-gray-900">100% off</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Programs:</span>
-                    <span className="font-medium text-gray-900">
-                      {createdCode.allowedProgramIds?.length
-                        ? `${createdCode.allowedProgramIds.length} program(s)`
-                        : "All programs"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Expires:</span>
-                    <span className="font-medium text-gray-900">
-                      {createdCode.expiresAt
-                        ? new Date(createdCode.expiresAt).toLocaleDateString()
-                        : "Never"}
-                    </span>
+                  <button
+                    onClick={handleCopyCode}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  >
+                    {copiedCode ? (
+                      <>
+                        <CheckIcon className="w-5 h-5" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <ClipboardDocumentIcon className="w-5 h-5" />
+                        Copy Code
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Code Details */}
+                <div className="text-left bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                  <div className="text-sm space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Owner:</span>
+                      <span className="font-medium text-gray-900">
+                        {createdCode.ownerName || createdCode.ownerEmail}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Discount:</span>
+                      <span className="font-medium text-gray-900">
+                        100% off
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Programs:</span>
+                      <span className="font-medium text-gray-900">
+                        {createdCode.allowedProgramIds?.length
+                          ? `${createdCode.allowedProgramIds.length} program(s)`
+                          : "All programs"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Expires:</span>
+                      <span className="font-medium text-gray-900">
+                        {createdCode.expiresAt
+                          ? new Date(createdCode.expiresAt).toLocaleDateString()
+                          : "Never"}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Actions */}
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    closeSuccessModal();
-                    // Reset form to create another
-                  }}
-                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  Create Another
-                </button>
-                <button
-                  onClick={closeSuccessModal}
-                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
-                >
-                  Done
-                </button>
+                {/* Notification Confirmation */}
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-6">
+                  <div className="flex items-start gap-2">
+                    <span className="text-green-600 text-lg">✓</span>
+                    <div className="flex-1 text-sm text-green-800">
+                      <p className="font-medium">
+                        {createdCode.ownerName || createdCode.ownerEmail} has
+                        been notified
+                      </p>
+                      <p className="mt-1 text-green-700">
+                        An email and system notification with the promo code has
+                        been sent.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      closeSuccessModal();
+                      // Reset form to create another
+                    }}
+                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    Create Another
+                  </button>
+                  <button
+                    onClick={closeSuccessModal}
+                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+                  >
+                    Done
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
@@ -1133,22 +1199,22 @@ function BundleConfigTab() {
         {/* Enable/Disable Toggle */}
         <div className="flex items-center justify-between">
           <div>
-            <label className="text-sm font-medium text-gray-900">
+            <label className="text-base font-medium text-gray-900">
               Enable Bundle Codes
             </label>
-            <p className="text-sm text-gray-600 mt-1">
+            <p className="text-base text-gray-600 mt-1">
               Automatically generate promo codes after each purchase
             </p>
           </div>
           <button
             onClick={() => setFormEnabled(!formEnabled)}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors border border-gray-600 focus:outline-none p-0.5 ${
               formEnabled ? "bg-green-600" : "bg-gray-300"
             }`}
           >
             <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                formEnabled ? "translate-x-6" : "translate-x-1"
+              className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                formEnabled ? "translate-x-[22px]" : "translate-x-0"
               }`}
             />
           </button>
@@ -1157,7 +1223,7 @@ function BundleConfigTab() {
         {/* Discount Amount Slider */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-sm font-medium text-gray-900">
+            <label className="text-base font-medium text-gray-900">
               Discount Amount
             </label>
             <span className="text-lg font-semibold text-purple-600">
@@ -1178,25 +1244,25 @@ function BundleConfigTab() {
                 : "bg-gray-200 cursor-not-allowed"
             }`}
           />
-          <div className="flex justify-between text-xs text-gray-600 mt-1">
+          <div className="flex justify-between text-sm text-gray-600 mt-1">
             <span>$10</span>
             <span>$200</span>
           </div>
-          <p className="text-sm text-gray-600 mt-2">
+          <p className="text-base text-gray-600 mt-2">
             Each bundle code will offer {formatAmount(formAmount)} off
           </p>
         </div>
 
         {/* Expiry Days Dropdown */}
         <div>
-          <label className="text-sm font-medium text-gray-900 block mb-2">
+          <label className="text-base font-medium text-gray-900 block mb-2">
             Code Expiration
           </label>
           <select
             value={formExpiry}
             onChange={(e) => setFormExpiry(Number(e.target.value))}
             disabled={!formEnabled}
-            className={`w-full px-4 py-2 border border-gray-300 rounded-lg ${
+            className={`w-full px-4 py-2 border border-gray-300 rounded-lg text-base ${
               formEnabled
                 ? "bg-white text-gray-900"
                 : "bg-gray-100 text-gray-500 cursor-not-allowed"
@@ -1207,25 +1273,36 @@ function BundleConfigTab() {
             <option value={60}>60 days</option>
             <option value={90}>90 days</option>
           </select>
-          <p className="text-sm text-gray-600 mt-2">
+          <p className="text-base text-gray-600 mt-2">
             Bundle codes will expire {formExpiry} days after purchase
           </p>
         </div>
 
         {/* Preview Section */}
         <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">
-            📋 Current Configuration Preview
+          <h3 className="text-base font-semibold text-gray-900 mb-3 flex items-center">
+            <ClipboardDocumentListIcon className="w-4 h-4 mr-2" />
+            Current Configuration Preview
           </h3>
-          <div className="space-y-2 text-sm">
+          <div className="space-y-2 text-base">
             <div className="flex justify-between">
               <span className="text-gray-600">Status:</span>
               <span
-                className={`font-medium ${
+                className={`font-medium flex items-center ${
                   formEnabled ? "text-green-600" : "text-gray-500"
                 }`}
               >
-                {formEnabled ? "✅ Enabled" : "❌ Disabled"}
+                {formEnabled ? (
+                  <>
+                    <CheckCircleIcon className="w-4 h-4 mr-1" />
+                    Enabled
+                  </>
+                ) : (
+                  <>
+                    <XCircleIcon className="w-4 h-4 mr-1" />
+                    Disabled
+                  </>
+                )}
               </span>
             </div>
             <div className="flex justify-between">
@@ -1242,13 +1319,16 @@ function BundleConfigTab() {
             </div>
             {formEnabled && (
               <div className="mt-3 pt-3 border-t border-purple-300">
-                <p className="text-xs text-gray-700 italic">
-                  💡 When a user completes a purchase, they will automatically
-                  receive a{" "}
-                  <strong className="text-purple-700">
-                    {formatAmount(formAmount)} promo code
-                  </strong>{" "}
-                  that expires in <strong>{formExpiry} days</strong>.
+                <p className="text-sm text-gray-700 italic flex items-start">
+                  <LightBulbIcon className="w-4 h-4 mr-1.5 mt-0.5 flex-shrink-0 text-purple-600" />
+                  <span>
+                    When a user completes a purchase, they will automatically
+                    receive a{" "}
+                    <strong className="text-purple-700">
+                      {formatAmount(formAmount)} promo code
+                    </strong>{" "}
+                    that expires in <strong>{formExpiry} days</strong>.
+                  </span>
                 </p>
               </div>
             )}
@@ -1270,12 +1350,16 @@ function BundleConfigTab() {
       {/* Info Section */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <div className="flex gap-3">
-          <div className="text-2xl">ℹ️</div>
+          <div className="flex-shrink-0 mt-0.5">
+            <div className="flex items-center justify-center w-6 h-6 bg-blue-500 rounded-full">
+              <span className="text-white text-xs font-bold">i</span>
+            </div>
+          </div>
           <div className="flex-1">
-            <h3 className="text-sm font-semibold text-gray-900 mb-1">
+            <h3 className="text-base font-semibold text-gray-900 mb-1">
               How Bundle Codes Work
             </h3>
-            <ul className="text-sm text-gray-700 space-y-1">
+            <ul className="text-base text-gray-700 space-y-1">
               <li>
                 • Bundle codes are automatically generated when users complete a
                 purchase

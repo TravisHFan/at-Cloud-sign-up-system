@@ -7,7 +7,6 @@ import { socketService } from "../services/socketService";
 import { Icon } from "../components/common";
 import ConfirmationModal from "../components/common/ConfirmationModal";
 import AlertModal from "../components/common/AlertModal";
-import NameCardActionModal from "../components/common/NameCardActionModal";
 import Pagination from "../components/common/Pagination";
 import { systemMessageService } from "../services/systemMessageService";
 import type { SystemMessage } from "../types/notification";
@@ -104,18 +103,6 @@ export default function SystemMessages() {
     title: "",
     message: "",
     type: "info",
-  });
-
-  const [nameCardModal, setNameCardModal] = useState<{
-    isOpen: boolean;
-    userId: string;
-    userName: string;
-    userRole: string;
-  }>({
-    isOpen: false,
-    userId: "",
-    userName: "",
-    userRole: "",
   });
 
   // Helper function to show alert
@@ -303,12 +290,8 @@ export default function SystemMessages() {
       : `/dashboard/profile/${userId}`; // View-only profile page
   };
 
-  // Handle name card click for authorized users
-  const handleNameCardClick = (
-    userId: string,
-    userName?: string,
-    userRole?: string
-  ) => {
+  // Handle name card click - direct navigation with role-based authorization
+  const handleNameCardClick = (userId: string) => {
     const currentUserId =
       currentUser?.id || "550e8400-e29b-41d4-a716-446655440000";
 
@@ -318,13 +301,12 @@ export default function SystemMessages() {
       return;
     }
 
-    // Open action modal for other users
-    setNameCardModal({
-      isOpen: true,
-      userId,
-      userName: userName || "Unknown User",
-      userRole: userRole || "",
-    });
+    // Only Super Admin, Administrator, and Leader can view other users' profiles
+    // Guest Expert and Participant cannot (name cards should not be clickable for them)
+    if (canNavigateToProfiles) {
+      navigate(getProfileLink(userId));
+    }
+    // If not authorized, do nothing (name card should not be clickable anyway)
   };
   const [formData, setFormData] = useState({
     title: "",
@@ -890,11 +872,7 @@ export default function SystemMessages() {
                       onClick={(e) => {
                         e.stopPropagation(); // Prevent triggering the message click
                         if (message.creator) {
-                          handleNameCardClick(
-                            message.creator.id,
-                            `${message.creator.firstName} ${message.creator.lastName}`,
-                            message.creator.roleInAtCloud
-                          );
+                          handleNameCardClick(message.creator.id);
                         }
                       }}
                       title={
@@ -1096,11 +1074,7 @@ export default function SystemMessages() {
                         className="flex items-center space-x-3 cursor-pointer hover:bg-gray-100 -mx-1 px-1 py-1 rounded-md transition-colors"
                         onClick={() => {
                           if (currentUser) {
-                            handleNameCardClick(
-                              currentUser.id,
-                              `${currentUser.firstName} ${currentUser.lastName}`,
-                              currentUser.roleInAtCloud
-                            );
+                            handleNameCardClick(currentUser.id);
                           }
                         }}
                         title={`View your profile`}
@@ -1484,15 +1458,6 @@ export default function SystemMessages() {
         title={alertModal.title}
         message={alertModal.message}
         type={alertModal.type}
-      />
-
-      {/* Name Card Action Modal */}
-      <NameCardActionModal
-        isOpen={nameCardModal.isOpen}
-        onClose={() => setNameCardModal({ ...nameCardModal, isOpen: false })}
-        userId={nameCardModal.userId}
-        userName={nameCardModal.userName}
-        userRole={nameCardModal.userRole}
       />
     </div>
   );

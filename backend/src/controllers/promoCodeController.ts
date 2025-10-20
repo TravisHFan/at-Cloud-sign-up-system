@@ -1,6 +1,22 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 import { PromoCode, User, SystemConfig } from "../models";
+import { EmailService } from "../services";
+
+// Type for populated user reference
+interface PopulatedUser {
+  _id: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  username: string;
+}
+
+// Type for populated program reference
+interface PopulatedProgram {
+  _id: string;
+  title: string;
+}
 
 export class PromoCodeController {
   /**
@@ -39,27 +55,50 @@ export class PromoCodeController {
       const codes = await PromoCode.find(query)
         .populate("usedForProgramId", "title")
         .populate("excludedProgramId", "title")
+        .populate("allowedProgramIds", "title")
         .sort({ createdAt: -1 });
 
       res.status(200).json({
         success: true,
-        codes: codes.map((code) => ({
-          _id: code._id,
-          code: code.code,
-          type: code.type,
-          discountAmount: code.discountAmount,
-          discountPercent: code.discountPercent,
-          isActive: code.isActive,
-          isUsed: code.isUsed,
-          isExpired: code.isExpired,
-          isValid: code.isValid,
-          expiresAt: code.expiresAt,
-          usedAt: code.usedAt,
-          usedForProgramId: code.usedForProgramId,
-          excludedProgramId: code.excludedProgramId,
-          allowedProgramIds: code.allowedProgramIds,
-          createdAt: code.createdAt,
-        })),
+        codes: codes.map((code) => {
+          // Extract allowed program titles if populated
+          const allowedProgramTitles = code.allowedProgramIds
+            ? (
+                code.allowedProgramIds as unknown as Array<{
+                  _id: string;
+                  title: string;
+                }>
+              )
+                .map((p) => p.title)
+                .filter(Boolean)
+            : undefined;
+
+          return {
+            _id: code._id,
+            code: code.code,
+            type: code.type,
+            discountAmount: code.discountAmount,
+            discountPercent: code.discountPercent,
+            isActive: code.isActive,
+            isUsed: code.isUsed,
+            isExpired: code.isExpired,
+            isValid: code.isValid,
+            expiresAt: code.expiresAt,
+            usedAt: code.usedAt,
+            usedForProgramId: code.usedForProgramId,
+            usedForProgramTitle: (
+              code.usedForProgramId as unknown as { title?: string }
+            )?.title,
+            excludedProgramId: code.excludedProgramId,
+            allowedProgramIds: code.allowedProgramIds
+              ? (
+                  code.allowedProgramIds as unknown as Array<{ _id: string }>
+                ).map((p) => p._id.toString())
+              : undefined,
+            allowedProgramTitles,
+            createdAt: code.createdAt,
+          };
+        }),
       });
     } catch (error) {
       console.error("Error fetching user promo codes:", error);
@@ -158,16 +197,13 @@ export class PromoCodeController {
         return;
       }
 
-      // Check ownership for bundle codes
+      // Check ownership for ALL promo codes (one-time, one-person)
       const userId = req.user._id as mongoose.Types.ObjectId;
-      if (
-        promoCode.type === "bundle_discount" &&
-        promoCode.ownerId.toString() !== userId.toString()
-      ) {
+      if (promoCode.ownerId.toString() !== userId.toString()) {
         res.status(200).json({
           success: true,
           valid: false,
-          message: "This bundle code belongs to another user.",
+          message: "This promo code belongs to another user.",
         });
         return;
       }
@@ -279,47 +315,47 @@ export class PromoCodeController {
 
       res.status(200).json({
         success: true,
-        codes: codes.map((code) => ({
-          _id: code._id,
-          code: code.code,
-          type: code.type,
-          discountAmount: code.discountAmount,
-          discountPercent: code.discountPercent,
-          ownerId:
+        codes: codes.map((code) => {
+          const ownerIdPopulated =
             typeof code.ownerId === "object" && code.ownerId !== null
-              ? (code.ownerId as any)._id
-              : code.ownerId,
-          ownerEmail:
-            typeof code.ownerId === "object" && code.ownerId !== null
-              ? (code.ownerId as any).email
-              : undefined,
-          ownerName:
-            typeof code.ownerId === "object" && code.ownerId !== null
-              ? `${(code.ownerId as any).firstName || ""} ${
-                  (code.ownerId as any).lastName || ""
-                }`.trim() || (code.ownerId as any).username
-              : undefined,
-          isActive: code.isActive,
-          isUsed: code.isUsed,
-          isExpired: code.isExpired,
-          isValid: code.isValid,
-          expiresAt: code.expiresAt,
-          usedAt: code.usedAt,
-          usedForProgramId:
+              ? (code.ownerId as unknown as PopulatedUser)
+              : null;
+
+          const usedForProgramPopulated =
             typeof code.usedForProgramId === "object" &&
             code.usedForProgramId !== null
-              ? (code.usedForProgramId as any)._id
+              ? (code.usedForProgramId as unknown as PopulatedProgram)
+              : null;
+
+          return {
+            _id: code._id,
+            code: code.code,
+            type: code.type,
+            discountAmount: code.discountAmount,
+            discountPercent: code.discountPercent,
+            ownerId: ownerIdPopulated ? ownerIdPopulated._id : code.ownerId,
+            ownerEmail: ownerIdPopulated?.email,
+            ownerName: ownerIdPopulated
+              ? `${ownerIdPopulated.firstName || ""} ${
+                  ownerIdPopulated.lastName || ""
+                }`.trim() || ownerIdPopulated.username
+              : undefined,
+            isActive: code.isActive,
+            isUsed: code.isUsed,
+            isExpired: code.isExpired,
+            isValid: code.isValid,
+            expiresAt: code.expiresAt,
+            usedAt: code.usedAt,
+            usedForProgramId: usedForProgramPopulated
+              ? usedForProgramPopulated._id
               : code.usedForProgramId,
-          usedForProgramTitle:
-            typeof code.usedForProgramId === "object" &&
-            code.usedForProgramId !== null
-              ? (code.usedForProgramId as any).title
-              : undefined,
-          excludedProgramId: code.excludedProgramId,
-          allowedProgramIds: code.allowedProgramIds,
-          createdAt: code.createdAt,
-          createdBy: code.createdBy,
-        })),
+            usedForProgramTitle: usedForProgramPopulated?.title,
+            excludedProgramId: code.excludedProgramId,
+            allowedProgramIds: code.allowedProgramIds,
+            createdAt: code.createdAt,
+            createdBy: code.createdBy,
+          };
+        }),
         pagination: {
           page: pageNum,
           limit: limitNum,
@@ -439,21 +475,129 @@ export class PromoCodeController {
         await promoCode.populate("allowedProgramIds", "title");
       }
 
+      // Send notifications to the code recipient
+      try {
+        const owner = promoCode.ownerId as unknown as {
+          _id: string;
+          email: string;
+          firstName?: string;
+          lastName?: string;
+          username: string;
+        };
+        const recipientName =
+          owner.firstName && owner.lastName
+            ? `${owner.firstName} ${owner.lastName}`
+            : owner.username;
+
+        // Get program names for email
+        const allowedPrograms =
+          validatedProgramIds && validatedProgramIds.length > 0
+            ? (
+                promoCode.allowedProgramIds as unknown as Array<{
+                  title: string;
+                }>
+              )
+                .map((p) => p.title)
+                .join(", ")
+            : undefined;
+
+        // Send email notification
+        await EmailService.sendStaffPromoCodeEmail({
+          recipientEmail: owner.email,
+          recipientName,
+          promoCode: promoCode.code,
+          discountPercent: promoCode.discountPercent ?? 100,
+          allowedPrograms,
+          expiresAt: promoCode.expiresAt?.toISOString(),
+          createdBy: req.user.username || req.user.email,
+        });
+
+        // Create system message/notification using UnifiedMessageController pattern
+        const { UnifiedMessageController } = await import(
+          "./unifiedMessageController"
+        );
+
+        // Format creator name: System Auth Level + Full Name
+        const creatorFullName =
+          req.user.firstName && req.user.lastName
+            ? `${req.user.firstName} ${req.user.lastName}`
+            : req.user.username || req.user.email;
+        const creatorAuthLevel = req.user.role || "Administrator"; // System auth level (Super Admin, Administrator, etc.)
+        const creatorDisplay = `${creatorAuthLevel} ${creatorFullName}`;
+
+        await UnifiedMessageController.createTargetedSystemMessage(
+          {
+            title: "🎁 You've Received a Staff Access Code",
+            content: `You've been granted a ${
+              promoCode.discountPercent ?? 100
+            }% discount code${
+              allowedPrograms ? ` for ${allowedPrograms}` : " for all programs"
+            } by ${creatorDisplay}.\n\nUse code: ${promoCode.code}`,
+            type: "announcement",
+            priority: "high",
+            hideCreator: false,
+            metadata: {
+              promoCodeId: String(promoCode._id),
+              promoCode: promoCode.code,
+              linkUrl: "/dashboard/promo-codes",
+            },
+          },
+          [owner._id], // Target specific user
+          {
+            id: req.user.id,
+            firstName: req.user.firstName || "",
+            lastName: req.user.lastName || "",
+            username: req.user.username || req.user.email,
+            avatar: req.user.avatar,
+            gender: req.user.gender || "male",
+            authLevel: req.user.roleInAtCloud || "Administrator",
+            roleInAtCloud: req.user.roleInAtCloud,
+          }
+        );
+
+        console.log(
+          `Sent notifications to ${owner.email} for staff code ${promoCode.code}`
+        );
+      } catch (notificationError) {
+        // Log but don't fail the request if notifications fail
+        console.error(
+          "Failed to send notifications for staff promo code:",
+          notificationError
+        );
+      }
+
+      // Get owner info for response
+      const ownerInfo = promoCode.ownerId as unknown as {
+        _id: string;
+        email: string;
+        firstName?: string;
+        lastName?: string;
+        username: string;
+      };
+      const ownerName =
+        ownerInfo.firstName && ownerInfo.lastName
+          ? `${ownerInfo.firstName} ${ownerInfo.lastName}`
+          : ownerInfo.username;
+
       res.status(201).json({
         success: true,
         message: "Staff promo code created successfully.",
-        code: {
-          _id: promoCode._id,
-          code: promoCode.code,
-          type: promoCode.type,
-          discountPercent: promoCode.discountPercent,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          ownerId: (promoCode.ownerId as any)?._id || promoCode.ownerId,
-          allowedProgramIds: promoCode.allowedProgramIds,
-          expiresAt: promoCode.expiresAt,
-          isActive: promoCode.isActive,
-          createdAt: promoCode.createdAt,
-          createdBy: promoCode.createdBy,
+        data: {
+          code: {
+            _id: promoCode._id,
+            code: promoCode.code,
+            type: promoCode.type,
+            discountPercent: promoCode.discountPercent,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ownerId: (promoCode.ownerId as any)?._id || promoCode.ownerId,
+            ownerEmail: ownerInfo.email,
+            ownerName,
+            allowedProgramIds: promoCode.allowedProgramIds,
+            expiresAt: promoCode.expiresAt,
+            isActive: promoCode.isActive,
+            createdAt: promoCode.createdAt,
+            createdBy: promoCode.createdBy,
+          },
         },
       });
     } catch (error) {
@@ -598,7 +742,10 @@ export class PromoCodeController {
       }
 
       // Find and deactivate promo code
-      const promoCode = await PromoCode.findById(id);
+      const promoCode = await PromoCode.findById(id).populate(
+        "ownerId",
+        "username email firstName lastName"
+      );
       if (!promoCode) {
         res.status(404).json({
           success: false,
@@ -616,8 +763,112 @@ export class PromoCodeController {
         return;
       }
 
+      // Populate programs if needed
+      if (
+        promoCode.allowedProgramIds &&
+        promoCode.allowedProgramIds.length > 0
+      ) {
+        await promoCode.populate("allowedProgramIds", "title");
+      }
+
       // Deactivate
       await promoCode.deactivate();
+
+      // Send notifications to the code owner
+      try {
+        if (!req.user) {
+          console.warn("No user found in request, skipping notifications");
+        } else {
+          const owner = promoCode.ownerId as unknown as {
+            _id: string;
+            email: string;
+            firstName?: string;
+            lastName?: string;
+            username: string;
+          };
+          const recipientName =
+            owner.firstName && owner.lastName
+              ? `${owner.firstName} ${owner.lastName}`
+              : owner.username;
+
+          // Get program names for notifications
+          const allowedPrograms =
+            promoCode.allowedProgramIds &&
+            promoCode.allowedProgramIds.length > 0
+              ? (
+                  promoCode.allowedProgramIds as unknown as Array<{
+                    title: string;
+                  }>
+                )
+                  .map((p) => p.title)
+                  .join(", ")
+              : undefined;
+
+          // Format actor name: System Auth Level + Full Name
+          const actorFullName =
+            req.user.firstName && req.user.lastName
+              ? `${req.user.firstName} ${req.user.lastName}`
+              : req.user.username || req.user.email;
+          const actorAuthLevel = req.user.role || "Administrator";
+          const actorDisplay = `${actorAuthLevel} ${actorFullName}`;
+
+          // Send email notification
+          await EmailService.sendPromoCodeDeactivatedEmail({
+            recipientEmail: owner.email,
+            recipientName,
+            promoCode: promoCode.code,
+            discountPercent: promoCode.discountPercent ?? 100,
+            allowedPrograms,
+            deactivatedBy: actorDisplay,
+          });
+
+          // Create system message/notification
+          const { UnifiedMessageController } = await import(
+            "./unifiedMessageController"
+          );
+          await UnifiedMessageController.createTargetedSystemMessage(
+            {
+              title: "⛔ Your Promo Code Has Been Deactivated",
+              content: `Your promo code ${promoCode.code} (${
+                promoCode.discountPercent ?? 100
+              }% discount${
+                allowedPrograms
+                  ? ` for ${allowedPrograms}`
+                  : " for all programs"
+              }) has been deactivated by ${actorDisplay}.\n\nThis code can no longer be used for enrollment.`,
+              type: "warning",
+              priority: "high",
+              hideCreator: false,
+              metadata: {
+                promoCodeId: String(promoCode._id),
+                promoCode: promoCode.code,
+                linkUrl: "/dashboard/promo-codes",
+              },
+            },
+            [owner._id],
+            {
+              id: req.user.id,
+              firstName: req.user.firstName || "",
+              lastName: req.user.lastName || "",
+              username: req.user.username || req.user.email,
+              avatar: req.user.avatar,
+              gender: req.user.gender || "male",
+              authLevel: req.user.role || "Administrator",
+              roleInAtCloud: req.user.roleInAtCloud,
+            }
+          );
+
+          console.log(
+            `Sent deactivation notifications to ${owner.email} for code ${promoCode.code}`
+          );
+        }
+      } catch (notificationError) {
+        // Log but don't fail the request if notifications fail
+        console.error(
+          "Failed to send deactivation notifications:",
+          notificationError
+        );
+      }
 
       res.status(200).json({
         success: true,
@@ -655,7 +906,10 @@ export class PromoCodeController {
       }
 
       // Find and reactivate promo code
-      const promoCode = await PromoCode.findById(id);
+      const promoCode = await PromoCode.findById(id).populate(
+        "ownerId",
+        "username email firstName lastName"
+      );
       if (!promoCode) {
         res.status(404).json({
           success: false,
@@ -673,8 +927,113 @@ export class PromoCodeController {
         return;
       }
 
+      // Populate programs if needed
+      if (
+        promoCode.allowedProgramIds &&
+        promoCode.allowedProgramIds.length > 0
+      ) {
+        await promoCode.populate("allowedProgramIds", "title");
+      }
+
       // Reactivate
       await promoCode.reactivate();
+
+      // Send notifications to the code owner
+      try {
+        if (!req.user) {
+          console.warn("No user found in request, skipping notifications");
+        } else {
+          const owner = promoCode.ownerId as unknown as {
+            _id: string;
+            email: string;
+            firstName?: string;
+            lastName?: string;
+            username: string;
+          };
+          const recipientName =
+            owner.firstName && owner.lastName
+              ? `${owner.firstName} ${owner.lastName}`
+              : owner.username;
+
+          // Get program names for notifications
+          const allowedPrograms =
+            promoCode.allowedProgramIds &&
+            promoCode.allowedProgramIds.length > 0
+              ? (
+                  promoCode.allowedProgramIds as unknown as Array<{
+                    title: string;
+                  }>
+                )
+                  .map((p) => p.title)
+                  .join(", ")
+              : undefined;
+
+          // Format actor name: System Auth Level + Full Name
+          const actorFullName =
+            req.user.firstName && req.user.lastName
+              ? `${req.user.firstName} ${req.user.lastName}`
+              : req.user.username || req.user.email;
+          const actorAuthLevel = req.user.role || "Administrator";
+          const actorDisplay = `${actorAuthLevel} ${actorFullName}`;
+
+          // Send email notification
+          await EmailService.sendPromoCodeReactivatedEmail({
+            recipientEmail: owner.email,
+            recipientName,
+            promoCode: promoCode.code,
+            discountPercent: promoCode.discountPercent ?? 100,
+            allowedPrograms,
+            expiresAt: promoCode.expiresAt?.toISOString(),
+            reactivatedBy: actorDisplay,
+          });
+
+          // Create system message/notification
+          const { UnifiedMessageController } = await import(
+            "./unifiedMessageController"
+          );
+          await UnifiedMessageController.createTargetedSystemMessage(
+            {
+              title: "✅ Your Promo Code Has Been Reactivated",
+              content: `Good news! Your promo code ${promoCode.code} (${
+                promoCode.discountPercent ?? 100
+              }% discount${
+                allowedPrograms
+                  ? ` for ${allowedPrograms}`
+                  : " for all programs"
+              }) has been reactivated by ${actorDisplay}.\n\nYou can now use this code for enrollment.`,
+              type: "announcement",
+              priority: "high",
+              hideCreator: false,
+              metadata: {
+                promoCodeId: String(promoCode._id),
+                promoCode: promoCode.code,
+                linkUrl: "/dashboard/promo-codes",
+              },
+            },
+            [owner._id],
+            {
+              id: req.user.id,
+              firstName: req.user.firstName || "",
+              lastName: req.user.lastName || "",
+              username: req.user.username || req.user.email,
+              avatar: req.user.avatar,
+              gender: req.user.gender || "male",
+              authLevel: req.user.role || "Administrator",
+              roleInAtCloud: req.user.roleInAtCloud,
+            }
+          );
+
+          console.log(
+            `Sent reactivation notifications to ${owner.email} for code ${promoCode.code}`
+          );
+        }
+      } catch (notificationError) {
+        // Log but don't fail the request if notifications fail
+        console.error(
+          "Failed to send reactivation notifications:",
+          notificationError
+        );
+      }
 
       res.status(200).json({
         success: true,

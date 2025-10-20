@@ -262,7 +262,10 @@ export default function PurchaseSuccess() {
                   programId = purchase.programId;
                 } else if (typeof purchase.programId === "object") {
                   // Backend's toJSON transform converts _id to id, so check both
-                  const prog = purchase.programId as any;
+                  const prog = purchase.programId as {
+                    id?: string;
+                    _id?: string;
+                  };
                   if (prog.id) {
                     programId = prog.id;
                   } else if (prog._id) {

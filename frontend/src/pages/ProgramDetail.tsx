@@ -849,8 +849,8 @@ export default function ProgramDetail({
         </div>
       )}
 
-      {/* Program Participants (Mentees & Class Representatives) */}
-      {program && (
+      {/* Program Participants (Mentees & Class Representatives) - Only shown for paid programs */}
+      {program && !program.isFree && (
         <ProgramParticipants programId={program.id} program={program} />
       )}
 

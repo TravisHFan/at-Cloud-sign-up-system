@@ -71,20 +71,19 @@ export class PurchaseController {
           return;
         }
 
-        // Verify code belongs to user (for bundle codes) or is valid staff code
-        if (validatedPromoCode.type === "bundle_discount") {
-          if (
-            validatedPromoCode.ownerId.toString() !==
-            (userId as mongoose.Types.ObjectId).toString()
-          ) {
-            res.status(400).json({
-              success: false,
-              message: "This promo code does not belong to you.",
-            });
-            return;
-          }
+        // Verify code belongs to user (ALL promo codes are one-time, one-person)
+        if (
+          validatedPromoCode.ownerId.toString() !==
+          (userId as mongoose.Types.ObjectId).toString()
+        ) {
+          res.status(400).json({
+            success: false,
+            message: "This promo code does not belong to you.",
+          });
+          return;
         }
-        // For staff codes, check allowedProgramIds if specified
+
+        // Additional check for staff codes: verify allowedProgramIds if specified
         if (
           validatedPromoCode.type === "staff_access" &&
           validatedPromoCode.allowedProgramIds &&

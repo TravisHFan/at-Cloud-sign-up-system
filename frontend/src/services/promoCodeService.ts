@@ -19,6 +19,7 @@ export interface PromoCode {
   discountPercent?: number; // Percentage (e.g., 100 = 100% off)
   ownerId: string;
   allowedProgramIds?: string[];
+  allowedProgramTitles?: string[];
   isActive: boolean;
   isUsed: boolean;
   expiresAt?: string; // ISO date string

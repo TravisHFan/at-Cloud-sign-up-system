@@ -19,6 +19,9 @@ interface Purchase {
   finalPrice: number;
   isClassRep: boolean;
   isEarlyBird: boolean;
+  promoCode?: string;
+  promoDiscountAmount?: number;
+  promoDiscountPercent?: number;
   purchaseDate: string;
   status: "pending" | "completed" | "failed" | "refunded";
   createdAt?: string;
@@ -200,7 +203,9 @@ export default function PurchaseHistory() {
                           {formatCurrency(purchase.finalPrice || 0)}
                         </p>
                         {(purchase.classRepDiscount > 0 ||
-                          purchase.earlyBirdDiscount > 0) && (
+                          purchase.earlyBirdDiscount > 0 ||
+                          purchase.promoDiscountAmount ||
+                          purchase.promoDiscountPercent) && (
                           <p className="text-sm text-gray-500">
                             <span className="line-through">
                               {formatCurrency(purchase.fullPrice || 0)}
@@ -209,7 +214,17 @@ export default function PurchaseHistory() {
                               Save{" "}
                               {formatCurrency(
                                 (purchase.classRepDiscount || 0) +
-                                  (purchase.earlyBirdDiscount || 0)
+                                  (purchase.earlyBirdDiscount || 0) +
+                                  (purchase.promoDiscountAmount ||
+                                    (purchase.promoDiscountPercent
+                                      ? Math.round(
+                                          ((purchase.fullPrice -
+                                            (purchase.classRepDiscount || 0) -
+                                            (purchase.earlyBirdDiscount || 0)) *
+                                            purchase.promoDiscountPercent) /
+                                            100
+                                        )
+                                      : 0))
                               )}
                             </span>
                           </p>
@@ -381,7 +396,17 @@ export default function PurchaseHistory() {
                           (sum, p) =>
                             sum +
                             (p.classRepDiscount || 0) +
-                            (p.earlyBirdDiscount || 0),
+                            (p.earlyBirdDiscount || 0) +
+                            (p.promoDiscountAmount ||
+                              (p.promoDiscountPercent
+                                ? Math.round(
+                                    ((p.fullPrice -
+                                      (p.classRepDiscount || 0) -
+                                      (p.earlyBirdDiscount || 0)) *
+                                      p.promoDiscountPercent) /
+                                      100
+                                  )
+                                : 0)),
                           0
                         )
                       )}
@@ -485,7 +510,9 @@ export default function PurchaseHistory() {
                               {formatCurrency(purchase.finalPrice || 0)}
                             </div>
                             {(purchase.classRepDiscount > 0 ||
-                              purchase.earlyBirdDiscount > 0) && (
+                              purchase.earlyBirdDiscount > 0 ||
+                              purchase.promoDiscountAmount ||
+                              purchase.promoDiscountPercent) && (
                               <div className="text-xs text-gray-500">
                                 <span className="line-through">
                                   {formatCurrency(purchase.fullPrice || 0)}
@@ -494,7 +521,19 @@ export default function PurchaseHistory() {
                                   (
                                   {formatCurrency(
                                     (purchase.classRepDiscount || 0) +
-                                      (purchase.earlyBirdDiscount || 0)
+                                      (purchase.earlyBirdDiscount || 0) +
+                                      (purchase.promoDiscountAmount ||
+                                        (purchase.promoDiscountPercent
+                                          ? Math.round(
+                                              ((purchase.fullPrice -
+                                                (purchase.classRepDiscount ||
+                                                  0) -
+                                                (purchase.earlyBirdDiscount ||
+                                                  0)) *
+                                                purchase.promoDiscountPercent) /
+                                                100
+                                            )
+                                          : 0))
                                   )}{" "}
                                   off)
                                 </span>
@@ -508,6 +547,13 @@ export default function PurchaseHistory() {
                             {purchase.isEarlyBird && (
                               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 mt-1 ml-1">
                                 Early Bird
+                              </span>
+                            )}
+                            {purchase.promoCode && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 mt-1 ml-1">
+                                {purchase.promoDiscountPercent === 100
+                                  ? "Staff 100%"
+                                  : `Promo: ${purchase.promoCode}`}
                               </span>
                             )}
                           </div>

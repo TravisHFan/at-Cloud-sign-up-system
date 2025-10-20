@@ -99,6 +99,27 @@ This document summarizes all the fixes and features implemented for the promo co
   - Creates fresh session with current pricing
 - **File:** `backend/src/controllers/purchaseController.ts`
 
+### 9. Staff Code Creation Missing Discount Percent
+
+- **Root Cause:** Frontend not sending `discountPercent: 100` when creating staff codes
+- **Error:** "Discount percent must be between 0 and 100" even though staff codes should always be 100% off
+- **Solution:** Frontend now explicitly sends `discountPercent: 100` in payload
+- **Files:**
+  - `frontend/src/pages/AdminPromoCodes.tsx`
+  - `frontend/src/services/api.ts`
+
+### 10. UserSelectionModal Not Loading Users
+
+- **Root Cause:** useEffect dependency array causing infinite re-render loop
+  - Dependencies `allLoaded`, `loadingAll`, `baseFilter`, `allowedRoles` caused effect to continuously re-run
+  - Stale closure values prevented fetch from completing
+- **Solution:**
+  - Removed problematic dependencies from useEffect
+  - Added `fetchingRef` to prevent duplicate fetches
+  - Simplified dependencies to only `[isOpen, query]`
+  - Added comprehensive console logging for debugging
+- **File:** `frontend/src/components/admin/UserSelectionModal.tsx`
+
 ---
 
 ## 🗑️ Features Removed

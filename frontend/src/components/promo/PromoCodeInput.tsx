@@ -17,6 +17,7 @@ export interface PromoCode {
 
 export interface PromoCodeInputProps {
   programId?: string; // Optional, for backend validation
+  programPrice: number; // Current price in cents (after other discounts), needed to calculate percentage discounts
   availableCodes: PromoCode[];
   onApply: (code: string, discountAmountInCents: number) => void;
   onRemove: () => void;
@@ -27,6 +28,7 @@ export interface PromoCodeInputProps {
 
 export default function PromoCodeInput({
   programId,
+  programPrice,
   availableCodes,
   onApply,
   onRemove,
@@ -72,8 +74,21 @@ export default function PromoCodeInput({
 
       if (foundCode) {
         // Code is in user's available codes - apply directly
-        // All promo codes use dollar amount discount in cents
-        const discountAmountInCents = foundCode.discountAmount || 0;
+        let discountAmountInCents = 0;
+
+        if (foundCode.type === "bundle_discount" && foundCode.discountAmount) {
+          // Bundle discount: use fixed dollar amount
+          discountAmountInCents = foundCode.discountAmount;
+        } else if (
+          foundCode.type === "staff_access" &&
+          foundCode.discountPercent !== undefined
+        ) {
+          // Staff access: calculate from percentage
+          discountAmountInCents = Math.round(
+            (programPrice * foundCode.discountPercent) / 100
+          );
+        }
+
         onApply(codeToApply, discountAmountInCents);
       } else if (programId) {
         // Code not in available codes - validate with service
@@ -196,7 +211,12 @@ export default function PromoCodeInput({
                       {code.code}
                     </span>
                     <span className="text-blue-700 font-semibold">
-                      ($${((code.discountAmount || 0) / 100).toFixed(2)} OFF)
+                      {code.type === "staff_access" &&
+                      code.discountPercent !== undefined
+                        ? `(${code.discountPercent}% OFF)`
+                        : `($${((code.discountAmount || 0) / 100).toFixed(
+                            2
+                          )} OFF)`}
                     </span>
                   </div>
                   <div className="text-sm text-gray-600 flex items-center gap-2 flex-wrap">

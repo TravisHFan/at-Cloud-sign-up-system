@@ -2,11 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader, Card, CardContent } from "../components/ui";
 import PromoCodeCard from "../components/promo/PromoCodeCard";
-import {
-  MagnifyingGlassIcon,
-  TagIcon,
-  InformationCircleIcon,
-} from "@heroicons/react/24/outline";
+import { MagnifyingGlassIcon, TagIcon } from "@heroicons/react/24/outline";
 import { promoCodeService, type PromoCode } from "../services/promoCodeService";
 
 type FilterStatus = "all" | "active" | "used" | "expired";
@@ -157,32 +153,14 @@ export default function MyPromoCodes() {
       <PageHeader title={`My Promo Codes (${counts.all})`} />
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Retention Policy Info Banner */}
-        <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-start">
-            <InformationCircleIcon className="h-5 w-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
-            <div className="flex-1">
-              <h3 className="text-sm font-semibold text-blue-900 mb-1">
-                Promo Code Retention Policy
-              </h3>
-              <p className="text-sm text-blue-800">
-                To keep your promo codes organized, we automatically remove{" "}
-                <span className="font-medium">used codes after 7 days</span> and{" "}
-                <span className="font-medium">expired codes after 30 days</span>
-                . Active codes are never deleted.
-              </p>
-            </div>
-          </div>
-        </div>
-
         <Card>
           <CardContent>
             {/* Filter Tabs */}
             <div className="border-b border-gray-200 mb-6">
-              <nav className="-mb-px flex space-x-8" aria-label="Filter tabs">
+              <nav className="-mb-px flex" aria-label="Filter tabs">
                 <button
                   onClick={() => handleFilterChange("all")}
-                  className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  className={`whitespace-nowrap py-4 px-6 border-b-2 font-medium text-base transition-colors ${
                     activeFilter === "all"
                       ? "border-blue-500 text-blue-600"
                       : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -192,7 +170,7 @@ export default function MyPromoCodes() {
                 </button>
                 <button
                   onClick={() => handleFilterChange("active")}
-                  className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  className={`whitespace-nowrap py-4 px-6 border-b-2 font-medium text-base transition-colors ${
                     activeFilter === "active"
                       ? "border-green-500 text-green-600"
                       : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -202,7 +180,7 @@ export default function MyPromoCodes() {
                 </button>
                 <button
                   onClick={() => handleFilterChange("used")}
-                  className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  className={`whitespace-nowrap py-4 px-6 border-b-2 font-medium text-base transition-colors ${
                     activeFilter === "used"
                       ? "border-gray-500 text-gray-600"
                       : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -212,7 +190,7 @@ export default function MyPromoCodes() {
                 </button>
                 <button
                   onClick={() => handleFilterChange("expired")}
-                  className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  className={`whitespace-nowrap py-4 px-6 border-b-2 font-medium text-base transition-colors ${
                     activeFilter === "expired"
                       ? "border-red-500 text-red-600"
                       : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -260,6 +238,8 @@ export default function MyPromoCodes() {
                     expiresAt={code.expiresAt}
                     isUsed={code.isUsed}
                     usedForProgramTitle={code.usedForProgramTitle}
+                    allowedProgramIds={code.allowedProgramIds}
+                    allowedProgramTitles={code.allowedProgramTitles}
                     onCopy={() => handleCopy(code.code)}
                     onUse={() => handleUseCode(code.code)}
                   />
@@ -306,6 +286,11 @@ export default function MyPromoCodes() {
                     Codes can be applied at checkout when enrolling in programs
                   </li>
                   <li>You'll receive a new bundle code after each purchase</li>
+                  <li>
+                    To keep codes organized, we automatically remove used codes
+                    after 7 days and expired codes after 30 days (active codes
+                    are never deleted)
+                  </li>
                 </ul>
               </div>
             </div>

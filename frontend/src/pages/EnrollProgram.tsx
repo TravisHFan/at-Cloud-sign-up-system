@@ -161,13 +161,31 @@ export default function EnrollProgram() {
       setIsProcessing(true);
 
       // Create checkout session with promo code if applied
-      const { sessionUrl } = await purchaseService.createCheckoutSession({
+      const response = await purchaseService.createCheckoutSession({
         programId: id,
         isClassRep,
         promoCode: appliedPromoCode || undefined,
       });
 
-      // Redirect to Stripe Checkout
+      const { sessionUrl, isFree, orderId } = response;
+
+      // Handle free purchase (100% discount)
+      if (isFree && orderId) {
+        setAlertModal({
+          isOpen: true,
+          title: "Enrollment Complete! 🎉",
+          message: `You've successfully enrolled in ${program.title} with 100% discount! Your order number is ${orderId}.`,
+          type: "success",
+          onClose: () => {
+            setAlertModal((prev) => ({ ...prev, isOpen: false }));
+            navigate("/dashboard/purchase-history");
+          },
+        });
+        setIsProcessing(false);
+        return;
+      }
+
+      // Redirect to Stripe Checkout for paid purchases
       if (sessionUrl) {
         window.location.href = sessionUrl;
       } else {
@@ -329,6 +347,17 @@ export default function EnrollProgram() {
         <div className="mb-6">
           <PromoCodeInput
             programId={id || ""}
+            programPrice={
+              program
+                ? program.fullPriceTicket -
+                  (isClassRep && program.classRepDiscount
+                    ? program.classRepDiscount
+                    : 0) -
+                  (isEarlyBird && program.earlyBirdDiscount
+                    ? program.earlyBirdDiscount
+                    : 0)
+                : 0
+            }
             availableCodes={availablePromoCodes}
             onApply={handlePromoApply}
             onRemove={handlePromoRemove}

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import Icon from "./Icon";
 import ConfirmationModal from "./ConfirmationModal";
 
@@ -96,7 +97,7 @@ export default function EventDeletionModal({
   }
 
   // Show main options modal
-  return (
+  return createPortal(
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
         <div className="p-6">
@@ -105,15 +106,17 @@ export default function EventDeletionModal({
               <Icon name="trash" className="w-6 h-6 text-red-600" />
             </div>
             <div className="ml-4">
-              <h3 className="text-lg font-medium text-gray-900">Event Management</h3>
+              <h3 className="text-lg font-medium text-gray-900">
+                Event Management
+              </h3>
             </div>
           </div>
-          
+
           <div className="mb-6">
             <p className="text-sm text-gray-500 mb-4">
               What would you like to do with "{eventTitle}"?
             </p>
-            
+
             <div className="space-y-3">
               <button
                 onClick={handleDeleteClick}
@@ -121,24 +124,32 @@ export default function EventDeletionModal({
               >
                 <Icon name="trash" className="w-5 h-5 text-red-600 mr-3" />
                 <div>
-                  <div className="font-medium text-red-900">Delete this event</div>
-                  <div className="text-sm text-red-600">Permanently remove the event and all data</div>
+                  <div className="font-medium text-red-900">
+                    Delete this event
+                  </div>
+                  <div className="text-sm text-red-600">
+                    Permanently remove the event and all data
+                  </div>
                 </div>
               </button>
-              
+
               <button
                 onClick={handleCancelClick}
                 className="w-full flex items-center p-3 text-left border border-yellow-200 rounded-lg hover:bg-yellow-50 transition-colors"
               >
                 <Icon name="tag" className="w-5 h-5 text-yellow-600 mr-3" />
                 <div>
-                  <div className="font-medium text-yellow-900">Cancel this event</div>
-                  <div className="text-sm text-yellow-600">Mark as cancelled, keep in history</div>
+                  <div className="font-medium text-yellow-900">
+                    Cancel this event
+                  </div>
+                  <div className="text-sm text-yellow-600">
+                    Mark as cancelled, keep in history
+                  </div>
                 </div>
               </button>
             </div>
           </div>
-          
+
           <div className="flex items-center justify-end">
             <button
               onClick={handleCloseAll}
@@ -149,6 +160,7 @@ export default function EventDeletionModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -23,6 +23,9 @@ interface PurchaseReceipt {
   finalPrice: number;
   isClassRep: boolean;
   isEarlyBird: boolean;
+  promoCode?: string;
+  promoDiscountAmount?: number;
+  promoDiscountPercent?: number;
   purchaseDate: string;
   status: string;
   billingInfo?: {
@@ -354,6 +357,38 @@ export default function PurchaseReceipt() {
                     </td>
                   </tr>
                 )}
+
+                {receipt.promoCode &&
+                  (receipt.promoDiscountAmount ||
+                    receipt.promoDiscountPercent) && (
+                    <tr>
+                      <td className="py-3 text-gray-900">
+                        <div className="flex items-center">
+                          {receipt.promoDiscountPercent === 100
+                            ? "Staff Discount (100%)"
+                            : "Promo Code Discount"}
+                          <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                            {receipt.promoCode}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3 text-right text-green-600 font-medium">
+                        -
+                        {formatCurrency(
+                          receipt.promoDiscountAmount ||
+                            (receipt.promoDiscountPercent
+                              ? Math.round(
+                                  ((receipt.fullPrice -
+                                    (receipt.classRepDiscount || 0) -
+                                    (receipt.earlyBirdDiscount || 0)) *
+                                    receipt.promoDiscountPercent) /
+                                    100
+                                )
+                              : 0)
+                        )}
+                      </td>
+                    </tr>
+                  )}
 
                 <tr className="border-t-2 border-gray-300">
                   <td className="py-4 text-lg font-semibold text-gray-900">
