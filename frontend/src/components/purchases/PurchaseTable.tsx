@@ -97,6 +97,9 @@ export default function PurchaseTable({
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Date
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Order Number
               </th>
               {showUser && (
@@ -111,16 +114,7 @@ export default function PurchaseTable({
                 Price
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Discounts
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Final
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Date
               </th>
             </tr>
           </thead>
@@ -129,7 +123,17 @@ export default function PurchaseTable({
               const totalDiscount =
                 (purchase.classRepDiscount || 0) +
                 (purchase.earlyBirdDiscount || 0) +
-                (purchase.promoDiscountAmount || 0);
+                (purchase.promoDiscountAmount ||
+                  (purchase.promoDiscountPercent
+                    ? Math.round(
+                        ((purchase.fullPrice -
+                          (purchase.classRepDiscount || 0) -
+                          (purchase.earlyBirdDiscount || 0)) *
+                          purchase.promoDiscountPercent) /
+                          100
+                      )
+                    : 0));
+              const hasDiscount = totalDiscount > 0;
 
               return (
                 <tr
@@ -141,6 +145,14 @@ export default function PurchaseTable({
                       : ""
                   }
                 >
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {purchase.purchaseDate
+                      ? format(new Date(purchase.purchaseDate), "MMM d, yyyy")
+                      : format(
+                          new Date(purchase.createdAt || ""),
+                          "MMM d, yyyy"
+                        )}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     {purchase.orderNumber}
                   </td>
@@ -158,41 +170,43 @@ export default function PurchaseTable({
                     <div className="text-sm text-gray-900">
                       {purchase.program.name}
                     </div>
-                    {purchase.isClassRep && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 mt-1">
-                        Class Rep
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {formatCurrency(purchase.fullPrice)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      -{formatCurrency(totalDiscount)}
-                    </div>
-                    {purchase.isEarlyBird && (
-                      <div className="text-xs text-green-600">Early Bird</div>
-                    )}
-                    {purchase.promoCode && (
-                      <div className="text-xs text-blue-600">
-                        {purchase.promoCode}
+                    <div className="text-sm">
+                      <div className="font-medium text-gray-900">
+                        {formatCurrency(purchase.finalPrice || 0)}
                       </div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {formatCurrency(purchase.finalPrice)}
+                      {hasDiscount && (
+                        <div className="text-xs text-gray-500">
+                          <span className="line-through">
+                            {formatCurrency(purchase.fullPrice || 0)}
+                          </span>
+                          <span className="ml-1 text-green-600 font-medium">
+                            ({formatCurrency(totalDiscount)} off)
+                          </span>
+                        </div>
+                      )}
+                      {purchase.isClassRep && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 mt-1">
+                          Class Rep
+                        </span>
+                      )}
+                      {purchase.isEarlyBird && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 mt-1 ml-1">
+                          Early Bird
+                        </span>
+                      )}
+                      {purchase.promoCode && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 mt-1 ml-1">
+                          {purchase.promoDiscountPercent === 100
+                            ? "Staff 100%"
+                            : purchase.promoCode}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {getStatusBadge(purchase.status)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {purchase.purchaseDate
-                      ? format(new Date(purchase.purchaseDate), "MMM d, yyyy")
-                      : format(
-                          new Date(purchase.createdAt || ""),
-                          "MMM d, yyyy"
-                        )}
                   </td>
                 </tr>
               );
