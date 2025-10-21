@@ -28,7 +28,7 @@ import * as XLSX from "xlsx";
 import { ShareModal } from "../components/share/ShareModal";
 import { usePublishReadiness } from "../hooks/usePublishReadiness";
 import { PublishGateBanner } from "../components/publish/PublishGateBanner";
-import { apiUrl } from "../lib/apiClient";
+import { apiFetch } from "../lib/apiClient";
 import {
   getMaxRolesPerEvent,
   hasUnlimitedRoles,
@@ -1459,7 +1459,7 @@ export default function EventDetail() {
     if (!event) return;
 
     try {
-      const response = await fetch(apiUrl(`/events/${event.id}/calendar`));
+      const response = await apiFetch(`/events/${event.id}/calendar`);
       if (!response.ok) {
         throw new Error("Failed to download calendar file");
       }
