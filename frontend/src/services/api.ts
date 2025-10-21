@@ -780,6 +780,103 @@ class ApiClient {
   }
 
   // ============================================================================
+  // Admin Purchase APIs (Super Admin & Administrator only)
+  // ============================================================================
+
+  /**
+   * Get all purchases for admin dashboard (Admin only)
+   * @param params Query parameters for pagination, search, and filtering
+   */
+  async getAllPurchasesAdmin(params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+  }): Promise<{
+    purchases: unknown[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  }> {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append("page", params.page.toString());
+    if (params.limit) queryParams.append("limit", params.limit.toString());
+    if (params.search) queryParams.append("search", params.search);
+    if (params.status) queryParams.append("status", params.status);
+
+    const res = await this.request<{
+      purchases: unknown[];
+      pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+      };
+    }>(`/admin/purchases?${queryParams.toString()}`);
+    return (
+      res.data || {
+        purchases: [],
+        pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
+      }
+    );
+  }
+
+  /**
+   * Get payment statistics for admin dashboard (Admin only)
+   */
+  async getPaymentStats(): Promise<{
+    stats: {
+      totalRevenue: number;
+      totalPurchases: number;
+      pendingPurchases: number;
+      failedPurchases: number;
+      refundedPurchases: number;
+      uniqueBuyers: number;
+      classRepPurchases: number;
+      promoCodeUsage: number;
+      last30Days: {
+        purchases: number;
+        revenue: number;
+      };
+    };
+  }> {
+    const res = await this.request<{
+      stats: {
+        totalRevenue: number;
+        totalPurchases: number;
+        pendingPurchases: number;
+        failedPurchases: number;
+        refundedPurchases: number;
+        uniqueBuyers: number;
+        classRepPurchases: number;
+        promoCodeUsage: number;
+        last30Days: {
+          purchases: number;
+          revenue: number;
+        };
+      };
+    }>(`/admin/purchases/stats`);
+    return (
+      res.data || {
+        stats: {
+          totalRevenue: 0,
+          totalPurchases: 0,
+          pendingPurchases: 0,
+          failedPurchases: 0,
+          refundedPurchases: 0,
+          uniqueBuyers: 0,
+          classRepPurchases: 0,
+          promoCodeUsage: 0,
+          last30Days: { purchases: 0, revenue: 0 },
+        },
+      }
+    );
+  }
+
+  // ============================================================================
   // Promo Code APIs (Todo #18)
   // ============================================================================
 
@@ -2869,6 +2966,16 @@ export const purchaseService = {
   getPurchaseReceipt: (id: string) => apiClient.getPurchaseReceipt(id),
   checkProgramAccess: (programId: string) =>
     apiClient.checkProgramAccess(programId),
+};
+
+export const adminPurchaseService = {
+  getAllPurchases: (params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+  }) => apiClient.getAllPurchasesAdmin(params),
+  getPaymentStats: () => apiClient.getPaymentStats(),
 };
 
 export default apiClient;

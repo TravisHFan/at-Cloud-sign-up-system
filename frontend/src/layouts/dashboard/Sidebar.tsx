@@ -18,6 +18,7 @@ import {
   ShieldCheckIcon,
   DocumentDuplicateIcon,
   TicketIcon,
+  CreditCardIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -108,6 +109,11 @@ export default function Sidebar({
           name: "Promo Codes",
           href: "/dashboard/admin/promo-codes",
           icon: TicketIcon,
+        },
+        {
+          name: "Income History",
+          href: "/dashboard/income-history",
+          icon: CreditCardIcon,
         },
         { name: "Management", href: "/dashboard/management", icon: UsersIcon }
       );

@@ -21,6 +21,7 @@ import rolesTemplatesRoutes from "./rolesTemplates"; // Role templates CRUD
 import purchaseRoutes from "./purchases"; // Program purchases and checkout
 import webhookRoutes from "./webhooks"; // Stripe webhooks
 import promoCodeRoutes from "./promoCodes"; // Promo code system
+import adminPurchaseRoutes from "./admin/purchases"; // Admin payment records
 
 const router = Router();
 
@@ -48,6 +49,7 @@ router.use("/roles-templates", rolesTemplatesRoutes);
 router.use("/purchases", purchaseRoutes);
 router.use("/webhooks", webhookRoutes);
 router.use("/promo-codes", promoCodeRoutes);
+router.use("/admin/purchases", adminPurchaseRoutes);
 
 // Health check endpoint
 router.get("/health", (req, res) => {

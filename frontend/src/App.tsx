@@ -20,6 +20,7 @@ import PurchaseSuccess from "./pages/PurchaseSuccess";
 import PurchaseCancel from "./pages/PurchaseCancel";
 import PurchaseHistory from "./pages/PurchaseHistory";
 import PurchaseReceipt from "./pages/PurchaseReceipt";
+import IncomeHistory from "./pages/IncomeHistory";
 import CreateNewProgram from "./pages/CreateNewProgram";
 import EditProgram from "./pages/EditProgram";
 import CreateEvent from "./pages/CreateEvent";
@@ -110,6 +111,20 @@ function App() {
               <Route
                 path="purchase-receipt/:id"
                 element={<PurchaseReceipt />}
+              />
+              <Route
+                path="purchases/:id/receipt"
+                element={<PurchaseReceipt />}
+              />
+              <Route
+                path="income-history"
+                element={
+                  <ProtectedRoute
+                    allowedRoles={["Super Admin", "Administrator"]}
+                  >
+                    <IncomeHistory />
+                  </ProtectedRoute>
+                }
               />
               <Route path="purchase/success" element={<PurchaseSuccess />} />
               <Route path="purchase/cancel" element={<PurchaseCancel />} />
