@@ -1106,7 +1106,7 @@ export class PurchaseController {
       const skip = (pageNum - 1) * limitNum;
 
       // Build query
-      const query: any = {};
+      const query: Record<string, unknown> = {};
 
       // Status filter
       if (status && status !== "all") {
@@ -1130,9 +1130,14 @@ export class PurchaseController {
       let filteredPurchases = allPurchases;
       if (search) {
         const searchLower = search.toLowerCase();
-        filteredPurchases = allPurchases.filter((purchase: any) => {
-          const user = purchase.userId;
-          const program = purchase.programId;
+        filteredPurchases = allPurchases.filter((purchase) => {
+          const user = purchase.userId as {
+            firstName?: string;
+            lastName?: string;
+            email?: string;
+            username?: string;
+          };
+          const program = purchase.programId as { title?: string };
 
           const userFirstName = user?.firstName?.toLowerCase() || "";
           const userLastName = user?.lastName?.toLowerCase() || "";
@@ -1157,37 +1162,49 @@ export class PurchaseController {
       const paginatedPurchases = filteredPurchases.slice(skip, skip + limitNum);
 
       // Format response
-      const formattedPurchases = paginatedPurchases.map((purchase: any) => ({
-        id: purchase._id,
-        orderNumber: purchase.orderNumber,
-        user: {
-          id: purchase.userId?._id,
-          name:
-            `${purchase.userId?.firstName || ""} ${
-              purchase.userId?.lastName || ""
-            }`.trim() ||
-            purchase.userId?.username ||
-            "Unknown User",
-          email: purchase.userId?.email || "",
-        },
-        program: {
-          id: purchase.programId?._id,
-          name: purchase.programId?.title || "Unknown Program",
-        },
-        fullPrice: purchase.fullPrice,
-        classRepDiscount: purchase.classRepDiscount,
-        earlyBirdDiscount: purchase.earlyBirdDiscount,
-        promoDiscountAmount: purchase.promoDiscountAmount || 0,
-        promoDiscountPercent: purchase.promoDiscountPercent || 0,
-        finalPrice: purchase.finalPrice,
-        isClassRep: purchase.isClassRep,
-        isEarlyBird: purchase.isEarlyBird,
-        promoCode: purchase.promoCode,
-        status: purchase.status,
-        purchaseDate: purchase.purchaseDate,
-        createdAt: purchase.createdAt,
-        paymentMethod: purchase.paymentMethod,
-      }));
+      const formattedPurchases = paginatedPurchases.map((purchase) => {
+        const user = purchase.userId as {
+          _id?: unknown;
+          firstName?: string;
+          lastName?: string;
+          email?: string;
+          username?: string;
+        };
+        const program = purchase.programId as {
+          _id?: unknown;
+          title?: string;
+        };
+
+        return {
+          id: purchase._id,
+          orderNumber: purchase.orderNumber,
+          user: {
+            id: user?._id,
+            name:
+              `${user?.firstName || ""} ${user?.lastName || ""}`.trim() ||
+              user?.username ||
+              "Unknown User",
+            email: user?.email || "",
+          },
+          program: {
+            id: program?._id,
+            name: program?.title || "Unknown Program",
+          },
+          fullPrice: purchase.fullPrice,
+          classRepDiscount: purchase.classRepDiscount,
+          earlyBirdDiscount: purchase.earlyBirdDiscount,
+          promoDiscountAmount: purchase.promoDiscountAmount || 0,
+          promoDiscountPercent: purchase.promoDiscountPercent || 0,
+          finalPrice: purchase.finalPrice,
+          isClassRep: purchase.isClassRep,
+          isEarlyBird: purchase.isEarlyBird,
+          promoCode: purchase.promoCode,
+          status: purchase.status,
+          purchaseDate: purchase.purchaseDate,
+          createdAt: purchase.createdAt,
+          paymentMethod: purchase.paymentMethod,
+        };
+      });
 
       res.status(200).json({
         success: true,
