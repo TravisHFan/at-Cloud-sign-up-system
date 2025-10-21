@@ -13,10 +13,16 @@ import {
   validateGuestRateLimit,
   GUEST_MAX_ROLES_PER_EVENT,
 } from "../../../src/middleware/guestValidation";
-import GuestRegistration from "../../../src/models/GuestRegistration";
 
-// Mock dependencies
-vi.mock("../../../src/models/GuestRegistration");
+// Create a mock GuestRegistration model
+const mockGuestRegistration = {
+  countDocuments: vi.fn(),
+};
+
+// Mock the models index to return the mocked GuestRegistration
+vi.mock("../../../src/models", () => ({
+  GuestRegistration: mockGuestRegistration,
+}));
 
 // Mock express-validator
 vi.mock("express-validator", () => ({
@@ -76,23 +82,22 @@ describe("guestValidation middleware", () => {
     const testEventId = "507f1f77bcf86cd799439011";
 
     it("should return valid when fewer than max registrations exist", async () => {
-      const countSpy = vi
-        .spyOn(GuestRegistration, "countDocuments")
-        .mockResolvedValue(0 as any); // Changed from 2 to 0 (since max is now 1)
+      mockGuestRegistration.countDocuments.mockResolvedValue(0 as any); // Changed from 2 to 0 (since max is now 1)
 
       const result = await validateGuestUniqueness(testEmail, testEventId);
 
       expect(result.isValid).toBe(true);
       expect(result.message).toBeUndefined();
-      expect(countSpy).toHaveBeenCalledTimes(1);
-      const query = countSpy.mock.calls[0]?.[0] as any;
+      expect(mockGuestRegistration.countDocuments).toHaveBeenCalledTimes(1);
+      const query = mockGuestRegistration.countDocuments.mock
+        .calls[0]?.[0] as any;
       expect(query.email).toBe(testEmail.toLowerCase());
       expect(query.status).toBe("active");
       expect(query.eventId).toBeInstanceOf(mongoose.Types.ObjectId);
     });
 
     it("should return invalid when guest already has max registrations for the event", async () => {
-      vi.spyOn(GuestRegistration, "countDocuments").mockResolvedValue(
+      mockGuestRegistration.countDocuments.mockResolvedValue(
         GUEST_MAX_ROLES_PER_EVENT as any // This is now 1
       );
 
@@ -102,14 +107,14 @@ describe("guestValidation middleware", () => {
     });
 
     it("should return valid when guest has fewer than max (0 count)", async () => {
-      vi.spyOn(GuestRegistration, "countDocuments").mockResolvedValue(0 as any);
+      mockGuestRegistration.countDocuments.mockResolvedValue(0 as any);
       const result = await validateGuestUniqueness(testEmail, testEventId);
       expect(result.isValid).toBe(true);
       expect(result.message).toBeUndefined();
     });
 
     it("should handle database errors gracefully", async () => {
-      vi.spyOn(GuestRegistration, "countDocuments").mockRejectedValue(
+      mockGuestRegistration.countDocuments.mockRejectedValue(
         new Error("Database connection failed")
       );
       const result = await validateGuestUniqueness(testEmail, testEventId);
@@ -123,7 +128,7 @@ describe("guestValidation middleware", () => {
       const invalidEventId = "invalid-object-id";
 
       // With ObjectId casting, invalid ids should be handled gracefully and return invalid
-      vi.spyOn(GuestRegistration, "countDocuments").mockResolvedValue(0 as any);
+      mockGuestRegistration.countDocuments.mockResolvedValue(0 as any);
 
       const result = await validateGuestUniqueness(testEmail, invalidEventId);
 
@@ -205,9 +210,6 @@ describe("guestValidation middleware", () => {
       const emptyValues = ["", null, undefined];
 
       for (const value of emptyValues) {
-        // Mock findOne to not find anything for empty values
-        vi.mocked(GuestRegistration.findOne).mockResolvedValue(null);
-
         const result = await validateGuestUniqueness(
           value as any,
           "507f1f77bcf86cd799439011"

@@ -222,7 +222,8 @@ SystemConfigSchema.statics.initializeDefaults =
 // MODEL EXPORT
 // ============================================================================
 
-export const SystemConfig = mongoose.model<ISystemConfig, ISystemConfigModel>(
-  "SystemConfig",
-  SystemConfigSchema
-);
+export const SystemConfig = (mongoose.models.SystemConfig ||
+  mongoose.model<ISystemConfig, ISystemConfigModel>(
+    "SystemConfig",
+    SystemConfigSchema
+  )) as ISystemConfigModel;

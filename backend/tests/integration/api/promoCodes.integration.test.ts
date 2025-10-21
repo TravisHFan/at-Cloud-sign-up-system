@@ -691,14 +691,16 @@ describe("Promo Code System - Integration Tests", () => {
         .expect(201);
 
       expect(res.body.success).toBe(true);
-      expect(res.body.code).toBeDefined();
-      expect(res.body.code.type).toBe("staff_access");
-      expect(res.body.code.discountPercent).toBe(100);
-      expect(res.body.code.ownerId).toBe(targetUser._id.toString());
-      expect(res.body.code.allowedProgramIds).toBeUndefined(); // All programs
+      expect(res.body.data.code).toBeDefined();
+      expect(res.body.data.code.type).toBe("staff_access");
+      expect(res.body.data.code.discountPercent).toBe(100);
+      expect(res.body.data.code.ownerId).toBe(targetUser._id.toString());
+      expect(res.body.data.code.allowedProgramIds).toBeUndefined(); // All programs
 
       // Verify in database
-      const savedCode = await PromoCode.findOne({ code: res.body.code.code });
+      const savedCode = await PromoCode.findOne({
+        code: res.body.data.code.code,
+      });
       expect(savedCode).toBeDefined();
       expect(savedCode!.ownerId.toString()).toBe(targetUser._id.toString());
     });
@@ -732,7 +734,7 @@ describe("Promo Code System - Integration Tests", () => {
         .expect(201);
 
       expect(res.body.success).toBe(true);
-      expect(res.body.code.allowedProgramIds).toHaveLength(2);
+      expect(res.body.data.code.allowedProgramIds).toHaveLength(2);
     });
 
     test("creates staff code with expiration date", async () => {
@@ -762,8 +764,8 @@ describe("Promo Code System - Integration Tests", () => {
         .expect(201);
 
       expect(res.body.success).toBe(true);
-      expect(res.body.code.expiresAt).toBeDefined();
-      expect(new Date(res.body.code.expiresAt).toISOString()).toBe(
+      expect(res.body.data.code.expiresAt).toBeDefined();
+      expect(new Date(res.body.data.code.expiresAt).toISOString()).toBe(
         expiryDate.toISOString()
       );
     });

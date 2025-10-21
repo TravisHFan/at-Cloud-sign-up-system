@@ -86,8 +86,15 @@ describe("Server bootstrap scheduler guard (Option A)", () => {
   it("does not start scheduler when SCHEDULER_ENABLED is not true", async () => {
     await import("../../../src/index");
 
-    expect(mockCreateServer).toHaveBeenCalled();
-    expect(mockListen).toHaveBeenCalled();
+    // Wait for async operations to complete
+    await vi.waitFor(
+      () => {
+        expect(mockCreateServer).toHaveBeenCalled();
+        expect(mockListen).toHaveBeenCalled();
+      },
+      { timeout: 1000 }
+    );
+
     // Critical assertion: scheduler start was NOT called
     expect(mockStart).not.toHaveBeenCalled();
   });

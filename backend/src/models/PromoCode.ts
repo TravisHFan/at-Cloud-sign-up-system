@@ -407,9 +407,10 @@ promoCodeSchema.pre("save", function (this: IPromoCode, next) {
 
 // ==================== EXPORT ====================
 
-const PromoCode = mongoose.model<IPromoCode, IPromoCodeModel>(
-  "PromoCode",
-  promoCodeSchema
-);
+const PromoCode = (mongoose.models.PromoCode ||
+  mongoose.model<IPromoCode, IPromoCodeModel>(
+    "PromoCode",
+    promoCodeSchema
+  )) as IPromoCodeModel;
 
 export default PromoCode;

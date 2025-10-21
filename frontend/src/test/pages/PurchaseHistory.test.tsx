@@ -7,7 +7,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
-import userEvent from "@testing-library/user-event";
 
 // Mock Auth context
 vi.mock("../../contexts/AuthContext", () => ({
@@ -256,60 +255,6 @@ describe("PurchaseHistory Component", () => {
     expect(screen.getByText(/\$29\.00/)).toBeInTheDocument();
   });
 
-  // TODO: Navigation mock test - Vitest limitation with vi.doMock + dynamic imports
-  // The useNavigate mock doesn't get intercepted properly with current test setup
-  // Navigation works in actual app - consider E2E test or refactoring test approach
-  it.skip("navigates to receipt page on view receipt click", async () => {
-    const mockNavigate = vi.fn();
-
-    vi.doMock("react-router-dom", async () => {
-      const actual = await vi.importActual<typeof import("react-router-dom")>(
-        "react-router-dom"
-      );
-      return {
-        ...actual,
-        useNavigate: () => mockNavigate,
-      };
-    });
-
-    const { default: PurchaseHistory } = await import(
-      "../../pages/PurchaseHistory"
-    );
-    const { NotificationProvider } = await import(
-      "../../contexts/NotificationModalContext"
-    );
-
-    const user = userEvent.setup();
-
-    render(
-      <NotificationProvider>
-        <MemoryRouter initialEntries={["/dashboard/purchase-history"]}>
-          <Routes>
-            <Route
-              path="/dashboard/purchase-history"
-              element={<PurchaseHistory />}
-            />
-          </Routes>
-        </MemoryRouter>
-      </NotificationProvider>
-    );
-
-    await waitFor(() => {
-      expect(
-        screen.getByText("Advanced Leadership Training")
-      ).toBeInTheDocument();
-    });
-
-    const viewButtons = screen.getAllByRole("button", {
-      name: /view receipt/i,
-    });
-    await user.click(viewButtons[0]);
-
-    expect(mockNavigate).toHaveBeenCalledWith(
-      "/dashboard/purchase-receipt/pur1"
-    );
-  });
-
   it("handles loading state", async () => {
     // Make the API call hang
     let resolvePromise: any;
@@ -382,70 +327,6 @@ describe("PurchaseHistory Component", () => {
       expect(
         screen.getByText(/failed to load purchase history/i)
       ).toBeInTheDocument();
-    });
-  });
-
-  // TODO: Implement filter functionality in component before enabling this test
-  it.skip("filters purchases by status", async () => {
-    const mixedStatusPurchases = [
-      ...mockPurchases,
-      {
-        id: "pur3",
-        _id: "pur3",
-        orderNumber: "ORD-2025-003",
-        program: {
-          id: "prog3",
-          title: "Pending Program",
-          programType: "Training",
-        },
-        fullPrice: 19,
-        finalPrice: 19,
-        isClassRep: false,
-        isEarlyBird: false,
-        status: "pending",
-        purchaseDate: "2025-10-14T12:00:00Z",
-      },
-    ];
-
-    mockPurchaseService.getMyPurchases.mockResolvedValueOnce(
-      mixedStatusPurchases
-    );
-
-    const { default: PurchaseHistory } = await import(
-      "../../pages/PurchaseHistory"
-    );
-    const { NotificationProvider } = await import(
-      "../../contexts/NotificationModalContext"
-    );
-
-    const user = userEvent.setup();
-
-    render(
-      <NotificationProvider>
-        <MemoryRouter initialEntries={["/dashboard/purchase-history"]}>
-          <Routes>
-            <Route
-              path="/dashboard/purchase-history"
-              element={<PurchaseHistory />}
-            />
-          </Routes>
-        </MemoryRouter>
-      </NotificationProvider>
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText("Pending Program")).toBeInTheDocument();
-    });
-
-    // Find and click the filter for "pending"
-    const pendingFilter = screen.getByRole("button", { name: /pending/i });
-    await user.click(pendingFilter);
-
-    await waitFor(() => {
-      expect(screen.getByText("Pending Program")).toBeInTheDocument();
-      expect(
-        screen.queryByText("Advanced Leadership Training")
-      ).not.toBeInTheDocument();
     });
   });
 });

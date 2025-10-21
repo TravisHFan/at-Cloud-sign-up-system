@@ -128,6 +128,8 @@ describe("Security Middleware", () => {
         "Content-Type",
         "Authorization",
         "X-Requested-With",
+        "Cache-Control",
+        "Pragma",
       ]);
       expect(corsOptions.exposedHeaders).toEqual([
         "RateLimit-Limit",

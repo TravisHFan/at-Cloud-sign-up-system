@@ -3,6 +3,22 @@
 // If future consolidation desired, those can be merged here; for now we keep non-breaking.
 import mongoose from "mongoose";
 
+// Disable HTTP proxies for supertest/local requests
+// Prevents "Parse Error: Expected HTTP/" when proxy env vars are set
+// See: https://github.com/visionmedia/supertest/issues/556
+for (const key of [
+  "HTTP_PROXY",
+  "http_proxy",
+  "HTTPS_PROXY",
+  "https_proxy",
+  "ALL_PROXY",
+  "all_proxy",
+]) {
+  delete (process.env as any)[key];
+}
+// Explicitly disable proxying local addresses
+process.env.NO_PROXY = "localhost,127.0.0.1,::1";
+
 // Optional eager connection if VITEST_EAGER_DB=true (mostly for local developer speed on repeated runs)
 if (process.env.VITEST_EAGER_DB === "true") {
   (async () => {

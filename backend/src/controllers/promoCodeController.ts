@@ -184,7 +184,9 @@ export class PromoCodeController {
         } else if (
           promoCode.allowedProgramIds &&
           promoCode.allowedProgramIds.length > 0 &&
-          !promoCode.allowedProgramIds.some((id) => id.toString() === programId)
+          !promoCode.allowedProgramIds.some(
+            (id: mongoose.Types.ObjectId) => id.toString() === programId
+          )
         ) {
           message = "This staff code is not valid for this program.";
         }

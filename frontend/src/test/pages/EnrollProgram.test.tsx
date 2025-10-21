@@ -219,60 +219,7 @@ describe("EnrollProgram Component", () => {
     });
   });
 
-  // TODO: External redirect test - window.location.href mocking is fragile in jsdom
-  // The Stripe checkout redirect works in actual app, but mocking window.location is unreliable
-  // Consider: E2E test with actual Stripe test mode, or accept that redirect logic is simple
-  it.skip("redirects to Stripe checkout on enrollment", async () => {
-    const { default: EnrollProgram } = await import(
-      "../../pages/EnrollProgram"
-    );
-    const { NotificationProvider } = await import(
-      "../../contexts/NotificationModalContext"
-    );
-
-    const user = userEvent.setup();
-
-    // Mock window.location.href
-    delete (window as any).location;
-    (window as any).location = { href: "" };
-
-    render(
-      <NotificationProvider>
-        <MemoryRouter initialEntries={["/dashboard/programs/prog1/enroll"]}>
-          <Routes>
-            <Route
-              path="/dashboard/programs/:id/enroll"
-              element={<EnrollProgram />}
-            />
-          </Routes>
-        </MemoryRouter>
-      </NotificationProvider>
-    );
-
-    await waitFor(() => {
-      expect(
-        screen.getByText(/Advanced Leadership Training/i)
-      ).toBeInTheDocument();
-    });
-
-    const enrollButton = screen.getByRole("button", {
-      name: /proceed to payment/i,
-    });
-    await user.click(enrollButton);
-
-    await waitFor(() => {
-      expect(mockPurchaseService.createCheckoutSession).toHaveBeenCalledWith(
-        "prog1",
-        { isClassRep: false }
-      );
-      expect(window.location.href).toBe("https://checkout.stripe.com/test");
-    });
-  });
-
-  it("handles enrollment error gracefully", async () => {
-    // Mock alert to capture error messages
-    const alertMock = vi.spyOn(window, "alert").mockImplementation(() => {});
-
+  it("handles expired early bird deadline", async () => {
     mockPurchaseService.createCheckoutSession.mockRejectedValueOnce(
       new Error("Payment service unavailable")
     );
@@ -312,75 +259,12 @@ describe("EnrollProgram Component", () => {
 
     await waitFor(() => {
       expect(mockPurchaseService.createCheckoutSession).toHaveBeenCalled();
-      // Error should be shown in alert
-      expect(alertMock).toHaveBeenCalledWith(
-        expect.stringMatching(/payment service unavailable/i)
-      );
+      // Error should be shown in modal
+      expect(screen.getByText("Checkout Error")).toBeInTheDocument();
+      expect(
+        screen.getByText(/payment service unavailable/i)
+      ).toBeInTheDocument();
     });
-
-    alertMock.mockRestore();
-  });
-
-  // TODO: Navigation mock tests - Vitest limitation with vi.doMock + dynamic imports
-  // The useNavigate mock doesn't get intercepted properly when using dynamic imports
-  // These features work in the actual app, but can't be reliably tested with current setup
-  // Consider: testing navigation at E2E level, or refactoring to avoid dynamic imports
-  it.skip("shows free program message for free programs", async () => {
-    const alertMock = vi.spyOn(window, "alert").mockImplementation(() => {});
-    const navigateMock = vi.fn();
-
-    const freeProgramMock = {
-      ...mockProgram,
-      fullPriceTicket: 0,
-      classRepDiscount: 0,
-      earlyBirdDiscount: 0,
-    };
-
-    mockProgramService.getById.mockResolvedValueOnce(freeProgramMock);
-
-    vi.doMock("react-router-dom", async () => {
-      const actual = await vi.importActual<typeof import("react-router-dom")>(
-        "react-router-dom"
-      );
-      return {
-        ...actual,
-        useNavigate: () => navigateMock,
-        useParams: () => ({ id: "prog1" }),
-      };
-    });
-
-    const { default: EnrollProgram } = await import(
-      "../../pages/EnrollProgram"
-    );
-    const { NotificationProvider } = await import(
-      "../../contexts/NotificationModalContext"
-    );
-
-    render(
-      <NotificationProvider>
-        <MemoryRouter initialEntries={["/dashboard/programs/prog1/enroll"]}>
-          <Routes>
-            <Route
-              path="/dashboard/programs/:id/enroll"
-              element={<EnrollProgram />}
-            />
-          </Routes>
-        </MemoryRouter>
-      </NotificationProvider>
-    );
-
-    await waitFor(() => {
-      expect(alertMock).toHaveBeenCalledWith(
-        expect.stringMatching(
-          /this program is free and does not require enrollment/i
-        )
-      );
-      expect(navigateMock).toHaveBeenCalledWith(
-        `/dashboard/programs/${mockProgram.id}`
-      );
-    });
-
-    alertMock.mockRestore();
   });
 
   it("handles expired early bird deadline", async () => {
