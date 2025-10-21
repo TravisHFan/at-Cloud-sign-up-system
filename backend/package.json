@@ -36,7 +36,10 @@
     "mongo:status": "mongosh --quiet --eval 'db.serverStatus().connections'",
     "mongo:health": "mongosh --quiet --eval 'db.adminCommand({ ping: 1 })'",
     "mongo:cache": "mongosh --quiet --eval 'db.serverStatus().wiredTiger.cache' | grep -E 'bytes currently|maximum bytes configured'",
-    "mongo:logs": "tail -100 /opt/homebrew/var/log/mongodb/mongo.log"
+    "mongo:logs": "tail -100 /opt/homebrew/var/log/mongodb/mongo.log",
+    "clean-install": "rm -rf node_modules && npm install",
+    "pre-deploy": "npm run clean-install && npm run verify && npm run build && npm test",
+    "check-deps": "npm ls --depth=0"
   },
   "keywords": [
     "nodejs",

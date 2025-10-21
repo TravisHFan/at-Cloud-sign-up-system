@@ -8,6 +8,29 @@ Full-stack event and workshop sign-up platform (Node/Express + React/TypeScript)
 - Dev servers: backend on 5001, frontend on 5173 (proxy to backend)
 - Health checks: see `docs/DEV_HEALTH_CHECKS.md`
 
+## Pre-Deployment Checklist
+
+**Before deploying to production**, run:
+
+```bash
+npm run pre-deploy
+```
+
+This will:
+
+1. Clean install dependencies (catches missing packages)
+2. Run lint + type-check
+3. Build production bundles
+4. Run all tests
+
+For more details, see `docs/PRE_DEPLOYMENT_CHECKLIST.md`
+
+**Quick checks**:
+
+- `npm run verify` - Lint + type-check only
+- `npm run check-deps` - List all dependencies
+- `npm run clean-install` - Fresh install both workspaces
+
 ## Testing
 
 - Run the full test suite from the repo root: `npm test`

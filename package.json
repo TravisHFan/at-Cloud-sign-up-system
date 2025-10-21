@@ -22,7 +22,12 @@
     "verify:local": "npm run -s verify && npm run -s check:no-only",
     "docker:dev": "docker-compose -f docker-compose.dev.yml up",
     "docker:dev:build": "docker-compose -f docker-compose.dev.yml up --build",
-    "docker:down": "docker-compose -f docker-compose.dev.yml down"
+    "docker:down": "docker-compose -f docker-compose.dev.yml down",
+    "clean-install:frontend": "cd frontend && rm -rf node_modules && npm install",
+    "clean-install:backend": "cd backend && rm -rf node_modules && npm install",
+    "clean-install": "npm run clean-install:backend && npm run clean-install:frontend",
+    "pre-deploy": "npm run clean-install && npm run verify && npm run build && npm test",
+    "check-deps": "cd backend && npm ls --depth=0 && cd ../frontend && npm ls --depth=0"
   },
   "dependencies": {
     "concurrently": "^8.2.2"

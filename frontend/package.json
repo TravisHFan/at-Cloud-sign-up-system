@@ -15,12 +15,16 @@
     "test:verbose": "NODE_OPTIONS=--max-old-space-size=4096 vitest run --reporter=verbose",
     "test:coverage": "vitest --coverage",
     "test:ui": "vitest --ui",
-    "type-check": "tsc -b --pretty false"
+    "type-check": "tsc -b --pretty false",
+    "clean-install": "rm -rf node_modules && npm install",
+    "pre-deploy": "npm run clean-install && npm run verify && npm run build && npm test",
+    "check-deps": "npm ls --depth=0"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "^5.1.1",
     "@stripe/stripe-js": "^8.0.0",
+    "date-fns": "^2.30.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-hook-form": "^7.60.0",
