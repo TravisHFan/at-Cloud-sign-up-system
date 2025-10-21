@@ -33,7 +33,10 @@ Programs serve as containers for related events, enabling:
 interface Program {
   _id: string;
   title: string;
-  programType: "EMBA Mentor Circles" | "Effective Communication Workshops";
+  programType:
+    | "EMBA Mentor Circles"
+    | "Effective Communication Workshops"
+    | "Marketplace Church Incubator Program (MCIP)";
   period: {
     startYear: number;
     startMonth: number; // 1-12

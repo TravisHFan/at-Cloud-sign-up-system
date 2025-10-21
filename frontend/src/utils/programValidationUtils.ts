@@ -1,3 +1,5 @@
+import { isValidProgramType } from "../constants/programTypes";
+
 export interface FieldValidation {
   isValid: boolean;
   message: string;
@@ -58,12 +60,8 @@ function validateProgramType(programType: string): FieldValidation {
     };
   }
 
-  // Check if provided value is in allowed program types
-  const validTypes = [
-    "EMBA Mentor Circles",
-    "Effective Communication Workshops",
-  ];
-  if (!validTypes.includes(programType)) {
+  // Check if provided value is in allowed program types using centralized validation
+  if (!isValidProgramType(programType)) {
     return {
       isValid: false,
       message: "Invalid program type selected",

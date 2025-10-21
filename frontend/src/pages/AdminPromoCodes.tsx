@@ -25,6 +25,7 @@ import ConfirmationModal from "../components/common/ConfirmationModal";
 import UserSelectionModal, {
   type SelectedUser,
 } from "../components/admin/UserSelectionModal";
+import type { ProgramType } from "../constants/programTypes";
 
 type AdminTabType = "all" | "create-staff" | "bundle-config";
 
@@ -53,7 +54,7 @@ interface ProgramDTO {
   _id?: string;
   id: string;
   title: string;
-  programType: "EMBA Mentor Circles" | "Effective Communication Workshops";
+  programType: ProgramType;
   hostedBy?: string;
   period?: {
     startYear?: string;

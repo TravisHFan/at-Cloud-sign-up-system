@@ -13,7 +13,10 @@ interface IUserRefLite {
 
 export interface IProgram extends Document {
   title: string;
-  programType: "EMBA Mentor Circles" | "Effective Communication Workshops";
+  programType:
+    | "EMBA Mentor Circles"
+    | "Effective Communication Workshops"
+    | "Marketplace Church Incubator Program (MCIP)";
   hostedBy?: string;
   period?: {
     startYear?: string;
@@ -77,7 +80,11 @@ const programSchema = new Schema<IProgram>(
     programType: {
       type: String,
       required: true,
-      enum: ["EMBA Mentor Circles", "Effective Communication Workshops"],
+      enum: [
+        "EMBA Mentor Circles",
+        "Effective Communication Workshops",
+        "Marketplace Church Incubator Program (MCIP)",
+      ],
     },
     hostedBy: {
       type: String,

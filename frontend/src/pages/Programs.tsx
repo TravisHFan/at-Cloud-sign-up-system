@@ -7,13 +7,14 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { programService, purchaseService } from "../services/api";
 import { useAuth } from "../hooks/useAuth";
+import type { ProgramType } from "../constants/programTypes";
 
 // Card model for UI
 interface ProgramCard {
   id: string;
   name: string;
   timeSpan: string;
-  type: "EMBA Mentor Circles" | "Effective Communication Workshops";
+  type: ProgramType;
   isFree?: boolean;
   hasAccess?: boolean; // Whether user has access (admin, mentor, purchased, or free)
   accessReason?: "admin" | "mentor" | "free" | "purchased" | "not_purchased";
@@ -37,6 +38,14 @@ const getProgramTypeColors = (type: ProgramCard["type"]) => {
         title: "group-hover:text-orange-700",
         dot: "bg-orange-500 group-hover:bg-orange-700",
         shadow: "hover:shadow-orange-200/50",
+      };
+    case "Marketplace Church Incubator Program (MCIP)":
+      return {
+        card: "bg-gradient-to-br from-purple-50 to-violet-100 border-purple-200 hover:from-purple-100 hover:to-violet-200",
+        badge: "bg-purple-100 text-purple-800 border-purple-300",
+        title: "group-hover:text-purple-700",
+        dot: "bg-purple-500 group-hover:bg-purple-700",
+        shadow: "hover:shadow-purple-200/50",
       };
     default:
       return {

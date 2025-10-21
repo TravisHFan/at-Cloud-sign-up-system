@@ -18,11 +18,12 @@ import { LoadingSpinner } from "../components/ui/LoadingStates";
 import { useAuth } from "../contexts/AuthContext";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import { ProgramParticipants } from "../components/program/ProgramParticipants";
+import type { ProgramType } from "../constants/programTypes";
 
 type Program = {
   id: string;
   title: string;
-  programType: "EMBA Mentor Circles" | "Effective Communication Workshops";
+  programType: ProgramType;
   hostedBy?: string;
   period?: {
     startYear?: string;

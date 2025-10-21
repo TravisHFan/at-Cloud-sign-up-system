@@ -7,6 +7,7 @@ import OrganizerSelection from "../components/events/OrganizerSelection";
 import ValidationIndicator from "../components/events/ValidationIndicator";
 import { fileService, programService } from "../services/api";
 import { formatCurrency } from "../utils/currency";
+import { getProgramTypes } from "../constants/programTypes";
 
 interface Mentor {
   id: string;
@@ -75,10 +76,8 @@ interface ProgramFormData {
   earlyBirdDiscount?: number | undefined;
 }
 
-const PROGRAM_TYPES = [
-  "EMBA Mentor Circles",
-  "Effective Communication Workshops",
-];
+// Use centralized program types constant
+const PROGRAM_TYPES = getProgramTypes();
 
 // Generate years from current year to 5 years in the future
 const currentYear = new Date().getFullYear();
@@ -221,9 +220,7 @@ export default function CreateNewProgram() {
       // Prepare program payload based on program type
       const payload: ProgramPayload = {
         title: data.title,
-        programType: data.programType as
-          | "EMBA Mentor Circles"
-          | "Effective Communication Workshops",
+        programType: data.programType,
         hostedBy: data.hostedBy,
         period: {
           startYear: data.startYear,

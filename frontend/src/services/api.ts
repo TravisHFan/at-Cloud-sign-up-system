@@ -10,6 +10,7 @@ import type {
 import type { User as AppUser } from "../types";
 import type { MyEventStats, MyEventRegistrationItem } from "../types/myEvents";
 import type { Notification, SystemMessage } from "../types/notification";
+import type { ProgramType } from "../constants/programTypes";
 import { handleSessionExpired } from "./session";
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:5001/api";
@@ -469,7 +470,7 @@ class ApiClient {
     Array<{
       id: string;
       title: string;
-      programType: "EMBA Mentor Circles" | "Effective Communication Workshops";
+      programType: ProgramType;
       hostedBy?: string;
       period?: {
         startYear?: string;
@@ -523,7 +524,7 @@ class ApiClient {
     type ProgramDTO = {
       id: string;
       title: string;
-      programType: "EMBA Mentor Circles" | "Effective Communication Workshops";
+      programType: ProgramType;
       hostedBy?: string;
       period?: {
         startYear?: string;

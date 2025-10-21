@@ -32,15 +32,9 @@ const router = Router();
 router.get("/", searchLimiter, EventController.getAllEvents);
 // Time conflict check (public for quick client validation; read-only)
 router.get("/check-conflict", EventController.checkTimeConflict);
-router.get(
-  "/:id",
-  authenticateOptional,
-  validateObjectId,
-  handleValidationErrors,
-  EventController.getEventById
-);
 
 // Download ICS calendar file for event (no authentication required)
+// IMPORTANT: This must come BEFORE /:id route to avoid route matching conflicts
 router.get(
   "/:id/calendar",
   validateObjectId,
@@ -90,6 +84,15 @@ router.get(
       });
     }
   }
+);
+
+// Get single event by ID
+router.get(
+  "/:id",
+  authenticateOptional,
+  validateObjectId,
+  handleValidationErrors,
+  EventController.getEventById
 );
 
 // Batch status update (can be called by admins or as a maintenance endpoint)

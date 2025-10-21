@@ -8,6 +8,7 @@ import { useProgramValidation } from "../hooks/useProgramValidation";
 import OrganizerSelection from "../components/events/OrganizerSelection";
 import ValidationIndicator from "../components/events/ValidationIndicator";
 import { fileService, programService } from "../services/api";
+import { getProgramTypes, type ProgramType } from "../constants/programTypes";
 
 interface Mentor {
   id: string;
@@ -56,7 +57,7 @@ type MentorPayload = {
 
 type ProgramUpdatePayload = {
   title: string;
-  programType: "EMBA Mentor Circles" | "Effective Communication Workshops";
+  programType: ProgramType;
   hostedBy?: string;
   period: {
     startYear?: string;
@@ -77,10 +78,8 @@ type ProgramUpdatePayload = {
   classRepLimit?: number;
 };
 
-const PROGRAM_TYPES = [
-  "EMBA Mentor Circles",
-  "Effective Communication Workshops",
-];
+// Use centralized program types constant
+const PROGRAM_TYPES = getProgramTypes();
 
 // Generate years from current year to 5 years in the future
 const currentYear = new Date().getFullYear();
@@ -291,9 +290,7 @@ export default function EditProgram() {
         setLoading(true);
         const program = (await programService.getById(id)) as {
           title?: string;
-          programType?:
-            | "EMBA Mentor Circles"
-            | "Effective Communication Workshops";
+          programType?: ProgramType;
           hostedBy?: string;
           period?: {
             startYear?: string;
@@ -489,9 +486,7 @@ export default function EditProgram() {
       // Prepare program payload based on program type
       const payload: ProgramUpdatePayload = {
         title: data.title,
-        programType: data.programType as
-          | "EMBA Mentor Circles"
-          | "Effective Communication Workshops",
+        programType: data.programType as ProgramType,
         hostedBy: data.hostedBy,
         period: {
           startYear: data.startYear,
