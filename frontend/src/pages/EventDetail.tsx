@@ -2537,32 +2537,7 @@ export default function EventDetail() {
           )}
           {/* Add to Calendar button - available to all users */}
           <button
-            onClick={async () => {
-              try {
-                const response = await fetch(
-                  `/api/events/${event.id}/calendar`
-                );
-                if (!response.ok) {
-                  throw new Error("Failed to download calendar file");
-                }
-
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const link = document.createElement("a");
-                link.href = url;
-                link.download = `${event.title.replace(
-                  /[^a-zA-Z0-9]/g,
-                  "_"
-                )}.ics`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                window.URL.revokeObjectURL(url);
-              } catch (error) {
-                console.error("Error downloading calendar file:", error);
-                // You could add a toast notification here if you have one
-              }
-            }}
+            onClick={handleDownloadCalendar}
             className="inline-flex items-center px-4 py-2 border border-blue-600 shadow-sm text-sm font-medium rounded-md text-blue-600 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors h-10"
           >
             <Icon name="calendar" className="h-4 w-4 mr-1.5" />
