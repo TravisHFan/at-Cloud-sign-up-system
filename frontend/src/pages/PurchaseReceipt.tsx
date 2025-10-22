@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { purchaseService } from "../services/api";
 import { formatCurrency } from "../utils/currency";
 
@@ -47,10 +47,22 @@ interface PurchaseReceipt {
 export default function PurchaseReceipt() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const printRef = useRef<HTMLDivElement>(null);
   const [receipt, setReceipt] = useState<PurchaseReceipt | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Determine if we came from Income History based on the URL pattern
+  const isFromIncomeHistory = location.pathname.includes("/purchases/");
+
+  const backPath = isFromIncomeHistory
+    ? "/dashboard/income-history"
+    : "/dashboard/purchase-history";
+
+  const backLabel = isFromIncomeHistory
+    ? "Back to Income History"
+    : "Back to Purchase History";
 
   useEffect(() => {
     const loadReceipt = async () => {
@@ -98,10 +110,10 @@ export default function PurchaseReceipt() {
             </h2>
             <p className="text-red-700">{error || "Receipt not found"}</p>
             <button
-              onClick={() => navigate("/dashboard/purchase-history")}
+              onClick={() => navigate(backPath)}
               className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
             >
-              Back to Purchase History
+              {backLabel}
             </button>
           </div>
         </div>
@@ -135,7 +147,7 @@ export default function PurchaseReceipt() {
       <div className="print-hide bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
           <button
-            onClick={() => navigate("/dashboard/purchase-history")}
+            onClick={() => navigate(backPath)}
             className="flex items-center text-gray-600 hover:text-gray-900"
           >
             <svg
@@ -151,7 +163,7 @@ export default function PurchaseReceipt() {
                 d="M10 19l-7-7m0 0l7-7m-7 7h18"
               />
             </svg>
-            Back to Purchase History
+            {backLabel}
           </button>
           <button
             onClick={handlePrint}

@@ -23,8 +23,10 @@ export default function ActionDropdown({
   isMobile = false,
 }: ActionDropdownProps) {
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
 
+  // Update dropdown position when it opens
   useEffect(() => {
     if (isOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
@@ -63,12 +65,15 @@ export default function ActionDropdown({
       {/* Dropdown Menu */}
       {isOpen && (
         <div
+          ref={dropdownRef}
           className="fixed w-48 bg-white rounded-md shadow-lg border border-gray-200 z-[9999]"
           style={{
             top: `${dropdownPosition.top}px`,
             left: `${dropdownPosition.left}px`,
             transform: showUpward ? "translateY(-100%)" : "none",
+            pointerEvents: "auto",
           }}
+          onClick={(e) => e.stopPropagation()}
         >
           <div className="py-1">
             {actions.length > 0 ? (
@@ -79,14 +84,19 @@ export default function ActionDropdown({
                     e.stopPropagation();
                     if (!action.disabled) {
                       action.onClick();
+                      // Close dropdown after action
+                      onToggle(userId);
                     }
                   }}
                   disabled={action.disabled}
                   className={`block w-full text-left px-4 py-2 text-sm transition-colors ${
                     action.className
                   } ${
-                    action.disabled ? "cursor-not-allowed" : "cursor-pointer"
+                    action.disabled
+                      ? "cursor-not-allowed opacity-50"
+                      : "cursor-pointer hover:bg-gray-100"
                   }`}
+                  type="button"
                 >
                   {action.label}
                 </button>
