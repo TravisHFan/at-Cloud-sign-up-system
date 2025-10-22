@@ -76,6 +76,7 @@ function sanitizeBaseURL(url: string): string {
 // Minimal payload shape used in tests for updateEvent
 export type UpdateEventPayload = Record<string, unknown> & {
   organizerDetails: unknown[];
+  forceDeleteRegistrations?: boolean; // Force delete all registrations when applying template
 };
 
 // Minimal guest summary for admin views and token-based management
@@ -1015,12 +1016,22 @@ class ApiClient {
       method: "POST",
       body: JSON.stringify({ code, programId }),
     });
-    return (
-      res.data || {
-        valid: false,
-        message: res.message || "Validation failed",
-      }
-    );
+
+    // Backend returns validation result directly at top level (not wrapped in data field)
+    // Response: {success, valid, message, discount?, code?}
+    const response = res as unknown as {
+      valid: boolean;
+      discount?: { type: "amount" | "percent"; value: number };
+      code?: Record<string, unknown>; // Use flexible type since we just pass it through
+      message: string;
+    };
+
+    return {
+      valid: response.valid || false,
+      discount: response.discount,
+      promoCode: response.code as any, // Backend returns full code object
+      message: response.message || "Validation failed",
+    };
   }
 
   /**
@@ -1216,6 +1227,106 @@ class ApiClient {
 
     if (!res.data) {
       throw new Error(res.message || "Failed to create staff promo code");
+    }
+
+    return res.data;
+  }
+
+  /**
+   * Create a general staff promo code (Admin only)
+   * POST /api/promo-codes/staff/general
+   */
+  async createGeneralStaffPromoCode(payload: {
+    description: string;
+    discountPercent: number;
+    expiresAt?: string;
+    isGeneral: boolean;
+  }): Promise<{
+    code: {
+      _id: string;
+      code: string;
+      type: "staff_access";
+      discountPercent: number;
+      description?: string;
+      allowedProgramIds?: string[];
+      isActive: boolean;
+      isUsed: boolean;
+      expiresAt?: string;
+      createdAt: string;
+      createdBy: string;
+      isGeneral?: boolean;
+      usageLimit?: number;
+    };
+  }> {
+    const res = await this.request<{
+      code: {
+        _id: string;
+        code: string;
+        type: "staff_access";
+        discountPercent: number;
+        description?: string;
+        allowedProgramIds?: string[];
+        isActive: boolean;
+        isUsed: boolean;
+        expiresAt?: string;
+        createdAt: string;
+        createdBy: string;
+        isGeneral?: boolean;
+        usageLimit?: number;
+      };
+    }>(`/promo-codes/staff/general`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.data) {
+      throw new Error(
+        res.message || "Failed to create general staff promo code"
+      );
+    }
+
+    return res.data;
+  }
+
+  /**
+   * Get usage history for a promo code (Admin only)
+   * GET /api/promo-codes/:id/usage-history
+   */
+  async getPromoCodeUsageHistory(codeId: string): Promise<{
+    code: string;
+    type: string;
+    isGeneral: boolean;
+    description?: string;
+    usageHistory: Array<{
+      userId: string;
+      userName: string;
+      userEmail: string;
+      usedAt: string;
+      programId?: string;
+      programTitle?: string;
+    }>;
+    usageCount: number;
+  }> {
+    const res = await this.request<{
+      code: string;
+      type: string;
+      isGeneral: boolean;
+      description?: string;
+      usageHistory: Array<{
+        userId: string;
+        userName: string;
+        userEmail: string;
+        usedAt: string;
+        programId?: string;
+        programTitle?: string;
+      }>;
+      usageCount: number;
+    }>(`/promo-codes/${codeId}/usage-history`);
+
+    if (!res.data) {
+      throw new Error(
+        res.message || "Failed to fetch promo code usage history"
+      );
     }
 
     return res.data;
@@ -1697,6 +1808,30 @@ class ApiClient {
     }
 
     throw new Error(response.message || "Failed to get event");
+  }
+
+  /**
+   * Check if an event has any registrations (user or guest)
+   * Used to determine if confirmation modal should be shown before deleting registrations
+   */
+  async hasRegistrations(id: string): Promise<{
+    hasRegistrations: boolean;
+    userCount: number;
+    guestCount: number;
+    totalCount: number;
+  }> {
+    const response = await this.request<{
+      hasRegistrations: boolean;
+      userCount: number;
+      guestCount: number;
+      totalCount: number;
+    }>(`/events/${id}/has-registrations`);
+
+    if (response.data) {
+      return response.data;
+    }
+
+    throw new Error(response.message || "Failed to check registrations");
   }
 
   async createEvent(eventData: unknown): Promise<EventData> {
@@ -2749,6 +2884,7 @@ export const eventService = {
   getEvents: (params?: Parameters<typeof apiClient.getEvents>[0]) =>
     apiClient.getEvents(params),
   getEvent: (id: string) => apiClient.getEvent(id),
+  hasRegistrations: (id: string) => apiClient.hasRegistrations(id),
   createEvent: (eventData: unknown) => apiClient.createEvent(eventData),
   updateEvent: (eventId: string, eventData: UpdateEventPayload) =>
     apiClient.updateEvent(eventId, eventData),

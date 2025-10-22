@@ -6,7 +6,13 @@ interface IPromoCodeMethods {
     valid: boolean;
     reason?: string;
   };
-  markAsUsed(programId: mongoose.Types.ObjectId): Promise<IPromoCode>;
+  markAsUsed(
+    programId: mongoose.Types.ObjectId,
+    userId?: mongoose.Types.ObjectId,
+    userName?: string,
+    userEmail?: string,
+    programTitle?: string
+  ): Promise<IPromoCode>;
   deactivate(): Promise<IPromoCode>;
   reactivate(): Promise<IPromoCode>;
 }
@@ -30,8 +36,12 @@ export interface IPromoCode extends Document, IPromoCodeMethods {
   discountAmount?: number; // For bundle_discount: dollar amount (e.g., 50 for $50 off)
   discountPercent?: number; // For staff_access: typically 100 (100% off)
 
+  // General code fields (for staff codes not tied to a specific user)
+  isGeneral?: boolean; // True for general staff codes (no owner, all programs, unlimited uses)
+  description?: string; // Description for general codes (required if isGeneral)
+
   // Ownership & restrictions
-  ownerId: mongoose.Types.ObjectId; // User who owns/can use this code
+  ownerId?: mongoose.Types.ObjectId; // User who owns/can use this code (optional for general codes)
   allowedProgramIds?: mongoose.Types.ObjectId[]; // For staff_access: specific programs (empty = all programs)
   excludedProgramId?: mongoose.Types.ObjectId; // For bundle_discount: can't use on the program that generated this code
 
@@ -41,8 +51,16 @@ export interface IPromoCode extends Document, IPromoCodeMethods {
   expiresAt?: Date; // When this code expires (optional, no expiry if null)
 
   // Usage tracking
-  usedAt?: Date; // When the code was actually used
-  usedForProgramId?: mongoose.Types.ObjectId; // Which program it was used for
+  usedAt?: Date; // When the code was actually used (deprecated for general codes, use usageHistory)
+  usedForProgramId?: mongoose.Types.ObjectId; // Which program it was used for (deprecated for general codes)
+  usageHistory?: Array<{
+    userId: mongoose.Types.ObjectId;
+    userName: string;
+    userEmail: string;
+    usedAt: Date;
+    programId?: mongoose.Types.ObjectId;
+    programTitle?: string;
+  }>; // For general staff codes: track all users who used this code
 
   // Metadata
   createdAt: Date;
@@ -113,10 +131,33 @@ const promoCodeSchema = new Schema<
         message: "Staff access codes must have a discountPercent",
       },
     },
+    isGeneral: {
+      type: Boolean,
+      default: false,
+      index: true, // For filtering general codes
+    },
+    description: {
+      type: String,
+      trim: true,
+      maxlength: [500, "Description cannot exceed 500 characters"],
+      validate: {
+        validator: function (this: IPromoCode, value: string | undefined) {
+          // Description is required for general codes
+          if (this.isGeneral) {
+            return value !== undefined && value.length > 0;
+          }
+          return true;
+        },
+        message: "Description is required for general codes",
+      },
+    },
     ownerId: {
       type: Schema.Types.ObjectId,
       ref: "User",
-      required: [true, "Owner ID is required"],
+      required: function (this: IPromoCode) {
+        // ownerId is required for personal codes, but not for general codes
+        return !this.isGeneral;
+      },
       index: true, // Frequently query codes by owner
     },
     allowedProgramIds: {
@@ -210,6 +251,52 @@ const promoCodeSchema = new Schema<
         message: "usedForProgramId can only be set when isUsed is true",
       },
     },
+    usageHistory: {
+      type: [
+        {
+          userId: {
+            type: Schema.Types.ObjectId,
+            ref: "User",
+            required: true,
+          },
+          userName: {
+            type: String,
+            required: true,
+            trim: true,
+          },
+          userEmail: {
+            type: String,
+            required: true,
+            trim: true,
+            lowercase: true,
+          },
+          usedAt: {
+            type: Date,
+            required: true,
+            default: Date.now,
+          },
+          programId: {
+            type: Schema.Types.ObjectId,
+            ref: "Program",
+          },
+          programTitle: {
+            type: String,
+            trim: true,
+          },
+        },
+      ],
+      default: [],
+      validate: {
+        validator: function (this: IPromoCode) {
+          // Only general staff codes should have usage history
+          if (this.usageHistory && this.usageHistory.length > 0) {
+            return this.isGeneral === true;
+          }
+          return true;
+        },
+        message: "Only general staff codes can have usage history",
+      },
+    },
     createdBy: {
       type: String,
       required: [true, "createdBy is required"],
@@ -262,8 +349,8 @@ promoCodeSchema.methods.canBeUsedForProgram = function (
 ): { valid: boolean; reason?: string } {
   const programIdStr = programId.toString();
 
-  // Check if already used
-  if (this.isUsed) {
+  // Check if already used (skip for general codes - they can be reused)
+  if (this.isUsed && !this.isGeneral) {
     return { valid: false, reason: "Code has already been used" };
   }
 
@@ -310,11 +397,39 @@ promoCodeSchema.methods.canBeUsedForProgram = function (
 // Mark code as used
 promoCodeSchema.methods.markAsUsed = async function (
   this: IPromoCode,
-  programId: mongoose.Types.ObjectId
+  programId: mongoose.Types.ObjectId,
+  userId?: mongoose.Types.ObjectId,
+  userName?: string,
+  userEmail?: string,
+  programTitle?: string
 ): Promise<IPromoCode> {
-  this.isUsed = true;
-  this.usedAt = new Date();
-  this.usedForProgramId = programId;
+  if (this.isGeneral) {
+    // For general codes: append to usage history instead of marking as used
+    if (!userId || !userName || !userEmail) {
+      throw new Error(
+        "User information (userId, userName, userEmail) is required for general code usage tracking"
+      );
+    }
+
+    if (!this.usageHistory) {
+      this.usageHistory = [];
+    }
+
+    this.usageHistory.push({
+      userId,
+      userName,
+      userEmail,
+      usedAt: new Date(),
+      programId,
+      programTitle,
+    });
+  } else {
+    // For personal codes: mark as used (old behavior)
+    this.isUsed = true;
+    this.usedAt = new Date();
+    this.usedForProgramId = programId;
+  }
+
   return await this.save();
 };
 

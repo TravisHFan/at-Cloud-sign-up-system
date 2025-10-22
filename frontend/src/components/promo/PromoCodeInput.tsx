@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   CheckCircleIcon,
   XCircleIcon,
@@ -40,6 +40,15 @@ export default function PromoCodeInput({
   const [manualCode, setManualCode] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [isValidating, setIsValidating] = useState(false);
+
+  // Clear input fields when a code is successfully applied
+  useEffect(() => {
+    if (appliedCode) {
+      setSelectedCode("");
+      setManualCode("");
+      setError("");
+    }
+  }, [appliedCode]);
 
   // Filter out used codes
   const validCodes = availableCodes.filter((code) => !code.isUsed);
@@ -98,7 +107,18 @@ export default function PromoCodeInput({
         );
 
         if (result.valid && result.discount) {
-          const discountAmountInCents = result.discount.value;
+          let discountAmountInCents = 0;
+
+          if (result.discount.type === "amount") {
+            // Fixed dollar amount (e.g., bundle discount)
+            discountAmountInCents = result.discount.value;
+          } else if (result.discount.type === "percent") {
+            // Percentage discount (e.g., staff access)
+            discountAmountInCents = Math.round(
+              (programPrice * result.discount.value) / 100
+            );
+          }
+
           onApply(codeToApply, discountAmountInCents);
         } else {
           setError(result.message || "Invalid promo code");

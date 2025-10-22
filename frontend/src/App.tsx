@@ -54,6 +54,7 @@ import EditRolesTemplate from "./pages/EditRolesTemplate";
 import ViewRolesTemplate from "./pages/ViewRolesTemplate";
 import MyPromoCodes from "./pages/MyPromoCodes";
 import AdminPromoCodes from "./pages/AdminPromoCodes";
+import PromoCodeDetail from "./pages/PromoCodeDetail";
 import SessionExpiredModal from "./components/common/SessionExpiredModal";
 
 function App() {
@@ -255,6 +256,17 @@ function App() {
                     allowedRoles={["Super Admin", "Administrator"]}
                   >
                     <AdminPromoCodes />
+                  </ProtectedRoute>
+                }
+              />
+              {/* Admin: Promo Code Detail - Super Admin & Administrator only */}
+              <Route
+                path="admin/promo-codes/:id"
+                element={
+                  <ProtectedRoute
+                    allowedRoles={["Super Admin", "Administrator"]}
+                  >
+                    <PromoCodeDetail />
                   </ProtectedRoute>
                 }
               />

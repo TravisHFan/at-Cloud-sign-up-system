@@ -1431,6 +1431,63 @@ export class EventController {
     }
   }
 
+  /**
+   * Check if an event has any registrations (user or guest)
+   * Used by frontend to determine if confirmation modal should be shown before deleting registrations
+   *
+   * GET /api/events/:id/has-registrations
+   *
+   * @returns { hasRegistrations: boolean, userCount: number, guestCount: number, totalCount: number }
+   */
+  static async hasRegistrations(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        res.status(400).json({
+          success: false,
+          message: "Invalid event ID.",
+        });
+        return;
+      }
+
+      // Count user registrations
+      const userCount = await Registration.countDocuments({ eventId: id });
+
+      // Count guest registrations
+      const { GuestRegistration } = await import("../models");
+      const guestCount = await GuestRegistration.countDocuments({
+        eventId: id,
+        status: "active", // Only count active guest registrations
+      });
+
+      const totalCount = userCount + guestCount;
+      const hasRegistrations = totalCount > 0;
+
+      res.status(200).json({
+        success: true,
+        data: {
+          hasRegistrations,
+          userCount,
+          guestCount,
+          totalCount,
+        },
+      });
+    } catch (error: unknown) {
+      console.error("Check registrations error:", error);
+      CorrelatedLogger.fromRequest(req, "EventController").error(
+        "hasRegistrations failed",
+        error as Error,
+        undefined,
+        { eventId: req.params?.id }
+      );
+      res.status(500).json({
+        success: false,
+        message: "Failed to check event registrations.",
+      });
+    }
+  }
+
   // Create new event
   static async createEvent(req: Request, res: Response): Promise<void> {
     try {
@@ -2585,6 +2642,57 @@ export class EventController {
     }
   }
 
+  /**
+   * Helper function to delete ALL registrations (both user and guest) for an event
+   * Used when applying a role template that replaces existing roles with registrations
+   *
+   * @param eventId - MongoDB ObjectId of the event
+   * @returns Promise resolving to deletion counts
+   */
+  private static async deleteAllRegistrationsForEvent(
+    eventId: string
+  ): Promise<{
+    deletedRegistrations: number;
+    deletedGuestRegistrations: number;
+  }> {
+    let deletedRegistrationsCount = 0;
+    let deletedGuestRegistrationsCount = 0;
+
+    // Delete all user registrations
+    try {
+      const deletionResult = await Registration.deleteMany({ eventId });
+      deletedRegistrationsCount = deletionResult.deletedCount || 0;
+    } catch (err) {
+      logger.error(
+        `Failed to delete user registrations for event ${eventId}`,
+        err as Error
+      );
+      throw err; // Fail-fast to avoid partial state
+    }
+
+    // Delete all guest registrations
+    try {
+      const { GuestRegistration } = await import("../models");
+      const guestDeletion = await GuestRegistration.deleteMany({ eventId });
+      deletedGuestRegistrationsCount = guestDeletion.deletedCount || 0;
+    } catch (err) {
+      logger.error(
+        `Failed to delete guest registrations for event ${eventId}`,
+        err as Error
+      );
+      throw err; // Fail-fast to avoid partial state
+    }
+
+    logger.info(
+      `Deleted ${deletedRegistrationsCount} user registrations and ${deletedGuestRegistrationsCount} guest registrations for event ${eventId}`
+    );
+
+    return {
+      deletedRegistrations: deletedRegistrationsCount,
+      deletedGuestRegistrations: deletedGuestRegistrationsCount,
+    };
+  }
+
   // Update event
   static async updateEvent(req: Request, res: Response): Promise<void> {
     try {
@@ -2792,133 +2900,173 @@ export class EventController {
 
       // Handle roles update if provided
       if (updateData.roles && Array.isArray(updateData.roles)) {
-        // Validate roles
-        const roleValidation = EventController.validateRoles(
-          updateData.roles.map(
-            (r: { name: string; maxParticipants: number }) => ({
-              name: r.name,
-              maxParticipants: r.maxParticipants,
-            })
-          )
-        );
-        if (roleValidation.valid === false) {
-          res.status(400).json({
-            success: false,
-            message: "Invalid roles.",
-            errors: roleValidation.errors,
-          });
-          return;
-        }
+        // Extract forceDeleteRegistrations flag from request body
+        const forceDeleteRegistrations =
+          typeof (req.body as { forceDeleteRegistrations?: unknown })
+            .forceDeleteRegistrations === "boolean"
+            ? Boolean(
+                (req.body as { forceDeleteRegistrations?: boolean })
+                  .forceDeleteRegistrations
+              )
+            : false;
 
-        // Server-side protection: prevent deleting roles that have existing registrations
-        // and prevent reducing capacity below current registrations (users + active guests)
-        // Defensive: if the query helper isn't available (e.g., isolated unit tests),
-        // skip these validations rather than failing the update.
-        try {
-          if (
-            !RegistrationQueryService ||
-            typeof RegistrationQueryService.getEventSignupCounts !== "function"
-          ) {
-            logger.warn(
-              "Signup count helper not available; skipping role deletion/capacity validations"
-            );
-          } else {
-            const signupCounts =
-              await RegistrationQueryService.getEventSignupCounts(id);
-            if (signupCounts) {
-              const currentRoleCounts = new Map(
-                signupCounts.roles.map((r) => [r.roleId, r.currentCount])
-              );
-              const newRolesById = new Map(
-                (
-                  updateData.roles as Array<{
-                    id?: string;
-                    name: string;
-                    maxParticipants: number;
-                  }>
-                ).map((r) => [r.id, r])
-              );
-
-              // 1) Deletion guard: if an existing role with registrations is missing in the update
-              const deletionConflicts: string[] = [];
-              for (const existingRole of event.roles as Array<{
-                id: string;
-                name: string;
-              }>) {
-                const currentCount =
-                  currentRoleCounts.get(existingRole.id) || 0;
-                if (currentCount > 0 && !newRolesById.has(existingRole.id)) {
-                  deletionConflicts.push(
-                    `Cannot delete role "${
-                      existingRole.name
-                    }" because it has ${currentCount} registrant${
-                      currentCount === 1 ? "" : "s"
-                    }.`
-                  );
-                }
-              }
-
-              if (deletionConflicts.length > 0) {
-                res.status(409).json({
-                  success: false,
-                  message:
-                    "One or more roles cannot be removed because they already have registrants.",
-                  errors: deletionConflicts,
-                });
-                return;
-              }
-
-              // 2) Capacity reduction guard: new capacity must be >= current registrations
-              const capacityConflicts: string[] = [];
-              for (const updatedRole of updateData.roles as Array<{
-                id?: string;
-                name: string;
-                maxParticipants: number;
-              }>) {
-                if (!updatedRole?.id) continue; // Newly added roles will have id; if not, skip capacity check
-                const currentCount = currentRoleCounts.get(updatedRole.id) || 0;
-                if (
-                  currentCount > 0 &&
-                  updatedRole.maxParticipants < currentCount
-                ) {
-                  capacityConflicts.push(
-                    `Cannot reduce capacity for role "${updatedRole.name}" below ${currentCount} (current registrations).`
-                  );
-                }
-              }
-
-              if (capacityConflicts.length > 0) {
-                res.status(409).json({
-                  success: false,
-                  message:
-                    "Capacity cannot be reduced below current registrations for one or more roles.",
-                  errors: capacityConflicts,
-                });
-                return;
-              }
-            }
-          }
-        } catch (err) {
-          // If signup counts lookup fails unexpectedly, fail-safe by rejecting the update
-          logger.error(
-            "Failed to validate role update against registrations",
-            err as Error
+        // If force delete flag is true, delete ALL registrations first
+        if (forceDeleteRegistrations) {
+          logger.info(
+            `Force deleting all registrations for event ${id} before applying template`
           );
-          // Be graceful in unit-test environments where mocks may hide the helper; allow update.
-          if (process.env.VITEST === "true") {
-            logger.warn(
-              "Proceeding with role update despite validation error under test environment"
+          try {
+            const { deletedRegistrations, deletedGuestRegistrations } =
+              await EventController.deleteAllRegistrationsForEvent(id);
+            logger.info(
+              `Successfully deleted ${deletedRegistrations} user registrations and ${deletedGuestRegistrations} guest registrations for event ${id}`
             );
-          } else {
+            // Continue with update - no validation guards needed since we deleted all registrations
+          } catch (err) {
+            logger.error(
+              `Failed to delete registrations for event ${id}`,
+              err as Error
+            );
             res.status(500).json({
               success: false,
               message:
-                "Failed to validate role changes due to an internal error. Please try again.",
+                "Failed to delete existing registrations. Please try again.",
             });
             return;
           }
+        } else {
+          // Normal path: validate roles against existing registrations
+          // Validate roles
+          const roleValidation = EventController.validateRoles(
+            updateData.roles.map(
+              (r: { name: string; maxParticipants: number }) => ({
+                name: r.name,
+                maxParticipants: r.maxParticipants,
+              })
+            )
+          );
+          if (roleValidation.valid === false) {
+            res.status(400).json({
+              success: false,
+              message: "Invalid roles.",
+              errors: roleValidation.errors,
+            });
+            return;
+          }
+
+          // Server-side protection: prevent deleting roles that have existing registrations
+          // and prevent reducing capacity below current registrations (users + active guests)
+          // Defensive: if the query helper isn't available (e.g., isolated unit tests),
+          // skip these validations rather than failing the update.
+          try {
+            if (
+              !RegistrationQueryService ||
+              typeof RegistrationQueryService.getEventSignupCounts !==
+                "function"
+            ) {
+              logger.warn(
+                "Signup count helper not available; skipping role deletion/capacity validations"
+              );
+            } else {
+              const signupCounts =
+                await RegistrationQueryService.getEventSignupCounts(id);
+              if (signupCounts) {
+                const currentRoleCounts = new Map(
+                  signupCounts.roles.map((r) => [r.roleId, r.currentCount])
+                );
+                const newRolesById = new Map(
+                  (
+                    updateData.roles as Array<{
+                      id?: string;
+                      name: string;
+                      maxParticipants: number;
+                    }>
+                  ).map((r) => [r.id, r])
+                );
+
+                // 1) Deletion guard: if an existing role with registrations is missing in the update
+                const deletionConflicts: string[] = [];
+                for (const existingRole of event.roles as Array<{
+                  id: string;
+                  name: string;
+                }>) {
+                  const currentCount =
+                    currentRoleCounts.get(existingRole.id) || 0;
+                  if (currentCount > 0 && !newRolesById.has(existingRole.id)) {
+                    deletionConflicts.push(
+                      `Cannot delete role "${
+                        existingRole.name
+                      }" because it has ${currentCount} registrant${
+                        currentCount === 1 ? "" : "s"
+                      }.`
+                    );
+                  }
+                }
+
+                if (deletionConflicts.length > 0) {
+                  res.status(409).json({
+                    success: false,
+                    message:
+                      "One or more roles cannot be removed because they already have registrants.",
+                    errors: deletionConflicts,
+                  });
+                  return;
+                }
+
+                // 2) Capacity reduction guard: new capacity must be >= current registrations
+                const capacityConflicts: string[] = [];
+                for (const updatedRole of updateData.roles as Array<{
+                  id?: string;
+                  name: string;
+                  maxParticipants: number;
+                }>) {
+                  if (!updatedRole?.id) continue; // Newly added roles will have id; if not, skip capacity check
+                  const currentCount =
+                    currentRoleCounts.get(updatedRole.id) || 0;
+                  if (
+                    currentCount > 0 &&
+                    updatedRole.maxParticipants < currentCount
+                  ) {
+                    capacityConflicts.push(
+                      `Cannot reduce capacity for role "${updatedRole.name}" below ${currentCount} (current registrations).`
+                    );
+                  }
+                }
+
+                if (capacityConflicts.length > 0) {
+                  res.status(409).json({
+                    success: false,
+                    message:
+                      "Capacity cannot be reduced below current registrations for one or more roles.",
+                    errors: capacityConflicts,
+                  });
+                  return;
+                }
+              }
+            }
+          } catch (err) {
+            // If signup counts lookup fails unexpectedly, fail-safe by rejecting the update
+            logger.error(
+              "Failed to validate role update against registrations",
+              err as Error
+            );
+            // Be graceful in unit-test environments where mocks may hide the helper; allow update.
+            if (process.env.VITEST === "true") {
+              logger.warn(
+                "Proceeding with role update despite validation error under test environment"
+              );
+            } else {
+              res.status(500).json({
+                success: false,
+                message:
+                  "Failed to validate role changes due to an internal error. Please try again.",
+              });
+              return;
+            }
+          }
         }
 
+        // Role merging logic (applies after validation or force deletion)
         if (Array.isArray(updateData.roles)) {
           // Merge existing roles by id to preserve openToPublic when omitted.
           const existingById = new Map<string, IEventRole>(

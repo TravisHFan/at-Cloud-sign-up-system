@@ -9,6 +9,7 @@ import OrganizerSelection from "../components/events/OrganizerSelection";
 import ProgramSelection from "../components/events/ProgramSelection";
 import ValidationIndicator from "../components/events/ValidationIndicator";
 import ConfirmationModal from "../components/common/ConfirmationModal";
+import { RegistrationDeletionConfirmModal } from "../components/RegistrationDeletionConfirmModal";
 import { EVENT_TYPES } from "../config/eventConstants";
 import { useAuth } from "../hooks/useAuth";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
@@ -304,6 +305,10 @@ export default function EditEvent() {
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const [highlightTemplateSelector, setHighlightTemplateSelector] =
     useState(false);
+  const [highlightRoleSection, setHighlightRoleSection] = useState(false);
+
+  // Track if a template was applied (for registration deletion confirmation)
+  const [templateApplied, setTemplateApplied] = useState(false);
 
   // Modal states for template confirmation and selection
   const [confirmResetModal, setConfirmResetModal] = useState<{
@@ -312,6 +317,21 @@ export default function EditEvent() {
     message: string;
     onConfirm: () => void;
   }>({ isOpen: false, title: "", message: "", onConfirm: () => {} });
+
+  // Registration deletion confirmation modal state
+  const [registrationDeletionModal, setRegistrationDeletionModal] = useState<{
+    isOpen: boolean;
+    registrationCount: number;
+    userCount: number;
+    guestCount: number;
+    pendingFormData: EventFormData | null;
+  }>({
+    isOpen: false,
+    registrationCount: 0,
+    userCount: 0,
+    guestCount: 0,
+    pendingFormData: null,
+  });
 
   // Track original published state & original format for predictive warning
   const originalPublishedRef = useRef<boolean | undefined>(undefined);
@@ -552,6 +572,9 @@ export default function EditEvent() {
 
           setSelectedOrganizers(coOrganizers);
         }
+
+        // Reset templateApplied flag when loading event
+        setTemplateApplied(false);
       } catch (error) {
         console.error("Error fetching event:", error);
         notification.error("Failed to load event data");
@@ -675,6 +698,10 @@ export default function EditEvent() {
     getValuesRef.current = getValues;
   }, [setValue, getValues]);
 
+  // Note: templateApplied flag is set when a template is applied and persists
+  // until the user saves. This ensures the registration deletion modal appears
+  // even if the user makes manual edits after applying a template.
+
   // Update form's organizer field whenever organizers change
   const handleOrganizersChange = (newOrganizers: Organizer[]) => {
     setSelectedOrganizers(newOrganizers);
@@ -719,6 +746,39 @@ export default function EditEvent() {
         title: "Selection Required",
       });
       return;
+    }
+
+    // Check if a template was applied (which replaces the entire role structure)
+    // If so, check for registrations and show confirmation modal if needed
+    // Manual edits (add/remove/reorder) are safe because:
+    // - Adding roles: new roles have no registrations
+    // - Removing roles: protected by disabled remove button if registrations exist
+    // - Reordering: registrations stay with their roles (by role ID)
+    if (templateApplied && id) {
+      try {
+        const response = await eventService.hasRegistrations(id);
+        if (response.hasRegistrations) {
+          // Show confirmation modal instead of proceeding
+          setRegistrationDeletionModal({
+            isOpen: true,
+            registrationCount: response.totalCount,
+            userCount: response.userCount,
+            guestCount: response.guestCount,
+            pendingFormData: data,
+          });
+          setIsSubmitting(false); // Reset submitting state
+          return; // Stop here - modal will handle the actual submission
+        }
+        // No registrations - proceed normally
+      } catch (error) {
+        console.error("Error checking registrations:", error);
+        notification.error(
+          "Failed to check event registrations. Please try again.",
+          { title: "Error" }
+        );
+        setIsSubmitting(false);
+        return;
+      }
     }
 
     try {
@@ -798,7 +858,12 @@ export default function EditEvent() {
       navigate(returnTo);
     } catch (error) {
       console.error("Error updating event:", error);
-      notification.error("Failed to update event. Please try again.", {
+      // Extract error message from the error object
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to update event. Please try again.";
+      notification.error(errorMessage, {
         title: "Update Failed",
       });
     } finally {
@@ -1656,6 +1721,7 @@ export default function EditEvent() {
                       );
                       setValue("roles", formattedRoles);
                       setShowTemplateSelector(false);
+                      setTemplateApplied(true); // Mark that a template was applied
                     }
                   }}
                   disabled={!selectedTemplateId}
@@ -1740,6 +1806,13 @@ export default function EditEvent() {
                                   })
                                 );
                                 setValue("roles", formattedRoles);
+                                setTemplateApplied(true); // Mark that a template was applied
+                                // Trigger highlight effect on role section
+                                setHighlightRoleSection(true);
+                                setTimeout(
+                                  () => setHighlightRoleSection(false),
+                                  1200
+                                );
                                 setConfirmResetModal({
                                   isOpen: false,
                                   title: "",
@@ -1812,7 +1885,13 @@ export default function EditEvent() {
                   </button>
                 </div>
 
-                <div className="space-y-4">
+                <div
+                  className={`space-y-4 transition-all duration-300 ${
+                    highlightRoleSection
+                      ? "ring-4 ring-blue-400 ring-opacity-75 shadow-lg scale-[1.02] rounded-lg p-1"
+                      : ""
+                  }`}
+                >
                   {customizeRoles && formRoles.length > 0 && (
                     <div className="flex justify-center">
                       <button
@@ -2243,6 +2322,130 @@ export default function EditEvent() {
         confirmText="Yes"
         cancelText="Cancel"
         type="warning"
+      />
+
+      {/* Confirmation Modal for registration deletion when applying template */}
+      <RegistrationDeletionConfirmModal
+        isOpen={registrationDeletionModal.isOpen}
+        registrationCount={registrationDeletionModal.registrationCount}
+        userCount={registrationDeletionModal.userCount}
+        guestCount={registrationDeletionModal.guestCount}
+        onCancel={() => {
+          setRegistrationDeletionModal({
+            isOpen: false,
+            registrationCount: 0,
+            userCount: 0,
+            guestCount: 0,
+            pendingFormData: null,
+          });
+          setIsSubmitting(false);
+        }}
+        onConfirm={async () => {
+          // User confirmed - proceed with update and force delete registrations
+          const formData = registrationDeletionModal.pendingFormData;
+          if (!formData) return;
+
+          try {
+            setIsSubmitting(true);
+
+            // Close modal first
+            setRegistrationDeletionModal({
+              isOpen: false,
+              registrationCount: 0,
+              userCount: 0,
+              guestCount: 0,
+              pendingFormData: null,
+            });
+
+            // Build payload with forceDeleteRegistrations flag
+            const normalizedDate = normalizeEventDate(formData.date);
+            const payload: EventUpdatePayload = {
+              title: formData.title,
+              type: formData.type,
+              format: formData.format,
+              date: normalizedDate,
+              endDate: formData.endDate || normalizedDate,
+              time: formData.time,
+              endTime: formData.endTime,
+              timeZone: formData.timeZone,
+              organizer: formData.organizer,
+              purpose: formData.purpose,
+              agenda: formData.agenda,
+              location: formData.location,
+              disclaimer: formData.disclaimer,
+              hostedBy: formData.hostedBy,
+              flyerUrl: deriveFlyerUrlForUpdate(
+                originalFlyerUrl,
+                formData.flyerUrl
+              ),
+              secondaryFlyerUrl: deriveFlyerUrlForUpdate(
+                originalSecondaryFlyerUrl,
+                formData.secondaryFlyerUrl
+              ),
+              programLabels:
+                (formData as { programLabels?: string[] }).programLabels || [],
+              roles: (formData.roles || []).map(
+                (r: FormRole & { startTime?: string; endTime?: string }) => ({
+                  id: r.id,
+                  name: r.name,
+                  description: r.description,
+                  agenda: r.agenda,
+                  maxParticipants: Number(r.maxParticipants || 0),
+                  startTime: r.startTime,
+                  endTime: r.endTime,
+                  openToPublic: r.openToPublic === true,
+                })
+              ),
+              organizerDetails: organizerDetails || [],
+              forceDeleteRegistrations: true, // IMPORTANT: Force delete all registrations
+            };
+
+            // Handle format-specific fields
+            if (
+              payload.format === "Online" ||
+              payload.format === "Hybrid Participation"
+            ) {
+              payload.zoomLink = formData.zoomLink || "";
+              payload.meetingId = formData.meetingId || "";
+              payload.passcode = formData.passcode || "";
+              if (payload.format === "Online") {
+                payload.location = "Online";
+              }
+            } else if (payload.format === "In-person") {
+              delete (payload as { zoomLink?: string }).zoomLink;
+              delete (payload as { meetingId?: string }).meetingId;
+              delete (payload as { passcode?: string }).passcode;
+            }
+
+            if (sendNotificationsPref === false) {
+              payload.suppressNotifications = true;
+            }
+
+            await eventService.updateEvent(id!, payload);
+            notification.success(
+              "Event updated successfully! All registrations have been removed.",
+              {
+                title: "Success",
+                autoCloseDelay: 3000,
+              }
+            );
+
+            const state =
+              (location.state as { returnTo?: string } | null) || null;
+            const returnTo = state?.returnTo || "/dashboard/upcoming";
+            navigate(returnTo);
+          } catch (error) {
+            console.error("Error updating event:", error);
+            const errorMessage =
+              error instanceof Error
+                ? error.message
+                : "An unexpected error occurred.";
+            notification.error(errorMessage, {
+              title: "Error",
+            });
+            setIsSubmitting(false);
+          }
+        }}
       />
     </div>
   );

@@ -41,6 +41,16 @@ router.post("/validate", PromoCodeController.validatePromoCode);
 router.get("/", requireAdmin, PromoCodeController.getAllPromoCodes);
 
 /**
+ * Get usage history for a specific promo code (admin only)
+ * Returns: { code, type, isGeneral, description, usageHistory[], usageCount }
+ */
+router.get(
+  "/:id/usage-history",
+  requireAdmin,
+  PromoCodeController.getPromoCodeUsageHistory
+);
+
+/**
  * Create a staff access promo code (admin only)
  * Body: {
  *   userId: string,
@@ -50,6 +60,23 @@ router.get("/", requireAdmin, PromoCodeController.getAllPromoCodes);
  * }
  */
 router.post("/staff", requireAdmin, PromoCodeController.createStaffCode);
+
+/**
+ * Create a general staff promo code (admin only)
+ * POST /api/promo-codes/staff/general
+ * Body: {
+ *   description: string,
+ *   discountPercent: number (0-100, typically 100),
+ *   expiresAt?: Date (optional expiration),
+ *   isGeneral: boolean (must be true)
+ * }
+ * Note: General codes have no owner, apply to all programs, unlimited uses
+ */
+router.post(
+  "/staff/general",
+  requireAdmin,
+  PromoCodeController.createGeneralStaffCode
+);
 
 /**
  * Get bundle discount configuration (admin only)

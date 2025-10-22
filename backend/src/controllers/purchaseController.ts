@@ -1,10 +1,11 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
-import { Purchase, Program, PromoCode } from "../models";
+import { Purchase, Program, PromoCode, User } from "../models";
 import type { IProgram } from "../models/Program";
 import type { IPromoCode } from "../models/PromoCode";
 import { createCheckoutSession as stripeCreateCheckoutSession } from "../services/stripeService";
 import { lockService } from "../services/LockService";
+import { TrioNotificationService } from "../services/notifications/TrioNotificationService";
 
 export class PurchaseController {
   /**
@@ -71,16 +72,19 @@ export class PurchaseController {
           return;
         }
 
-        // Verify code belongs to user (ALL promo codes are one-time, one-person)
-        if (
-          validatedPromoCode.ownerId.toString() !==
-          (userId as mongoose.Types.ObjectId).toString()
-        ) {
-          res.status(400).json({
-            success: false,
-            message: "This promo code does not belong to you.",
-          });
-          return;
+        // Verify code belongs to user (skip for general codes that have no owner)
+        if (!validatedPromoCode.isGeneral) {
+          if (
+            !validatedPromoCode.ownerId ||
+            validatedPromoCode.ownerId.toString() !==
+              (userId as mongoose.Types.ObjectId).toString()
+          ) {
+            res.status(400).json({
+              success: false,
+              message: "This promo code does not belong to you.",
+            });
+            return;
+          }
         }
 
         // Additional check for staff codes: verify allowedProgramIds if specified
@@ -313,7 +317,80 @@ export class PurchaseController {
 
             // Mark promo code as used
             if (validatedPromoCode) {
-              await validatedPromoCode.markAsUsed(program._id);
+              console.log(
+                `🔍 DEBUG: Promo code "${validatedPromoCode.code}" being marked as used`
+              );
+              console.log(
+                `🔍 DEBUG: isGeneral = ${validatedPromoCode.isGeneral}`
+              );
+              console.log(
+                `🔍 DEBUG: Full promo code object:`,
+                JSON.stringify(validatedPromoCode, null, 2)
+              );
+
+              await validatedPromoCode.markAsUsed(
+                program._id,
+                userId as mongoose.Types.ObjectId,
+                userName,
+                userEmail,
+                program.title
+              );
+
+              // Send notification to admins if it's a general staff code
+              if (validatedPromoCode.isGeneral) {
+                console.log(
+                  `✅ DEBUG: This IS a general code, sending admin notifications...`
+                );
+                try {
+                  // Find all administrators
+                  const admins = await User.find({
+                    role: { $in: ["Super Admin", "Administrator"] },
+                  }).select("_id");
+
+                  console.log(`🔍 DEBUG: Found ${admins.length} admin users`);
+                  const adminIds = admins.map((admin) => admin._id.toString());
+
+                  if (adminIds.length > 0) {
+                    console.log(
+                      `📤 DEBUG: Sending notification to ${adminIds.length} admins...`
+                    );
+                    await TrioNotificationService.createTrio({
+                      systemMessage: {
+                        title: "General Staff Code Used",
+                        content: `${userName} (${userEmail}) used general staff code "${validatedPromoCode.code}" for program "${program.title}".`,
+                        type: "announcement",
+                        priority: "medium",
+                        hideCreator: true, // System-generated notification, no sender
+                        metadata: {
+                          promoCodeId: (
+                            validatedPromoCode._id as mongoose.Types.ObjectId
+                          ).toString(),
+                          userId: (
+                            userId as mongoose.Types.ObjectId
+                          ).toString(),
+                          programId: program._id.toString(),
+                        },
+                      },
+                      recipients: adminIds,
+                    });
+                    console.log(
+                      `✅ DEBUG: Admin notification sent successfully!`
+                    );
+                  } else {
+                    console.log(`⚠️ DEBUG: No admin users found to notify`);
+                  }
+                } catch (notifyError) {
+                  console.error(
+                    "Failed to notify admins of general code usage:",
+                    notifyError
+                  );
+                  // Don't fail the purchase if notification fails
+                }
+              } else {
+                console.log(
+                  `❌ DEBUG: This is NOT a general code (isGeneral = ${validatedPromoCode.isGeneral}), skipping admin notification`
+                );
+              }
             }
 
             console.log(

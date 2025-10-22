@@ -87,6 +87,16 @@ router.get(
 );
 
 // Get single event by ID
+// Check if event has registrations (for template application confirmation)
+// IMPORTANT: This must come BEFORE /:id route to avoid route matching conflicts
+router.get(
+  "/:id/has-registrations",
+  authenticate,
+  validateObjectId,
+  handleValidationErrors,
+  EventController.hasRegistrations
+);
+
 router.get(
   "/:id",
   authenticateOptional,

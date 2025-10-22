@@ -199,15 +199,20 @@ export class PromoCodeController {
         return;
       }
 
-      // Check ownership for ALL promo codes (one-time, one-person)
+      // Check ownership for personal promo codes (skip for general codes)
       const userId = req.user._id as mongoose.Types.ObjectId;
-      if (promoCode.ownerId.toString() !== userId.toString()) {
-        res.status(200).json({
-          success: true,
-          valid: false,
-          message: "This promo code belongs to another user.",
-        });
-        return;
+      if (!promoCode.isGeneral) {
+        if (
+          !promoCode.ownerId ||
+          promoCode.ownerId.toString() !== userId.toString()
+        ) {
+          res.status(200).json({
+            success: true,
+            valid: false,
+            message: "This promo code belongs to another user.",
+          });
+          return;
+        }
       }
 
       // Valid code
@@ -335,6 +340,7 @@ export class PromoCodeController {
             type: code.type,
             discountAmount: code.discountAmount,
             discountPercent: code.discountPercent,
+            isGeneral: code.isGeneral,
             ownerId: ownerIdPopulated ? ownerIdPopulated._id : code.ownerId,
             ownerEmail: ownerIdPopulated?.email,
             ownerName: ownerIdPopulated
@@ -370,6 +376,65 @@ export class PromoCodeController {
       res.status(500).json({
         success: false,
         message: "Failed to fetch promo codes.",
+      });
+    }
+  }
+
+  /**
+   * Get usage history for a specific promo code (Admin only)
+   * GET /api/promo-codes/:id/usage-history
+   */
+  static async getPromoCodeUsageHistory(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      if (!req.user) {
+        res
+          .status(401)
+          .json({ success: false, message: "Authentication required." });
+        return;
+      }
+
+      const { id } = req.params;
+
+      // Validate ObjectId
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        res
+          .status(400)
+          .json({ success: false, message: "Invalid promo code ID." });
+        return;
+      }
+
+      // Find the promo code
+      const promoCode = await PromoCode.findById(id)
+        .populate("usageHistory.userId", "firstName lastName email username")
+        .populate("usageHistory.programId", "title");
+
+      if (!promoCode) {
+        res
+          .status(404)
+          .json({ success: false, message: "Promo code not found." });
+        return;
+      }
+
+      // Return usage history
+      res.status(200).json({
+        success: true,
+        data: {
+          code: promoCode.code,
+          type: promoCode.type,
+          isGeneral: promoCode.isGeneral || false,
+          description: promoCode.description,
+          usageHistory: promoCode.usageHistory || [],
+          usageCount: promoCode.usageHistory?.length || 0,
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching promo code usage history:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch usage history.",
       });
     }
   }
@@ -607,6 +672,105 @@ export class PromoCodeController {
       res.status(500).json({
         success: false,
         message: "Failed to create staff promo code.",
+      });
+    }
+  }
+
+  /**
+   * Create general staff access promo code (Admin only)
+   * POST /api/promo-codes/staff/general
+   * Body: { description: string, discountPercent: number, expiresAt?: Date, isGeneral: boolean }
+   */
+  static async createGeneralStaffCode(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      if (!req.user) {
+        res
+          .status(401)
+          .json({ success: false, message: "Authentication required." });
+        return;
+      }
+
+      const { description, discountPercent, expiresAt, isGeneral } = req.body;
+
+      // Validate required fields
+      if (!description || typeof description !== "string") {
+        res.status(400).json({
+          success: false,
+          message: "Description is required.",
+        });
+        return;
+      }
+
+      // Validate discount percent
+      if (
+        typeof discountPercent !== "number" ||
+        discountPercent < 0 ||
+        discountPercent > 100
+      ) {
+        res.status(400).json({
+          success: false,
+          message: "Discount percent must be between 0 and 100.",
+        });
+        return;
+      }
+
+      // Validate expiration date if provided
+      let validatedExpiresAt: Date | undefined;
+      if (expiresAt) {
+        const expiryDate = new Date(expiresAt);
+        if (isNaN(expiryDate.getTime()) || expiryDate <= new Date()) {
+          res.status(400).json({
+            success: false,
+            message: "Expiration date must be in the future.",
+          });
+          return;
+        }
+        validatedExpiresAt = expiryDate;
+      }
+
+      // Generate unique code
+      const code = await PromoCode.generateUniqueCode();
+
+      // Create general promo code (no owner, applies to all programs, unlimited uses)
+      const promoCode = await PromoCode.create({
+        code,
+        type: "staff_access",
+        description,
+        discountPercent,
+        expiresAt: validatedExpiresAt,
+        createdBy: req.user.username || req.user.email,
+        isGeneral: true, // Flag to indicate this is a general code
+        // No ownerId - can be used by anyone
+        // No allowedProgramIds - applies to all programs
+        // No usage limit - unlimited uses
+      });
+
+      res.status(201).json({
+        success: true,
+        message: "General staff promo code created successfully.",
+        data: {
+          code: {
+            _id: promoCode._id,
+            code: promoCode.code,
+            type: promoCode.type,
+            description: promoCode.description,
+            discountPercent: promoCode.discountPercent,
+            expiresAt: promoCode.expiresAt,
+            isActive: promoCode.isActive,
+            isGeneral: true,
+            createdAt: promoCode.createdAt,
+            createdBy: promoCode.createdBy,
+          },
+        },
+      });
+    } catch (error) {
+      console.error("Error creating general staff promo code:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to create general staff promo code.",
       });
     }
   }

@@ -702,7 +702,8 @@ describe("Promo Code System - Integration Tests", () => {
         code: res.body.data.code.code,
       });
       expect(savedCode).toBeDefined();
-      expect(savedCode!.ownerId.toString()).toBe(targetUser._id.toString());
+      expect(savedCode!.ownerId).toBeDefined(); // Personal codes always have ownerId
+      expect(savedCode!.ownerId!.toString()).toBe(targetUser._id.toString());
     });
 
     test("creates staff code for specific programs", async () => {

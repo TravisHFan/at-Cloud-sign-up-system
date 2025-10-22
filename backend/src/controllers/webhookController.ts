@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import Stripe from "stripe";
+import mongoose from "mongoose";
 import { Purchase, SystemConfig } from "../models";
 import type { IUser } from "../models/User";
 import type { IProgram } from "../models/Program";
@@ -9,6 +10,7 @@ import {
 } from "../services/stripeService";
 import { EmailService } from "../services/infrastructure/emailService";
 import { lockService } from "../services/LockService";
+import { TrioNotificationService } from "../services/notifications/TrioNotificationService";
 
 export class WebhookController {
   /**
@@ -184,13 +186,112 @@ export class WebhookController {
         // 8. Mark promo code as used if one was applied
         if (purchase.promoCode) {
           try {
-            const { PromoCode } = await import("../models");
+            const { PromoCode, User, Program } = await import("../models");
             const promoCode = await PromoCode.findOne({
               code: purchase.promoCode,
             });
-            if (promoCode && !promoCode.isUsed) {
-              await promoCode.markAsUsed(purchase.programId);
-              console.log(`Promo code ${purchase.promoCode} marked as used`);
+
+            if (promoCode) {
+              // Skip if already used (for personal codes)
+              if (!promoCode.isGeneral && promoCode.isUsed) {
+                console.log(
+                  `Promo code ${purchase.promoCode} already marked as used`
+                );
+              } else {
+                // Get user info for general code tracking
+                console.log(
+                  `🔍 WEBHOOK DEBUG: Promo code "${purchase.promoCode}" being marked as used`
+                );
+                console.log(
+                  `🔍 WEBHOOK DEBUG: isGeneral = ${promoCode.isGeneral}`
+                );
+                console.log(
+                  `🔍 WEBHOOK DEBUG: Full promo code object:`,
+                  JSON.stringify(promoCode, null, 2)
+                );
+
+                const user = await User.findById(purchase.userId).select(
+                  "firstName lastName email"
+                );
+                const program = await Program.findById(
+                  purchase.programId
+                ).select("title");
+
+                const userName = user
+                  ? `${user.firstName} ${user.lastName}`
+                  : "Unknown User";
+                const userEmail = user?.email || "unknown@example.com";
+                const programTitle = program?.title || "Unknown Program";
+
+                await promoCode.markAsUsed(
+                  purchase.programId,
+                  purchase.userId as mongoose.Types.ObjectId,
+                  userName,
+                  userEmail,
+                  programTitle
+                );
+                console.log(`Promo code ${purchase.promoCode} marked as used`);
+
+                // Send notification to admins if it's a general staff code
+                if (promoCode.isGeneral) {
+                  console.log(
+                    `✅ WEBHOOK DEBUG: This IS a general code, sending admin notifications...`
+                  );
+                  try {
+                    // Find all administrators
+                    const admins = await User.find({
+                      role: { $in: ["Super Admin", "Administrator"] },
+                    }).select("_id");
+
+                    console.log(
+                      `🔍 WEBHOOK DEBUG: Found ${admins.length} admin users`
+                    );
+                    const adminIds = admins.map((admin) =>
+                      admin._id.toString()
+                    );
+
+                    if (adminIds.length > 0) {
+                      console.log(
+                        `📤 WEBHOOK DEBUG: Sending notification to ${adminIds.length} admins...`
+                      );
+                      await TrioNotificationService.createTrio({
+                        systemMessage: {
+                          title: "General Staff Code Used",
+                          content: `${userName} (${userEmail}) used general staff code "${promoCode.code}" for program "${programTitle}".`,
+                          type: "announcement",
+                          priority: "medium",
+                          hideCreator: true, // System-generated notification, no sender
+                          metadata: {
+                            promoCodeId: (
+                              promoCode._id as mongoose.Types.ObjectId
+                            ).toString(),
+                            userId: purchase.userId.toString(),
+                            programId: purchase.programId.toString(),
+                          },
+                        },
+                        recipients: adminIds,
+                      });
+                      console.log(
+                        `✅ WEBHOOK DEBUG: Admin notification sent for general code usage: ${promoCode.code}`
+                      );
+                    } else {
+                      console.log(
+                        `⚠️ WEBHOOK DEBUG: No admin users found to notify`
+                      );
+                    }
+                  } catch (notifyError) {
+                    console.error(
+                      "Failed to notify admins of general code usage:",
+                      notifyError
+                    );
+                    // Don't fail the purchase
+                  }
+                } else {
+                  console.log(
+                    `❌ WEBHOOK DEBUG: This is NOT a general code (isGeneral = ${promoCode.isGeneral}), skipping admin notification`
+                  );
+                }
+              }
             }
           } catch (promoError) {
             // Log error but don't fail the purchase
