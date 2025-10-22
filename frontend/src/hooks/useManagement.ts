@@ -19,7 +19,7 @@ interface ConfirmationAction {
   actionType: "danger" | "warning" | "info";
 }
 
-export function useManagement() {
+export function useManagement(providedUsers?: User[]) {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [confirmationAction, setConfirmationAction] =
     useState<ConfirmationAction | null>(null);
@@ -36,7 +36,7 @@ export function useManagement() {
   // Use existing hooks for user data management
   const userData = useUserData();
   const {
-    users,
+    users: internalUsers,
     promoteUser,
     demoteUser,
     deleteUser,
@@ -45,6 +45,10 @@ export function useManagement() {
     pagination,
     loadPage,
   } = userData;
+
+  // Use provided users if available, otherwise use internal users
+  const users = providedUsers || internalUsers;
+
   // 1) Page-derived stats (fallback)
   const pageRoleStats = useRoleStats(users);
 

@@ -25,6 +25,7 @@ export default function Management() {
   } = useEnhancedManagement();
 
   // Original management hook provides action handling
+  // Pass the enhancedUsers so handlers can find users correctly
   const {
     // User actions
     getActionsForUser,
@@ -38,7 +39,7 @@ export default function Management() {
     isProcessing,
     handleConfirmAction,
     handleCancelConfirmation,
-  } = useManagement();
+  } = useManagement(enhancedUsers);
 
   // Use enhanced data when available, fallback to original
   const users = enhancedUsers;
