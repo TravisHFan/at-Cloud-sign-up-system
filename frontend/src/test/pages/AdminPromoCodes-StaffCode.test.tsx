@@ -109,10 +109,13 @@ describe("AdminPromoCodes - Staff Code Creation (Minimal Test)", () => {
     // Click the tab
     await user.click(createStaffTab);
 
-    // Verify the tab content loads (should see "Select User" button)
+    // Verify the tab content loads (should see code type choice)
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: /select user/i })
+        screen.getByRole("button", { name: /create personal staff code/i })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /create general staff code/i })
       ).toBeInTheDocument();
     });
   });
@@ -182,6 +185,25 @@ describe("AdminPromoCodes - Staff Code Creation (Minimal Test)", () => {
       name: /create staff code/i,
     });
     await user.click(createStaffTab);
+
+    // Choose Personal Staff Code option
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /create personal staff code/i })
+      ).toBeInTheDocument();
+    });
+
+    const personalCodeButton = screen.getByRole("button", {
+      name: /create personal staff code/i,
+    });
+    await user.click(personalCodeButton);
+
+    // Wait for the form to appear with Select User button
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /select user/i })
+      ).toBeInTheDocument();
+    });
 
     // Open user selection modal
     const selectUserButton = screen.getByRole("button", {
@@ -303,6 +325,25 @@ describe("AdminPromoCodes - Staff Code Creation (Minimal Test)", () => {
       name: /create staff code/i,
     });
     await user.click(createStaffTab);
+
+    // Choose Personal Staff Code option
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /create personal staff code/i })
+      ).toBeInTheDocument();
+    });
+
+    const personalCodeButton = screen.getByRole("button", {
+      name: /create personal staff code/i,
+    });
+    await user.click(personalCodeButton);
+
+    // Wait for the form to appear with Select User button
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /select user/i })
+      ).toBeInTheDocument();
+    });
 
     const selectUserButton = screen.getByRole("button", {
       name: /select user/i,

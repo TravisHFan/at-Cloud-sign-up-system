@@ -693,7 +693,7 @@ export class PromoCodeController {
         return;
       }
 
-      const { description, discountPercent, expiresAt, isGeneral } = req.body;
+      const { description, discountPercent, expiresAt } = req.body;
 
       // Validate required fields
       if (!description || typeof description !== "string") {

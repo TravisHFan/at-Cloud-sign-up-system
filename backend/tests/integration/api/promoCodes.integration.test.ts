@@ -1551,4 +1551,536 @@ describe("Promo Code System - Integration Tests", () => {
       expect(codes2[0].code).toBe("ALLPROGS");
     });
   });
+
+  // ============================================================================
+  // GENERAL STAFF CODE FEATURES - New Feature Tests
+  // ============================================================================
+
+  describe("POST /api/promo-codes/general (Admin) - Create General Code", () => {
+    test("creates general staff code successfully", async () => {
+      const { token } = await createAndLoginTestUser({ role: "Administrator" });
+
+      const res = await request(app)
+        .post("/api/promo-codes/general")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          description: "General Staff Access 2025",
+          discountPercent: 100,
+        })
+        .expect(201);
+
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.code).toBeDefined();
+      expect(res.body.data.code.type).toBe("staff_access");
+      expect(res.body.data.code.discountPercent).toBe(100);
+      expect(res.body.data.code.isGeneral).toBe(true);
+      expect(res.body.data.code.description).toBe("General Staff Access 2025");
+      expect(res.body.data.code.ownerId).toBeUndefined(); // No owner for general codes
+
+      // Verify in database
+      const savedCode = await PromoCode.findOne({
+        code: res.body.data.code.code,
+      });
+      expect(savedCode).toBeDefined();
+      expect(savedCode!.isGeneral).toBe(true);
+      expect(savedCode!.ownerId).toBeUndefined();
+    });
+
+    test("creates general code with expiration date", async () => {
+      const { token } = await createAndLoginTestUser({ role: "Administrator" });
+      const expiryDate = new Date("2030-12-31");
+
+      const res = await request(app)
+        .post("/api/promo-codes/general")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          description: "Temporary General Code",
+          discountPercent: 50,
+          expiresAt: expiryDate.toISOString(),
+        })
+        .expect(201);
+
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.code.expiresAt).toBeDefined();
+      expect(new Date(res.body.data.code.expiresAt).toISOString()).toBe(
+        expiryDate.toISOString()
+      );
+    });
+
+    test("validates required description field", async () => {
+      const { token } = await createAndLoginTestUser({ role: "Administrator" });
+
+      await request(app)
+        .post("/api/promo-codes/general")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          discountPercent: 100,
+        })
+        .expect(400);
+    });
+
+    test("validates discount percent range", async () => {
+      const { token } = await createAndLoginTestUser({ role: "Administrator" });
+
+      // Below minimum
+      await request(app)
+        .post("/api/promo-codes/general")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          description: "Test",
+          discountPercent: -10,
+        })
+        .expect(400);
+
+      // Above maximum
+      await request(app)
+        .post("/api/promo-codes/general")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          description: "Test",
+          discountPercent: 150,
+        })
+        .expect(400);
+    });
+
+    test("requires admin role", async () => {
+      const { token } = await createAndLoginTestUser({ role: "Participant" });
+
+      await request(app)
+        .post("/api/promo-codes/general")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          description: "Test",
+          discountPercent: 100,
+        })
+        .expect(403);
+    });
+
+    test("requires authentication", async () => {
+      await request(app)
+        .post("/api/promo-codes/general")
+        .send({
+          description: "Test",
+          discountPercent: 100,
+        })
+        .expect(401);
+    });
+  });
+
+  describe("General Code Reusability", () => {
+    test("allows general code to be used multiple times by different users", async () => {
+      const admin = await createAndLoginTestUser({ role: "Administrator" });
+
+      // Create general code
+      const generalCode = await PromoCode.create({
+        code: "GENERAL1",
+        type: "staff_access",
+        discountPercent: 100,
+        isGeneral: true,
+        description: "General Staff Code",
+        isActive: true,
+        createdBy: "admin",
+      });
+
+      // Create two users
+      const user1 = await User.create({
+        username: "user1",
+        firstName: "User",
+        lastName: "One",
+        email: "user1@example.com",
+        password: "ValidPass123",
+        role: "Participant",
+        isVerified: true,
+        gender: "male",
+        isAtCloudLeader: false,
+      });
+
+      const user2 = await User.create({
+        username: "user2",
+        firstName: "User",
+        lastName: "Two",
+        email: "user2@example.com",
+        password: "ValidPass123",
+        role: "Participant",
+        isVerified: true,
+        gender: "female",
+        isAtCloudLeader: false,
+      });
+
+      const program = await createTestProgram(admin.userId);
+
+      // User 1 uses the code
+      await generalCode.markAsUsed(
+        program._id,
+        user1._id,
+        `${user1.firstName} ${user1.lastName}`,
+        user1.email,
+        "Test Program"
+      );
+
+      // Verify code is still usable (not marked as used)
+      let reloaded = await PromoCode.findById(generalCode._id);
+      expect(reloaded!.isUsed).toBe(false);
+      expect(reloaded!.usageHistory).toHaveLength(1);
+
+      // User 2 uses the same code
+      await generalCode.markAsUsed(
+        program._id,
+        user2._id,
+        `${user2.firstName} ${user2.lastName}`,
+        user2.email,
+        "Test Program"
+      );
+
+      // Verify both usages are tracked
+      reloaded = await PromoCode.findById(generalCode._id);
+      expect(reloaded!.isUsed).toBe(false);
+      expect(reloaded!.usageHistory).toHaveLength(2);
+      expect(reloaded!.usageHistory?.[0]?.userId.toString()).toBe(
+        user1._id.toString()
+      );
+      expect(reloaded!.usageHistory?.[1]?.userId.toString()).toBe(
+        user2._id.toString()
+      );
+    });
+
+    test("allows same user to use general code for different programs", async () => {
+      const { userId } = await createAndLoginTestUser();
+
+      const generalCode = await PromoCode.create({
+        code: "GENERAL2",
+        type: "staff_access",
+        discountPercent: 100,
+        isGeneral: true,
+        description: "General Staff Code",
+        isActive: true,
+        createdBy: "admin",
+      });
+
+      const program1 = await createTestProgram(userId, { title: "Program 1" });
+      const program2 = await createTestProgram(userId, { title: "Program 2" });
+
+      const user = await User.findById(userId);
+
+      // Use for program 1
+      await generalCode.markAsUsed(
+        program1._id,
+        userId,
+        `${user!.firstName} ${user!.lastName}`,
+        user!.email,
+        "Program 1"
+      );
+
+      // Use for program 2
+      await generalCode.markAsUsed(
+        program2._id,
+        userId,
+        `${user!.firstName} ${user!.lastName}`,
+        user!.email,
+        "Program 2"
+      );
+
+      // Verify both usages are tracked
+      const reloaded = await PromoCode.findById(generalCode._id);
+      expect(reloaded!.usageHistory).toHaveLength(2);
+      expect(reloaded!.usageHistory?.[0]?.programId?.toString()).toBe(
+        program1._id.toString()
+      );
+      expect(reloaded!.usageHistory?.[1]?.programId?.toString()).toBe(
+        program2._id.toString()
+      );
+    });
+
+    test("personal codes still become used after first use", async () => {
+      const { userId } = await createAndLoginTestUser();
+      const program = await createTestProgram(userId);
+
+      const personalCode = await PromoCode.create({
+        code: "PERSON01",
+        type: "staff_access",
+        discountPercent: 100,
+        ownerId: userId,
+        isGeneral: false, // Personal code
+        isActive: true,
+        createdBy: "admin",
+      });
+
+      const user = await User.findById(userId);
+
+      await personalCode.markAsUsed(
+        program._id,
+        userId,
+        `${user!.firstName} ${user!.lastName}`,
+        user!.email,
+        "Test Program"
+      );
+
+      // Verify personal code is marked as used
+      const reloaded = await PromoCode.findById(personalCode._id);
+      expect(reloaded!.isUsed).toBe(true);
+      expect(reloaded!.usedAt).toBeDefined();
+      expect(reloaded!.usageHistory).toHaveLength(0); // Personal codes don't track history
+    });
+  });
+
+  describe("GET /api/promo-codes/:id/usage-history (Admin)", () => {
+    test("returns usage history for general code", async () => {
+      const { token } = await createAndLoginTestUser({ role: "Administrator" });
+
+      // Create general code with usage history
+      const user1 = await User.create({
+        username: "user1",
+        firstName: "John",
+        lastName: "Doe",
+        email: "john@example.com",
+        password: "ValidPass123",
+        role: "Participant",
+        isVerified: true,
+        gender: "male",
+        isAtCloudLeader: false,
+      });
+
+      const user2 = await User.create({
+        username: "user2",
+        firstName: "Jane",
+        lastName: "Smith",
+        email: "jane@example.com",
+        password: "ValidPass123",
+        role: "Participant",
+        isVerified: true,
+        gender: "female",
+        isAtCloudLeader: false,
+      });
+
+      const program = await createTestProgram(user1._id);
+
+      const generalCode = await PromoCode.create({
+        code: "GENERAL3",
+        type: "staff_access",
+        discountPercent: 100,
+        isGeneral: true,
+        description: "Test General Code",
+        isActive: true,
+        createdBy: "admin",
+      });
+
+      // Add usage history
+      await generalCode.markAsUsed(
+        program._id,
+        user1._id,
+        "John Doe",
+        "john@example.com",
+        "Test Program"
+      );
+
+      await generalCode.markAsUsed(
+        program._id,
+        user2._id,
+        "Jane Smith",
+        "jane@example.com",
+        "Test Program"
+      );
+
+      const res = await request(app)
+        .get(`/api/promo-codes/${generalCode._id}/usage-history`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.usageHistory).toHaveLength(2);
+      expect(res.body.data.usageHistory[0].userName).toBe("John Doe");
+      expect(res.body.data.usageHistory[0].userEmail).toBe("john@example.com");
+      expect(res.body.data.usageHistory[1].userName).toBe("Jane Smith");
+      expect(res.body.data.usageHistory[1].userEmail).toBe("jane@example.com");
+    });
+
+    test("returns empty array for code with no usage history", async () => {
+      const { token } = await createAndLoginTestUser({ role: "Administrator" });
+
+      const generalCode = await PromoCode.create({
+        code: "GENERAL4",
+        type: "staff_access",
+        discountPercent: 100,
+        isGeneral: true,
+        description: "Unused Code",
+        isActive: true,
+        createdBy: "admin",
+      });
+
+      const res = await request(app)
+        .get(`/api/promo-codes/${generalCode._id}/usage-history`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.usageHistory).toEqual([]);
+    });
+
+    test("returns 404 for non-existent code", async () => {
+      const { token } = await createAndLoginTestUser({ role: "Administrator" });
+      const fakeId = new mongoose.Types.ObjectId();
+
+      await request(app)
+        .get(`/api/promo-codes/${fakeId}/usage-history`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(404);
+    });
+
+    test("requires admin role", async () => {
+      const { token } = await createAndLoginTestUser({ role: "Participant" });
+
+      const generalCode = await PromoCode.create({
+        code: "GENERAL5",
+        type: "staff_access",
+        discountPercent: 100,
+        isGeneral: true,
+        description: "Test",
+        isActive: true,
+        createdBy: "admin",
+      });
+
+      await request(app)
+        .get(`/api/promo-codes/${generalCode._id}/usage-history`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(403);
+    });
+
+    test("requires authentication", async () => {
+      const fakeId = new mongoose.Types.ObjectId();
+
+      await request(app)
+        .get(`/api/promo-codes/${fakeId}/usage-history`)
+        .expect(401);
+    });
+  });
+
+  describe("Admin Notifications for General Code Usage", () => {
+    test("validates general code can be used by any user", async () => {
+      const user1 = await createAndLoginTestUser();
+      const user2Token = (
+        await createAndLoginTestUser({
+          username: "user2",
+          email: "user2@test.com",
+        })
+      ).token;
+
+      const program = await createTestProgram(user1.userId);
+
+      // Create general code
+      const generalCode = await PromoCode.create({
+        code: "GENERAL6",
+        type: "staff_access",
+        discountPercent: 100,
+        isGeneral: true,
+        description: "Test General Code",
+        isActive: true,
+        createdBy: "admin",
+      });
+
+      // User 1 validates the code
+      const res1 = await request(app)
+        .post("/api/promo-codes/validate")
+        .set("Authorization", `Bearer ${user1.token}`)
+        .send({
+          code: "GENERAL6",
+          programId: program._id.toString(),
+        })
+        .expect(200);
+
+      expect(res1.body.success).toBe(true);
+      expect(res1.body.valid).toBe(true);
+
+      // User 2 validates the same code (should also be valid)
+      const res2 = await request(app)
+        .post("/api/promo-codes/validate")
+        .set("Authorization", `Bearer ${user2Token}`)
+        .send({
+          code: "GENERAL6",
+          programId: program._id.toString(),
+        })
+        .expect(200);
+
+      expect(res2.body.success).toBe(true);
+      expect(res2.body.valid).toBe(true);
+    });
+
+    test("general code remains valid after being used", async () => {
+      const { token, userId } = await createAndLoginTestUser();
+      const program = await createTestProgram(userId);
+
+      const generalCode = await PromoCode.create({
+        code: "GENERAL7",
+        type: "staff_access",
+        discountPercent: 100,
+        isGeneral: true,
+        description: "Reusable Code",
+        isActive: true,
+        createdBy: "admin",
+      });
+
+      const user = await User.findById(userId);
+
+      // Mark as used
+      await generalCode.markAsUsed(
+        program._id,
+        userId,
+        `${user!.firstName} ${user!.lastName}`,
+        user!.email,
+        "Test Program"
+      );
+
+      // Validate again - should still be valid
+      const res = await request(app)
+        .post("/api/promo-codes/validate")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          code: "GENERAL7",
+          programId: program._id.toString(),
+        })
+        .expect(200);
+
+      expect(res.body.success).toBe(true);
+      expect(res.body.valid).toBe(true);
+    });
+
+    test("tracks usage metadata correctly", async () => {
+      const { userId } = await createAndLoginTestUser();
+
+      const generalCode = await PromoCode.create({
+        code: "GENERAL8",
+        type: "staff_access",
+        discountPercent: 100,
+        isGeneral: true,
+        description: "Metadata Test",
+        isActive: true,
+        createdBy: "admin",
+      });
+
+      const program = await createTestProgram(userId, {
+        title: "Specific Program Title",
+      });
+
+      const user = await User.findById(userId);
+
+      await generalCode.markAsUsed(
+        program._id,
+        userId,
+        `${user!.firstName} ${user!.lastName}`,
+        user!.email,
+        "Specific Program Title"
+      );
+
+      const reloaded = await PromoCode.findById(generalCode._id);
+      expect(reloaded!.usageHistory).toHaveLength(1);
+      const usage = reloaded!.usageHistory?.[0];
+      expect(usage).toBeDefined();
+
+      expect(usage?.userId.toString()).toBe(userId.toString());
+      expect(usage?.userName).toBe(`${user!.firstName} ${user!.lastName}`);
+      expect(usage?.userEmail).toBe(user!.email);
+      expect(usage?.programTitle).toBe("Specific Program Title");
+      expect(usage?.programId?.toString()).toBe(program._id.toString());
+      expect(usage?.usedAt).toBeDefined();
+    });
+  });
 });

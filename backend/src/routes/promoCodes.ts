@@ -63,7 +63,7 @@ router.post("/staff", requireAdmin, PromoCodeController.createStaffCode);
 
 /**
  * Create a general staff promo code (admin only)
- * POST /api/promo-codes/staff/general
+ * POST /api/promo-codes/general OR /api/promo-codes/staff/general
  * Body: {
  *   description: string,
  *   discountPercent: number (0-100, typically 100),
@@ -72,6 +72,11 @@ router.post("/staff", requireAdmin, PromoCodeController.createStaffCode);
  * }
  * Note: General codes have no owner, apply to all programs, unlimited uses
  */
+router.post(
+  "/general",
+  requireAdmin,
+  PromoCodeController.createGeneralStaffCode
+);
 router.post(
   "/staff/general",
   requireAdmin,

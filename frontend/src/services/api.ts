@@ -1022,14 +1022,30 @@ class ApiClient {
     const response = res as unknown as {
       valid: boolean;
       discount?: { type: "amount" | "percent"; value: number };
-      code?: Record<string, unknown>; // Use flexible type since we just pass it through
+      code?: {
+        _id: string;
+        code: string;
+        type: "bundle_discount" | "staff_access";
+        discountAmount?: number;
+        discountPercent?: number;
+        ownerId: string;
+        allowedProgramIds?: string[];
+        isActive: boolean;
+        isUsed: boolean;
+        expiresAt?: string;
+        usedAt?: string;
+        usedForProgramId?: string;
+        usedForProgramTitle?: string;
+        createdAt: string;
+        createdBy: string;
+      };
       message: string;
     };
 
     return {
       valid: response.valid || false,
       discount: response.discount,
-      promoCode: response.code as any, // Backend returns full code object
+      promoCode: response.code, // Backend returns full code object
       message: response.message || "Validation failed",
     };
   }
