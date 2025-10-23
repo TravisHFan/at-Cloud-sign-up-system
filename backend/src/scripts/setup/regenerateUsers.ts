@@ -34,7 +34,7 @@ const sampleUsers: UserData[] = [
   // Super Admin
   {
     username: "superadmin",
-    email: "superadmin@atcloud.org",
+    email: "superadmin@gmail.com",
     phone: "+1234567890",
     password: "SuperAdmin123!",
     firstName: "Super",
@@ -57,7 +57,7 @@ const sampleUsers: UserData[] = [
   // Administrator
   {
     username: "admin_john",
-    email: "john.doe@atcloud.org",
+    email: "john.doe@gmail.com",
     phone: "+1234567891",
     password: "AdminPass123!",
     firstName: "John",
@@ -80,7 +80,7 @@ const sampleUsers: UserData[] = [
   // Leader
   {
     username: "leader_sarah",
-    email: "sarah.johnson@atcloud.org",
+    email: "sarah.johnson@gmail.com",
     phone: "+1234567892",
     password: "LeaderPass123!",
     firstName: "Sarah",
@@ -103,7 +103,7 @@ const sampleUsers: UserData[] = [
   // Leader - Event Coordinator
   {
     username: "coordinator_mike",
-    email: "mike.wilson@atcloud.org",
+    email: "mike.wilson@gmail.com",
     phone: "+1234567893",
     password: "Coordinator123!",
     firstName: "Mike",

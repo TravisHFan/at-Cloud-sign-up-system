@@ -474,7 +474,7 @@ After successful purchase (on `checkout.session.completed` event), users receive
   - Payment summary with discounts breakdown
   - Receipt link
   - Next steps information
-  - Support contact: support@atcloud.com
+  - Support contact: atcloudministry@gmail.com
 
 ---
 
@@ -561,5 +561,5 @@ if (hasAccess) {
 
 For questions or issues with the Purchase API:
 
-- Email: support@atcloud.com
+- Email: atcloudministry@gmail.com
 - Documentation: https://github.com/atcloud/signup-system/docs

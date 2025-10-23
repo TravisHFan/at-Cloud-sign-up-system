@@ -167,7 +167,7 @@ export class EmailService {
 
       const mailOptions: nodemailer.SendMailOptions = {
         from:
-          process.env.EMAIL_FROM || '"@Cloud Ministry" <noreply@atcloud.org>',
+          process.env.EMAIL_FROM || '"@Cloud Ministry" <atcloudministry@gmail.com>',
         to: options.to,
         subject: options.subject,
         text: options.text,
@@ -470,7 +470,7 @@ export class EmailService {
             </div>
             <div class="footer">
               <p>@Cloud Ministry | Building Community Through Faith</p>
-              <p>If you have any questions, please contact us at support@atcloud.org</p>
+              <p>If you have any questions, please contact us at atcloudministry@gmail.com</p>
             </div>
           </div>
         </body>
@@ -530,7 +530,7 @@ export class EmailService {
             </div>
             <div class="footer">
               <p>@Cloud Ministry | Building Community Through Faith</p>
-              <p>If you have any questions, please contact us at support@atcloud.org</p>
+              <p>If you have any questions, please contact us at atcloudministry@gmail.com</p>
             </div>
           </div>
         </body>
@@ -635,7 +635,7 @@ export class EmailService {
       const to = (
         params.recipients && params.recipients.length
           ? params.recipients
-          : [process.env.FALLBACK_ADMIN_EMAIL || "noreply@atcloud.org"]
+          : [process.env.FALLBACK_ADMIN_EMAIL || "atcloudministry@gmail.com"]
       ).join(",");
       const subject = `[Action Required] Event Auto-Unpublished – ${params.title}`;
       const html = `<!DOCTYPE html><html><body style=\"font-family:Arial,sans-serif;line-height:1.5;color:#333;\">\n<h2 style=\"margin:0 0 12px;\">Event Automatically Unpublished</h2>\n<p>The event <strong>${
@@ -1780,7 +1780,7 @@ export class EmailService {
             </div>
             <div class="footer">
               <p>@Cloud Ministry | Building Community Through Faith</p>
-              <p>If you have any questions, please contact us at support@atcloud.org</p>
+              <p>If you have any questions, please contact us at atcloudministry@gmail.com</p>
             </div>
           </div>
         </body>
@@ -1935,7 +1935,7 @@ export class EmailService {
             </div>
             <div class="footer">
               <p>@Cloud Ministry | Building Community Through Faith</p>
-              <p>If you have any questions, please contact us at support@atcloud.org</p>
+              <p>If you have any questions, please contact us at atcloudministry@gmail.com</p>
             </div>
           </div>
         </body>
@@ -2106,7 +2106,7 @@ export class EmailService {
             </div>
             <div class="footer">
               <p>@Cloud Ministry | Building Community Through Faith</p>
-              <p>If you have any questions about your new role, please contact us at support@atcloud.org</p>
+              <p>If you have any questions about your new role, please contact us at atcloudministry@gmail.com</p>
             </div>
           </div>
         </body>
@@ -4340,7 +4340,7 @@ export class EmailService {
             </div>
             <div class="footer">
               <p><strong>@Cloud Ministry</strong> | Building Community Through Faith</p>
-              <p>Support: <a href="mailto:support@atcloud.com" style="color: #9333ea;">support@atcloud.com</a></p>
+              <p>Support: <a href="mailto:atcloudministry@gmail.com" style="color: #9333ea;">atcloudministry@gmail.com</a></p>
               <p style="font-size: 12px; color: #999; margin-top: 15px;">
                 This is a confirmation email for order ${orderNumber}. Please save this email for your records.
               </p>
@@ -4393,7 +4393,7 @@ What's Next?
 - Check your email for program updates and reminders
 - Download your receipt for your records
 
-If you have any questions, please contact us at support@atcloud.com
+If you have any questions, please contact us at atcloudministry@gmail.com
 
 Blessings,
 The @Cloud Ministry Team
@@ -4525,7 +4525,7 @@ The @Cloud Ministry Team
       
       <div class="footer">
         <p>This is an automated message from @Cloud Ministry.</p>
-        <p>If you have any questions, please contact support@atcloud.com</p>
+        <p>If you have any questions, please contact atcloudministry@gmail.com</p>
         <p style="margin-top: 20px;">
           <a href="${promoCodesUrl}" style="color: #9333ea; text-decoration: none;">Manage My Promo Codes</a>
         </p>
@@ -4666,7 +4666,7 @@ The @Cloud Ministry Team
       
       <div class="footer">
         <p>This is an automated message from @Cloud Ministry.</p>
-        <p>If you have any questions, please contact support@atcloud.com</p>
+        <p>If you have any questions, please contact atcloudministry@gmail.com</p>
         <p style="margin-top: 20px;">
           <a href="${promoCodesUrl}" style="color: #ef4444; text-decoration: none;">Manage My Promo Codes</a>
         </p>
@@ -4823,7 +4823,7 @@ View your promo codes: ${promoCodesUrl}
       
       <div class="footer">
         <p>This is an automated message from @Cloud Ministry.</p>
-        <p>If you have any questions, please contact support@atcloud.com</p>
+        <p>If you have any questions, please contact atcloudministry@gmail.com</p>
         <p style="margin-top: 20px;">
           <a href="${promoCodesUrl}" style="color: #10b981; text-decoration: none;">Manage My Promo Codes</a>
         </p>

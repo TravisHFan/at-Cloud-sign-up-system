@@ -150,7 +150,7 @@ const sampleEvents = [
       {
         name: "John Doe",
         role: "Workshop Coordinator",
-        email: "john.doe@atcloud.org",
+        email: "john.doe@gmail.com",
         phone: "+1 (555) 123-4567",
         avatar: null,
         gender: "male",
@@ -158,7 +158,7 @@ const sampleEvents = [
       {
         name: "Jane Smith",
         role: "Ministry Leader",
-        email: "jane.smith@atcloud.org",
+        email: "jane.smith@gmail.com",
         phone: "+1 (555) 234-5678",
         avatar: null,
         gender: "female",
@@ -222,7 +222,7 @@ const sampleEvents = [
       {
         name: "Robert Lee",
         role: "Youth Pastor",
-        email: "robert.lee@atcloud.org",
+        email: "robert.lee@gmail.com",
         phone: "+1 (555) 345-6789",
         avatar: null,
         gender: "male",
@@ -276,7 +276,7 @@ const sampleEvents = [
       {
         name: "Sarah Brown",
         role: "Community Outreach Director",
-        email: "sarah.brown@atcloud.org",
+        email: "sarah.brown@gmail.com",
         phone: "+1 (555) 456-7890",
         avatar: null,
         gender: "female",
@@ -329,7 +329,7 @@ const sampleEvents = [
       {
         name: "Mike Wilson",
         role: "Technical Director",
-        email: "mike.wilson@atcloud.org",
+        email: "mike.wilson@gmail.com",
         phone: "+1 (555) 567-8901",
         avatar: null,
         gender: "male",
@@ -376,7 +376,7 @@ const createSampleData = async () => {
     // Clear existing sample data (keep admin users)
     await User.deleteMany({
       email: {
-        $nin: ["admin@atcloud.org", "leader@atcloud.org", "user@atcloud.org"],
+        $nin: ["admin@gmail.com", "leader@gmail.com", "user@gmail.com"],
       },
     });
     await Event.deleteMany({});

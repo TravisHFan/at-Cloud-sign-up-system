@@ -174,7 +174,7 @@ describe("EmailService", () => {
 
       expect(result).toBe(true);
       expect(mockTransporter.sendMail).toHaveBeenCalledWith({
-        from: '"@Cloud Ministry" <noreply@atcloud.org>',
+        from: '"@Cloud Ministry" <atcloudministry@gmail.com>',
         to: "test@example.com",
         subject: "Test Subject",
         text: "Test text",
@@ -502,7 +502,7 @@ describe("EmailService", () => {
       expect(result).toBe(true);
       expect(mockTransporter.sendMail).toHaveBeenCalledWith(
         expect.objectContaining({
-          from: '"@Cloud Ministry" <noreply@atcloud.org>',
+          from: '"@Cloud Ministry" <atcloudministry@gmail.com>',
         })
       );
     });
@@ -568,7 +568,7 @@ describe("EmailService", () => {
 
       expect(result).toBe(true);
       expect(mockTransporter.sendMail).toHaveBeenCalledWith({
-        from: '"@Cloud Ministry" <noreply@atcloud.org>',
+        from: '"@Cloud Ministry" <atcloudministry@gmail.com>',
         to: "test@example.com",
         subject: "HTML Only",
         text: undefined,
@@ -587,7 +587,7 @@ describe("EmailService", () => {
 
       expect(result).toBe(true);
       expect(mockTransporter.sendMail).toHaveBeenCalledWith({
-        from: '"@Cloud Ministry" <noreply@atcloud.org>',
+        from: '"@Cloud Ministry" <atcloudministry@gmail.com>',
         to: "",
         subject: "",
         text: undefined,

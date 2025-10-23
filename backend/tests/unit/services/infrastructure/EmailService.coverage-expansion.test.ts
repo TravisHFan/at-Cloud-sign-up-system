@@ -34,11 +34,11 @@ describe("EmailService - Phase 3 Coverage Expansion", () => {
     // Setup production-like environment to trigger all code paths
     process.env.NODE_ENV = "production";
     process.env.FRONTEND_URL = "https://atcloud.org";
-    process.env.SMTP_USER = "test@atcloud.org";
+    process.env.SMTP_USER = "test@gmail.com";
     process.env.SMTP_PASS = "secure-password";
     process.env.SMTP_HOST = "smtp.atcloud.org";
     process.env.SMTP_PORT = "587";
-    process.env.EMAIL_FROM = '"@Cloud Ministry" <noreply@atcloud.org>';
+    process.env.EMAIL_FROM = '"@Cloud Ministry" <atcloudministry@gmail.com>';
 
     mockTransporter = {
       sendMail: vi.fn().mockResolvedValue({
@@ -347,7 +347,7 @@ describe("EmailService - Phase 3 Coverage Expansion", () => {
 
       expect(result).toBe(true);
       const emailCall = mockTransporter.sendMail.mock.calls[0][0];
-      expect(emailCall.from).toBe('"@Cloud Ministry" <noreply@atcloud.org>');
+      expect(emailCall.from).toBe('"@Cloud Ministry" <atcloudministry@gmail.com>');
     });
 
     it("should handle missing FRONTEND_URL in templates", async () => {

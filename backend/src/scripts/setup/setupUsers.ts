@@ -22,7 +22,7 @@ const createAdminUser = async () => {
     // Create admin user
     const adminUser = new User({
       username: "admin",
-      email: "admin@atcloud.org",
+      email: "admin@gmail.com",
       password: "AdminPassword123!",
       firstName: "System",
       lastName: "Administrator",
@@ -62,7 +62,7 @@ const createTestUsers = async () => {
     if (!existingLeader) {
       const leaderUser = new User({
         username: "testleader",
-        email: "leader@atcloud.org",
+        email: "leader@gmail.com",
         password: "LeaderPassword123!",
         firstName: "John",
         lastName: "Leader",
@@ -85,7 +85,7 @@ const createTestUsers = async () => {
     if (!existingParticipant) {
       const participantUser = new User({
         username: "testuser",
-        email: "user@atcloud.org",
+        email: "user@gmail.com",
         password: "UserPassword123!",
         firstName: "Jane",
         lastName: "Participant",

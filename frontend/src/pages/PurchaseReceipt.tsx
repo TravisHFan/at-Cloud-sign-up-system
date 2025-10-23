@@ -424,10 +424,10 @@ export default function PurchaseReceipt() {
                 If you have any questions about this receipt, please contact us
                 at{" "}
                 <a
-                  href="mailto:support@atcloud.com"
+                  href="mailto:atcloudministry@gmail.com"
                   className="text-purple-600 hover:underline"
                 >
-                  support@atcloud.com
+                  atcloudministry@gmail.com
                 </a>
               </p>
               <p className="text-xs text-gray-400 mt-4">

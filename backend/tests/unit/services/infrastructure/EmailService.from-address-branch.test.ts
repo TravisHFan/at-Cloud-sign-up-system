@@ -32,7 +32,7 @@ describe("EmailService.sendEmail from-address branch", () => {
     });
     expect(ok).toBe(true);
     const mailArgs = send.mock.calls[0][0];
-    expect(mailArgs.from).toBe('"@Cloud Ministry" <noreply@atcloud.org>');
+    expect(mailArgs.from).toBe('"@Cloud Ministry" <atcloudministry@gmail.com>');
   });
 
   it("uses provided EMAIL_FROM when set", async () => {

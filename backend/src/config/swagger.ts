@@ -12,7 +12,7 @@ const options = {
         "Comprehensive event management and user sign-up system API for @Cloud Ministry",
       contact: {
         name: "Travis Fan @Cloud IT Team",
-        email: "support@cloud-ministry.com",
+        email: "atcloudministry@gmail.com",
       },
     },
     servers: [

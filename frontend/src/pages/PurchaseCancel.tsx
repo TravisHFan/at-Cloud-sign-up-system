@@ -97,7 +97,7 @@ export default function PurchaseCancel() {
             <p className="text-sm text-gray-600">
               Having trouble completing your enrollment?{" "}
               <a
-                href="mailto:support@atcloud.com"
+                href="mailto:atcloudministry@gmail.com"
                 className="text-purple-600 hover:text-purple-700 font-medium"
               >
                 Contact Support
