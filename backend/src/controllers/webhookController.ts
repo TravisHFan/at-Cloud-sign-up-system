@@ -18,14 +18,24 @@ export class WebhookController {
    * POST /api/webhooks/stripe
    */
   static async handleStripeWebhook(req: Request, res: Response): Promise<void> {
+    console.log("🎣 WEBHOOK HANDLER CALLED - Request reached Express!");
+    console.log("🎣 Request body type:", typeof req.body);
+    console.log(
+      "🎣 Request body length:",
+      req.body ? Buffer.byteLength(req.body) : 0
+    );
+
     const signature = req.headers["stripe-signature"] as string;
 
     if (!signature) {
+      console.log("❌ Missing stripe-signature header");
       res
         .status(400)
         .json({ success: false, message: "Missing stripe-signature header" });
       return;
     }
+
+    console.log("✅ stripe-signature header present");
 
     let event: Stripe.Event;
 
