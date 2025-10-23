@@ -45,26 +45,6 @@ const app = express();
 // Trust proxy for accurate IP addresses behind reverse proxies
 app.set("trust proxy", 1);
 
-// DIAGNOSTIC: Log ALL incoming requests (remove after debugging webhook issue)
-if (process.env.NODE_ENV === "production") {
-  app.use((req, res, next) => {
-    console.log(
-      `🔍 [${new Date().toISOString()}] ${req.method} ${req.originalUrl}`
-    );
-    console.log(
-      `🔍 Headers:`,
-      JSON.stringify({
-        "content-type": req.headers["content-type"],
-        "stripe-signature": req.headers["stripe-signature"]
-          ? "present"
-          : "missing",
-        "user-agent": req.headers["user-agent"],
-      })
-    );
-    next();
-  });
-}
-
 // Request correlation (early - before other middleware)
 app.use(requestCorrelation());
 
