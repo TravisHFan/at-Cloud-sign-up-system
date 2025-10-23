@@ -4,7 +4,6 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 
 import {
   authenticate,
-  authorize,
   authorizeRoles,
   authorizeMinimumRole,
   authorizePermission,
@@ -167,22 +166,22 @@ describe("Auth Middleware Integration", () => {
   });
 
   describe("authorization helpers", () => {
-    it("authorize denies when user missing", async () => {
-      app.get("/admin", authorize(ROLES.ADMINISTRATOR), (req, res) => {
+    it("authorizeRoles denies when user missing", async () => {
+      app.get("/admin", authorizeRoles(ROLES.ADMINISTRATOR), (req, res) => {
         res.json({ ok: true });
       });
       const res = await request(app).get("/admin");
       expect(res.status).toBe(401);
     });
 
-    it("authorize denies when role not allowed", async () => {
+    it("authorizeRoles denies when role not allowed", async () => {
       app.get(
         "/admin",
         (req: any, _res, next) => {
           req.user = { role: ROLES.PARTICIPANT } as any;
           next();
         },
-        authorize(ROLES.ADMINISTRATOR),
+        authorizeRoles(ROLES.ADMINISTRATOR),
         (req, res) => {
           res.json({ ok: true });
         }
@@ -192,14 +191,14 @@ describe("Auth Middleware Integration", () => {
       expect(res.body.error).toBe("Insufficient permissions.");
     });
 
-    it("authorize passes when role allowed", async () => {
+    it("authorizeRoles passes when role allowed", async () => {
       app.get(
         "/admin",
         (req: any, _res, next) => {
           req.user = { role: ROLES.ADMINISTRATOR } as any;
           next();
         },
-        authorize(ROLES.ADMINISTRATOR),
+        authorizeRoles(ROLES.ADMINISTRATOR),
         (req, res) => res.json({ ok: true })
       );
       const res = await request(app).get("/admin");

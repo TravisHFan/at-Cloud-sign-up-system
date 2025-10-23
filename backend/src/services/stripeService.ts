@@ -58,6 +58,7 @@ export async function createCheckoutSession(params: {
   finalPrice: number;
   isClassRep: boolean;
   isEarlyBird: boolean;
+  purchaseId?: string; // NEW: For unified lock mechanism
 }): Promise<Stripe.Checkout.Session> {
   const {
     userId,
@@ -73,6 +74,7 @@ export async function createCheckoutSession(params: {
     finalPrice,
     isClassRep,
     isEarlyBird,
+    purchaseId, // NEW: For unified lock mechanism
   } = params;
 
   // Build line items - Stripe doesn't allow negative amounts in payment mode
@@ -150,6 +152,11 @@ export async function createCheckoutSession(params: {
     isClassRep: isClassRep.toString(),
     isEarlyBird: isEarlyBird.toString(),
   };
+
+  // Add purchaseId for unified lock mechanism (NEW)
+  if (purchaseId) {
+    metadata.purchaseId = purchaseId;
+  }
 
   // Add promo code fields if present
   if (promoCode) {

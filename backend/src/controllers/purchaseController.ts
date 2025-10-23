@@ -132,7 +132,9 @@ export class PurchaseController {
       }
 
       // === CRITICAL SECTION: Lock prevents race conditions ===
-      const lockKey = `purchase:create:${req.user._id}:${programId}`;
+      // Pre-generate purchase ID for unified lock mechanism
+      const purchaseId = new mongoose.Types.ObjectId();
+      const lockKey = `purchase:complete:${purchaseId.toString()}`;
 
       const result = await lockService.withLock(
         lockKey,
@@ -415,33 +417,16 @@ export class PurchaseController {
             );
           }
 
-          // 4. Create Stripe session FIRST (can't rollback, but expires in 24h)
-          const stripeSession = await stripeCreateCheckoutSession({
-            userId: (userId as mongoose.Types.ObjectId).toString(),
-            userEmail: userEmail,
-            programId: program._id.toString(),
-            programTitle: program.title,
-            fullPrice,
-            classRepDiscount,
-            earlyBirdDiscount,
-            promoCode: validatedPromoCode?.code,
-            promoDiscountAmount:
-              promoDiscountAmount > 0 ? promoDiscountAmount : undefined,
-            promoDiscountPercent:
-              promoDiscountPercent > 0 ? promoDiscountPercent : undefined,
-            finalPrice,
-            isClassRep: !!isClassRep,
-            isEarlyBird,
-          });
-
-          // 5. Create purchase record SECOND (atomic within lock)
+          // 4. Generate order number and create purchase record FIRST
+          // This ensures the purchase exists BEFORE webhook fires
           const orderNumber = await (
             Purchase as unknown as {
               generateOrderNumber: () => Promise<string>;
             }
           ).generateOrderNumber();
 
-          await Purchase.create({
+          const purchase = await Purchase.create({
+            _id: purchaseId, // Use pre-generated ID for unified lock
             userId: userId,
             programId: program._id,
             orderNumber,
@@ -457,7 +442,7 @@ export class PurchaseController {
               promoDiscountAmount > 0 ? promoDiscountAmount : undefined,
             promoDiscountPercent:
               promoDiscountPercent > 0 ? promoDiscountPercent : undefined,
-            stripeSessionId: stripeSession.id,
+            stripeSessionId: "", // Placeholder, will be updated after Stripe session creation
             status: "pending",
             billingInfo: {
               fullName: userName,
@@ -468,6 +453,46 @@ export class PurchaseController {
             },
             purchaseDate: new Date(),
           });
+
+          console.log(
+            `Purchase record created (order: ${orderNumber}), creating Stripe session...`
+          );
+
+          // 5. Create Stripe session SECOND (after purchase record exists)
+          let stripeSession;
+          try {
+            stripeSession = await stripeCreateCheckoutSession({
+              userId: (userId as mongoose.Types.ObjectId).toString(),
+              userEmail: userEmail,
+              programId: program._id.toString(),
+              programTitle: program.title,
+              fullPrice,
+              classRepDiscount,
+              earlyBirdDiscount,
+              promoCode: validatedPromoCode?.code,
+              promoDiscountAmount:
+                promoDiscountAmount > 0 ? promoDiscountAmount : undefined,
+              promoDiscountPercent:
+                promoDiscountPercent > 0 ? promoDiscountPercent : undefined,
+              finalPrice,
+              isClassRep: !!isClassRep,
+              isEarlyBird,
+              purchaseId: purchaseId.toString(), // Pass for unified lock mechanism
+            });
+
+            // 6. Update purchase with Stripe session ID
+            purchase.stripeSessionId = stripeSession.id;
+            await purchase.save();
+
+            console.log(
+              `Stripe session created and linked to purchase ${orderNumber}`
+            );
+          } catch (stripeError) {
+            // If Stripe fails, clean up the purchase record
+            console.error("Stripe session creation failed:", stripeError);
+            await Purchase.deleteOne({ _id: purchase._id });
+            throw stripeError; // Re-throw to return error to user
+          }
 
           console.log(
             `Purchase created successfully for user ${userId}, program ${programId}`

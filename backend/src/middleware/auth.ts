@@ -340,6 +340,7 @@ export const authorizeRoles = (...requiredRoles: UserRole[]) => {
       res.status(403).json({
         success: false,
         message: `Access denied. Required roles: ${requiredRoles.join(" or ")}`,
+        error: "Insufficient permissions.",
       });
       return;
     }
@@ -363,6 +364,7 @@ export const authorizeMinimumRole = (minimumRole: UserRole) => {
       res.status(403).json({
         success: false,
         message: `Access denied. Minimum required role: ${minimumRole}`,
+        error: "Insufficient permissions.",
       });
       return;
     }
@@ -386,6 +388,7 @@ export const authorizePermission = (permission: Permission) => {
       res.status(403).json({
         success: false,
         message: `Access denied. Required permission: ${permission}`,
+        error: "Insufficient permissions.",
       });
       return;
     }

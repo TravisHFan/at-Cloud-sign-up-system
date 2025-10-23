@@ -521,6 +521,7 @@ describe("Auth Middleware", () => {
       expect(res.json).toHaveBeenCalledWith({
         success: false,
         message: `Access denied. Required roles: ${ROLES.ADMINISTRATOR} or ${ROLES.LEADER}`,
+        error: "Insufficient permissions.",
       });
       expect(next).not.toHaveBeenCalled();
     });
@@ -577,6 +578,7 @@ describe("Auth Middleware", () => {
       expect(res.json).toHaveBeenCalledWith({
         success: false,
         message: `Access denied. Minimum required role: ${ROLES.LEADER}`,
+        error: "Insufficient permissions.",
       });
       expect(next).not.toHaveBeenCalled();
     });
@@ -652,6 +654,7 @@ describe("Auth Middleware", () => {
       expect(res.json).toHaveBeenCalledWith({
         success: false,
         message: "Access denied. Required permission: CAN_DELETE",
+        error: "Insufficient permissions.",
       });
       expect(next).not.toHaveBeenCalled();
     });
@@ -874,6 +877,7 @@ describe("Auth Middleware", () => {
       expect(res.json).toHaveBeenCalledWith({
         success: false,
         message: `Access denied. Minimum required role: ${ROLES.ADMINISTRATOR}`,
+        error: "Insufficient permissions.",
       });
       expect(next).not.toHaveBeenCalled();
     });
@@ -889,6 +893,7 @@ describe("Auth Middleware", () => {
       expect(res.json).toHaveBeenCalledWith({
         success: false,
         message: `Access denied. Required roles: ${ROLES.SUPER_ADMIN}`,
+        error: "Insufficient permissions.",
       });
       expect(next).not.toHaveBeenCalled();
     });

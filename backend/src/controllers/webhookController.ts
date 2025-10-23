@@ -89,16 +89,30 @@ export class WebhookController {
   ): Promise<void> {
     console.log("Checkout session completed:", session.id);
 
-    // Lock ensures only one webhook processes this session
-    const lockKey = `webhook:session:${session.id}`;
+    // UNIFIED LOCK: Use purchaseId from metadata if available (new behavior)
+    // Fall back to session ID for backward compatibility (old sessions)
+    const purchaseId = session.metadata?.purchaseId;
+    const lockKey = purchaseId
+      ? `purchase:complete:${purchaseId}` // Unified lock (matches purchase creation)
+      : `webhook:session:${session.id}`; // Legacy fallback
+
+    if (purchaseId) {
+      console.log(
+        `Using unified lock with purchaseId: ${purchaseId} (eliminates race condition)`
+      );
+    } else {
+      console.log(
+        `Using legacy lock with sessionId: ${session.id} (backward compatibility)`
+      );
+    }
 
     await lockService.withLock(
       lockKey,
       async () => {
-        // 1. Find purchase
-        const purchase = await Purchase.findOne({
-          stripeSessionId: session.id,
-        });
+        // 1. Find purchase by ID (if available) or session ID (fallback)
+        const purchase = purchaseId
+          ? await Purchase.findById(purchaseId)
+          : await Purchase.findOne({ stripeSessionId: session.id });
 
         if (!purchase) {
           console.warn(
