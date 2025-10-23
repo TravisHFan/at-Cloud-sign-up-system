@@ -31,5 +31,8 @@
   },
   "dependencies": {
     "concurrently": "^8.2.2"
+  },
+  "devDependencies": {
+    "ts-prune": "^0.10.3"
   }
 }

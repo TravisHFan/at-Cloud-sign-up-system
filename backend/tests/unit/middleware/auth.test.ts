@@ -5,7 +5,6 @@ import { User } from "../../../src/models";
 import {
   TokenService,
   authenticate,
-  authorize,
   authorizeRoles,
   authorizeMinimumRole,
   authorizePermission,
@@ -14,10 +13,7 @@ import {
   requireAdmin,
   requireSuperAdmin,
   requireLeader,
-  authorizeAtCloudLeader,
-  authorizeEventAccess,
   authorizeEventManagement,
-  conditionalAuthorization,
 } from "../../../src/middleware/auth";
 import { ROLES, RoleUtils, hasPermission } from "../../../src/utils/roleUtils";
 
@@ -465,52 +461,6 @@ describe("Auth Middleware", () => {
     });
   });
 
-  describe("authorize middleware", () => {
-    it("should allow access for user with correct role", () => {
-      const authorizeMiddleware = authorize("Administrator", "Leader");
-      const req = { user: { role: "Administrator" } } as unknown as Request;
-      const res = createMockResponse() as Response;
-      const next = createMockNext();
-
-      authorizeMiddleware(req, res, next);
-
-      expect(next).toHaveBeenCalled();
-      expect(res.status).not.toHaveBeenCalled();
-    });
-
-    it("should return 401 when user not authenticated", () => {
-      const authorizeMiddleware = authorize("Administrator");
-      const req = {} as Request;
-      const res = createMockResponse() as Response;
-      const next = createMockNext();
-
-      authorizeMiddleware(req, res, next);
-
-      expect(res.status).toHaveBeenCalledWith(401);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        error: "Authentication required. Invalid or missing token.",
-      });
-      expect(next).not.toHaveBeenCalled();
-    });
-
-    it("should return 403 when user role not authorized", () => {
-      const authorizeMiddleware = authorize("Administrator");
-      const req = { user: { role: "Participant" } } as unknown as Request;
-      const res = createMockResponse() as Response;
-      const next = createMockNext();
-
-      authorizeMiddleware(req, res, next);
-
-      expect(res.status).toHaveBeenCalledWith(403);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        error: "Insufficient permissions.",
-      });
-      expect(next).not.toHaveBeenCalled();
-    });
-  });
-
   describe("authorizeRoles middleware", () => {
     it("should allow access when user has one of the required roles", () => {
       // Mock RoleUtils.hasAnyRole to return true
@@ -640,11 +590,6 @@ describe("Auth Middleware", () => {
     it("should have authenticate middleware", () => {
       expect(authenticate).toBeDefined();
       expect(typeof authenticate).toBe("function");
-    });
-
-    it("should have authorize middleware", () => {
-      expect(authorize).toBeDefined();
-      expect(typeof authorize).toBe("function");
     });
 
     it("should have authorizeRoles middleware", () => {
@@ -949,178 +894,6 @@ describe("Auth Middleware", () => {
     });
   });
 
-  describe("authorizeAtCloudLeader middleware", () => {
-    it("should return 401 when no user", () => {
-      const req: any = {};
-      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
-      const next = vi.fn();
-
-      authorizeAtCloudLeader(req, res, next);
-
-      expect(res.status).toHaveBeenCalledWith(401);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        message: "Authentication required.",
-      });
-      expect(next).not.toHaveBeenCalled();
-    });
-
-    it("should allow when user is @Cloud co-worker", () => {
-      vi.mocked(RoleUtils.isAdmin).mockReturnValue(false as any);
-      const req: any = {
-        user: { isAtCloudLeader: true, role: ROLES.PARTICIPANT },
-      };
-      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
-      const next = vi.fn();
-
-      authorizeAtCloudLeader(req, res, next);
-
-      expect(next).toHaveBeenCalled();
-      expect(res.status).not.toHaveBeenCalled();
-    });
-
-    it("should allow when user is admin even if not leader", () => {
-      vi.mocked(RoleUtils.isAdmin).mockReturnValue(true as any);
-      const req: any = {
-        user: { isAtCloudLeader: false, role: ROLES.ADMINISTRATOR },
-      };
-      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
-      const next = vi.fn();
-
-      authorizeAtCloudLeader(req, res, next);
-
-      expect(next).toHaveBeenCalled();
-      expect(res.status).not.toHaveBeenCalled();
-    });
-
-    it("should 403 when not leader and not admin", () => {
-      vi.mocked(RoleUtils.isAdmin).mockReturnValue(false as any);
-      const req: any = {
-        user: { isAtCloudLeader: false, role: ROLES.PARTICIPANT },
-      };
-      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
-      const next = vi.fn();
-
-      authorizeAtCloudLeader(req, res, next);
-
-      expect(res.status).toHaveBeenCalledWith(403);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        message: "Access denied. @Cloud co-worker status required.",
-      });
-      expect(next).not.toHaveBeenCalled();
-    });
-  });
-
-  describe("authorizeEventAccess middleware", () => {
-    it("should return 401 when no user", async () => {
-      const req: any = { params: { eventId: "e1" } };
-      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
-      const next = vi.fn();
-
-      await authorizeEventAccess(req, res, next);
-
-      expect(res.status).toHaveBeenCalledWith(401);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        message: "Authentication required.",
-      });
-    });
-
-    it("should return 400 when no event id provided", async () => {
-      const req: any = {
-        user: { _id: "u1", role: ROLES.PARTICIPANT },
-        params: {},
-      };
-      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
-      const next = vi.fn();
-
-      await authorizeEventAccess(req, res, next);
-
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        message: "Event ID is required.",
-      });
-    });
-
-    it("should allow admins without checking event", async () => {
-      const { Event } = await import("../../../src/models");
-      vi.mocked(RoleUtils.isAdmin).mockReturnValue(true as any);
-
-      const req: any = {
-        user: { _id: "u1", role: ROLES.ADMINISTRATOR },
-        params: { eventId: "e1" },
-      };
-      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
-      const next = vi.fn();
-
-      await authorizeEventAccess(req, res, next);
-
-      expect(next).toHaveBeenCalled();
-      expect(Event.findById).not.toHaveBeenCalled();
-    });
-
-    it("should 404 when event not found", async () => {
-      const { Event } = await import("../../../src/models");
-      vi.mocked(RoleUtils.isAdmin).mockReturnValue(false as any);
-      (Event.findById as any).mockResolvedValue(null);
-
-      const req: any = {
-        user: { _id: "u1", role: ROLES.PARTICIPANT },
-        params: { id: "e404" },
-      };
-      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
-      const next = vi.fn();
-
-      await authorizeEventAccess(req, res, next);
-
-      expect(res.status).toHaveBeenCalledWith(404);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        message: "Event not found.",
-      });
-    });
-
-    it("should allow when user is event creator", async () => {
-      const { Event } = await import("../../../src/models");
-      vi.mocked(RoleUtils.isAdmin).mockReturnValue(false as any);
-      (Event.findById as any).mockResolvedValue({ createdBy: "u1" });
-
-      const req: any = {
-        user: { _id: "u1", role: ROLES.PARTICIPANT },
-        params: { eventId: "e1" },
-      };
-      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
-      const next = vi.fn();
-
-      await authorizeEventAccess(req, res, next);
-
-      expect(next).toHaveBeenCalled();
-    });
-
-    it("should 403 when user is neither admin nor creator", async () => {
-      const { Event } = await import("../../../src/models");
-      vi.mocked(RoleUtils.isAdmin).mockReturnValue(false as any);
-      (Event.findById as any).mockResolvedValue({ createdBy: "another-user" });
-
-      const req: any = {
-        user: { _id: "u1", role: ROLES.PARTICIPANT },
-        params: { eventId: "e1" },
-      };
-      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
-      const next = vi.fn();
-
-      await authorizeEventAccess(req, res, next);
-
-      expect(res.status).toHaveBeenCalledWith(403);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        message: "Access denied. You can only access events you created.",
-      });
-    });
-  });
-
   describe("authorizeEventManagement middleware", () => {
     it("should return 401 when no user", async () => {
       const req: any = { params: { eventId: "e1" } };
@@ -1260,108 +1033,6 @@ describe("Auth Middleware", () => {
         message:
           "Access denied. You must be an Administrator, Super Admin, event creator, or listed organizer to manage this event.",
       });
-    });
-  });
-
-  describe("conditionalAuthorization middleware", () => {
-    it("should return 401 when no user", () => {
-      const middleware = conditionalAuthorization(true, ROLES.LEADER, [
-        ROLES.ADMINISTRATOR,
-      ]);
-      const req: any = {};
-      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
-      const next = vi.fn();
-
-      middleware(req, res, next);
-
-      expect(res.status).toHaveBeenCalledWith(401);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        message: "Authentication required.",
-      });
-    });
-
-    it("should 403 when leader required and not leader nor admin", () => {
-      vi.mocked(RoleUtils.isAdmin).mockReturnValue(false as any);
-      const middleware = conditionalAuthorization(true);
-      const req: any = {
-        user: { role: ROLES.PARTICIPANT, isAtCloudLeader: false },
-      };
-      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
-      const next = vi.fn();
-
-      middleware(req, res, next);
-
-      expect(res.status).toHaveBeenCalledWith(403);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        message: "Access denied. @Cloud co-worker status required.",
-      });
-    });
-
-    it("should allow when leader required but user is admin", () => {
-      vi.mocked(RoleUtils.isAdmin).mockReturnValue(true as any);
-      const middleware = conditionalAuthorization(true);
-      const req: any = {
-        user: { role: ROLES.ADMINISTRATOR, isAtCloudLeader: false },
-      };
-      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
-      const next = vi.fn();
-
-      middleware(req, res, next);
-
-      expect(next).toHaveBeenCalled();
-    });
-
-    it("should 403 when minimum role not met", () => {
-      vi.mocked(RoleUtils.hasMinimumRole).mockReturnValue(false as any);
-      const middleware = conditionalAuthorization(false, ROLES.LEADER);
-      const req: any = { user: { role: ROLES.PARTICIPANT } };
-      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
-      const next = vi.fn();
-
-      middleware(req, res, next);
-
-      expect(res.status).toHaveBeenCalledWith(403);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        message: `Access denied. Minimum required role: ${ROLES.LEADER}`,
-      });
-    });
-
-    it("should 403 when allowed roles not matched", () => {
-      vi.mocked(RoleUtils.hasAnyRole).mockReturnValue(false as any);
-      const middleware = conditionalAuthorization(false, undefined, [
-        ROLES.ADMINISTRATOR,
-      ]);
-      const req: any = { user: { role: ROLES.PARTICIPANT } };
-      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
-      const next = vi.fn();
-
-      middleware(req, res, next);
-
-      expect(res.status).toHaveBeenCalledWith(403);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        message: `Access denied. Required roles: ${ROLES.ADMINISTRATOR}`,
-      });
-    });
-
-    it("should allow when all conditions satisfied", () => {
-      vi.mocked(RoleUtils.isAdmin).mockReturnValue(false as any);
-      vi.mocked(RoleUtils.hasMinimumRole).mockReturnValue(true as any);
-      vi.mocked(RoleUtils.hasAnyRole).mockReturnValue(true as any);
-      const middleware = conditionalAuthorization(true, ROLES.LEADER, [
-        ROLES.LEADER,
-        ROLES.ADMINISTRATOR,
-      ]);
-      const req: any = { user: { role: ROLES.LEADER, isAtCloudLeader: true } };
-      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
-      const next = vi.fn();
-
-      middleware(req, res, next);
-
-      expect(next).toHaveBeenCalled();
     });
   });
 });

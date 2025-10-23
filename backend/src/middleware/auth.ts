@@ -325,29 +325,6 @@ export const authenticateOptional = async (
   }
 };
 
-// Role-based authorization middleware
-export const authorize = (...roles: string[]) => {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    if (!req.user) {
-      res.status(401).json({
-        success: false,
-        error: "Authentication required. Invalid or missing token.",
-      });
-      return;
-    }
-
-    if (!roles.includes(req.user.role)) {
-      res.status(403).json({
-        success: false,
-        error: "Insufficient permissions.",
-      });
-      return;
-    }
-
-    next();
-  };
-};
-
 // Advanced role-based authorization using role utilities
 export const authorizeRoles = (...requiredRoles: UserRole[]) => {
   return (req: Request, res: Response, next: NextFunction): void => {
@@ -532,97 +509,6 @@ export const requireSuperAdmin = authorizeRoles(ROLES.SUPER_ADMIN);
 // Leader or higher middleware
 export const requireLeader = authorizeMinimumRole(ROLES.LEADER);
 
-// @Cloud co-worker authorization (for @Cloud-specific features)
-export const authorizeAtCloudLeader = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void => {
-  if (!req.user) {
-    res.status(401).json({
-      success: false,
-      message: "Authentication required.",
-    });
-    return;
-  }
-
-  // Check if user is an @Cloud co-worker or has admin privileges
-  if (req.user.isAtCloudLeader || RoleUtils.isAdmin(req.user.role)) {
-    next();
-    return;
-  }
-
-  res.status(403).json({
-    success: false,
-    message: "Access denied. @Cloud co-worker status required.",
-  });
-};
-
-// Event ownership or admin access
-export const authorizeEventAccess = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    if (!req.user) {
-      res.status(401).json({
-        success: false,
-        message: "Authentication required.",
-      });
-      return;
-    }
-
-    const eventId = req.params.eventId || req.params.id;
-
-    if (!eventId) {
-      res.status(400).json({
-        success: false,
-        message: "Event ID is required.",
-      });
-      return;
-    }
-
-    // Admins can access any event
-    if (RoleUtils.isAdmin(req.user.role)) {
-      next();
-      return;
-    }
-
-    // Import Event model here to avoid circular dependency
-    const { Event } = await import("../models");
-    const event = await Event.findById(eventId);
-
-    if (!event) {
-      res.status(404).json({
-        success: false,
-        message: "Event not found.",
-      });
-      return;
-    }
-
-    // Check if user created the event
-    const currentUserId = String(req.user._id);
-    const eventCreatorId = String(event.createdBy);
-
-    if (currentUserId === eventCreatorId) {
-      next();
-      return;
-    }
-
-    res.status(403).json({
-      success: false,
-      message: "Access denied. You can only access events you created.",
-    });
-  } catch (error) {
-    console.error("Event authorization error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Authorization check failed.",
-    });
-  }
-};
-
 // Event management authorization (for removing/moving users)
 export const authorizeEventManagement = async (
   req: Request,
@@ -707,53 +593,4 @@ export const authorizeEventManagement = async (
       message: "Authorization check failed.",
     });
   }
-};
-
-// Conditional authorization based on @Cloud co-worker status and role
-export const conditionalAuthorization = (
-  requireAtCloudLeader: boolean = false,
-  minimumRole?: UserRole,
-  allowedRoles?: UserRole[]
-) => {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    if (!req.user) {
-      res.status(401).json({
-        success: false,
-        message: "Authentication required.",
-      });
-      return;
-    }
-
-    // Check @Cloud co-worker requirement
-    if (
-      requireAtCloudLeader &&
-      !req.user.isAtCloudLeader &&
-      !RoleUtils.isAdmin(req.user.role)
-    ) {
-      res.status(403).json({
-        success: false,
-        message: "Access denied. @Cloud co-worker status required.",
-      });
-      return;
-    }
-
-    // Check role requirements
-    if (minimumRole && !RoleUtils.hasMinimumRole(req.user.role, minimumRole)) {
-      res.status(403).json({
-        success: false,
-        message: `Access denied. Minimum required role: ${minimumRole}`,
-      });
-      return;
-    }
-
-    if (allowedRoles && !RoleUtils.hasAnyRole(req.user.role, allowedRoles)) {
-      res.status(403).json({
-        success: false,
-        message: `Access denied. Required roles: ${allowedRoles.join(" or ")}`,
-      });
-      return;
-    }
-
-    next();
-  };
 };
