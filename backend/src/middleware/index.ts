@@ -40,56 +40,6 @@ export {
   includeCompressionInfo,
 } from "./imageCompression";
 
-// Request validation middleware
-import { Schema } from "joi";
-
-export const validateRequest = (schema: {
-  body?: Schema;
-  query?: Schema;
-  params?: Schema;
-}) => {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    const errors: string[] = [];
-
-    // Validate body
-    if (schema.body) {
-      const { error } = schema.body.validate(req.body);
-      if (error) {
-        errors.push(`Body: ${error.details.map((d) => d.message).join(", ")}`);
-      }
-    }
-
-    // Validate query
-    if (schema.query) {
-      const { error } = schema.query.validate(req.query);
-      if (error) {
-        errors.push(`Query: ${error.details.map((d) => d.message).join(", ")}`);
-      }
-    }
-
-    // Validate params
-    if (schema.params) {
-      const { error } = schema.params.validate(req.params);
-      if (error) {
-        errors.push(
-          `Params: ${error.details.map((d) => d.message).join(", ")}`
-        );
-      }
-    }
-
-    if (errors.length > 0) {
-      res.status(400).json({
-        success: false,
-        message: "Validation failed",
-        errors,
-      });
-      return;
-    }
-
-    next();
-  };
-};
-
 // Error handling middleware
 export const errorHandler = ErrorHandlerMiddleware.globalErrorHandler;
 
