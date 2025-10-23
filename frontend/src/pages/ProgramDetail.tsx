@@ -748,6 +748,13 @@ export default function ProgramDetail({
       {program.mentors && program.mentors.length > 0 && (
         <div className="bg-white rounded-lg shadow-sm p-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Mentors</h2>
+          <p className="text-gray-600 text-sm mb-4 italic">
+            Spiritual Guides and Leadership Coaches
+            <br />
+            Mentors are seasoned ministry & business leaders who model
+            Christ-centered leadership and guide others in faith, personal
+            growth, and practical skills.
+          </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {program.mentors.map((m) => {
               // Use avatar URL directly from database (backend updates it atomically)

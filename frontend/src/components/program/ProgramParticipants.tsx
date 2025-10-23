@@ -317,6 +317,10 @@ export function ProgramParticipants({
         <h2 className="text-xl font-semibold text-gray-900 mb-4">
           Class Representatives
         </h2>
+        <p className="text-gray-600 text-sm mb-4 italic">
+          Class representatives are peer leaders chosen within each mentorship
+          cohort to support coordination, communication, and community building.
+        </p>
 
         {classReps.length === 0 ? (
           <p className="text-gray-600 text-center py-4">
@@ -353,6 +357,13 @@ export function ProgramParticipants({
       {/* Mentees Section */}
       <div className="bg-white rounded-lg shadow-sm p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Mentees</h2>
+        <p className="text-gray-600 text-sm mb-4 italic">
+          Emerging Leaders in Growth and Service
+          <br />
+          Mentees are participants who commit to a season of intentional
+          learning, reflection, and transformation under the guidance of
+          mentors.
+        </p>
 
         {mentees.length === 0 ? (
           <p className="text-gray-600 text-center py-4">
