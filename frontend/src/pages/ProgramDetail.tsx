@@ -747,9 +747,9 @@ export default function ProgramDetail({
       {/* Mentors section */}
       {program.mentors && program.mentors.length > 0 && (
         <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Mentors</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Mentors</h2>
           <p className="text-gray-600 text-sm mb-4 italic">
-            Spiritual Guides and Leadership Coaches
+            — Spiritual Guides and Leadership Coaches
             <br />
             Mentors are seasoned ministry & business leaders who model
             Christ-centered leadership and guide others in faith, personal

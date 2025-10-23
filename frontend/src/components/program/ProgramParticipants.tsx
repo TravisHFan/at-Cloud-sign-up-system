@@ -314,7 +314,7 @@ export function ProgramParticipants({
 
       {/* Class Representatives Section */}
       <div className="bg-white rounded-lg shadow-sm p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">
           Class Representatives
         </h2>
         <p className="text-gray-600 text-sm mb-4 italic">
@@ -356,9 +356,9 @@ export function ProgramParticipants({
 
       {/* Mentees Section */}
       <div className="bg-white rounded-lg shadow-sm p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Mentees</h2>
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">Mentees</h2>
         <p className="text-gray-600 text-sm mb-4 italic">
-          Emerging Leaders in Growth and Service
+          — Emerging Leaders in Growth and Service
           <br />
           Mentees are participants who commit to a season of intentional
           learning, reflection, and transformation under the guidance of
