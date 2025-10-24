@@ -66,7 +66,7 @@ The sidebar now shows (for Super Admin/Administrator/Leader):
 ├── Upcoming Events
 ├── Past Events
 ├── My Events
-├── Published Events (Super Admin/Admin only)
+├── Published Events (Super Admin/Admin/Leader)
 ├── ➕ Create Event
 ├── 📋 Role Templates        ← NEW!
 ├── Management/Community

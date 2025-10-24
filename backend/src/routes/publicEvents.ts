@@ -41,7 +41,10 @@ router.get("/events", async (req, res) => {
     };
 
     const entry = await getOrSetPublicEventsList(params, async () => {
-      const filter: Record<string, unknown> = { publish: true };
+      const filter: Record<string, unknown> = {
+        publish: true,
+        status: { $ne: "completed" }, // Filter out past/completed events
+      };
       if (type) filter.type = type;
       if (dateFrom || dateTo) {
         if (dateFrom)

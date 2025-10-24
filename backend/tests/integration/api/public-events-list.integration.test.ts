@@ -131,4 +131,35 @@ describe("Public events listing", () => {
     const total2 = list2.body.data.total;
     expect(total2).toBeGreaterThan(total1);
   });
+
+  it("filters out completed events from public listing", async () => {
+    const token = await createAdmin();
+
+    // Create a future event (should appear)
+    const futureEvent = await createPublished(
+      token,
+      "Future Event",
+      "Webinar",
+      "2025-12-01"
+    );
+
+    // Create another event with future date, then mark it as completed (should NOT appear)
+    const pastEvent = await createPublished(
+      token,
+      "Past Event",
+      "Webinar",
+      "2025-11-15"
+    );
+    // Manually mark the event as completed to simulate a past event
+    await Event.findByIdAndUpdate(pastEvent.eventId, { status: "completed" });
+
+    const list = await request(app).get("/api/public/events");
+    expect(list.status).toBe(200);
+
+    const titles = list.body.data.items.map(
+      (item: { title: string }) => item.title
+    );
+    expect(titles).toContain("Future Event");
+    expect(titles).not.toContain("Past Event");
+  });
 });

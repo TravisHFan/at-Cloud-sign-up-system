@@ -99,7 +99,7 @@ function App() {
                 path="published-events"
                 element={
                   <ProtectedRoute
-                    allowedRoles={["Super Admin", "Administrator"]}
+                    allowedRoles={["Super Admin", "Administrator", "Leader"]}
                   >
                     <PublishedEvents />
                   </ProtectedRoute>

@@ -211,8 +211,8 @@ describe("Sidebar Component - Income History Link Visibility", () => {
         </MemoryRouter>
       );
 
-      // Should NOT see admin-only features
-      expect(screen.queryByText("Published Events")).not.toBeInTheDocument();
+      // Leader should see Published Events but NOT other admin-only features
+      expect(screen.getByText("Published Events")).toBeInTheDocument();
       expect(screen.queryByText("Promo Codes")).not.toBeInTheDocument();
       expect(screen.queryByText("Income History")).not.toBeInTheDocument();
       // Leader sees "Community" instead of "Management"

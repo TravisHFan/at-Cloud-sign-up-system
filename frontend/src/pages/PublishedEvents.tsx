@@ -25,7 +25,8 @@ export default function PublishedEvents() {
   const [error, setError] = useState<string | null>(null);
   const notification = useToastReplacement();
 
-  // Load published events (all statuses but filter for published ones)
+  // Load published events (filter for published AND not completed)
+  // We filter out completed events because they're no longer available for registration
   const refreshEvents = useCallback(async () => {
     try {
       setLoading(true);
@@ -40,9 +41,10 @@ export default function PublishedEvents() {
         sortOrder,
       });
 
-      // Filter for published events only
+      // Filter for published events only (excluding completed/past events)
+      // Past events are not useful since they're no longer available for registration
       const publishedEvents = resp.events.filter(
-        (event) => event.publish === true
+        (event) => event.publish === true && event.status !== "completed"
       );
 
       setEvents(publishedEvents);

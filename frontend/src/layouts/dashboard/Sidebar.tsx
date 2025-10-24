@@ -83,8 +83,12 @@ export default function Sidebar({
       },
     ];
 
-    // Add Published Events for Super Admin and Administrator only
-    if (userRole === "Super Admin" || userRole === "Administrator") {
+    // Add Published Events for Super Admin, Administrator, and Leader
+    if (
+      userRole === "Super Admin" ||
+      userRole === "Administrator" ||
+      userRole === "Leader"
+    ) {
       baseItems.push({
         name: "Published Events",
         href: "/dashboard/published-events",
