@@ -67,6 +67,13 @@ export default function NotificationPromptModal({
                 The user will receive an email and system message about the role
                 assignment.
               </div>
+              <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-xs text-green-800">
+                <strong>Highly recommended.</strong> Even if you're inviting the
+                person to take on multiple roles in the same event, please send
+                a separate notification each time, so they aren't forced to
+                decline only part of the invitation, which could lead to
+                miscommunication and scheduling errors.
+              </div>
             </div>
           </label>
 
@@ -86,6 +93,10 @@ export default function NotificationPromptModal({
               <div className="text-xs text-gray-500 mt-1">
                 The assignment will be applied silently without any
                 notifications.
+              </div>
+              <div className="mt-2 p-2 bg-red-50 border border-red-300 rounded text-xs text-red-800">
+                <strong>Highly not recommended,</strong> unless you've already
+                communicated with the other party and confirmed they can attend.
               </div>
             </div>
           </label>
