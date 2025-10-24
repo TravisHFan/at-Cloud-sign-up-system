@@ -7,6 +7,22 @@ import { ROLES } from "../../utils/roleUtils";
 // Load environment variables
 dotenv.config();
 
+/**
+ * Regenerate Users Script
+ *
+ * Creates a comprehensive set of test users across all roles for development and testing.
+ * WARNING: This will DELETE all existing users and create fresh ones.
+ *
+ * Created users:
+ * - Super Admin: test-superadmin@example.com / SuperAdmin123!
+ * - Administrator: test-admin-john@example.com / AdminPass123!
+ * - Leader: test-leader-sarah@example.com / LeaderPass123!
+ * - Participant 1: test-participant-mike@example.com / ParticipantPass123!
+ * - Participant 2: test-participant-emily@example.com / ParticipantPass123!
+ *
+ * Usage: npm run regenerate-users
+ */
+
 interface UserData {
   username: string;
   email: string;
@@ -33,8 +49,8 @@ interface UserData {
 const sampleUsers: UserData[] = [
   // Super Admin
   {
-    username: "superadmin",
-    email: "superadmin@gmail.com",
+    username: "testsuperadmin",
+    email: "test-superadmin@example.com",
     phone: "+1234567890",
     password: "SuperAdmin123!",
     firstName: "Super",
@@ -56,8 +72,8 @@ const sampleUsers: UserData[] = [
 
   // Administrator
   {
-    username: "admin_john",
-    email: "john.doe@gmail.com",
+    username: "testadminjohn",
+    email: "test-admin-john@example.com",
     phone: "+1234567891",
     password: "AdminPass123!",
     firstName: "John",
@@ -79,8 +95,8 @@ const sampleUsers: UserData[] = [
 
   // Leader
   {
-    username: "leader_sarah",
-    email: "sarah.johnson@gmail.com",
+    username: "testleadersarah",
+    email: "test-leader-sarah@example.com",
     phone: "+1234567892",
     password: "LeaderPass123!",
     firstName: "Sarah",
@@ -100,35 +116,34 @@ const sampleUsers: UserData[] = [
     loginAttempts: 0,
   },
 
-  // Leader - Event Coordinator
+  // Participant 1
   {
-    username: "coordinator_mike",
-    email: "mike.wilson@gmail.com",
+    username: "testparticipantmike",
+    email: "test-participant-mike@example.com",
     phone: "+1234567893",
-    password: "Coordinator123!",
+    password: "ParticipantPass123!",
     firstName: "Mike",
     lastName: "Wilson",
     gender: "male",
     avatar: "/default-avatar-male.jpg",
-    homeAddress: "654 Event Street, City, State",
-    isAtCloudLeader: true,
-    roleInAtCloud: "Event Coordinator",
-    occupation: "Event Manager",
-    company: "@Cloud Ministry",
+    homeAddress: "654 Participant Street, City, State",
+    isAtCloudLeader: false,
+    occupation: "Software Engineer",
+    company: "Tech Company Inc.",
     weeklyChurch: "@Cloud Main Campus",
     churchAddress: "456 Church Avenue, City, State",
-    role: ROLES.LEADER,
+    role: ROLES.PARTICIPANT,
     isActive: true,
     isVerified: true,
     loginAttempts: 0,
   },
 
-  // Regular Participants
+  // Participant 2
   {
-    username: "participant_emily",
-    email: "emily.davis@gmail.com",
+    username: "testparticipantemily",
+    email: "test-participant-emily@example.com",
     phone: "+1234567894",
-    password: "Participant123!",
+    password: "ParticipantPass123!",
     firstName: "Emily",
     lastName: "Davis",
     gender: "female",
@@ -137,113 +152,6 @@ const sampleUsers: UserData[] = [
     isAtCloudLeader: false,
     occupation: "Teacher",
     company: "Local Elementary School",
-    weeklyChurch: "@Cloud Main Campus",
-    churchAddress: "456 Church Avenue, City, State",
-    role: ROLES.PARTICIPANT,
-    isActive: true,
-    isVerified: true,
-    loginAttempts: 0,
-  },
-
-  {
-    username: "participant_david",
-    email: "david.brown@outlook.com",
-    phone: "+1234567895",
-    password: "David123!",
-    firstName: "David",
-    lastName: "Brown",
-    gender: "male",
-    avatar: "/default-avatar-male.jpg",
-    homeAddress: "456 Family Street, City, State",
-    isAtCloudLeader: false,
-    occupation: "Software Engineer",
-    company: "Tech Solutions Inc",
-    weeklyChurch: "@Cloud North Campus",
-    churchAddress: "789 North Street, City, State",
-    role: ROLES.PARTICIPANT,
-    isActive: true,
-    isVerified: true,
-    loginAttempts: 0,
-  },
-
-  {
-    username: "participant_lisa",
-    email: "lisa.garcia@yahoo.com",
-    phone: "+1234567896",
-    password: "Lisa123!",
-    firstName: "Lisa",
-    lastName: "Garcia",
-    gender: "female",
-    avatar: "/default-avatar-female.jpg",
-    homeAddress: "789 Hope Avenue, City, State",
-    isAtCloudLeader: false,
-    occupation: "Nurse",
-    company: "City General Hospital",
-    weeklyChurch: "@Cloud Youth Center",
-    churchAddress: "321 Youth Boulevard, City, State",
-    role: ROLES.PARTICIPANT,
-    isActive: true,
-    isVerified: true,
-    loginAttempts: 0,
-  },
-
-  {
-    username: "participant_james",
-    email: "james.miller@gmail.com",
-    phone: "+1234567897",
-    password: "James123!",
-    firstName: "James",
-    lastName: "Miller",
-    gender: "male",
-    avatar: "/default-avatar-male.jpg",
-    homeAddress: "123 Faith Circle, City, State",
-    isAtCloudLeader: false,
-    occupation: "Accountant",
-    company: "Financial Services LLC",
-    weeklyChurch: "@Cloud Main Campus",
-    churchAddress: "456 Church Avenue, City, State",
-    role: ROLES.PARTICIPANT,
-    isActive: true,
-    isVerified: false, // Not yet verified
-    loginAttempts: 0,
-  },
-
-  // Inactive user example
-  {
-    username: "inactive_user",
-    email: "inactive@example.com",
-    phone: "+1234567898",
-    password: "Inactive123!",
-    firstName: "Inactive",
-    lastName: "User",
-    gender: "male",
-    avatar: "/default-avatar-male.jpg",
-    homeAddress: "999 Inactive Lane, City, State",
-    isAtCloudLeader: false,
-    occupation: "Former Member",
-    company: "N/A",
-    weeklyChurch: "@Cloud Main Campus",
-    churchAddress: "456 Church Avenue, City, State",
-    role: ROLES.PARTICIPANT,
-    isActive: false, // Inactive account
-    isVerified: true,
-    loginAttempts: 0,
-  },
-
-  // Test users for development
-  {
-    username: "testuser1",
-    email: "test1@atcloud.test",
-    phone: "+1234567899",
-    password: "TestUser123!",
-    firstName: "Test",
-    lastName: "User One",
-    gender: "female",
-    avatar: "/default-avatar-female.jpg",
-    homeAddress: "111 Test Street, Test City, Test State",
-    isAtCloudLeader: false,
-    occupation: "QA Tester",
-    company: "Testing Corp",
     weeklyChurch: "@Cloud Main Campus",
     churchAddress: "456 Church Avenue, City, State",
     role: ROLES.PARTICIPANT,
@@ -261,10 +169,15 @@ async function regenerateUserData() {
       process.env.MONGODB_URI || "mongodb://localhost:27017/atcloud-signup";
     await mongoose.connect(mongoUri);
 
+    console.log("🚀 Starting user regeneration...");
+    console.log("⚠️  WARNING: This will DELETE all existing users!\n");
+
     // Clear existing users
-    await User.deleteMany({});
+    const deleteResult = await User.deleteMany({});
+    console.log(`🗑️  Deleted ${deleteResult.deletedCount} existing users\n`);
 
     // Create new users with all required fields
+    console.log("📝 Creating test users...");
 
     for (const userData of sampleUsers) {
       try {
@@ -277,12 +190,16 @@ async function regenerateUserData() {
         });
 
         await user.save();
+        console.log(
+          `✅ Created: ${userData.username} (${userData.email}) - ${userData.role}`
+        );
       } catch (error) {
         console.error(`❌ Failed to create user ${userData.username}:`, error);
       }
     }
 
     // Verify the data
+    console.log("\n📊 User Statistics:");
     const userCount = await User.countDocuments();
     const adminCount = await User.countDocuments({ role: ROLES.SUPER_ADMIN });
     const adminUserCount = await User.countDocuments({
@@ -295,17 +212,35 @@ async function regenerateUserData() {
     const activeCount = await User.countDocuments({ isActive: true });
     const verifiedCount = await User.countDocuments({ isVerified: true });
 
+    console.log(`Total Users: ${userCount}`);
+    console.log(`Super Admins: ${adminCount}`);
+    console.log(`Administrators: ${adminUserCount}`);
+    console.log(`Leaders: ${leaderCount}`);
+    console.log(`Participants: ${participantCount}`);
+    console.log(`Active: ${activeCount}`);
+    console.log(`Verified: ${verifiedCount}`);
+
     // Test a sample user to verify schema
-    const testUser = await User.findOne({ username: "superadmin" });
+    const testUser = await User.findOne({ username: "testsuperadmin" });
     if (testUser) {
+      console.log("\n✅ Sample user verification successful");
+      console.log(`   Username: ${testUser.username}`);
+      console.log(`   Email: ${testUser.email}`);
+      console.log(`   Role: ${testUser.role}`);
     }
   } catch (error) {
     console.error("❌ Error regenerating user data:", error);
+    process.exit(1);
   } finally {
     // Close the connection
     await mongoose.connection.close();
+    console.log("\n✨ User regeneration complete!");
+    process.exit(0);
   }
 }
+
+// Run the function
+regenerateUserData();
 
 // Export the function and run if this file is executed directly
 export { regenerateUserData, sampleUsers };

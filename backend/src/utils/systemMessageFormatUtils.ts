@@ -23,26 +23,3 @@ export function formatActorDisplay(actor: {
   // Return format: [System Authorization Level] [Full Name]
   return `${actor.role} ${fullName}`;
 }
-
-/**
- * Format target user display for system messages
- * Shows the user's full name and username/email information
- *
- * @param user - The target user
- * @returns Formatted string like "John Doe (@johndoe, john@example.com)"
- */
-export function formatTargetUserDisplay(user: {
-  firstName?: string;
-  lastName?: string;
-  username?: string;
-  email: string;
-}): string {
-  const fullName =
-    [user.firstName, user.lastName].filter(Boolean).join(" ") ||
-    user.username ||
-    user.email;
-
-  const username = user.username ? `@${user.username}` : user.email;
-
-  return `${fullName} (${username}, ${user.email})`;
-}

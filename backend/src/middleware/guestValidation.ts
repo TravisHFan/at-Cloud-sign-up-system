@@ -92,18 +92,6 @@ export const guestUpdateValidation: ValidationChain[] = [
 ];
 
 /**
- * Validation rules for guest email lookup
- */
-export const guestEmailValidation: ValidationChain[] = [
-  body("email")
-    .isEmail()
-    .withMessage("Please provide a valid email address")
-    // Preserve dots and plus-addressing; only trim + lowercase
-    .trim()
-    .toLowerCase(),
-];
-
-/**
  * Validation rules for guest cancellation
  */
 export const guestCancellationValidation: ValidationChain[] = [
@@ -113,41 +101,6 @@ export const guestCancellationValidation: ValidationChain[] = [
     .isLength({ max: 500 })
     .withMessage("Cancellation reason must be less than 500 characters"),
 ];
-
-/**
- * Custom validation functions
- */
-
-/**
- * Validates phone number format more strictly
- */
-export const isValidPhoneNumber = (phone: string): boolean => {
-  // Remove all non-digit characters
-  const digitsOnly = phone.replace(/\D/g, "");
-
-  // Check if it's a valid length (typically 10-15 digits)
-  if (digitsOnly.length < 10 || digitsOnly.length > 15) {
-    return false;
-  }
-
-  // Basic format validation
-  return /^[\d\s+().-]+$/.test(phone);
-};
-
-/**
- * Validates full name format
- */
-export const isValidFullName = (name: string): boolean => {
-  const trimmedName = name.trim();
-
-  // Must contain at least first and last name (space between)
-  if (!trimmedName.includes(" ")) {
-    return false;
-  }
-
-  // Check character restrictions
-  return /^[a-zA-Z\s'-]+$/.test(trimmedName);
-};
 
 /**
  * Sanitizes guest input data
@@ -288,51 +241,6 @@ export const validateGuestUniqueness = async (
     return {
       isValid: false,
       message: "Error validating guest registration uniqueness",
-    };
-  }
-};
-
-/**
- * Deprecated: global single-event access check (no longer enforced).
- * Kept for backward compatibility in case older migrations/tests reference it.
- */
-export const validateGuestSingleEventAccess = async (
-  email: string,
-  excludeId?: string
-): Promise<{ isValid: boolean; message?: string }> => {
-  try {
-    if (!email || typeof email !== "string" || email.trim() === "") {
-      return {
-        isValid: false,
-        message: "Error validating guest single-event access",
-      };
-    }
-
-    const { GuestRegistration } = await import("../models");
-
-    const query: Record<string, unknown> = {
-      email: email.toLowerCase(),
-      status: "active",
-    };
-
-    if (excludeId) {
-      query._id = { $ne: excludeId };
-    }
-
-    const existing = await GuestRegistration.findOne(query).lean();
-    if (existing) {
-      return {
-        isValid: false,
-        message:
-          "A guest with this email already has an active registration for another event",
-      };
-    }
-
-    return { isValid: true };
-  } catch {
-    return {
-      isValid: false,
-      message: "Error validating guest single-event access",
     };
   }
 };

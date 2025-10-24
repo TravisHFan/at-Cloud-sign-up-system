@@ -46,7 +46,3 @@ export function randomBase62(length: number): string {
 function randomIntInclusive(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
-
-export function isBase62(str: string): boolean {
-  return /^[0-9A-Za-z]+$/.test(str);
-}

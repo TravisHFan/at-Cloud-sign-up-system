@@ -49,22 +49,6 @@ export function getMaxRolesPerEvent(authorization: UserAuthorization): number {
 }
 
 /**
- * Returns a human-readable limit string for error messages.
- *
- * @param authorization - The user's authorization level
- * @returns A string describing the limit
- */
-export function getMaxRolesMessage(authorization: UserAuthorization): string {
-  const limit = getMaxRolesPerEvent(authorization);
-
-  if (limit === Infinity) {
-    return "unlimited";
-  }
-
-  return `${limit}`;
-}
-
-/**
  * Returns the full limit description for user display.
  *
  * @param authorization - The user's authorization level

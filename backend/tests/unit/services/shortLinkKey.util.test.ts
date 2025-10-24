@@ -45,7 +45,6 @@ describe("shortLinkKey util", () => {
       minLength: 6,
       maxLength: 6,
     });
-    expect(keyUtil.isBase62(key)).toBe(true);
     expect(key.length).toBe(6);
     expect((ShortLink.findOne as any).mock.calls.length).toBe(3);
   });
@@ -64,10 +63,5 @@ describe("shortLinkKey util", () => {
       })
     ).rejects.toThrow(/Failed to generate unique short link key/);
     expect((ShortLink.findOne as any).mock.calls.length).toBeGreaterThan(2);
-  });
-
-  it("validates base62 strings", () => {
-    expect(keyUtil.isBase62("abcDEF123")).toBe(true);
-    expect(keyUtil.isBase62("abc-123")).toBe(false);
   });
 });

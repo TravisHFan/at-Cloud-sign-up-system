@@ -6,6 +6,17 @@ import { ROLES } from "../../utils/roleUtils";
 // Load environment variables
 dotenv.config();
 
+/**
+ * Setup Users Script
+ *
+ * Creates basic test users for local development:
+ * - Super Admin: test-admin@example.com / AdminPassword123!
+ * - Leader: test-leader@example.com / LeaderPassword123!
+ * - Participant: test-user@example.com / UserPassword123!
+ *
+ * Usage: npm run setup-users
+ */
+
 const createAdminUser = async () => {
   try {
     // Connect to MongoDB
@@ -13,24 +24,27 @@ const createAdminUser = async () => {
       process.env.MONGODB_URI || "mongodb://localhost:27017/atcloud-signup";
     await mongoose.connect(mongoURI);
 
+    console.log("📝 Setting up test users...");
+
     // Check if admin user already exists
     const existingAdmin = await User.findOne({ role: ROLES.SUPER_ADMIN });
     if (existingAdmin) {
+      console.log("ℹ️  Super Admin already exists, skipping...");
       return;
     }
 
     // Create admin user
     const adminUser = new User({
-      username: "admin",
-      email: "admin@gmail.com",
+      username: "testadmin",
+      email: "test-admin@example.com",
       password: "AdminPassword123!",
-      firstName: "System",
+      firstName: "Test",
       lastName: "Administrator",
       gender: "male",
       isAtCloudLeader: true,
       roleInAtCloud: "IT Director",
       occupation: "System Administrator",
-      company: "@Cloud Marketplace Ministry",
+      company: "@Cloud Ministry",
       weeklyChurch: "@Cloud Ministry",
       role: ROLES.SUPER_ADMIN,
       isActive: true,
@@ -38,10 +52,14 @@ const createAdminUser = async () => {
     });
 
     await adminUser.save();
+    console.log(
+      "✅ Created Super Admin: test-admin@example.com / AdminPassword123!"
+    );
   } catch (error: any) {
-    console.error("❌ Error creating admin user:", error);
+    console.error("❌ Error creating admin user:", error.message);
 
     if (error.code === 11000) {
+      console.log("ℹ️  User already exists (duplicate key)");
     }
   } finally {
     await mongoose.connection.close();
@@ -62,7 +80,7 @@ const createTestUsers = async () => {
     if (!existingLeader) {
       const leaderUser = new User({
         username: "testleader",
-        email: "leader@gmail.com",
+        email: "test-leader@example.com",
         password: "LeaderPassword123!",
         firstName: "John",
         lastName: "Leader",
@@ -78,6 +96,11 @@ const createTestUsers = async () => {
       });
 
       await leaderUser.save();
+      console.log(
+        "✅ Created Leader: test-leader@example.com / LeaderPassword123!"
+      );
+    } else {
+      console.log("ℹ️  Leader user already exists, skipping...");
     }
 
     // Create test participant user
@@ -85,7 +108,7 @@ const createTestUsers = async () => {
     if (!existingParticipant) {
       const participantUser = new User({
         username: "testuser",
-        email: "user@gmail.com",
+        email: "test-user@example.com",
         password: "UserPassword123!",
         firstName: "Jane",
         lastName: "Participant",
@@ -100,9 +123,14 @@ const createTestUsers = async () => {
       });
 
       await participantUser.save();
+      console.log(
+        "✅ Created Participant: test-user@example.com / UserPassword123!"
+      );
+    } else {
+      console.log("ℹ️  Participant user already exists, skipping...");
     }
   } catch (error: any) {
-    console.error("❌ Error creating test users:", error);
+    console.error("❌ Error creating test users:", error.message);
   } finally {
     await mongoose.connection.close();
   }
@@ -110,9 +138,11 @@ const createTestUsers = async () => {
 
 // Main execution
 const main = async () => {
+  console.log("🚀 Starting user setup script...\n");
   await createAdminUser();
-
+  console.log("\n🚀 Creating additional test users...\n");
   await createTestUsers();
+  console.log("\n✨ User setup complete!");
 };
 
 main();

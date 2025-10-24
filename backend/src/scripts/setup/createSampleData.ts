@@ -4,6 +4,24 @@ import { User, Event, Registration } from "../../models";
 import { ROLES } from "../../utils/roleUtils";
 import { v4 as uuidv4 } from "uuid";
 
+/**
+ * Create Sample Data Script
+ *
+ * Creates a complete development environment with:
+ * - Sample users across all roles (Super Admin, Administrator, Leader, Participants)
+ * - Sample events (webinars, conferences, workshops)
+ * - Sample registrations
+ *
+ * This script is useful for:
+ * - Initial local development setup
+ * - Demo environments
+ * - Testing complete workflows
+ *
+ * Usage: npm run create-sample-data
+ *
+ * Note: Uses @example.com email addresses for all test accounts
+ */
+
 // Load environment variables
 dotenv.config();
 

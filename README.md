@@ -8,6 +8,53 @@ Full-stack event and workshop sign-up platform (Node/Express + React/TypeScript)
 - Dev servers: backend on 5001, frontend on 5173 (proxy to backend)
 - Health checks: see `docs/DEV_HEALTH_CHECKS.md`
 
+## Development Setup Scripts
+
+For local development, you can quickly set up test users and sample data:
+
+### Setup Test Users
+
+Creates basic test users for development:
+
+```bash
+cd backend
+npm run setup-users
+```
+
+**Created users:**
+
+- **Super Admin:** `test-admin@example.com` / `AdminPassword123!`
+- **Leader:** `test-leader@example.com` / `LeaderPassword123!`
+- **Participant:** `test-user@example.com` / `UserPassword123!`
+
+### Regenerate All Users
+
+⚠️ **WARNING:** Deletes all existing users and creates a fresh set:
+
+```bash
+cd backend
+npm run regenerate-users
+```
+
+**Created users:**
+
+- **Super Admin:** `test-superadmin@example.com` / `SuperAdmin123!`
+- **Administrator:** `test-admin-john@example.com` / `AdminPass123!`
+- **Leader:** `test-leader-sarah@example.com` / `LeaderPass123!`
+- **Participant 1:** `test-participant-mike@example.com` / `ParticipantPass123!`
+- **Participant 2:** `test-participant-emily@example.com` / `ParticipantPass123!`
+
+### Create Sample Data
+
+Creates users, events, and registrations for a complete dev environment:
+
+```bash
+cd backend
+npm run create-sample-data
+```
+
+**Note:** All test accounts use `@example.com` domain to avoid confusion with real accounts.
+
 ## Pre-Deployment Checklist
 
 **Before deploying to production**, run:

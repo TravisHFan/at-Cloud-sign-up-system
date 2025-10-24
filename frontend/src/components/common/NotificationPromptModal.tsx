@@ -95,7 +95,7 @@ export default function NotificationPromptModal({
                 notifications.
               </div>
               <div className="mt-2 p-2 bg-red-50 border border-red-300 rounded text-xs text-red-800">
-                <strong>Highly not recommended,</strong> unless you've already
+                <strong>Not recommended,</strong> unless you've already
                 communicated with the other party and confirmed they can attend.
               </div>
             </div>
