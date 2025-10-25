@@ -1,3 +1,4 @@
+import { EmailTransporter } from "../../../../src/services/email/EmailTransporter";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 // Mock nodemailer before importing EmailService
@@ -44,14 +45,14 @@ describe("EmailService - branch polish (promotion + reminders)", () => {
         mockTransporter
       );
 
-    (EmailService as any).transporter = null;
+    EmailTransporter.resetTransporter();
     vi.spyOn(console, "error").mockImplementation(() => {});
     vi.spyOn(console, "log").mockImplementation(() => {});
   });
 
   afterEach(() => {
     process.env = env;
-    (EmailService as any).transporter = null;
+    EmailTransporter.resetTransporter();
     vi.restoreAllMocks();
   });
 

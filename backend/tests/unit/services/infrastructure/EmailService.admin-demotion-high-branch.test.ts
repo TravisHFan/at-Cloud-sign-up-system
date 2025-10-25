@@ -1,3 +1,4 @@
+import { EmailTransporter } from "../../../../src/services/email/EmailTransporter";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import nodemailer from "nodemailer";
 import { EmailService } from "../../../../src/services/infrastructure/emailService";
@@ -14,14 +15,14 @@ describe("EmailService.sendDemotionNotificationToAdmins - High impact branch", (
     process.env = { ...baseEnv } as any;
     delete (process.env as any).FRONTEND_URL; // force default URL branch in admin links
     process.env.NODE_ENV = "development";
-    (EmailService as any).transporter = null;
+    EmailTransporter.resetTransporter();
     sentArgs = undefined;
     createTransportSpy = vi.spyOn(nodemailer, "createTransport");
   });
 
   afterEach(() => {
     process.env = { ...baseEnv } as any;
-    (EmailService as any).transporter = null;
+    EmailTransporter.resetTransporter();
     vi.restoreAllMocks();
   });
 

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { EmailService } from "../../../../src/services/infrastructure/emailService";
+import { EmailTransporter } from "../../../../src/services/email/EmailTransporter";
 
 describe("EmailService.sendEmail branches", () => {
   const realEnv = process.env.NODE_ENV;
@@ -15,7 +16,7 @@ describe("EmailService.sendEmail branches", () => {
 
   it("short-circuits in test env without transporter", async () => {
     process.env.NODE_ENV = "test";
-    const getT = vi.spyOn(EmailService as any, "getTransporter");
+    const getT = vi.spyOn(EmailTransporter, "getTransporter");
     const ok = await EmailService.sendEmail({
       to: "a@b.com",
       subject: "S",
@@ -30,7 +31,7 @@ describe("EmailService.sendEmail branches", () => {
     const sendMail = vi
       .fn()
       .mockResolvedValue({ response: '{"jsonTransport":true}' });
-    vi.spyOn(EmailService as any, "getTransporter").mockReturnValue({
+    vi.spyOn(EmailTransporter, "getTransporter").mockReturnValue({
       sendMail,
     } as any);
 
@@ -46,7 +47,7 @@ describe("EmailService.sendEmail branches", () => {
   it("returns false when transporter throws", async () => {
     process.env.NODE_ENV = "development";
     const sendMail = vi.fn().mockRejectedValue(new Error("boom"));
-    vi.spyOn(EmailService as any, "getTransporter").mockReturnValue({
+    vi.spyOn(EmailTransporter, "getTransporter").mockReturnValue({
       sendMail,
     } as any);
 

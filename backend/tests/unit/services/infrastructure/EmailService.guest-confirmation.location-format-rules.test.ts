@@ -1,3 +1,4 @@
+import { EmailTransporter } from "../../../../src/services/email/EmailTransporter";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import nodemailer from "nodemailer";
 import { EmailService } from "../../../../src/services/infrastructure/emailService";
@@ -19,14 +20,14 @@ describe("EmailService.sendGuestConfirmationEmail - location format rules", () =
     // Use development env so EmailService.sendEmail does NOT short-circuit and we can capture html/text
     process.env.NODE_ENV = "development";
     process.env.FRONTEND_URL = "https://app.example.com";
-    (EmailService as any).transporter = null;
+    EmailTransporter.resetTransporter();
     sentArgs = undefined;
     createTransportSpy = vi.spyOn(nodemailer, "createTransport");
   });
 
   afterEach(() => {
     process.env = { ...baseEnv } as any;
-    (EmailService as any).transporter = null;
+    EmailTransporter.resetTransporter();
     vi.restoreAllMocks();
   });
 

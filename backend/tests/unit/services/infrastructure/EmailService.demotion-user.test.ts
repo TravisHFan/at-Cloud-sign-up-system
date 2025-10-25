@@ -1,3 +1,4 @@
+import { EmailTransporter } from "../../../../src/services/email/EmailTransporter";
 import {
   describe,
   it,
@@ -23,7 +24,7 @@ describe("EmailService demotion-to-user coverage", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
-    (EmailService as any).transporter = undefined;
+    EmailTransporter.resetTransporter();
   });
 
   const userData = {

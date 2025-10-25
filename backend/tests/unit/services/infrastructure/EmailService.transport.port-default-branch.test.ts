@@ -1,3 +1,4 @@
+import { EmailTransporter } from "../../../../src/services/email/EmailTransporter";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import nodemailer from "nodemailer";
 import { EmailService } from "../../../../src/services/infrastructure/emailService";
@@ -10,13 +11,13 @@ describe("EmailService.getTransporter - production port default fallback", () =>
   beforeEach(() => {
     vi.restoreAllMocks();
     process.env = { ...baseEnv } as any;
-    (EmailService as any).transporter = null;
+    EmailTransporter.resetTransporter();
     createTransportSpy = vi.spyOn(nodemailer, "createTransport");
   });
 
   afterEach(() => {
     process.env = { ...baseEnv } as any;
-    (EmailService as any).transporter = null;
+    EmailTransporter.resetTransporter();
     vi.restoreAllMocks();
   });
 

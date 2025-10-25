@@ -1,3 +1,4 @@
+import { EmailTransporter } from "../../../../src/services/email/EmailTransporter";
 /**
  * EmailService Phase 3 Coverage Expansion Tests
  *
@@ -59,7 +60,7 @@ describe("EmailService - Phase 3 Coverage Expansion", () => {
         mockTransporter
       );
     }
-    (EmailService as any).transporter = null;
+    EmailTransporter.resetTransporter();
 
     vi.spyOn(console, "log").mockImplementation(() => {});
     vi.spyOn(console, "error").mockImplementation(() => {});
@@ -67,7 +68,7 @@ describe("EmailService - Phase 3 Coverage Expansion", () => {
 
   afterEach(() => {
     process.env = originalEnv;
-    (EmailService as any).transporter = null;
+    EmailTransporter.resetTransporter();
     vi.restoreAllMocks();
   });
 

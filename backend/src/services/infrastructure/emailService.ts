@@ -2,19 +2,23 @@ import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 import { createLogger } from "../../services/LoggerService";
 import { buildRegistrationICS } from "../ICSBuilder";
+import {
+  generateVerificationEmail,
+  generatePasswordResetEmail,
+  generatePasswordChangeRequestEmail,
+  generatePasswordResetSuccessEmail,
+  generateWelcomeEmail,
+} from "../../templates/email";
+import {
+  EmailTransporter,
+  EmailDeduplication,
+  EmailHelpers,
+  EmailOptions,
+} from "../email";
 
 dotenv.config();
 
 const log = createLogger("EmailService");
-
-interface EmailOptions {
-  to: string | string[];
-  subject: string;
-  html: string;
-  text?: string;
-  replyTo?: string;
-  attachments?: nodemailer.SendMailOptions["attachments"]; // support inline images and files
-}
 
 interface EmailTemplateData {
   name?: string;
@@ -27,9 +31,6 @@ interface EmailTemplateData {
 }
 
 export class EmailService {
-  private static transporter: nodemailer.Transporter;
-  // In-memory dedup cache: key -> lastSentAt (ms)
-  private static dedupeCache: Map<string, number> = new Map();
   // NOTE: Additional template referenced via TrioNotificationService for guest declines:
   // 'guest-invitation-declined' (assigner/event creator notification when a guest declines)
 
@@ -38,114 +39,21 @@ export class EmailService {
    * Safe to call in any environment; no effect on behavior other than cache state.
    */
   static __clearDedupeCacheForTests(): void {
-    try {
-      this.dedupeCache.clear();
-    } catch {}
-  }
-
-  private static getDedupTtlMs(): number {
-    const n = Number(process.env.EMAIL_DEDUP_TTL_MS || "120000");
-    return Number.isFinite(n) && n > 0 ? n : 120000; // default 2 minutes
-  }
-
-  private static simpleHash(input: string): string {
-    // djb2-like simple hash; deterministic and fast
-    let hash = 5381;
-    for (let i = 0; i < input.length; i++) {
-      hash = (hash * 33) ^ input.charCodeAt(i);
-    }
-    return (hash >>> 0).toString(36);
-  }
-
-  private static makeDedupKey(options: EmailOptions): string {
-    const toField = options.to;
-    const primary = Array.isArray(toField) ? toField[0] || "" : toField || "";
-    const email = primary.toString().trim().toLowerCase();
-    const subject = (options.subject || "").trim();
-    const bodySig = this.simpleHash(`${options.html}\n${options.text || ""}`);
-    return `${email}|${subject}|${bodySig}`;
-  }
-
-  private static purgeExpiredDedup(now: number, ttl: number) {
-    if (this.dedupeCache.size === 0) return;
-    for (const [k, ts] of this.dedupeCache.entries()) {
-      if (now - ts > ttl) this.dedupeCache.delete(k);
-    }
-  }
-
-  private static isDedupeEnabled(): boolean {
-    // Explicit opt-in via env to avoid surprising behavior in tests/dev
-    return process.env.EMAIL_DEDUP_ENABLE === "true";
-  }
-
-  private static getTransporter(): nodemailer.Transporter {
-    if (!this.transporter) {
-      // Check if real SMTP credentials are configured
-      const hasRealCredentials =
-        process.env.SMTP_USER &&
-        process.env.SMTP_PASS &&
-        !process.env.SMTP_USER.includes("your-email") &&
-        !process.env.SMTP_PASS.includes("your-app-password");
-
-      if (process.env.NODE_ENV === "production" && hasRealCredentials) {
-        // Production email configuration
-        this.transporter = nodemailer.createTransport({
-          host: process.env.SMTP_HOST,
-          port: parseInt(process.env.SMTP_PORT || "587"),
-          secure: process.env.SMTP_SECURE === "true",
-          auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS,
-          },
-        });
-      } else if (hasRealCredentials) {
-        // Development with real credentials
-        this.transporter = nodemailer.createTransport({
-          host: process.env.SMTP_HOST || "smtp.gmail.com",
-          port: parseInt(process.env.SMTP_PORT || "587"),
-          secure: false, // Use TLS
-          auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS,
-          },
-        });
-      } else {
-        // Development: Use console logging instead of real email
-        console.log(
-          "🔧 Development mode: Email service will use console logging"
-        );
-        // Structured log alongside console for visibility
-        try {
-          log.info("Development mode: email service using console logging");
-        } catch {}
-        this.transporter = nodemailer.createTransport({
-          jsonTransport: true, // This will just return JSON instead of sending
-        });
-      }
-    }
-    return this.transporter;
+    EmailDeduplication.__clearDedupeCacheForTests();
   }
 
   static async sendEmail(options: EmailOptions): Promise<boolean> {
     try {
       // Global duplicate suppression (opt-in): avoid sending the exact same email payload
       // to the same recipient multiple times within a short TTL window.
-      if (this.isDedupeEnabled()) {
-        const now = Date.now();
-        const ttl = this.getDedupTtlMs();
-        this.purgeExpiredDedup(now, ttl);
-        const dedupKey = this.makeDedupKey(options);
-        const last = this.dedupeCache.get(dedupKey);
-        if (last && now - last < ttl) {
-          try {
-            log.info("Duplicate email suppressed by dedupe cache", undefined, {
-              to: options.to,
-              subject: options.subject,
-            });
-          } catch {}
-          return true; // treat as success
-        }
-        this.dedupeCache.set(dedupKey, now);
+      if (EmailDeduplication.isDuplicate(options)) {
+        try {
+          log.info("Duplicate email suppressed by dedupe cache", undefined, {
+            to: options.to,
+            subject: options.subject,
+          });
+        } catch {}
+        return true; // treat as success
       }
 
       // Skip email sending in test environment
@@ -163,24 +71,7 @@ export class EmailService {
         return true;
       }
 
-      const transporter = this.getTransporter();
-
-      const mailOptions: nodemailer.SendMailOptions = {
-        from:
-          process.env.EMAIL_FROM || '"@Cloud Ministry" <atcloudministry@gmail.com>',
-        to: options.to,
-        subject: options.subject,
-        text: options.text,
-        html: options.html,
-      };
-      if (options.replyTo) {
-        mailOptions.replyTo = options.replyTo;
-      }
-      if (options.attachments && options.attachments.length) {
-        mailOptions.attachments = options.attachments;
-      }
-
-      const info = await transporter.sendMail(mailOptions);
+      const info = await EmailTransporter.send(options);
 
       // Check if we're using jsonTransport (development mode without real credentials)
       if (
@@ -230,22 +121,9 @@ export class EmailService {
     }
   }
 
-  // ===== Shared Date-Time Formatting Helpers =====
+  // ===== Shared Date-Time Formatting Helpers (delegated to EmailHelpers) =====
   private static normalizeTimeTo24h(time: string): string {
-    if (!time) return "00:00";
-    const t = time.trim();
-    const ampm = /(am|pm)$/i;
-    if (!ampm.test(t)) {
-      return t;
-    }
-    const match = t.match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/i);
-    if (!match) return t;
-    let [_, hh, mm, ap] = match;
-    let h = parseInt(hh, 10);
-    if (/pm/i.test(ap) && h !== 12) h += 12;
-    if (/am/i.test(ap) && h === 12) h = 0;
-    const h2 = h.toString().padStart(2, "0");
-    return `${h2}:${mm}`;
+    return EmailHelpers.normalizeTimeTo24h(time);
   }
 
   private static buildDate(
@@ -253,67 +131,7 @@ export class EmailService {
     time: string,
     timeZone?: string
   ): Date {
-    const t24 = this.normalizeTimeTo24h(time);
-    if (!timeZone) {
-      // Preserve existing behavior when no timezone is provided (assume local system tz)
-      return new Date(`${date}T${t24}`);
-    }
-
-    // When a timezone is provided, interpret the provided date/time as local wall time
-    // in that timezone and convert it to an absolute Date. This avoids shifting caused
-    // by using the system timezone as the base.
-    try {
-      const [yStr, mStr, dStr] = date.split("-");
-      const [hhStr, mmStr] = t24.split(":");
-      const y = parseInt(yStr, 10);
-      const m = parseInt(mStr, 10);
-      const d = parseInt(dStr, 10);
-      const hh = parseInt(hhStr || "0", 10);
-      const mm = parseInt(mmStr || "0", 10);
-
-      // Start with the UTC timestamp for the intended wall time components
-      const utcTs = Date.UTC(y, (m || 1) - 1, d || 1, hh || 0, mm || 0, 0, 0);
-
-      const dtf = new Intl.DateTimeFormat("en-US", {
-        timeZone,
-        hour12: false,
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      });
-
-      const parts = dtf.formatToParts(new Date(utcTs));
-      const get = (type: string) =>
-        parts.find((p) => p.type === type)?.value || "0";
-      const zoneY = parseInt(get("year"), 10);
-      const zoneM = parseInt(get("month"), 10);
-      const zoneD = parseInt(get("day"), 10);
-      const zoneH = parseInt(get("hour"), 10);
-      const zoneMin = parseInt(get("minute"), 10);
-      const zoneS = parseInt(get("second"), 10);
-
-      // zoneTs is what the formatter says the wall time would be for the given UTC instant
-      const zoneTs = Date.UTC(
-        zoneY,
-        (zoneM || 1) - 1,
-        zoneD || 1,
-        zoneH || 0,
-        zoneMin || 0,
-        zoneS || 0,
-        0
-      );
-      const offset = zoneTs - utcTs; // difference between zone local time and UTC for that instant
-
-      // Adjust the UTC timestamp by the offset to get the absolute time that corresponds
-      // to the intended wall time in the given timezone (handles DST correctly)
-      return new Date(utcTs - offset);
-    } catch {
-      // Fallback to previous behavior if anything goes wrong
-      return new Date(`${date}T${t24}`);
-    }
+    return EmailHelpers.buildDate(date, time, timeZone);
   }
 
   private static formatDateTime(
@@ -321,22 +139,7 @@ export class EmailService {
     time: string,
     timeZone?: string
   ): string {
-    const d = this.buildDate(date, time, timeZone);
-    const opts: Intl.DateTimeFormatOptions = {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-      ...(timeZone ? { timeZone, timeZoneName: "short" } : {}),
-    };
-    try {
-      return new Intl.DateTimeFormat("en-US", opts).format(d);
-    } catch {
-      return d.toLocaleString("en-US", opts);
-    }
+    return EmailHelpers.formatDateTime(date, time, timeZone);
   }
 
   private static formatTime(
@@ -344,26 +147,7 @@ export class EmailService {
     timeZone?: string,
     date?: string
   ): string {
-    const t24 = this.normalizeTimeTo24h(time);
-    const [hours, minutes] = t24.split(":");
-
-    // Use the provided date if available, otherwise fall back to current date
-    const temp = date ? this.buildDate(date, time, timeZone) : new Date();
-    if (!date) {
-      temp.setHours(parseInt(hours || "0"), parseInt(minutes || "0"), 0, 0);
-    }
-
-    const opts: Intl.DateTimeFormatOptions = {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-      ...(timeZone ? { timeZone, timeZoneName: "short" } : {}),
-    };
-    try {
-      return new Intl.DateTimeFormat("en-US", opts).format(temp);
-    } catch {
-      return temp.toLocaleString("en-US", opts);
-    }
+    return EmailHelpers.formatTime(time, timeZone, date);
   }
 
   private static formatDateTimeRange(
@@ -373,15 +157,13 @@ export class EmailService {
     endDate?: string,
     timeZone?: string
   ): string {
-    const multiDay = !!endDate && endDate !== date;
-    const left = this.formatDateTime(date, startTime, timeZone);
-    if (!endTime) return left;
-    if (multiDay) {
-      const right = this.formatDateTime(endDate as string, endTime, timeZone);
-      return `${left} - ${right}`;
-    }
-    const right = this.formatTime(endTime, timeZone, date);
-    return `${left} - ${right}`;
+    return EmailHelpers.formatDateTimeRange(
+      date,
+      startTime,
+      endTime,
+      endDate,
+      timeZone
+    );
   }
 
   /**
@@ -434,48 +216,7 @@ export class EmailService {
       process.env.FRONTEND_URL || "http://localhost:5173"
     }/verify-email/${verificationToken}`;
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Verify Your Email - @Cloud Ministry</title>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .button { display: inline-block; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>Welcome to @Cloud Ministry!</h1>
-            </div>
-            <div class="content">
-              <h2>Hello ${name},</h2>
-              <p>Thank you for joining @Cloud Ministry! We're excited to have you as part of our community.</p>
-              <p>To complete your registration and start participating in our events, please verify your email address by clicking the button below:</p>
-              <div style="text-align: center;">
-                <a href="${verificationUrl}" class="button">Verify My Email</a>
-              </div>
-              <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
-              <p><a href="${verificationUrl}">${verificationUrl}</a></p>
-              <p>This verification link will expire in 24 hours for security purposes.</p>
-              <p>If you didn't create an account with @Cloud Ministry, please ignore this email.</p>
-              <p>Blessings,<br>The @Cloud Ministry Team</p>
-            </div>
-            <div class="footer">
-              <p>@Cloud Ministry | Building Community Through Faith</p>
-              <p>If you have any questions, please contact us at atcloudministry@gmail.com</p>
-            </div>
-          </div>
-        </body>
-      </html>
-    `;
+    const html = generateVerificationEmail({ name, verificationUrl });
 
     return this.sendEmail({
       to: email,
@@ -494,48 +235,7 @@ export class EmailService {
       process.env.FRONTEND_URL || "http://localhost:5173"
     }/reset-password/${resetToken}`;
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Password Reset - @Cloud Ministry</title>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .button { display: inline-block; padding: 12px 30px; background: #f5576c; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>Password Reset Request</h1>
-            </div>
-            <div class="content">
-              <h2>Hello ${name},</h2>
-              <p>We received a request to reset your password for your @Cloud Ministry account.</p>
-              <p>If you requested this password reset, please click the button below to create a new password:</p>
-              <div style="text-align: center;">
-                <a href="${resetUrl}" class="button">Reset My Password</a>
-              </div>
-              <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
-              <p><a href="${resetUrl}">${resetUrl}</a></p>
-              <p><strong>Important:</strong> This reset link will expire in 10 minutes for security purposes.</p>
-              <p>If you didn't request a password reset, please ignore this email. Your password will remain unchanged.</p>
-              <p>Blessings,<br>The @Cloud Ministry Team</p>
-            </div>
-            <div class="footer">
-              <p>@Cloud Ministry | Building Community Through Faith</p>
-              <p>If you have any questions, please contact us at atcloudministry@gmail.com</p>
-            </div>
-          </div>
-        </body>
-      </html>
-    `;
+    const html = generatePasswordResetEmail({ name, resetUrl });
 
     return this.sendEmail({
       to: email,
@@ -554,55 +254,7 @@ export class EmailService {
       process.env.FRONTEND_URL || "http://localhost:5173"
     }/change-password/confirm/${confirmToken}`;
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Password Change Request - @Cloud Ministry</title>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .button { display: inline-block; padding: 12px 30px; background: #4facfe; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
-            .warning { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>Password Change Request</h1>
-            </div>
-            <div class="content">
-              <p>Hello ${name},</p>
-              <p>We received a request to change your password for your @Cloud Ministry account.</p>
-              
-              <div class="warning">
-                <strong>Security Notice:</strong> If you didn't request this password change, please ignore this email. Your password will remain unchanged.
-              </div>
-              
-              <p>To confirm and complete your password change, click the button below:</p>
-              <p style="text-align: center;">
-                <a href="${confirmUrl}" class="button">Confirm Password Change</a>
-              </p>
-              <p>Or copy and paste this link into your browser:<br>
-                <a href="${confirmUrl}">${confirmUrl}</a>
-              </p>
-              
-              <p><strong>This link will expire in 10 minutes for security.</strong></p>
-              
-              <div class="footer">
-                <p>This is an automated message from @Cloud Ministry.<br>
-                If you need help, please contact our support team.</p>
-              </div>
-            </div>
-          </div>
-        </body>
-      </html>
-    `;
+    const html = generatePasswordChangeRequestEmail({ name, confirmUrl });
 
     return this.sendEmail({
       to: email,
@@ -1555,58 +1207,14 @@ export class EmailService {
     email: string,
     name: string
   ): Promise<boolean> {
-    const html = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Password Changed Successfully - @Cloud Ministry</title>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #00b894 0%, #00cec9 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 15px; border-radius: 5px; margin: 20px 0; }
-            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
-            .security-tip { background: #e3f2fd; border: 1px solid #bbdefb; padding: 15px; border-radius: 5px; margin: 20px 0; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>Password Changed Successfully</h1>
-            </div>
-            <div class="content">
-              <p>Hello ${name},</p>
-              
-              <div class="success">
-                <strong>✅ Success!</strong> Your password has been changed successfully.
-              </div>
-              
-              <p>Your @Cloud Ministry account password was updated on ${new Date().toLocaleString()}.</p>
-              
-              <div class="security-tip">
-                <strong>Security Reminder:</strong> If you didn't make this change, please contact our support team immediately and consider securing your account.
-              </div>
-              
-              <p>You can now use your new password to log in to your account.</p>
-              
-              <div class="footer">
-                <p>This is an automated security notification from @Cloud Ministry.<br>
-                If you need help, please contact our support team.</p>
-              </div>
-            </div>
-          </div>
-        </body>
-      </html>
-    `;
+    const resetDateTime = new Date().toLocaleString();
+    const html = generatePasswordResetSuccessEmail({ name, resetDateTime });
 
     return this.sendEmail({
       to: email,
       subject: "Password Changed Successfully - @Cloud Ministry",
       html,
-      text: `Your @Cloud Ministry password was changed successfully on ${new Date().toLocaleString()}. If you didn't make this change, please contact support immediately.`,
+      text: `Your @Cloud Ministry password was changed successfully on ${resetDateTime}. If you didn't make this change, please contact support immediately.`,
     });
   }
 
@@ -1739,61 +1347,17 @@ export class EmailService {
   }
 
   static async sendWelcomeEmail(email: string, name: string): Promise<boolean> {
-    const html = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Welcome to @Cloud Ministry</title>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .button { display: inline-block; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>Welcome to @Cloud Ministry!</h1>
-            </div>
-            <div class="content">
-              <h2>Hello ${name},</h2>
-              <p>Your email has been verified and your account is now active! Welcome to the @Cloud Ministry community.</p>
-              <p>Here's what you can do now:</p>
-              <ul>
-                <li>Browse and sign up for upcoming events</li>
-                <li>Connect with other community members</li>
-                <li>Update your profile with your interests</li>
-                <li>Participate in our ministry activities</li>
-              </ul>
-              <div style="text-align: center;">
-                <a href="${
-                  process.env.FRONTEND_URL || "http://localhost:5173"
-                }/dashboard" class="button">Go to Dashboard</a>
-              </div>
-              <p>We're excited to have you as part of our family and look forward to growing together in faith!</p>
-              <p>Blessings,<br>The @Cloud Ministry Team</p>
-            </div>
-            <div class="footer">
-              <p>@Cloud Ministry | Building Community Through Faith</p>
-              <p>If you have any questions, please contact us at atcloudministry@gmail.com</p>
-            </div>
-          </div>
-        </body>
-      </html>
-    `;
+    const dashboardUrl = `${
+      process.env.FRONTEND_URL || "http://localhost:5173"
+    }/dashboard`;
+
+    const html = generateWelcomeEmail({ name, dashboardUrl });
 
     return this.sendEmail({
       to: email,
       subject: "Welcome to @Cloud Ministry - Account Verified!",
       html,
-      text: `Welcome to @Cloud Ministry! Your account has been verified. Visit your dashboard: ${
-        process.env.FRONTEND_URL || "http://localhost:5173"
-      }/dashboard`,
+      text: `Welcome to @Cloud Ministry! Your account has been verified. Visit your dashboard: ${dashboardUrl}`,
     });
   }
 

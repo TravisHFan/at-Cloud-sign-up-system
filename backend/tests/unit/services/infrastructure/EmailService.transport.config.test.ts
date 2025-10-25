@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import nodemailer from "nodemailer";
 import { EmailService } from "../../../../src/services/infrastructure/emailService";
+import { EmailTransporter } from "../../../../src/services/email/EmailTransporter";
 
 describe("EmailService.getTransporter config branches", () => {
   const env = { ...process.env } as Record<string, string>;
@@ -11,12 +12,12 @@ describe("EmailService.getTransporter config branches", () => {
     process.env = { ...env } as any;
     createTransportSpy = vi.spyOn(nodemailer, "createTransport");
     // reset cached transporter between tests
-    (EmailService as any).transporter = null;
+    EmailTransporter.resetTransporter();
   });
 
   afterEach(() => {
     process.env = { ...env } as any;
-    (EmailService as any).transporter = null;
+    EmailTransporter.resetTransporter();
     vi.restoreAllMocks();
   });
 

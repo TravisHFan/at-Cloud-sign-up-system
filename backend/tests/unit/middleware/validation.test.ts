@@ -37,8 +37,6 @@ import {
   validateEventCreation,
   validateSearch,
   validateObjectId,
-  validateMessage,
-  validateNotification,
   validateForgotPassword,
   validateResetPassword,
   validateSystemMessage,
@@ -228,36 +226,6 @@ describe("Validation Middleware", () => {
       it("should have validation for MongoDB ObjectId", () => {
         expect(validateObjectId).toBeDefined();
         expect(validateObjectId.length).toBe(2); // ID validation + handler
-      });
-    });
-
-    describe("validateMessage", () => {
-      it("should be an array containing validation rules and error handler", () => {
-        expect(Array.isArray(validateMessage)).toBe(true);
-        expect(validateMessage.length).toBeGreaterThan(0);
-        expect(validateMessage[validateMessage.length - 1]).toBe(
-          handleValidationErrors
-        );
-      });
-
-      it("should have validation rules for message fields", () => {
-        expect(validateMessage).toBeDefined();
-        expect(validateMessage.length).toBeGreaterThan(1); // Content, receiver + handler
-      });
-    });
-
-    describe("validateNotification", () => {
-      it("should be an array containing validation rules and error handler", () => {
-        expect(Array.isArray(validateNotification)).toBe(true);
-        expect(validateNotification.length).toBeGreaterThan(0);
-        expect(validateNotification[validateNotification.length - 1]).toBe(
-          handleValidationErrors
-        );
-      });
-
-      it("should have validation rules for notification fields", () => {
-        expect(validateNotification).toBeDefined();
-        expect(validateNotification.length).toBeGreaterThan(3); // Title, message, type, category + handler
       });
     });
 
@@ -458,8 +426,6 @@ describe("Validation Middleware", () => {
       expect(validateEventCreation).toBeDefined();
       expect(validateSearch).toBeDefined();
       expect(validateObjectId).toBeDefined();
-      expect(validateMessage).toBeDefined();
-      expect(validateNotification).toBeDefined();
       expect(validateForgotPassword).toBeDefined();
       expect(validateResetPassword).toBeDefined();
       expect(validateSystemMessage).toBeDefined();
@@ -474,8 +440,6 @@ describe("Validation Middleware", () => {
         validateEventCreation,
         validateSearch,
         validateObjectId,
-        validateMessage,
-        validateNotification,
         validateSystemMessage,
       ];
 
@@ -501,8 +465,6 @@ describe("Validation Middleware", () => {
         validateEventCreation,
         validateSearch,
         validateObjectId,
-        validateMessage,
-        validateNotification,
         validateForgotPassword,
         validateResetPassword,
         validateSystemMessage,

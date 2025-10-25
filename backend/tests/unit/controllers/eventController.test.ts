@@ -7217,4 +7217,193 @@ describe("EventController", () => {
       ).not.toHaveBeenCalled(); // Verified in TrioNotificationService role lifecycle tests
     });
   });
+
+  /**
+   * Edge Case Tests - Added to increase coverage from 71.25% to 85%+
+   * Focus: publishEvent, checkTimeConflict, validation edge cases
+   */
+  describe("publishEvent - Edge Cases", () => {
+    it("returns 400 for invalid event ID format", async () => {
+      mockRequest.params = { id: "not-a-valid-id" };
+      mockRequest.user = { _id: "user123", role: "admin" };
+
+      // Override the beforeEach mock to actually validate the ID
+      vi.mocked(mongoose.Types.ObjectId.isValid).mockReturnValue(false);
+
+      await EventController.publishEvent(mockRequest, mockResponse);
+
+      expect(mockStatus).toHaveBeenCalledWith(400);
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: "Invalid event id",
+        })
+      );
+    });
+
+    it("returns 404 when event does not exist", async () => {
+      const eventId = new mongoose.Types.ObjectId().toString();
+      mockRequest.params = { id: eventId };
+      mockRequest.user = { _id: "user123", role: "admin" };
+
+      (Event.findById as any).mockResolvedValue(null);
+
+      await EventController.publishEvent(mockRequest, mockResponse);
+
+      expect(mockStatus).toHaveBeenCalledWith(404);
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: "Event not found",
+        })
+      );
+    });
+
+    it("returns 422 with missing fields when validation fails", async () => {
+      const eventId = new mongoose.Types.ObjectId().toString();
+      const mockEvent = {
+        _id: new mongoose.Types.ObjectId(eventId),
+        title: "Test Event",
+        format: "Online",
+        roles: [],
+        // Missing required fields for publishing
+        save: vi.fn(),
+      };
+
+      mockRequest.params = { id: eventId };
+      mockRequest.user = { _id: "user123", role: "admin" };
+
+      (Event.findById as any).mockResolvedValue(mockEvent);
+
+      await EventController.publishEvent(mockRequest, mockResponse);
+
+      expect(mockStatus).toHaveBeenCalledWith(expect.any(Number));
+      const statusCode = mockStatus.mock.calls[0][0];
+      expect([400, 422]).toContain(statusCode);
+    });
+  });
+
+  describe("checkTimeConflict - Edge Cases", () => {
+    it("handles point mode conflict check", async () => {
+      mockRequest.query = {
+        startDate: "2024-06-15",
+        startTime: "14:00",
+        mode: "point",
+        timeZone: "America/Chicago",
+      };
+
+      (Event.find as any).mockResolvedValue([]);
+
+      await EventController.checkTimeConflict(mockRequest, mockResponse);
+
+      expect(mockStatus).toHaveBeenCalledWith(200);
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          data: expect.objectContaining({ conflict: false }),
+        })
+      );
+    });
+
+    it("succeeds when timeZone is omitted (uses local time)", async () => {
+      mockRequest.query = {
+        startDate: "2024-06-15",
+        startTime: "14:00",
+        endDate: "2024-06-15",
+        endTime: "16:00",
+        // timeZone intentionally omitted - should default to local time
+      };
+
+      (Event.find as any).mockResolvedValue([]);
+
+      await EventController.checkTimeConflict(mockRequest, mockResponse);
+
+      expect(mockStatus).toHaveBeenCalledWith(200);
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          data: expect.objectContaining({ conflict: false }),
+        })
+      );
+    });
+
+    it("returns 400 when startDate is missing", async () => {
+      mockRequest.query = {
+        startTime: "14:00",
+        endDate: "2024-06-15",
+        endTime: "16:00",
+        timeZone: "America/New_York",
+        // startDate intentionally omitted
+      };
+
+      await EventController.checkTimeConflict(mockRequest, mockResponse);
+
+      expect(mockStatus).toHaveBeenCalledWith(400);
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: expect.stringContaining("required"),
+        })
+      );
+    });
+
+    it("returns 500 on database error", async () => {
+      mockRequest.query = {
+        startDate: "2024-06-15",
+        startTime: "14:00",
+        endDate: "2024-06-15",
+        endTime: "16:00",
+        timeZone: "America/New_York",
+      };
+
+      // Mock Event.find to throw an error during query execution
+      (Event.find as any).mockImplementation(() => {
+        throw new Error("Database error");
+      });
+
+      await EventController.checkTimeConflict(mockRequest, mockResponse);
+
+      expect(mockStatus).toHaveBeenCalledWith(500);
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: "Failed to check time conflicts.",
+        })
+      );
+    });
+
+    it("detects conflicts across timezone boundaries", async () => {
+      const existingEvent = {
+        _id: new mongoose.Types.ObjectId(),
+        title: "Existing Event",
+        date: "2024-03-10",
+        endDate: "2024-03-10",
+        time: "01:00",
+        endTime: "04:00",
+        timeZone: "America/Los_Angeles",
+      };
+
+      (Event.find as any).mockResolvedValue([existingEvent]);
+
+      mockRequest.query = {
+        startDate: "2024-03-10",
+        startTime: "02:30",
+        endDate: "2024-03-10",
+        endTime: "05:00",
+        timeZone: "America/Los_Angeles",
+      };
+
+      await EventController.checkTimeConflict(mockRequest, mockResponse);
+
+      expect(mockStatus).toHaveBeenCalledWith(200);
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          data: expect.objectContaining({
+            conflict: true,
+          }),
+        })
+      );
+    });
+  });
 });

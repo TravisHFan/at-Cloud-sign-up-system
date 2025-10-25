@@ -1,0 +1,240 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`EmailService - Email Template Snapshots > Auth Templates > should match snapshot for password change request email 1`] = `
+"
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Password Change Request - @Cloud Ministry</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+            .button { display: inline-block; padding: 12px 30px; background: #4facfe; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+            .warning { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Password Change Request</h1>
+            </div>
+            <div class="content">
+              <p>Hello Bob Johnson,</p>
+              <p>We received a request to change your password for your @Cloud Ministry account.</p>
+              
+              <div class="warning">
+                <strong>Security Notice:</strong> If you didn't request this password change, please ignore this email. Your password will remain unchanged.
+              </div>
+              
+              <p>To confirm and complete your password change, click the button below:</p>
+              <p style="text-align: center;">
+                <a href="http://localhost:5173/change-password/confirm/change-token-789" class="button">Confirm Password Change</a>
+              </p>
+              <p>Or copy and paste this link into your browser:<br>
+                <a href="http://localhost:5173/change-password/confirm/change-token-789">http://localhost:5173/change-password/confirm/change-token-789</a>
+              </p>
+              
+              <p><strong>This link will expire in 10 minutes for security.</strong></p>
+              
+              <div class="footer">
+                <p>This is an automated message from @Cloud Ministry.<br>
+                If you need help, please contact our support team.</p>
+              </div>
+            </div>
+          </div>
+        </body>
+      </html>
+    "
+`;
+
+exports[`EmailService - Email Template Snapshots > Auth Templates > should match snapshot for password reset email 1`] = `
+"
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Password Reset - @Cloud Ministry</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+            .button { display: inline-block; padding: 12px 30px; background: #f5576c; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Password Reset Request</h1>
+            </div>
+            <div class="content">
+              <h2>Hello Jane Smith,</h2>
+              <p>We received a request to reset your password for your @Cloud Ministry account.</p>
+              <p>If you requested this password reset, please click the button below to create a new password:</p>
+              <div style="text-align: center;">
+                <a href="http://localhost:5173/reset-password/reset-token-456" class="button">Reset My Password</a>
+              </div>
+              <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
+              <p><a href="http://localhost:5173/reset-password/reset-token-456">http://localhost:5173/reset-password/reset-token-456</a></p>
+              <p><strong>Important:</strong> This reset link will expire in 10 minutes for security purposes.</p>
+              <p>If you didn't request a password reset, please ignore this email. Your password will remain unchanged.</p>
+              <p>Blessings,<br>The @Cloud Ministry Team</p>
+            </div>
+            <div class="footer">
+              <p>@Cloud Ministry | Building Community Through Faith</p>
+              <p>If you have any questions, please contact us at atcloudministry@gmail.com</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    "
+`;
+
+exports[`EmailService - Email Template Snapshots > Auth Templates > should match snapshot for password reset success email 1`] = `
+"
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Password Changed Successfully - @Cloud Ministry</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #00b894 0%, #00cec9 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+            .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 15px; border-radius: 5px; margin: 20px 0; }
+            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+            .security-tip { background: #e3f2fd; border: 1px solid #bbdefb; padding: 15px; border-radius: 5px; margin: 20px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Password Changed Successfully</h1>
+            </div>
+            <div class="content">
+              <p>Hello John Doe,</p>
+              
+              <div class="success">
+                <strong>✅ Success!</strong> Your password has been changed successfully.
+              </div>
+              
+              <p>Your @Cloud Ministry account password was updated on 1/15/2024, 4:00:00 AM.</p>
+              
+              <div class="security-tip">
+                <strong>Security Reminder:</strong> If you didn't make this change, please contact our support team immediately and consider securing your account.
+              </div>
+              
+              <p>You can now use your new password to log in to your account.</p>
+              
+              <div class="footer">
+                <p>This is an automated security notification from @Cloud Ministry.<br>
+                If you need help, please contact our support team.</p>
+              </div>
+            </div>
+          </div>
+        </body>
+      </html>
+    "
+`;
+
+exports[`EmailService - Email Template Snapshots > Auth Templates > should match snapshot for verification email 1`] = `
+"
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Verify Your Email - @Cloud Ministry</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+            .button { display: inline-block; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Welcome to @Cloud Ministry!</h1>
+            </div>
+            <div class="content">
+              <h2>Hello John Doe,</h2>
+              <p>Thank you for joining @Cloud Ministry! We're excited to have you as part of our community.</p>
+              <p>To complete your registration and start participating in our events, please verify your email address by clicking the button below:</p>
+              <div style="text-align: center;">
+                <a href="http://localhost:5173/verify-email/test-token-123" class="button">Verify My Email</a>
+              </div>
+              <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
+              <p><a href="http://localhost:5173/verify-email/test-token-123">http://localhost:5173/verify-email/test-token-123</a></p>
+              <p>This verification link will expire in 24 hours for security purposes.</p>
+              <p>If you didn't create an account with @Cloud Ministry, please ignore this email.</p>
+              <p>Blessings,<br>The @Cloud Ministry Team</p>
+            </div>
+            <div class="footer">
+              <p>@Cloud Ministry | Building Community Through Faith</p>
+              <p>If you have any questions, please contact us at atcloudministry@gmail.com</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    "
+`;
+
+exports[`EmailService - Email Template Snapshots > User Account Templates > should match snapshot for welcome email 1`] = `
+"
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Welcome to @Cloud Ministry</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+            .button { display: inline-block; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Welcome to @Cloud Ministry!</h1>
+            </div>
+            <div class="content">
+              <h2>Hello New User,</h2>
+              <p>Your email has been verified and your account is now active! Welcome to the @Cloud Ministry community.</p>
+              <p>Here's what you can do now:</p>
+              <ul>
+                <li>Browse and sign up for upcoming events</li>
+                <li>Connect with other community members</li>
+                <li>Update your profile with your interests</li>
+                <li>Participate in our ministry activities</li>
+              </ul>
+              <div style="text-align: center;">
+                <a href="http://localhost:5173/dashboard" class="button">Go to Dashboard</a>
+              </div>
+              <p>We're excited to have you as part of our family and look forward to growing together in faith!</p>
+              <p>Blessings,<br>The @Cloud Ministry Team</p>
+            </div>
+            <div class="footer">
+              <p>@Cloud Ministry | Building Community Through Faith</p>
+              <p>If you have any questions, please contact us at atcloudministry@gmail.com</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    "
+`;

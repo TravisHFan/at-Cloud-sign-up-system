@@ -1,3 +1,4 @@
+import { EmailTransporter } from "../../../../src/services/email/EmailTransporter";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { EmailService } from "../../../../src/services/infrastructure/emailService";
 import nodemailer from "nodemailer";
@@ -28,7 +29,7 @@ describe("EmailService", () => {
     vi.mocked(nodemailer.createTransport).mockReturnValue(mockTransporter);
 
     // Reset static transporter
-    (EmailService as any).transporter = null;
+    EmailTransporter.resetTransporter();
 
     // Mock console methods
     vi.spyOn(console, "log").mockImplementation(() => {});
@@ -39,7 +40,7 @@ describe("EmailService", () => {
     // Restore original environment
     process.env = originalEnv;
     // Reset static transporter
-    (EmailService as any).transporter = null;
+    EmailTransporter.resetTransporter();
     vi.restoreAllMocks();
   });
 
@@ -52,7 +53,7 @@ describe("EmailService", () => {
       process.env.SMTP_PORT = "465";
       process.env.SMTP_SECURE = "true";
 
-      const transporter = (EmailService as any).getTransporter();
+      const transporter = EmailTransporter.getTransporter();
 
       expect(nodemailer.createTransport).toHaveBeenCalledWith({
         host: "smtp.example.com",
@@ -73,7 +74,7 @@ describe("EmailService", () => {
       process.env.SMTP_HOST = "smtp.gmail.com";
       process.env.SMTP_PORT = "587";
 
-      (EmailService as any).getTransporter();
+      EmailTransporter.getTransporter();
 
       expect(nodemailer.createTransport).toHaveBeenCalledWith({
         host: "smtp.gmail.com",
@@ -91,7 +92,7 @@ describe("EmailService", () => {
       delete process.env.SMTP_USER;
       delete process.env.SMTP_PASS;
 
-      (EmailService as any).getTransporter();
+      EmailTransporter.getTransporter();
 
       expect(console.log).toHaveBeenCalledWith(
         "🔧 Development mode: Email service will use console logging"
@@ -102,8 +103,8 @@ describe("EmailService", () => {
     });
 
     it("should reuse existing transporter", () => {
-      const firstTransporter = (EmailService as any).getTransporter();
-      const secondTransporter = (EmailService as any).getTransporter();
+      const firstTransporter = EmailTransporter.getTransporter();
+      const secondTransporter = EmailTransporter.getTransporter();
 
       expect(firstTransporter).toBe(secondTransporter);
       expect(nodemailer.createTransport).toHaveBeenCalledTimes(1);
@@ -116,7 +117,7 @@ describe("EmailService", () => {
       delete process.env.SMTP_HOST;
       delete process.env.SMTP_PORT;
 
-      (EmailService as any).getTransporter();
+      EmailTransporter.getTransporter();
 
       expect(nodemailer.createTransport).toHaveBeenCalledWith({
         host: "smtp.gmail.com",
@@ -133,7 +134,7 @@ describe("EmailService", () => {
       process.env.SMTP_USER = "your-email@gmail.com";
       process.env.SMTP_PASS = "your-app-password";
 
-      (EmailService as any).getTransporter();
+      EmailTransporter.getTransporter();
 
       expect(console.log).toHaveBeenCalledWith(
         "🔧 Development mode: Email service will use console logging"
@@ -512,7 +513,7 @@ describe("EmailService", () => {
       process.env.SMTP_PASS = "password";
       process.env.SMTP_PORT = "invalid-port";
 
-      (EmailService as any).getTransporter();
+      EmailTransporter.getTransporter();
 
       expect(nodemailer.createTransport).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -527,7 +528,7 @@ describe("EmailService", () => {
       process.env.SMTP_PASS = "password";
       process.env.SMTP_SECURE = "false";
 
-      (EmailService as any).getTransporter();
+      EmailTransporter.getTransporter();
 
       expect(nodemailer.createTransport).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -544,7 +545,7 @@ describe("EmailService", () => {
       delete process.env.SMTP_PORT;
       delete process.env.SMTP_SECURE;
 
-      (EmailService as any).getTransporter();
+      EmailTransporter.getTransporter();
 
       expect(nodemailer.createTransport).toHaveBeenCalledWith({
         host: "smtp.gmail.com",

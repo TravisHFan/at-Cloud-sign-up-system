@@ -13,7 +13,7 @@ describe("notificationConfig", () => {
     process.env = { ...envBackup };
   });
 
-  it("validateConfig returns valid with sane env and logConfig does not throw", async () => {
+  it("validateConfig returns valid with sane env", async () => {
     process.env.EMAIL_TIMEOUT = "2000";
     process.env.DB_TIMEOUT = "1000";
     process.env.WS_TIMEOUT = "800";
@@ -27,19 +27,9 @@ describe("notificationConfig", () => {
 
     const result = mod.validateConfig();
     expect(result.valid).toBe(true);
-
-    const logSpy = vi
-      .spyOn(console, "log")
-      .mockImplementation((..._args: any[]) => undefined);
-    const errSpy = vi
-      .spyOn(console, "error")
-      .mockImplementation((..._args: any[]) => undefined);
-    expect(() => mod.logConfig()).not.toThrow();
-    logSpy.mockRestore();
-    errSpy.mockRestore();
   });
 
-  it("validateConfig returns invalid when retries/email is out of range and logConfig throws", async () => {
+  it("validateConfig returns invalid when retries/email is out of range", async () => {
     process.env.EMAIL_RETRIES = "0"; // invalid
     process.env.METRICS_INTERVAL = "60000";
 
@@ -50,16 +40,6 @@ describe("notificationConfig", () => {
     expect(result.errors.some((e: string) => e.includes("Email retries"))).toBe(
       true
     );
-
-    const logSpy = vi
-      .spyOn(console, "log")
-      .mockImplementation((..._args: any[]) => undefined);
-    const errSpy = vi
-      .spyOn(console, "error")
-      .mockImplementation((..._args: any[]) => undefined);
-    expect(() => mod.logConfig()).toThrow();
-    logSpy.mockRestore();
-    errSpy.mockRestore();
   });
 
   it("ConfigManager.updateConfig supports success, validation rollback, bad path, and records history", async () => {

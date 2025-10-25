@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { EmailService } from "../../../../src/services/infrastructure/emailService";
+import { EmailTransporter } from "../../../../src/services/email/EmailTransporter";
 
 describe("EmailService.sendEmail from-address branch", () => {
   const realEnv = { ...process.env } as NodeJS.ProcessEnv;
@@ -10,7 +11,7 @@ describe("EmailService.sendEmail from-address branch", () => {
     process.env = { ...realEnv };
     process.env.NODE_ENV = "development";
     getTransporterSpy = vi
-      .spyOn(EmailService as any, "getTransporter")
+      .spyOn(EmailTransporter, "getTransporter")
       .mockReturnValue({
         sendMail: vi.fn().mockResolvedValue({ messageId: "id" }),
       } as any);
@@ -24,7 +25,9 @@ describe("EmailService.sendEmail from-address branch", () => {
   it("uses default from when EMAIL_FROM not set", async () => {
     delete process.env.EMAIL_FROM;
     const send = vi.fn().mockResolvedValue({ messageId: "id1" });
-    (EmailService as any).getTransporter = vi.fn(() => ({ sendMail: send }));
+    vi.spyOn(EmailTransporter, "getTransporter").mockReturnValue({
+      sendMail: send,
+    } as any);
     const ok = await EmailService.sendEmail({
       to: "t@example.com",
       subject: "S",
@@ -38,7 +41,9 @@ describe("EmailService.sendEmail from-address branch", () => {
   it("uses provided EMAIL_FROM when set", async () => {
     process.env.EMAIL_FROM = '"Custom" <custom@example.com>';
     const send = vi.fn().mockResolvedValue({ messageId: "id2" });
-    (EmailService as any).getTransporter = vi.fn(() => ({ sendMail: send }));
+    vi.spyOn(EmailTransporter, "getTransporter").mockReturnValue({
+      sendMail: send,
+    } as any);
     const ok = await EmailService.sendEmail({
       to: "t@example.com",
       subject: "S2",

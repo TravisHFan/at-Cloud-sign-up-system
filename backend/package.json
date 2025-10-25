@@ -20,7 +20,7 @@
     "test:backend:single": "vitest run --testTimeout=60000",
     "test:e2e": "vitest tests/e2e",
     "test:watch": "vitest --watch",
-    "test:coverage": "vitest run --coverage --testTimeout=120000",
+    "test:coverage": "npm run test:coverage:unit && npm run test:coverage:integration",
     "test:coverage:unit": "vitest run tests/unit --coverage --testTimeout=10000",
     "test:coverage:integration": "VITEST_SCOPE=integration vitest run tests/integration --coverage --testTimeout=120000",
     "setup-users": "ts-node src/scripts/setup/setupUsers.ts",

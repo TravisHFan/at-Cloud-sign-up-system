@@ -410,48 +410,6 @@ export const validateObjectId = [
   handleValidationErrors,
 ];
 
-// Message validation rules
-export const validateMessage = [
-  body("content")
-    .trim()
-    .isLength({ min: 1, max: 10000 })
-    .withMessage("Message content must be between 1 and 10000 characters"),
-
-  body("receiverId").optional().isMongoId().withMessage("Invalid receiver ID"),
-
-  handleValidationErrors,
-];
-
-// Notification validation rules
-export const validateNotification = [
-  body("title")
-    .trim()
-    .isLength({ min: 1, max: 200 })
-    .withMessage("Notification title must be between 1 and 200 characters"),
-
-  body("message")
-    .trim()
-    .isLength({ min: 1, max: 1000 })
-    .withMessage("Notification message must be between 1 and 1000 characters"),
-
-  body("type")
-    .isIn(["email", "sms", "push", "in-app"])
-    .withMessage("Type must be 'email', 'sms', 'push', or 'in-app'"),
-
-  body("category")
-    .isIn([
-      "registration",
-      "reminder",
-      "cancellation",
-      "update",
-      "system",
-      "marketing",
-    ])
-    .withMessage("Category must be valid notification category"),
-
-  handleValidationErrors,
-];
-
 // Password reset validation
 export const validateForgotPassword = [
   body("email").isEmail().withMessage("Valid email is required"),

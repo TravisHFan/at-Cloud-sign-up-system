@@ -118,28 +118,6 @@ export function validateConfig(): { valid: boolean; errors: string[] } {
 }
 
 /**
- * Log configuration on startup
- */
-export function logConfig(): void {
-  console.log("📋 Notification Configuration Loaded:");
-  console.log("  🕐 Timeouts:", NOTIFICATION_CONFIG.timeouts);
-  console.log("  🔄 Retries:", NOTIFICATION_CONFIG.retries);
-  console.log("  🎛️  Features:", NOTIFICATION_CONFIG.features);
-  console.log("  📊 Monitoring:", NOTIFICATION_CONFIG.monitoring);
-  console.log("  ⚡ Performance:", NOTIFICATION_CONFIG.performance);
-  console.log("  🔒 Security:", NOTIFICATION_CONFIG.security);
-
-  const validation = validateConfig();
-  if (!validation.valid) {
-    console.error("❌ Configuration validation failed:");
-    validation.errors.forEach((error) => console.error(`  - ${error}`));
-    throw new Error("Invalid notification configuration");
-  } else {
-    console.log("✅ Configuration validation passed");
-  }
-}
-
-/**
  * Type definitions for configuration
  */
 export type NotificationConfigType = typeof NOTIFICATION_CONFIG;

@@ -1,3 +1,4 @@
+import { EmailTransporter } from "../../../../src/services/email/EmailTransporter";
 /**
  * EmailService Comprehensive Test Suite
  *
@@ -74,7 +75,7 @@ describe("EmailService - Comprehensive Validation", () => {
     }
 
     // Reset static transporter for clean state
-    (EmailService as any).transporter = null;
+    EmailTransporter.resetTransporter();
 
     // Mock console methods to avoid test noise but still allow verification
     vi.spyOn(console, "log").mockImplementation(() => {});
@@ -84,7 +85,7 @@ describe("EmailService - Comprehensive Validation", () => {
   afterEach(() => {
     // Restore original environment
     process.env = originalEnv;
-    (EmailService as any).transporter = null;
+    EmailTransporter.resetTransporter();
     vi.restoreAllMocks();
   });
 

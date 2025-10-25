@@ -1,3 +1,4 @@
+import { EmailTransporter } from "../../../../src/services/email/EmailTransporter";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import nodemailer from "nodemailer";
 import { EmailService } from "../../../../src/services/infrastructure/emailService";
@@ -12,14 +13,14 @@ describe("EmailService.sendEventCreatedEmail - default URL and copy coverage", (
     process.env = { ...baseEnv } as any;
     process.env.NODE_ENV = "development";
     delete process.env.FRONTEND_URL; // force default localhost path
-    (EmailService as any).transporter = null;
+    EmailTransporter.resetTransporter();
     sentArgs = undefined;
     createTransportSpy = vi.spyOn(nodemailer, "createTransport");
   });
 
   afterEach(() => {
     process.env = { ...baseEnv } as any;
-    (EmailService as any).transporter = null;
+    EmailTransporter.resetTransporter();
     vi.restoreAllMocks();
   });
 

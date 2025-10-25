@@ -1,9 +1,10 @@
+import { EmailTransporter } from "../../../../src/services/email/EmailTransporter";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import nodemailer from "nodemailer";
 import { EmailService } from "../../../../src/services/infrastructure/emailService";
 
 // Minimal helper to reset cached transporter
-const resetTransporter = () => ((EmailService as any).transporter = null);
+const resetTransporter = () => EmailTransporter.resetTransporter();
 
 describe("EmailService additional branch coverage", () => {
   const baseEnv = { ...process.env } as Record<string, string>;
