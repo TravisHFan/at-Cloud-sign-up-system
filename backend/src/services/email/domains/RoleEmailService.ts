@@ -32,8 +32,6 @@ export class RoleEmailService {
     return EmailService.sendEmail(options);
   }
 
-
-
   static async sendPromotionNotificationToUser(
     email: string,
     userData: {
@@ -1197,7 +1195,6 @@ export class RoleEmailService {
     });
   }
 
-
   static async sendAtCloudRoleRemovedToAdmins(
     adminEmail: string,
     adminName: string,
@@ -1277,7 +1274,141 @@ export class RoleEmailService {
   }
 
   /**
-   * Send new @Cloud co-worker signup notification to admins
-   * When new user signs up with @Cloud co-worker role
+   * Send co-organizer assignment notification
+   * Pattern: Notification to the newly assigned co-organizer
    */
+  static async sendCoOrganizerAssignedEmail(
+    coOrganizerEmail: string,
+    assignedUser: {
+      firstName: string;
+      lastName: string;
+    },
+    eventData: {
+      title: string;
+      date: string;
+      time: string;
+      endTime?: string;
+      endDate?: string;
+      location: string;
+    },
+    assignedBy: {
+      firstName: string;
+      lastName: string;
+    }
+  ): Promise<boolean> {
+    const coOrganizerName = `${assignedUser.firstName || ""} ${
+      assignedUser.lastName || ""
+    }`.trim();
+
+    const organizerName = `${assignedBy.firstName || ""} ${
+      assignedBy.lastName || ""
+    }`.trim();
+
+    // Import EmailService for date formatting helpers
+    const { EmailService } = await import("../../infrastructure/emailService");
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Co-Organizer Assignment - @Cloud Ministry</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 20px; }
+            .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            .header { background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%); color: white; padding: 30px; text-align: center; }
+            .content { padding: 30px; }
+            .welcome-message { background: #e7e3ff; border-left: 4px solid #6f42c1; padding: 15px; margin: 20px 0; border-radius: 4px; }
+            .event-details { background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 8px; border: 1px solid #dee2e6; }
+            .responsibility-box { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px; }
+            .button { display: inline-block; background: #6f42c1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
+            .button:hover { background: #5a32a3; }
+            .button.secondary { background: #6c757d; }
+            .button.secondary:hover { background: #545b62; }
+            .footer { background: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #6c757d; }
+            .contact-info { background: #d1ecf1; border: 1px solid #bee5eb; padding: 15px; margin: 20px 0; border-radius: 4px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🎉 Welcome to the Team!</h1>
+              <p>You've been assigned as Co-Organizer</p>
+            </div>
+            <div class="content">
+              <p>Hello ${coOrganizerName},</p>
+              
+              <div class="welcome-message">
+                <h3>🤝 Co-Organizer Assignment</h3>
+                <p>You have been assigned as a <strong>Co-Organizer</strong> for an upcoming event. Welcome to the organizing team!</p>
+              </div>
+
+              <div class="event-details">
+                <h4>📅 Event Details:</h4>
+                <p><strong>Event:</strong> ${eventData.title}</p>
+                <p><strong>Date & Time:</strong> ${(
+                  EmailService as any
+                ).formatDateTimeRange(
+                  eventData.date,
+                  eventData.time,
+                  eventData.endTime,
+                  eventData.endDate,
+                  (eventData as any).timeZone
+                )}</p>
+                <p><strong>Location:</strong> ${eventData.location}</p>
+                <p><strong>Assigned by:</strong> ${organizerName}</p>
+              </div>
+
+              <div class="responsibility-box">
+                <h4>🎯 Your Responsibilities:</h4>
+                <ul>
+                  <li>Help coordinate event logistics and planning</li>
+                  <li>Assist with participant communication and management</li>
+                  <li>Support the main organizer during the event</li>
+                  <li>Help ensure the event runs smoothly</li>
+                </ul>
+              </div>
+
+              <div class="contact-info">
+                <h4>📞 Main Organizer Contact:</h4>
+                <p><strong>${organizerName}</strong> is the main organizer for this event. Please reach out if you have any questions or need guidance.</p>
+              </div>
+
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="#{EVENT_DASHBOARD_URL}/events/${
+                  eventData.title
+                }" class="button">View Event Details</a>
+                <a href="#{EVENT_DASHBOARD_URL}/organize" class="button secondary">Event Management</a>
+              </div>
+
+              <p>Thank you for volunteering to help organize this event. Your contribution makes a difference in our ministry!</p>
+              
+              <p><em>If you have any questions about your role or the event, please don't hesitate to contact the main organizer.</em></p>
+            </div>
+            <div class="footer">
+              <p>@Cloud Ministry Event Management</p>
+              <p>This email was sent regarding your co-organizer assignment.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    return this.sendEmail({
+      to: coOrganizerEmail,
+      subject: `🎉 Co-Organizer Assignment: ${eventData.title}`,
+      html,
+      text: `You have been assigned as Co-Organizer for "${
+        eventData.title
+      }" on ${(EmailService as any).formatDateTimeRange(
+        eventData.date,
+        eventData.time,
+        eventData.endTime,
+        eventData.endDate,
+        (eventData as any).timeZone
+      )}. Location: ${
+        eventData.location
+      }. Assigned by: ${organizerName}. Please check the event management dashboard for more details.`,
+    });
+  }
 }
