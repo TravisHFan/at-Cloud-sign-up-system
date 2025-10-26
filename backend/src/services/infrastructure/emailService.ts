@@ -19,6 +19,7 @@ import { AuthEmailService } from "../email/domains/AuthEmailService";
 import { EventEmailService } from "../email/domains/EventEmailService";
 import { RoleEmailService } from "../email/domains/RoleEmailService";
 import { GuestEmailService } from "../email/domains/GuestEmailService";
+import { UserEmailService } from "../email/domains/UserEmailService";
 
 dotenv.config();
 
@@ -360,35 +361,12 @@ export class EmailService {
       role: string;
     }
   ): Promise<boolean> {
-    const targetName =
-      `${target.firstName || ""} ${target.lastName || ""}`.trim() ||
-      target.email;
-    const actorName =
-      `${actor.firstName || ""} ${actor.lastName || ""}`.trim() || actor.email;
-    const subject = `Admin Alert: User Account Deactivated (${targetName})`;
-    const text = `Hello ${adminName},\n\n${
-      actor.role
-    } ${actorName} deactivated the account of ${targetName} (${
-      target.email
-    }).\n\nTime: ${new Date().toLocaleString()}\n\n— @Cloud System`;
-    const html = `
-      <!DOCTYPE html>
-      <html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
-      <title>${subject}</title>
-      <style>body{font-family:Arial,sans-serif;color:#333} .container{max-width:600px;margin:0 auto;padding:20px} .header{background:#ffc107;color:#212529;padding:16px;border-radius:8px 8px 0 0} .content{background:#f9f9f9;padding:20px;border-radius:0 0 8px 8px}</style>
-      </head><body><div class="container">
-      <div class="header"><h2>Admin Alert: User Deactivated</h2></div>
-      <div class="content">
-        <p>Hello ${adminName},</p>
-        <p><strong>${
-          actor.role
-        }</strong> <strong>${actorName}</strong> deactivated the account of <strong>${targetName}</strong> (${
-      target.email
-    }).</p>
-        <p><small>Time: ${new Date().toLocaleString()}</small></p>
-        <p>— @Cloud System</p>
-      </div></div></body></html>`;
-    return this.sendEmail({ to: adminEmail, subject, html, text });
+    return UserEmailService.sendUserDeactivatedAlertToAdmin(
+      adminEmail,
+      adminName,
+      target,
+      actor
+    );
   }
 
   /**
@@ -405,35 +383,12 @@ export class EmailService {
       role: string;
     }
   ): Promise<boolean> {
-    const targetName =
-      `${target.firstName || ""} ${target.lastName || ""}`.trim() ||
-      target.email;
-    const actorName =
-      `${actor.firstName || ""} ${actor.lastName || ""}`.trim() || actor.email;
-    const subject = `Admin Alert: User Account Reactivated (${targetName})`;
-    const text = `Hello ${adminName},\n\n${
-      actor.role
-    } ${actorName} reactivated the account of ${targetName} (${
-      target.email
-    }).\n\nTime: ${new Date().toLocaleString()}\n\n— @Cloud System`;
-    const html = `
-      <!DOCTYPE html>
-      <html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
-      <title>${subject}</title>
-      <style>body{font-family:Arial,sans-serif;color:#333} .container{max-width:600px;margin:0 auto;padding:20px} .header{background:#28a745;color:#fff;padding:16px;border-radius:8px 8px 0 0} .content{background:#f9f9f9;padding:20px;border-radius:0 0 8px 8px}</style>
-      </head><body><div class="container">
-      <div class="header"><h2>Admin Alert: User Reactivated</h2></div>
-      <div class="content">
-        <p>Hello ${adminName},</p>
-        <p><strong>${
-          actor.role
-        }</strong> <strong>${actorName}</strong> reactivated the account of <strong>${targetName}</strong> (${
-      target.email
-    }).</p>
-        <p><small>Time: ${new Date().toLocaleString()}</small></p>
-        <p>— @Cloud System</p>
-      </div></div></body></html>`;
-    return this.sendEmail({ to: adminEmail, subject, html, text });
+    return UserEmailService.sendUserReactivatedAlertToAdmin(
+      adminEmail,
+      adminName,
+      target,
+      actor
+    );
   }
 
   /**
@@ -450,35 +405,12 @@ export class EmailService {
       role: string;
     }
   ): Promise<boolean> {
-    const targetName =
-      `${target.firstName || ""} ${target.lastName || ""}`.trim() ||
-      target.email;
-    const actorName =
-      `${actor.firstName || ""} ${actor.lastName || ""}`.trim() || actor.email;
-    const subject = `Security Alert: User Deleted (${targetName})`;
-    const text = `Hello ${adminName},\n\n${
-      actor.role
-    } ${actorName} permanently deleted the user ${targetName} (${
-      target.email
-    }).\n\nTime: ${new Date().toLocaleString()}\n\n— @Cloud System`;
-    const html = `
-      <!DOCTYPE html>
-      <html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
-      <title>${subject}</title>
-      <style>body{font-family:Arial,sans-serif;color:#333} .container{max-width:600px;margin:0 auto;padding:20px} .header{background:#dc3545;color:#fff;padding:16px;border-radius:8px 8px 0 0} .content{background:#f9f9f9;padding:20px;border-radius:0 0 8px 8px}</style>
-      </head><body><div class="container">
-      <div class="header"><h2>Security Alert: User Deleted</h2></div>
-      <div class="content">
-        <p>Hello ${adminName},</p>
-        <p><strong>${
-          actor.role
-        }</strong> <strong>${actorName}</strong> permanently deleted the user <strong>${targetName}</strong> (${
-      target.email
-    }).</p>
-        <p><small>Time: ${new Date().toLocaleString()}</small></p>
-        <p>— @Cloud System</p>
-      </div></div></body></html>`;
-    return this.sendEmail({ to: adminEmail, subject, html, text });
+    return UserEmailService.sendUserDeletedAlertToAdmin(
+      adminEmail,
+      adminName,
+      target,
+      actor
+    );
   }
 
   static async sendPasswordResetSuccessEmail(
