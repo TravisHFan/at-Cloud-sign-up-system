@@ -1,4 +1,4 @@
-import { EmailOptions } from "../../email";
+import { EmailOptions, EmailHelpers } from "../../email";
 import { createLogger } from "../../../services/LoggerService";
 
 const log = createLogger("RoleEmailService");
@@ -30,6 +30,25 @@ export class RoleEmailService {
     // Import EmailService dynamically to avoid circular dependency
     const { EmailService } = await import("../../infrastructure/emailService");
     return EmailService.sendEmail(options);
+  }
+
+  /**
+   * Helper method for formatting date/time ranges in emails
+   */
+  private static formatDateTimeRange(
+    date: string,
+    startTime: string,
+    endTime?: string,
+    endDate?: string,
+    timeZone?: string
+  ): string {
+    return EmailHelpers.formatDateTimeRange(
+      date,
+      startTime,
+      endTime,
+      endDate,
+      timeZone
+    );
   }
 
   static async sendPromotionNotificationToUser(
@@ -1304,9 +1323,6 @@ export class RoleEmailService {
       assignedBy.lastName || ""
     }`.trim();
 
-    // Import EmailService for date formatting helpers
-    const { EmailService } = await import("../../infrastructure/emailService");
-
     const html = `
       <!DOCTYPE html>
       <html>
@@ -1346,9 +1362,7 @@ export class RoleEmailService {
               <div class="event-details">
                 <h4>📅 Event Details:</h4>
                 <p><strong>Event:</strong> ${eventData.title}</p>
-                <p><strong>Date & Time:</strong> ${(
-                  EmailService as any
-                ).formatDateTimeRange(
+                <p><strong>Date & Time:</strong> ${RoleEmailService.formatDateTimeRange(
                   eventData.date,
                   eventData.time,
                   eventData.endTime,
@@ -1400,7 +1414,7 @@ export class RoleEmailService {
       html,
       text: `You have been assigned as Co-Organizer for "${
         eventData.title
-      }" on ${(EmailService as any).formatDateTimeRange(
+      }" on ${RoleEmailService.formatDateTimeRange(
         eventData.date,
         eventData.time,
         eventData.endTime,
