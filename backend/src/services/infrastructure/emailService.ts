@@ -1659,78 +1659,7 @@ export class EmailService {
       newRoleInAtCloud: string;
     }
   ): Promise<boolean> {
-    const userName = `${userData.firstName || ""} ${
-      userData.lastName || ""
-    }`.trim();
-
-    const html = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Ministry Role Update - @Cloud Ministry</title>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 20px; }
-            .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; }
-            .content { padding: 30px; }
-            .role-change { background: #f8f9fa; border-left: 4px solid #667eea; padding: 15px; margin: 20px 0; border-radius: 4px; }
-            .button { display: inline-block; background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
-            .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 12px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>Ministry Role Update</h1>
-              <p>@Cloud Ministry</p>
-            </div>
-            <div class="content">
-              <h2>Hello ${userName},</h2>
-              
-              <p>Your ministry role has been updated in our system.</p>
-              
-              <div class="role-change">
-                <h3>Role Change Details</h3>
-                <p><strong>Previous Role:</strong> ${
-                  userData.oldRoleInAtCloud
-                }</p>
-                <p><strong>New Role:</strong> ${userData.newRoleInAtCloud}</p>
-              </div>
-
-              <p>You can access your updated ministry dashboard and role-specific resources using the button below.</p>
-
-              <div style="text-align: center;">
-                <a href="${
-                  process.env.FRONTEND_URL || "http://localhost:5173"
-                }/ministry/dashboard" class="button">
-                  View Ministry Dashboard
-                </a>
-              </div>
-
-              <p>If you have any questions about this change, please contact our ministry leadership.</p>
-              
-              <p>Blessings,<br>@Cloud Ministry Team</p>
-            </div>
-            <div class="footer">
-              <p>@Cloud Ministry | Ministry Role Notification</p>
-            </div>
-          </div>
-        </body>
-      </html>
-    `;
-
-    return this.sendEmail({
-      to: userEmail,
-      subject: `Ministry Role Update: ${userData.newRoleInAtCloud}`,
-      html,
-      text: `Hello ${userName}, Your ministry role has been updated from ${
-        userData.oldRoleInAtCloud
-      } to ${userData.newRoleInAtCloud}. Access your ministry dashboard: ${
-        process.env.FRONTEND_URL || "http://localhost:5173"
-      }/ministry/dashboard`,
-    });
+    return RoleEmailService.sendAtCloudRoleChangeToUser(userEmail, userData);
   }
 
   /**
