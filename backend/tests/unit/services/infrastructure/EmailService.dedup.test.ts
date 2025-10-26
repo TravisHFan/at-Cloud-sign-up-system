@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { EmailService } from "../../../../src/services/infrastructure/emailService";
+import { EventEmailService } from "../../../../src/services/email/domains/EventEmailService";
 
 describe("EmailService deduplication (bulk helpers)", () => {
   beforeEach(() => {
@@ -9,7 +10,7 @@ describe("EmailService deduplication (bulk helpers)", () => {
 
   it("sendEventNotificationEmailBulk de-duplicates recipients by email", async () => {
     const spy = vi
-      .spyOn(EmailService as any, "sendEventNotificationEmail")
+      .spyOn(EventEmailService as any, "sendEventNotificationEmail")
       .mockResolvedValue(true);
 
     const recipients = [
@@ -46,7 +47,7 @@ describe("EmailService deduplication (bulk helpers)", () => {
 
   it("sendEventReminderEmailBulk de-duplicates recipients by email", async () => {
     const spy = vi
-      .spyOn(EmailService as any, "sendEventReminderEmail")
+      .spyOn(EventEmailService as any, "sendEventReminderEmail")
       .mockResolvedValue(true);
 
     const recipients = [
