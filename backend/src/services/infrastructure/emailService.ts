@@ -1097,15 +1097,7 @@ export class EmailService {
     email: string,
     name: string
   ): Promise<boolean> {
-    const resetDateTime = new Date().toLocaleString();
-    const html = generatePasswordResetSuccessEmail({ name, resetDateTime });
-
-    return this.sendEmail({
-      to: email,
-      subject: "Password Changed Successfully - @Cloud Ministry",
-      html,
-      text: `Your @Cloud Ministry password was changed successfully on ${resetDateTime}. If you didn't make this change, please contact support immediately.`,
-    });
+    return AuthEmailService.sendPasswordResetSuccessEmail(email, name);
   }
 
   static async sendEventNotificationEmail(
