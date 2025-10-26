@@ -5,15 +5,9 @@
  */
 
 // Infrastructure services
-export { NotificationService } from "./notifications/NotificationService";
 export { TrioNotificationService } from "./notifications/TrioNotificationService";
-export { EventService } from "./eventService";
-export { UserService } from "./userService";
-export { SubscriptionService } from "./SubscriptionService";
-export { LockService } from "./infrastructure/LockService";
 export { EmailService } from "./infrastructure/EmailServiceFacade";
-export { ICSBuilder, buildEventICS } from "./ICSBuilder";
-export { SystemConfigService } from "./SystemConfigService";
+export { buildRegistrationICS } from "./ICSBuilder";
 export {
   CacheService,
   cacheService,
