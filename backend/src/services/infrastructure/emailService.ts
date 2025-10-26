@@ -1229,18 +1229,7 @@ export class EmailService {
   }
 
   static async sendWelcomeEmail(email: string, name: string): Promise<boolean> {
-    const dashboardUrl = `${
-      process.env.FRONTEND_URL || "http://localhost:5173"
-    }/dashboard`;
-
-    const html = generateWelcomeEmail({ name, dashboardUrl });
-
-    return this.sendEmail({
-      to: email,
-      subject: "Welcome to @Cloud Ministry - Account Verified!",
-      html,
-      text: `Welcome to @Cloud Ministry! Your account has been verified. Visit your dashboard: ${dashboardUrl}`,
-    });
+    return AuthEmailService.sendWelcomeEmail(email, name);
   }
 
   static async sendEventCreatedEmail(
