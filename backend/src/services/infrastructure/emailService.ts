@@ -227,18 +227,7 @@ export class EmailService {
     name: string,
     resetToken: string
   ): Promise<boolean> {
-    const resetUrl = `${
-      process.env.FRONTEND_URL || "http://localhost:5173"
-    }/reset-password/${resetToken}`;
-
-    const html = generatePasswordResetEmail({ name, resetUrl });
-
-    return this.sendEmail({
-      to: email,
-      subject: "Password Reset Request - @Cloud Ministry",
-      html,
-      text: `Password reset requested. Please visit: ${resetUrl} (expires in 10 minutes)`,
-    });
+    return AuthEmailService.sendPasswordResetEmail(email, name, resetToken);
   }
 
   static async sendPasswordChangeRequestEmail(
