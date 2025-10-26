@@ -1677,69 +1677,11 @@ export class EmailService {
       newRoleInAtCloud: string;
     }
   ): Promise<boolean> {
-    const userName = `${userData.firstName || ""} ${
-      userData.lastName || ""
-    }`.trim();
-    const html = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <title>Admin Alert: Ministry Role Change</title>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 20px; }
-            .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-            .header { background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%); color: white; padding: 30px; text-align: center; }
-            .content { padding: 30px; }
-            .admin-alert { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px; }
-            .user-details { background: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 4px; }
-            .button { display: inline-block; background: #dc3545; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
-            .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 12px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>🚨 Admin Alert</h1>
-              <p>Ministry Role Change Notification</p>
-            </div>
-            <div class="content">
-              <h2>Hello ${adminName},</h2>
-              <div class="admin-alert">
-                <h3>Ministry Role Change Alert</h3>
-                <p>A ministry role change has occurred in the system.</p>
-              </div>
-              <div class="user-details">
-                <h4>User Details</h4>
-                <p><strong>Name:</strong> ${userName}</p>
-                <p><strong>Email:</strong> ${userData.email}</p>
-                <p><strong>Previous Role:</strong> ${
-                  userData.oldRoleInAtCloud
-                }</p>
-                <p><strong>New Role:</strong> ${userData.newRoleInAtCloud}</p>
-              </div>
-              <div style="text-align: center;">
-                <a href="${
-                  process.env.FRONTEND_URL || "http://localhost:5173"
-                }/admin/users" class="button">
-                  Review in Admin Dashboard
-                </a>
-              </div>
-              <p>Best regards,<br>@Cloud Ministry System</p>
-            </div>
-            <div class="footer">
-              <p>@Cloud Ministry | Administrative Notifications</p>
-            </div>
-          </div>
-        </body>
-      </html>
-    `;
-    return this.sendEmail({
-      to: adminEmail,
-      subject: `🚨 Admin Alert: Ministry Role Change - ${userName}`,
-      html,
-      text: `Admin Alert: ${userName} (${userData.email}) ministry role changed from ${userData.oldRoleInAtCloud} to ${userData.newRoleInAtCloud}. Please review in admin dashboard.`,
-    });
+    return RoleEmailService.sendAtCloudRoleChangeToAdmins(
+      adminEmail,
+      adminName,
+      userData
+    );
   }
 
   /**
