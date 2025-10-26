@@ -185,28 +185,9 @@ export class EmailService {
       message?: string;
     }
   ): Promise<boolean[]> {
-    const seen = new Set<string>();
-    const unique = recipients.filter((r) => {
-      const key = (r.email || "").trim().toLowerCase();
-      if (!key) return false;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-    return Promise.all(
-      unique.map((r) =>
-        EmailService.sendEventNotificationEmail(
-          r.email,
-          r.name || r.email,
-          payload
-        ).catch((err) => {
-          console.error(
-            `❌ Failed to send event update email to ${r.email}:`,
-            err
-          );
-          return false;
-        })
-      )
+    return EventEmailService.sendEventNotificationEmailBulk(
+      recipients,
+      payload
     );
   }
 
