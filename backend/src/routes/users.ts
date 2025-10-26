@@ -1,5 +1,8 @@
 import { Router } from "express";
 import { UserController } from "../controllers/userController";
+import { ProfileController } from "../controllers/ProfileController";
+import { UserAdminController } from "../controllers/UserAdminController";
+import { UserAnalyticsController } from "../controllers/UserAnalyticsController";
 import {
   authenticate,
   requireAdmin,
@@ -21,95 +24,95 @@ const router = Router();
 // All routes require authentication
 router.use(authenticate);
 
-// User profile routes
-router.get("/profile", UserController.getProfile);
+// User profile routes (ProfileController)
+router.get("/profile", ProfileController.getProfile);
 router.put(
   "/profile",
   validateUserUpdate,
   handleValidationErrors,
-  UserController.updateProfile
+  ProfileController.updateProfile
 );
 
-// Avatar upload route
+// Avatar upload route (ProfileController)
 router.post(
   "/avatar",
   uploadLimiter,
   uploadAvatar,
-  UserController.uploadAvatar
+  ProfileController.uploadAvatar
 );
 
-// Admin routes - Allow all authenticated users to view user list (community feature)
-router.get("/", UserController.getAllUsers);
-router.get("/search", UserController.getAllUsers); // Search endpoint (uses same logic as getAllUsers)
+// Admin routes - Allow all authenticated users to view user list (community feature) (UserAdminController)
+router.get("/", UserAdminController.getAllUsers);
+router.get("/search", UserAdminController.getAllUsers); // Search endpoint (uses same logic as getAllUsers)
 router.get(
   "/stats",
   authorizePermission(PERMISSIONS.VIEW_SYSTEM_ANALYTICS),
   analyticsLimiter,
-  UserController.getUserStats
+  UserAnalyticsController.getUserStats // UserAnalyticsController
 );
 
-// Get user by ID (access control handled in controller) - MUST come after specific routes
+// Get user by ID (access control handled in controller) - MUST come after specific routes (UserAdminController)
 router.get(
   "/:id",
   validateObjectId,
   handleValidationErrors,
-  UserController.getUserById
+  UserAdminController.getUserById
 );
 
-// Admin user management routes
+// Admin user management routes (UserAdminController)
 router.put(
   "/:id/admin-edit",
   validateObjectId,
   handleValidationErrors,
   requireAdmin,
-  UserController.adminEditProfile
+  UserAdminController.adminEditProfile
 );
 router.put(
   "/:id/role",
   validateObjectId,
   handleValidationErrors,
   requireAdmin,
-  UserController.updateUserRole
+  UserAdminController.updateUserRole
 );
 router.put(
   "/:id/deactivate",
   validateObjectId,
   handleValidationErrors,
   requireLeader,
-  UserController.deactivateUser
+  UserAdminController.deactivateUser
 );
 router.put(
   "/:id/reactivate",
   validateObjectId,
   handleValidationErrors,
   requireLeader,
-  UserController.reactivateUser
+  UserAdminController.reactivateUser
 );
 
-// Delete user impact analysis route (Super Admin only)
+// Delete user impact analysis route (Super Admin only) (UserAdminController)
 router.get(
   "/:id/deletion-impact",
   validateObjectId,
   handleValidationErrors,
   requireSuperAdmin,
-  UserController.getUserDeletionImpact
+  UserAdminController.getUserDeletionImpact
 );
 
-// Delete user route (Super Admin only)
+// Delete user route (Super Admin only) (UserAdminController)
 router.delete(
   "/:id",
   validateObjectId,
   handleValidationErrors,
   requireSuperAdmin,
-  UserController.deleteUser
+  UserAdminController.deleteUser
 );
 
-// Password change route (delegated to auth controller)
+// Password change route (ProfileController)
 router.post(
   "/:id/change-password",
   validateObjectId,
   handleValidationErrors,
-  UserController.changePassword
+  ProfileController.changePassword
 );
 
 export default router;

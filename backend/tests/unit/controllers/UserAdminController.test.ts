@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { Request, Response } from "express";
-import { UserController } from "../../../src/controllers/userController";
+import { UserAdminController } from "../../../src/controllers/UserAdminController";
 import bcrypt from "bcryptjs";
 
 // Mock dependencies
@@ -96,103 +96,32 @@ vi.mock(
   "../../../src/services/infrastructure/autoEmailNotificationService",
   () => ({
     AutoEmailNotificationService: {
-      sendRoleChangeNotification: vi.fn(),
-      sendAtCloudRoleChangeNotification: vi.fn(),
+      sendRoleChangeNotification: vi.fn().mockResolvedValue({
+        emailsSent: 1,
+        messagesCreated: 0,
+        success: true,
+      }),
+      sendAtCloudRoleChangeNotification: vi.fn().mockResolvedValue({
+        emailsSent: 1,
+        messagesCreated: 0,
+        success: true,
+      }),
       // New: mock admin notifications for account status changes
-      sendAccountStatusChangeAdminNotifications: vi.fn(
-        async ({ action, targetUser, actor, createSystemMessage = true }) => {
-          // Simulate sending admin emails based on action
-          const { EmailService } = await import(
-            "../../../src/services/infrastructure/emailService"
-          );
-          if (action === "deactivated") {
-            await EmailService.sendUserDeactivatedAlertToAdmin(
-              "admin@example.com",
-              "Admin User",
-              {
-                firstName: targetUser.firstName || "",
-                lastName: targetUser.lastName || "",
-                email: targetUser.email,
-              },
-              {
-                firstName: actor.firstName || "",
-                lastName: actor.lastName || "",
-                email: actor.email,
-                role: actor.role,
-              }
-            );
-          } else if (action === "reactivated") {
-            await EmailService.sendUserReactivatedAlertToAdmin(
-              "admin@example.com",
-              "Admin User",
-              {
-                firstName: targetUser.firstName || "",
-                lastName: targetUser.lastName || "",
-                email: targetUser.email,
-              },
-              {
-                firstName: actor.firstName || "",
-                lastName: actor.lastName || "",
-                email: actor.email,
-                role: actor.role,
-              }
-            );
-          } else if (action === "deleted") {
-            await EmailService.sendUserDeletedAlertToAdmin(
-              "admin@example.com",
-              "Admin User",
-              {
-                firstName: targetUser.firstName || "",
-                lastName: targetUser.lastName || "",
-                email: targetUser.email,
-              },
-              {
-                firstName: actor.firstName || "",
-                lastName: actor.lastName || "",
-                email: actor.email,
-                role: actor.role,
-              }
-            );
+      sendAccountStatusChangeAdminNotifications: vi
+        .fn()
+        .mockImplementation(
+          async ({ action, targetUser, actor, createSystemMessage = true }) => {
+            // In a real test environment, we would verify these calls separately
+            // The actual service implementation will handle the emails and messages
+            // For now, just return success
+            return {
+              emailsSent: 1,
+              messagesCreated:
+                createSystemMessage && action !== "deleted" ? 1 : 0,
+              success: true,
+            };
           }
-
-          // Optionally create system message for admins (skip for deleted when controller already created one)
-          if (createSystemMessage && action !== "deleted") {
-            const { UnifiedMessageController } = await import(
-              "../../../src/controllers/unifiedMessageController"
-            );
-            await UnifiedMessageController.createTargetedSystemMessage(
-              {
-                title:
-                  action === "deactivated"
-                    ? "User Account Deactivated"
-                    : "User Account Reactivated",
-                content: `${targetUser.email} was ${action} by ${actor.email}`,
-                type: "user_management",
-                priority: "high",
-                hideCreator: true,
-              },
-              ["admin-id-1"],
-              {
-                id: actor._id || "actor-id",
-                firstName: actor.firstName || "",
-                lastName: actor.lastName || "",
-                username: actor.email.split("@")[0],
-                avatar: actor.avatar,
-                gender: (actor as any).gender || "male",
-                authLevel: actor.role,
-                roleInAtCloud: actor.role,
-              }
-            );
-          }
-
-          return {
-            emailsSent: 1,
-            messagesCreated:
-              createSystemMessage && action !== "deleted" ? 1 : 0,
-            success: true,
-          };
-        }
-      ),
+        ),
     },
   })
 );
@@ -239,433 +168,45 @@ import { cleanupOldAvatar } from "../../../src/utils/avatarCleanup";
 import { EmailService } from "../../../src/services/infrastructure/emailService";
 import { socketService } from "../../../src/services/infrastructure/SocketService";
 
-describe("UserController", () => {
-  // Use 'any' for mockRequest to avoid TypeScript complaints about custom augmented properties like 'user'
-  let mockRequest: any;
+describe("UserAdminController", () => {
+  let mockRequest: Partial<Request>;
   let mockResponse: Partial<Response>;
   let statusMock: ReturnType<typeof vi.fn>;
   let jsonMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    // Reset all mocks before each test
+    // Reset all mocks
     vi.clearAllMocks();
 
-    // Setup response mocks
-    statusMock = vi.fn().mockReturnThis();
-    jsonMock = vi.fn().mockReturnThis();
-
+    // Setup mock response
+    jsonMock = vi.fn();
+    statusMock = vi.fn().mockReturnValue({ json: jsonMock });
     mockResponse = {
-      status: statusMock,
-      json: jsonMock,
-    } as any;
+      status: statusMock as any,
+      json: jsonMock as any,
+    };
 
-    // Setup console mocks to avoid test output clutter
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    vi.spyOn(console, "log").mockImplementation(() => {});
-    vi.spyOn(console, "warn").mockImplementation(() => {});
-
-    // Default request setup
+    // Setup mock request with user
     mockRequest = {
       user: {
         _id: "507f1f77bcf86cd799439011",
         id: "507f1f77bcf86cd799439011",
         email: "test@example.com",
-        username: "testuser",
         firstName: "Test",
         lastName: "User",
+        username: "testuser",
         role: ROLES.PARTICIPANT,
-        gender: "male",
-        avatar: "/default-avatar-male.jpg",
         isAtCloudLeader: false,
         roleInAtCloud: "",
-        lastLogin: new Date(),
-        createdAt: new Date(),
-        isVerified: true,
-        isActive: true,
       } as any,
-      params: {},
       body: {},
+      params: {},
       query: {},
-      file: undefined,
     };
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  describe("getProfile", () => {
-    it("should return user profile successfully", async () => {
-      await UserController.getProfile(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      expect(statusMock).toHaveBeenCalledWith(200);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: true,
-        data: {
-          user: expect.objectContaining({
-            id: "507f1f77bcf86cd799439011",
-            email: "test@example.com",
-            firstName: "Test",
-            lastName: "User",
-            username: "testuser",
-            role: ROLES.PARTICIPANT,
-          }),
-        },
-      });
-    });
-
-    it("should return 401 if user not authenticated", async () => {
-      mockRequest.user = undefined;
-
-      await UserController.getProfile(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      expect(statusMock).toHaveBeenCalledWith(401);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        message: "Authentication required.",
-      });
-    });
-
-    it("should handle server errors gracefully", async () => {
-      // Force an error by making req.user throw
-      Object.defineProperty(mockRequest, "user", {
-        get: () => {
-          throw new Error("Test error");
-        },
-      });
-
-      await UserController.getProfile(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      expect(statusMock).toHaveBeenCalledWith(500);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        message: "Internal server error.",
-      });
-    });
-  });
-
-  describe("updateProfile", () => {
-    beforeEach(() => {
-      vi.mocked(User.findById).mockResolvedValue({
-        _id: "507f1f77bcf86cd799439011",
-        save: vi.fn(),
-        avatar: "/old-avatar.jpg",
-      } as any);
-
-      vi.mocked(User.findByIdAndUpdate).mockResolvedValue({
-        _id: "507f1f77bcf86cd799439011",
-        username: "testuser",
-        email: "test@example.com",
-        firstName: "Test",
-        lastName: "User",
-        gender: "male",
-        avatar: "/default-avatar-male.jpg",
-        role: ROLES.PARTICIPANT,
-        isAtCloudLeader: false,
-        roleInAtCloud: "",
-      } as any);
-
-      vi.mocked(CachePatterns.invalidateUserCache).mockResolvedValue(undefined);
-    });
-
-    it("should require authentication", async () => {
-      mockRequest.user = undefined;
-
-      await UserController.updateProfile(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      expect(statusMock).toHaveBeenCalledWith(401);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        message: "Authentication required.",
-      });
-    });
-
-    it("should require roleInAtCloud when isAtCloudLeader is true", async () => {
-      mockRequest.body = {
-        isAtCloudLeader: true,
-        // Missing roleInAtCloud
-      };
-
-      await UserController.updateProfile(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      expect(statusMock).toHaveBeenCalledWith(400);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        message: "Role in @Cloud is required for @Cloud co-workers.",
-      });
-    });
-
-    it("should clear roleInAtCloud when isAtCloudLeader is false", async () => {
-      mockRequest.body = {
-        isAtCloudLeader: false,
-        roleInAtCloud: "Leader", // Should be cleared
-      };
-
-      await UserController.updateProfile(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      expect(User.findByIdAndUpdate).toHaveBeenCalledWith(
-        "507f1f77bcf86cd799439011",
-        {
-          $set: expect.objectContaining({
-            isAtCloudLeader: false,
-            roleInAtCloud: undefined,
-          }),
-        },
-        { new: true, runValidators: true }
-      );
-    });
-
-    it("should update avatar when gender changes", async () => {
-      mockRequest.body = { gender: "female" };
-
-      const mockUser = {
-        _id: "507f1f77bcf86cd799439011",
-        avatar: "/old-avatar.jpg",
-        save: vi.fn(),
-      };
-
-      vi.mocked(User.findById).mockResolvedValue(mockUser as any);
-
-      await UserController.updateProfile(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      expect(mockUser.avatar).toBe("/default-avatar-female.jpg");
-      expect(mockUser.save).toHaveBeenCalled();
-      expect(cleanupOldAvatar).toHaveBeenCalledWith(
-        "507f1f77bcf86cd799439011",
-        "/old-avatar.jpg"
-      );
-    });
-
-    it("should send @Cloud role assignment notification", async () => {
-      mockRequest.user!.isAtCloudLeader = false;
-      mockRequest.body = {
-        isAtCloudLeader: true,
-        roleInAtCloud: "Leader",
-      };
-
-      const updatedUser = {
-        _id: "507f1f77bcf86cd799439011",
-        firstName: "Test",
-        lastName: "User",
-        email: "test@example.com",
-        isAtCloudLeader: true,
-        roleInAtCloud: "Leader",
-      };
-
-      vi.mocked(User.findByIdAndUpdate).mockResolvedValue(updatedUser as any);
-
-      await UserController.updateProfile(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      expect(
-        AutoEmailNotificationService.sendAtCloudRoleChangeNotification
-      ).toHaveBeenCalledWith(
-        expect.objectContaining({
-          userData: {
-            _id: "507f1f77bcf86cd799439011",
-            firstName: "Test",
-            lastName: "User",
-            email: "test@example.com",
-            roleInAtCloud: "Leader",
-          },
-          changeType: "assigned",
-          systemUser: expect.objectContaining({
-            _id: "507f1f77bcf86cd799439011",
-            firstName: "Test",
-            lastName: "User",
-            email: "test@example.com",
-          }),
-        })
-      );
-    });
-
-    it("should send @Cloud role removal notification", async () => {
-      mockRequest.user!.isAtCloudLeader = true;
-      mockRequest.user!.roleInAtCloud = "Leader";
-      mockRequest.body = {
-        isAtCloudLeader: false,
-      };
-
-      const updatedUser = {
-        _id: "507f1f77bcf86cd799439011",
-        firstName: "Test",
-        lastName: "User",
-        email: "test@example.com",
-        isAtCloudLeader: false,
-        roleInAtCloud: undefined,
-      };
-
-      vi.mocked(User.findByIdAndUpdate).mockResolvedValue(updatedUser as any);
-
-      await UserController.updateProfile(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      expect(
-        AutoEmailNotificationService.sendAtCloudRoleChangeNotification
-      ).toHaveBeenCalledWith(
-        expect.objectContaining({
-          userData: {
-            _id: "507f1f77bcf86cd799439011",
-            firstName: "Test",
-            lastName: "User",
-            email: "test@example.com",
-            previousRoleInAtCloud: "Leader",
-          },
-          changeType: "removed",
-          systemUser: expect.objectContaining({
-            _id: "507f1f77bcf86cd799439011",
-            firstName: "Test",
-            lastName: "User",
-            email: "test@example.com",
-          }),
-        })
-      );
-    });
-
-    it("should not send notifications for @Cloud role changes within leadership", async () => {
-      mockRequest.user!.isAtCloudLeader = true;
-      mockRequest.user!.roleInAtCloud = "Leader";
-      mockRequest.body = {
-        isAtCloudLeader: true,
-        roleInAtCloud: "Co-Leader",
-      };
-
-      const updatedUser = {
-        _id: "507f1f77bcf86cd799439011",
-        isAtCloudLeader: true,
-        roleInAtCloud: "Co-Leader",
-      };
-
-      vi.mocked(User.findByIdAndUpdate).mockResolvedValue(updatedUser as any);
-
-      await UserController.updateProfile(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      expect(
-        AutoEmailNotificationService.sendAtCloudRoleChangeNotification
-      ).not.toHaveBeenCalled();
-    });
-
-    it("should handle user not found", async () => {
-      vi.mocked(User.findByIdAndUpdate).mockResolvedValue(null);
-
-      await UserController.updateProfile(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      expect(statusMock).toHaveBeenCalledWith(404);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        message: "User not found.",
-      });
-    });
-
-    it("should handle validation errors", async () => {
-      const validationError = {
-        name: "ValidationError",
-        errors: {
-          email: { message: "Invalid email format" },
-          username: { message: "Username already exists" },
-        },
-      };
-
-      vi.mocked(User.findByIdAndUpdate).mockRejectedValue(validationError);
-
-      await UserController.updateProfile(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      expect(statusMock).toHaveBeenCalledWith(400);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        message: "Validation failed.",
-        errors: ["Invalid email format", "Username already exists"],
-      });
-    });
-
-    it("should handle notification errors gracefully", async () => {
-      mockRequest.body = {
-        isAtCloudLeader: true,
-        roleInAtCloud: "Leader",
-      };
-
-      const updatedUser = {
-        _id: "507f1f77bcf86cd799439011",
-        firstName: "Test",
-        lastName: "User",
-        email: "test@example.com",
-        role: undefined,
-        gender: undefined,
-        avatar: undefined,
-        isAtCloudLeader: true,
-        roleInAtCloud: "Leader",
-      };
-
-      vi.mocked(User.findByIdAndUpdate).mockResolvedValue(updatedUser as any);
-      vi.mocked(
-        AutoEmailNotificationService.sendAtCloudRoleChangeNotification
-      ).mockRejectedValue(new Error("Notification failed"));
-
-      await UserController.updateProfile(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      // Should still succeed despite notification failure
-      expect(statusMock).toHaveBeenCalledWith(200);
-      expect(jsonMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          success: true,
-          message: "Profile updated successfully!",
-        })
-      );
-    });
-
-    it("should handle unexpected errors", async () => {
-      vi.mocked(User.findByIdAndUpdate).mockRejectedValue(
-        new Error("Database error")
-      );
-
-      await UserController.updateProfile(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      expect(statusMock).toHaveBeenCalledWith(500);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        message: "Failed to update profile.",
-      });
-    });
+    vi.resetAllMocks();
   });
 
   describe("getUserById", () => {
@@ -677,7 +218,7 @@ describe("UserController", () => {
     it("should require authentication", async () => {
       mockRequest.user = undefined;
 
-      await UserController.getUserById(
+      await UserAdminController.getUserById(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -701,7 +242,7 @@ describe("UserController", () => {
 
       vi.mocked(User.findById).mockResolvedValue(targetUser as any);
 
-      await UserController.getUserById(
+      await UserAdminController.getUserById(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -724,7 +265,7 @@ describe("UserController", () => {
     it("should return 404 if user not found", async () => {
       vi.mocked(User.findById).mockResolvedValue(null);
 
-      await UserController.getUserById(
+      await UserAdminController.getUserById(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -747,7 +288,7 @@ describe("UserController", () => {
         .mockReturnValueOnce(true) // Initial check
         .mockReturnValueOnce(false); // Final check
 
-      await UserController.getUserById(
+      await UserAdminController.getUserById(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -762,7 +303,7 @@ describe("UserController", () => {
     it("should handle database errors", async () => {
       vi.mocked(User.findById).mockRejectedValue(new Error("Database error"));
 
-      await UserController.getUserById(
+      await UserAdminController.getUserById(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -784,7 +325,7 @@ describe("UserController", () => {
     it("should require authentication", async () => {
       mockRequest.user = undefined;
 
-      await UserController.getAllUsers(
+      await UserAdminController.getAllUsers(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -837,7 +378,7 @@ describe("UserController", () => {
         }
       );
 
-      await UserController.getAllUsers(
+      await UserAdminController.getAllUsers(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -876,7 +417,7 @@ describe("UserController", () => {
         }
       );
 
-      await UserController.getAllUsers(
+      await UserAdminController.getAllUsers(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -904,7 +445,7 @@ describe("UserController", () => {
         }
       );
 
-      await UserController.getAllUsers(
+      await UserAdminController.getAllUsers(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -932,7 +473,7 @@ describe("UserController", () => {
         }
       );
 
-      await UserController.getAllUsers(
+      await UserAdminController.getAllUsers(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -1035,7 +576,7 @@ describe("UserController", () => {
         status: vi.fn().mockReturnThis(),
         json: vi.fn(),
       } as unknown as Response;
-      await UserController.getAllUsers(
+      await UserAdminController.getAllUsers(
         mockRequest as Request,
         resPage1 as Response
       );
@@ -1051,7 +592,7 @@ describe("UserController", () => {
         status: vi.fn().mockReturnThis(),
         json: vi.fn(),
       } as unknown as Response;
-      await UserController.getAllUsers(
+      await UserAdminController.getAllUsers(
         mockRequest as Request,
         resPage2 as Response
       );
@@ -1074,7 +615,7 @@ describe("UserController", () => {
     it("should return 403 if insufficient permissions", async () => {
       vi.mocked(hasPermission).mockReturnValue(false);
 
-      await UserController.getAllUsers(
+      await UserAdminController.getAllUsers(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -1090,7 +631,7 @@ describe("UserController", () => {
       const cachedData = { users: [], pagination: {} };
       vi.mocked(CachePatterns.getUserListing).mockResolvedValue(cachedData);
 
-      await UserController.getAllUsers(
+      await UserAdminController.getAllUsers(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -1113,7 +654,7 @@ describe("UserController", () => {
         throw new Error("Database error");
       });
 
-      await UserController.getAllUsers(
+      await UserAdminController.getAllUsers(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -1142,7 +683,7 @@ describe("UserController", () => {
     it("should require authentication", async () => {
       mockRequest.user = undefined;
 
-      await UserController.updateUserRole(
+      await UserAdminController.updateUserRole(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -1157,7 +698,7 @@ describe("UserController", () => {
     it("should require valid role", async () => {
       vi.mocked(RoleUtils.isValidRole).mockReturnValue(false);
 
-      await UserController.updateUserRole(
+      await UserAdminController.updateUserRole(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -1172,7 +713,7 @@ describe("UserController", () => {
     it("should require permission to edit roles", async () => {
       vi.mocked(hasPermission).mockReturnValue(false);
 
-      await UserController.updateUserRole(
+      await UserAdminController.updateUserRole(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -1194,7 +735,7 @@ describe("UserController", () => {
 
       vi.mocked(User.findById).mockResolvedValue(targetUser as any);
 
-      await UserController.updateUserRole(
+      await UserAdminController.updateUserRole(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -1220,7 +761,7 @@ describe("UserController", () => {
         .mockResolvedValueOnce(targetUser as any) // First call for target user
         .mockResolvedValueOnce(mockRequest.user as any); // Second call for changed by user
 
-      await UserController.updateUserRole(
+      await UserAdminController.updateUserRole(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -1278,7 +819,7 @@ describe("UserController", () => {
         .mockResolvedValueOnce(targetUser as any)
         .mockResolvedValueOnce(mockRequest.user as any);
 
-      await UserController.updateUserRole(
+      await UserAdminController.updateUserRole(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -1315,7 +856,7 @@ describe("UserController", () => {
         .mockResolvedValueOnce(targetUser as any)
         .mockResolvedValueOnce(mockRequest.user as any);
 
-      await UserController.updateUserRole(
+      await UserAdminController.updateUserRole(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -1351,7 +892,7 @@ describe("UserController", () => {
         .mockResolvedValueOnce(targetUser as any) // First call for target user
         .mockResolvedValueOnce(mockRequest.user as any); // Second call for changed by user
 
-      await UserController.updateUserRole(
+      await UserAdminController.updateUserRole(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -1394,7 +935,7 @@ describe("UserController", () => {
     it("should handle user not found", async () => {
       vi.mocked(User.findById).mockResolvedValue(null);
 
-      await UserController.updateUserRole(
+      await UserAdminController.updateUserRole(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -1423,7 +964,7 @@ describe("UserController", () => {
         .mockResolvedValueOnce(targetUser as any) // First call for target user
         .mockResolvedValueOnce(mockRequest.user as any); // Second call for changed by user
 
-      await UserController.updateUserRole(
+      await UserAdminController.updateUserRole(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -1447,7 +988,7 @@ describe("UserController", () => {
         AutoEmailNotificationService.sendRoleChangeNotification
       ).mockRejectedValue(new Error("Notification failed"));
 
-      await UserController.updateUserRole(
+      await UserAdminController.updateUserRole(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -1466,7 +1007,7 @@ describe("UserController", () => {
     it("should handle unexpected errors", async () => {
       vi.mocked(User.findById).mockRejectedValue(new Error("Database error"));
 
-      await UserController.updateUserRole(
+      await UserAdminController.updateUserRole(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -1489,7 +1030,7 @@ describe("UserController", () => {
     it("should require authentication", async () => {
       mockRequest.user = undefined;
 
-      await UserController.deactivateUser(
+      await UserAdminController.deactivateUser(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -1504,7 +1045,7 @@ describe("UserController", () => {
     it("should require proper permissions", async () => {
       vi.mocked(hasPermission).mockReturnValue(false);
 
-      await UserController.deactivateUser(
+      await UserAdminController.deactivateUser(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -1528,7 +1069,7 @@ describe("UserController", () => {
 
       vi.mocked(User.findById).mockResolvedValue(targetUser as any);
 
-      await UserController.deactivateUser(
+      await UserAdminController.deactivateUser(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -1548,17 +1089,19 @@ describe("UserController", () => {
           lastName: expect.any(String),
         })
       );
-      // Admin notifications should be sent (system message to admins + emails)
+      // Admin notifications sent via unified service
       expect(
-        UnifiedMessageController.createTargetedSystemMessage
-      ).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: "user_management",
+        AutoEmailNotificationService.sendAccountStatusChangeAdminNotifications
+      ).toHaveBeenCalledWith({
+        action: "deactivated",
+        targetUser: expect.objectContaining({
+          email: "target@example.com",
         }),
-        expect.any(Array),
-        expect.any(Object)
-      );
-      expect(EmailService.sendUserDeactivatedAlertToAdmin).toHaveBeenCalled();
+        actor: expect.objectContaining({
+          role: ROLES.ADMINISTRATOR,
+        }),
+        createSystemMessage: true,
+      });
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith({
         success: true,
@@ -1569,7 +1112,7 @@ describe("UserController", () => {
     it("should handle user not found", async () => {
       vi.mocked(User.findById).mockResolvedValue(null);
 
-      await UserController.deactivateUser(
+      await UserAdminController.deactivateUser(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -1590,7 +1133,7 @@ describe("UserController", () => {
 
       vi.mocked(User.findById).mockResolvedValue(targetUser as any);
 
-      await UserController.deactivateUser(
+      await UserAdminController.deactivateUser(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -1616,7 +1159,7 @@ describe("UserController", () => {
 
       vi.mocked(User.findById).mockResolvedValue(targetUser as any);
 
-      await UserController.deactivateUser(
+      await UserAdminController.deactivateUser(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -1631,7 +1174,7 @@ describe("UserController", () => {
     it("should handle unexpected errors", async () => {
       vi.mocked(User.findById).mockRejectedValue(new Error("Database error"));
 
-      await UserController.deactivateUser(
+      await UserAdminController.deactivateUser(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -1654,7 +1197,7 @@ describe("UserController", () => {
     it("should require authentication", async () => {
       mockRequest.user = undefined;
 
-      await UserController.reactivateUser(
+      await UserAdminController.reactivateUser(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -1669,7 +1212,7 @@ describe("UserController", () => {
     it("should require proper permissions", async () => {
       vi.mocked(hasPermission).mockReturnValue(false);
 
-      await UserController.reactivateUser(
+      await UserAdminController.reactivateUser(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -1693,7 +1236,7 @@ describe("UserController", () => {
 
       vi.mocked(User.findById).mockResolvedValue(targetUser as any);
 
-      await UserController.reactivateUser(
+      await UserAdminController.reactivateUser(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -1713,17 +1256,19 @@ describe("UserController", () => {
           lastName: expect.any(String),
         })
       );
-      // Admin notifications should be sent (system message to admins + emails)
+      // Admin notifications sent via unified service
       expect(
-        UnifiedMessageController.createTargetedSystemMessage
-      ).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: "user_management",
+        AutoEmailNotificationService.sendAccountStatusChangeAdminNotifications
+      ).toHaveBeenCalledWith({
+        action: "reactivated",
+        targetUser: expect.objectContaining({
+          email: "target@example.com",
         }),
-        expect.any(Array),
-        expect.any(Object)
-      );
-      expect(EmailService.sendUserReactivatedAlertToAdmin).toHaveBeenCalled();
+        actor: expect.objectContaining({
+          role: ROLES.ADMINISTRATOR,
+        }),
+        createSystemMessage: true,
+      });
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith({
         success: true,
@@ -1734,7 +1279,7 @@ describe("UserController", () => {
     it("should handle user not found", async () => {
       vi.mocked(User.findById).mockResolvedValue(null);
 
-      await UserController.reactivateUser(
+      await UserAdminController.reactivateUser(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -1755,7 +1300,7 @@ describe("UserController", () => {
 
       vi.mocked(User.findById).mockResolvedValue(targetUser as any);
 
-      await UserController.reactivateUser(
+      await UserAdminController.reactivateUser(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -1773,7 +1318,7 @@ describe("UserController", () => {
     it("should handle unexpected errors", async () => {
       vi.mocked(User.findById).mockRejectedValue(new Error("Database error"));
 
-      await UserController.reactivateUser(
+      await UserAdminController.reactivateUser(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -1782,268 +1327,6 @@ describe("UserController", () => {
       expect(jsonMock).toHaveBeenCalledWith({
         success: false,
         message: "Failed to reactivate user.",
-      });
-    });
-  });
-
-  describe("getUserStats", () => {
-    beforeEach(() => {
-      mockRequest.user!.role = ROLES.ADMINISTRATOR;
-      vi.mocked(hasPermission).mockReturnValue(true);
-    });
-
-    it("should require authentication", async () => {
-      mockRequest.user = undefined;
-
-      await UserController.getUserStats(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      expect(statusMock).toHaveBeenCalledWith(401);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        message: "Authentication required.",
-      });
-    });
-
-    it("should require proper permissions", async () => {
-      vi.mocked(hasPermission).mockReturnValue(false);
-
-      await UserController.getUserStats(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      expect(statusMock).toHaveBeenCalledWith(403);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        message: "Insufficient permissions to view user statistics.",
-      });
-    });
-
-    it("should return user statistics successfully", async () => {
-      const mockStats = {
-        totalUsers: 100,
-        activeUsers: 85,
-        inactiveUsers: 15,
-        roleDistribution: {
-          [ROLES.PARTICIPANT]: 60,
-          [ROLES.LEADER]: 25,
-          [ROLES.ADMINISTRATOR]: 10,
-          [ROLES.SUPER_ADMIN]: 5,
-        },
-        recentRegistrations: 12,
-        atCloudLeaders: 8,
-      };
-
-      // Mock User.getUserStats static method
-      vi.mocked(User as any).getUserStats = vi
-        .fn()
-        .mockResolvedValue(mockStats);
-
-      await UserController.getUserStats(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      expect(statusMock).toHaveBeenCalledWith(200);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: true,
-        data: { stats: mockStats },
-      });
-    });
-
-    it("should handle database errors", async () => {
-      vi.mocked(User as any).getUserStats = vi
-        .fn()
-        .mockRejectedValue(new Error("Database error"));
-
-      await UserController.getUserStats(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      expect(statusMock).toHaveBeenCalledWith(500);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        message: "Failed to retrieve user statistics.",
-      });
-    });
-  });
-
-  describe("uploadAvatar", () => {
-    beforeEach(() => {
-      mockRequest.file = {
-        filename: "avatar.jpg",
-        path: "/uploads/avatars/avatar.jpg",
-      } as any;
-
-      vi.mocked(getFileUrl).mockReturnValue("/api/uploads/avatars/avatar.jpg");
-
-      // Mock Program and Message updateMany to resolve immediately
-      vi.mocked(Program.updateMany).mockResolvedValue({
-        modifiedCount: 0,
-      } as any);
-      vi.mocked(Message.updateMany).mockResolvedValue({
-        modifiedCount: 0,
-      } as any);
-    });
-
-    it("should require authentication", async () => {
-      mockRequest.user = undefined;
-
-      await UserController.uploadAvatar(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      expect(statusMock).toHaveBeenCalledWith(401);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        message: "Authentication required.",
-      });
-    });
-
-    it("should require file upload", async () => {
-      mockRequest.file = undefined;
-
-      await UserController.uploadAvatar(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      expect(statusMock).toHaveBeenCalledWith(400);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        message: "No file uploaded.",
-      });
-    });
-
-    it("should successfully upload avatar", async () => {
-      const mockUser = {
-        _id: "507f1f77bcf86cd799439011",
-        avatar: "/old-avatar.jpg",
-        save: vi.fn(),
-      };
-
-      const updatedUser = {
-        _id: "507f1f77bcf86cd799439011",
-        email: "test@example.com",
-        avatar: "/api/uploads/avatars/avatar.jpg",
-        // Ensure we have all the properties that might be accessed
-        id: "507f1f77bcf86cd799439011",
-      };
-
-      vi.mocked(User.findById).mockResolvedValue(mockUser as any);
-      vi.mocked(User.findByIdAndUpdate).mockResolvedValue(updatedUser as any);
-      vi.mocked(cleanupOldAvatar).mockResolvedValue(true);
-
-      await UserController.uploadAvatar(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      // Check that avatar URL includes cache-busting timestamp
-      expect(User.findByIdAndUpdate).toHaveBeenCalled();
-      const updateCalls = vi.mocked(User.findByIdAndUpdate).mock.calls[0];
-      expect(updateCalls[0]).toBe("507f1f77bcf86cd799439011");
-      expect(updateCalls[1]).toMatchObject({
-        avatar: expect.stringMatching(
-          /^\/api\/uploads\/avatars\/avatar\.jpg\?t=\d+$/
-        ),
-      });
-
-      expect(cleanupOldAvatar).toHaveBeenCalledWith(
-        "507f1f77bcf86cd799439011",
-        "/old-avatar.jpg"
-      );
-      expect(statusMock).toHaveBeenCalledWith(200);
-
-      // Check the response includes cache-busting timestamp
-      expect(jsonMock).toHaveBeenCalled();
-      const responseData = jsonMock.mock.calls[0][0];
-      expect(responseData.success).toBe(true);
-      expect(responseData.message).toBe("Avatar uploaded successfully.");
-      expect(responseData.data.avatarUrl).toMatch(
-        /^\/api\/uploads\/avatars\/avatar\.jpg\?t=\d+$/
-      );
-      expect(responseData.data.user).toMatchObject({
-        id: "507f1f77bcf86cd799439011",
-        email: "test@example.com",
-        avatar: "/api/uploads/avatars/avatar.jpg",
-      });
-    });
-
-    it("should handle user not found", async () => {
-      vi.mocked(User.findById).mockResolvedValue(null);
-
-      await UserController.uploadAvatar(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      expect(statusMock).toHaveBeenCalledWith(404);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        message: "User not found.",
-      });
-    });
-
-    it("should handle cleanup errors gracefully", async () => {
-      const mockUser = {
-        _id: "507f1f77bcf86cd799439011",
-        avatar: "/old-avatar.jpg",
-        save: vi.fn(),
-      };
-
-      const updatedUser = {
-        _id: "507f1f77bcf86cd799439011",
-        email: "test@example.com",
-        avatar: "/api/uploads/avatars/avatar.jpg",
-      };
-
-      vi.mocked(User.findById).mockResolvedValue(mockUser as any);
-      vi.mocked(User.findByIdAndUpdate).mockResolvedValue(updatedUser as any);
-      vi.mocked(cleanupOldAvatar).mockRejectedValue(
-        new Error("Cleanup failed")
-      );
-
-      await UserController.uploadAvatar(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      // Should still succeed despite cleanup failure
-      expect(statusMock).toHaveBeenCalledWith(200);
-
-      // Check the response includes cache-busting timestamp
-      expect(jsonMock).toHaveBeenCalled();
-      const responseData = jsonMock.mock.calls[0][0];
-      expect(responseData.success).toBe(true);
-      expect(responseData.message).toBe("Avatar uploaded successfully.");
-      expect(responseData.data.avatarUrl).toMatch(
-        /^\/api\/uploads\/avatars\/avatar\.jpg\?t=\d+$/
-      );
-      expect(responseData.data.user).toMatchObject({
-        id: "507f1f77bcf86cd799439011",
-        email: "test@example.com",
-        avatar: "/api/uploads/avatars/avatar.jpg",
-      });
-    });
-
-    it("should handle unexpected errors", async () => {
-      vi.mocked(User.findById).mockRejectedValue(new Error("Database error"));
-
-      await UserController.uploadAvatar(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      expect(statusMock).toHaveBeenCalledWith(500);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        message: "Failed to upload avatar.",
       });
     });
   });
@@ -2058,7 +1341,7 @@ describe("UserController", () => {
     it("should require authentication", async () => {
       mockRequest.user = undefined;
 
-      await UserController.deleteUser(
+      await UserAdminController.deleteUser(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -2074,7 +1357,7 @@ describe("UserController", () => {
       // Change the user's role to not be Super Admin
       mockRequest.user!.role = ROLES.ADMINISTRATOR;
 
-      await UserController.deleteUser(
+      await UserAdminController.deleteUser(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -2096,21 +1379,33 @@ describe("UserController", () => {
 
       const mockDeletionReport = {
         userId: "507f1f77bcf86cd799439012",
-        deletedRecords: {
-          user: 1,
+        userEmail: "target@example.com",
+        deletedData: {
+          userRecord: true,
           registrations: 3,
-          messages: 5,
-          notifications: 2,
+          eventsCreated: 1,
+          eventOrganizations: 0,
+          messageStates: 2,
+          messagesCreated: 5,
         },
-        totalDeleted: 11,
+        updatedStatistics: {
+          events: [],
+          affectedUsers: 0,
+        },
+        errors: [],
       };
+
+      // Mock User.find for admin query with chainable select
+      vi.mocked(User.find).mockReturnValue({
+        select: vi.fn().mockResolvedValue([{ _id: "admin-id-1" }]),
+      } as any);
 
       vi.mocked(User.findById).mockResolvedValue(targetUser as any);
       vi.mocked(UserDeletionService.deleteUserCompletely).mockResolvedValue(
         mockDeletionReport as any
       );
 
-      await UserController.deleteUser(
+      await UserAdminController.deleteUser(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -2131,14 +1426,25 @@ describe("UserController", () => {
           "User Target User has been permanently deleted along with all associated data.",
       });
 
-      // Admin email alerts on deletion are sent
-      expect(EmailService.sendUserDeletedAlertToAdmin).toHaveBeenCalled();
+      // Admin notifications sent via unified service
+      expect(
+        AutoEmailNotificationService.sendAccountStatusChangeAdminNotifications
+      ).toHaveBeenCalledWith({
+        action: "deleted",
+        targetUser: expect.objectContaining({
+          email: "target@example.com",
+        }),
+        actor: expect.objectContaining({
+          role: ROLES.SUPER_ADMIN,
+        }),
+        createSystemMessage: false, // controller already creates message
+      });
     });
 
     it("should handle user not found", async () => {
       vi.mocked(User.findById).mockResolvedValue(null);
 
-      await UserController.deleteUser(
+      await UserAdminController.deleteUser(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -2161,7 +1467,7 @@ describe("UserController", () => {
       };
       vi.mocked(User.findById).mockResolvedValue(currentUserForDeletion as any);
 
-      await UserController.deleteUser(
+      await UserAdminController.deleteUser(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -2185,7 +1491,7 @@ describe("UserController", () => {
         new Error("Deletion failed")
       );
 
-      await UserController.deleteUser(
+      await UserAdminController.deleteUser(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -2200,7 +1506,7 @@ describe("UserController", () => {
     it("should handle unexpected errors", async () => {
       vi.mocked(User.findById).mockRejectedValue(new Error("Database error"));
 
-      await UserController.deleteUser(
+      await UserAdminController.deleteUser(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -2223,7 +1529,7 @@ describe("UserController", () => {
     it("should require authentication", async () => {
       mockRequest.user = undefined;
 
-      await UserController.getUserDeletionImpact(
+      await UserAdminController.getUserDeletionImpact(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -2239,7 +1545,7 @@ describe("UserController", () => {
       // Change the user's role to not be Super Admin
       mockRequest.user!.role = ROLES.ADMINISTRATOR;
 
-      await UserController.getUserDeletionImpact(
+      await UserAdminController.getUserDeletionImpact(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -2269,7 +1575,7 @@ describe("UserController", () => {
         mockImpact as any
       );
 
-      await UserController.getUserDeletionImpact(
+      await UserAdminController.getUserDeletionImpact(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -2290,7 +1596,7 @@ describe("UserController", () => {
         new Error("Service error")
       );
 
-      await UserController.getUserDeletionImpact(
+      await UserAdminController.getUserDeletionImpact(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -2299,259 +1605,6 @@ describe("UserController", () => {
       expect(jsonMock).toHaveBeenCalledWith({
         success: false,
         message: "Internal server error.",
-      });
-    });
-  });
-
-  describe("changePassword", () => {
-    beforeEach(() => {
-      mockRequest.params = { id: "507f1f77bcf86cd799439011" };
-      mockRequest.body = {
-        currentPassword: "oldPassword123",
-        newPassword: "newPassword456",
-        confirmPassword: "newPassword456",
-      };
-
-      // Mock user with comparePassword method
-      const mockUser = {
-        _id: "507f1f77bcf86cd799439011",
-        password: "hashedOldPassword",
-        comparePassword: vi.fn().mockResolvedValue(true),
-        save: vi.fn(),
-      };
-
-      vi.mocked(User.findById).mockReturnValue({
-        select: vi.fn().mockResolvedValue(mockUser),
-      } as any);
-    });
-
-    it("should require authentication", async () => {
-      mockRequest.user = undefined;
-
-      await UserController.changePassword(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      expect(statusMock).toHaveBeenCalledWith(403);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        error: "You can only change your own password",
-      });
-    });
-
-    it("should require current password", async () => {
-      mockRequest.body = {
-        newPassword: "newPassword456",
-        confirmPassword: "newPassword456",
-      };
-
-      await UserController.changePassword(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      expect(statusMock).toHaveBeenCalledWith(400);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        error: "Current password, new password, and confirmation are required",
-      });
-    });
-
-    it("should require new password", async () => {
-      mockRequest.body = {
-        currentPassword: "oldPassword123",
-        confirmPassword: "newPassword456",
-      };
-
-      await UserController.changePassword(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      expect(statusMock).toHaveBeenCalledWith(400);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        error: "Current password, new password, and confirmation are required",
-      });
-    });
-
-    it("should require password confirmation", async () => {
-      mockRequest.body = {
-        currentPassword: "oldPassword123",
-        newPassword: "newPassword456",
-      };
-
-      await UserController.changePassword(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      expect(statusMock).toHaveBeenCalledWith(400);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        error: "Current password, new password, and confirmation are required",
-      });
-    });
-
-    it("should require matching password confirmation", async () => {
-      mockRequest.body = {
-        currentPassword: "oldPassword123",
-        newPassword: "newPassword456",
-        confirmPassword: "differentPassword",
-      };
-
-      await UserController.changePassword(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      expect(statusMock).toHaveBeenCalledWith(400);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        error: "New password and confirmation do not match",
-      });
-    });
-
-    it("should enforce minimum password length", async () => {
-      mockRequest.body = {
-        currentPassword: "oldPassword123",
-        newPassword: "short",
-        confirmPassword: "short",
-      };
-
-      await UserController.changePassword(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      expect(statusMock).toHaveBeenCalledWith(400);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        error: "New password must be at least 8 characters long",
-      });
-    });
-
-    it("should only allow users to change their own password", async () => {
-      mockRequest.params!.id = "507f1f77bcf86cd799439999"; // Different user ID
-
-      await UserController.changePassword(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      expect(statusMock).toHaveBeenCalledWith(403);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        error: "You can only change your own password",
-      });
-    });
-
-    it("should successfully change password", async () => {
-      const mockUser = {
-        _id: "507f1f77bcf86cd799439011",
-        password: "hashedOldPassword",
-        comparePassword: vi.fn().mockResolvedValue(true),
-        save: vi.fn(),
-      };
-
-      vi.mocked(User.findById).mockReturnValue({
-        select: vi.fn().mockResolvedValue(mockUser),
-      } as any);
-
-      await UserController.changePassword(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      expect(mockUser.password).toBe("newPassword456");
-      expect(mockUser.save).toHaveBeenCalled();
-      expect(statusMock).toHaveBeenCalledWith(200);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: true,
-        message: "Password changed successfully",
-      });
-    });
-
-    it("should handle incorrect current password", async () => {
-      const mockUser = {
-        _id: "507f1f77bcf86cd799439011",
-        password: "hashedOldPassword",
-        comparePassword: vi.fn().mockResolvedValue(false),
-        save: vi.fn(),
-      };
-
-      vi.mocked(User.findById).mockReturnValue({
-        select: vi.fn().mockResolvedValue(mockUser),
-      } as any);
-
-      await UserController.changePassword(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      expect(statusMock).toHaveBeenCalledWith(400);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        error: "Current password is incorrect",
-      });
-    });
-
-    it("should handle user not found", async () => {
-      vi.mocked(User.findById).mockReturnValue({
-        select: vi.fn().mockResolvedValue(null),
-      } as any);
-
-      await UserController.changePassword(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      expect(statusMock).toHaveBeenCalledWith(404);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        error: "User not found",
-      });
-    });
-
-    it("should handle password comparison errors", async () => {
-      const mockUser = {
-        _id: "507f1f77bcf86cd799439011",
-        comparePassword: vi
-          .fn()
-          .mockRejectedValue(new Error("Comparison failed")),
-      };
-
-      vi.mocked(User.findById).mockReturnValue({
-        select: vi.fn().mockResolvedValue(mockUser),
-      } as any);
-
-      await UserController.changePassword(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      expect(statusMock).toHaveBeenCalledWith(500);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        error: "Password verification failed",
-      });
-    });
-
-    it("should handle unexpected errors", async () => {
-      vi.mocked(User.findById).mockImplementation(() => {
-        throw new Error("Database error");
-      });
-
-      await UserController.changePassword(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      expect(statusMock).toHaveBeenCalledWith(500);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        error: "Failed to change password",
       });
     });
   });
@@ -2589,7 +1642,7 @@ describe("UserController", () => {
     it("should require authentication", async () => {
       mockRequest.user = undefined;
 
-      await UserController.adminEditProfile(
+      await UserAdminController.adminEditProfile(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -2608,7 +1661,7 @@ describe("UserController", () => {
         email: "leader@example.com",
       } as any;
 
-      await UserController.adminEditProfile(
+      await UserAdminController.adminEditProfile(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -2624,7 +1677,7 @@ describe("UserController", () => {
     it("should return 404 if target user not found", async () => {
       vi.mocked(User.findById).mockResolvedValue(null);
 
-      await UserController.adminEditProfile(
+      await UserAdminController.adminEditProfile(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -2670,7 +1723,7 @@ describe("UserController", () => {
       vi.mocked(cleanupOldAvatar).mockResolvedValue(true);
       vi.mocked(CachePatterns.invalidateUserCache).mockResolvedValue(undefined);
 
-      await UserController.adminEditProfile(
+      await UserAdminController.adminEditProfile(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -2740,7 +1793,7 @@ describe("UserController", () => {
       vi.mocked(User.findByIdAndUpdate).mockResolvedValue(updatedUser as any);
       vi.mocked(CachePatterns.invalidateUserCache).mockResolvedValue(undefined);
 
-      await UserController.adminEditProfile(
+      await UserAdminController.adminEditProfile(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -2781,7 +1834,7 @@ describe("UserController", () => {
       vi.mocked(User.findByIdAndUpdate).mockResolvedValue(updatedUser as any);
       vi.mocked(CachePatterns.invalidateUserCache).mockResolvedValue(undefined);
 
-      await UserController.adminEditProfile(
+      await UserAdminController.adminEditProfile(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -2824,7 +1877,7 @@ describe("UserController", () => {
       vi.mocked(cleanupOldAvatar).mockResolvedValue(false); // Returns false for default avatars
       vi.mocked(CachePatterns.invalidateUserCache).mockResolvedValue(undefined);
 
-      await UserController.adminEditProfile(
+      await UserAdminController.adminEditProfile(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -2872,7 +1925,7 @@ describe("UserController", () => {
       );
       vi.mocked(CachePatterns.invalidateUserCache).mockResolvedValue(undefined);
 
-      await UserController.adminEditProfile(
+      await UserAdminController.adminEditProfile(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -2904,7 +1957,7 @@ describe("UserController", () => {
 
       vi.mocked(User.findById).mockResolvedValue(targetUser as any);
 
-      await UserController.adminEditProfile(
+      await UserAdminController.adminEditProfile(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -2929,7 +1982,7 @@ describe("UserController", () => {
       vi.mocked(User.findById).mockResolvedValue(targetUser as any);
       vi.mocked(User.findByIdAndUpdate).mockResolvedValue(null);
 
-      await UserController.adminEditProfile(
+      await UserAdminController.adminEditProfile(
         mockRequest as Request,
         mockResponse as Response
       );
@@ -2944,7 +1997,7 @@ describe("UserController", () => {
     it("should handle unexpected errors", async () => {
       vi.mocked(User.findById).mockRejectedValue(new Error("Database error"));
 
-      await UserController.adminEditProfile(
+      await UserAdminController.adminEditProfile(
         mockRequest as Request,
         mockResponse as Response
       );
