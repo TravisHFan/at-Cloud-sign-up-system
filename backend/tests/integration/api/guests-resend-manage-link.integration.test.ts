@@ -6,7 +6,7 @@ import User from "../../../src/models/User";
 import Event from "../../../src/models/Event";
 import Registration from "../../../src/models/Registration";
 import GuestRegistration from "../../../src/models/GuestRegistration";
-import { EmailService } from "../../../src/services/infrastructure/emailService";
+import { EmailService } from "../../../src/services/infrastructure/EmailServiceFacade";
 
 describe("Guests Admin Resend Manage Link API", () => {
   let adminToken: string;

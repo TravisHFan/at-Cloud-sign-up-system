@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { Request, Response } from "express";
 import { FeedbackController } from "../../src/controllers/feedbackController";
-import * as EmailServiceModule from "../../src/services/infrastructure/emailService";
+import * as EmailServiceModule from "../../src/services/infrastructure/EmailServiceFacade";
 
 // Minimal mock response helper
 const makeRes = () => {

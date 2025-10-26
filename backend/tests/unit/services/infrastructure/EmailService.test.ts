@@ -1,6 +1,6 @@
 import { EmailTransporter } from "../../../../src/services/email/EmailTransporter";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { EmailService } from "../../../../src/services/infrastructure/emailService";
+import { EmailService } from "../../../../src/services/infrastructure/EmailServiceFacade";
 import nodemailer from "nodemailer";
 
 // Mock nodemailer

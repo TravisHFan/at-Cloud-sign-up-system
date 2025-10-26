@@ -1,4 +1,4 @@
-import { EmailService } from "./emailService";
+import { EmailService } from "./EmailServiceFacade";
 import { EmailRecipientUtils } from "../../utils/emailRecipientUtils";
 import Message from "../../models/Message";
 import { socketService } from "./SocketService";

@@ -1,4 +1,4 @@
-import { EmailService } from "../../infrastructure/emailService";
+import { EmailService } from "../../infrastructure/EmailServiceFacade";
 import { buildRegistrationICS } from "../../ICSBuilder";
 import { createLogger } from "../../LoggerService";
 import { EmailHelpers } from "../EmailHelpers";

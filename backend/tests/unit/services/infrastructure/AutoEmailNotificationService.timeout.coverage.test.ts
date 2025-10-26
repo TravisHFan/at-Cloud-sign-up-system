@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { AutoEmailNotificationService } from "../../../../src/services/infrastructure/autoEmailNotificationService";
-import { EmailService } from "../../../../src/services/infrastructure/emailService";
+import { EmailService } from "../../../../src/services/infrastructure/EmailServiceFacade";
 import { EmailRecipientUtils } from "../../../../src/utils/emailRecipientUtils";
 import { UnifiedMessageController } from "../../../../src/controllers/unifiedMessageController";
 

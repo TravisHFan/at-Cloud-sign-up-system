@@ -25,7 +25,7 @@ vi.mock("nodemailer", async () => {
 });
 
 import nodemailer from "nodemailer";
-import { EmailService } from "../../../../src/services/infrastructure/emailService";
+import { EmailService } from "../../../../src/services/infrastructure/EmailServiceFacade";
 
 describe("EmailService - Email Template Snapshots", () => {
   let mockTransporter: any;

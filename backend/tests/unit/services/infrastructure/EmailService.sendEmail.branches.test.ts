@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { EmailService } from "../../../../src/services/infrastructure/emailService";
+import { EmailService } from "../../../../src/services/infrastructure/EmailServiceFacade";
 import { EmailTransporter } from "../../../../src/services/email/EmailTransporter";
 
 describe("EmailService.sendEmail branches", () => {

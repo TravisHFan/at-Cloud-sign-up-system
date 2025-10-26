@@ -1,14 +1,17 @@
 /**
  * UtilityEmailService.ts
- * Domain service for generic utility email functionality
+ * Domain service for utility/generic email functionality
  *
- * Provides reusable email utilities that don't fit into specific domain categories:
- * - Generic notification emails with custom content
- * - Flexible email templates for various use cases
+ * Created: 2025-01-25
+ * Extracted from EmailService.ts as part of domain-driven refactoring.
+ *
+ * Purpose: Generic email notifications with custom content
+ * - Generic notification wrapper for controllers
  */
 
-import * as nodemailer from "nodemailer";
-import { EmailService } from "../../infrastructure/emailService";
+import nodemailer from "nodemailer";
+import { EmailService } from "../../infrastructure/EmailServiceFacade";
+import { EmailOptions } from "../../email";
 import { createLogger } from "../../LoggerService";
 
 const log = createLogger("UtilityEmailService");

@@ -1,7 +1,7 @@
 import { EmailTransporter } from "../../../../src/services/email/EmailTransporter";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import nodemailer from "nodemailer";
-import { EmailService } from "../../../../src/services/infrastructure/emailService";
+import { EmailService } from "../../../../src/services/infrastructure/EmailServiceFacade";
 
 // Covers Medium impact branch (Administrator -> Leader OR Leader -> Participant)
 // and asserts that Security Review link is not rendered while action copy reflects Medium

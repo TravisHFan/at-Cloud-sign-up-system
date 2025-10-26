@@ -10,7 +10,7 @@ import User from "../../../src/models/User";
 import PromoCode from "../../../src/models/PromoCode";
 import Program from "../../../src/models/Program";
 import Purchase from "../../../src/models/Purchase";
-import { EmailService } from "../../../src/services/infrastructure/emailService";
+import { EmailService } from "../../../src/services/infrastructure/EmailServiceFacade";
 import { createAndLoginTestUser } from "../../test-utils/createTestUser";
 import { ensureIntegrationDB } from "../setup/connect";
 

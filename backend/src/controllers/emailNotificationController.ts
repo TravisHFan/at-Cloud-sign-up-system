@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 import { EmailRecipientUtils } from "../utils/emailRecipientUtils";
-import { EmailService } from "../services/infrastructure/emailService";
+import { EmailService } from "../services/infrastructure/EmailServiceFacade";
 import { AutoEmailNotificationService } from "../services/infrastructure/autoEmailNotificationService";
 import { RoleUtils } from "../utils/roleUtils";
 import { UnifiedMessageController } from "./unifiedMessageController";

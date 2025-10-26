@@ -7,7 +7,7 @@ import {
   validateGuestUniqueness,
   validateGuestRateLimit,
 } from "../middleware/guestValidation";
-import { EmailService } from "../services/infrastructure/emailService";
+import { EmailService } from "../services/infrastructure/EmailServiceFacade";
 import crypto from "crypto";
 import { socketService } from "../services/infrastructure/SocketService";
 import mongoose from "mongoose";

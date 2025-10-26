@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { User, IUser } from "../models";
 import { TokenService } from "../middleware/auth";
 import { ROLES } from "../utils/roleUtils";
-import { EmailService } from "../services/infrastructure/emailService";
+import { EmailService } from "../services/infrastructure/EmailServiceFacade";
 import { AutoEmailNotificationService } from "../services/infrastructure/autoEmailNotificationService";
 import { UnifiedMessageController } from "./unifiedMessageController";
 import { CachePatterns } from "../services";

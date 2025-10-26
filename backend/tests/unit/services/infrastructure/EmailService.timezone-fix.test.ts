@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { EmailService } from "../../../../src/services/infrastructure/emailService";
+import { EmailService } from "../../../../src/services/infrastructure/EmailServiceFacade";
 
 // Test specifically for the timezone bug fix in event update emails
 describe("EmailService.timezone-fix - event update email time formatting", () => {

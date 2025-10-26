@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { EmailService } from "../../../../src/services/infrastructure/emailService";
+import { EmailService } from "../../../../src/services/infrastructure/EmailServiceFacade";
 
 describe("EmailService.sendPasswordChangeRequestEmail FRONTEND_URL branches", () => {
   const originalEnv = { ...process.env } as NodeJS.ProcessEnv;

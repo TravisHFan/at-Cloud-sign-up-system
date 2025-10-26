@@ -181,7 +181,7 @@ import {
 } from "../../../src/models";
 import { hasPermission } from "../../../src/utils/roleUtils";
 import { EmailRecipientUtils } from "../../../src/utils/emailRecipientUtils";
-import { EmailService } from "../../../src/services/infrastructure/emailService";
+import { EmailService } from "../../../src/services/infrastructure/EmailServiceFacade";
 import { socketService } from "../../../src/services/infrastructure/SocketService";
 import { ResponseBuilderService } from "../../../src/services/ResponseBuilderService";
 import { UnifiedMessageController } from "../../../src/controllers/unifiedMessageController";

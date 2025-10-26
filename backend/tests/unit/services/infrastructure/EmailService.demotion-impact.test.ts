@@ -8,7 +8,7 @@ import {
   expect,
   vi,
 } from "vitest";
-import { EmailService } from "../../../../src/services/infrastructure/emailService";
+import { EmailService } from "../../../../src/services/infrastructure/EmailServiceFacade";
 
 describe("EmailService demotion impact levels", () => {
   const prevEnv = { ...process.env } as NodeJS.ProcessEnv;

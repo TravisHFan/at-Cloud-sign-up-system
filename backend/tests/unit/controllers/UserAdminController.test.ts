@@ -165,7 +165,7 @@ import { UserDeletionService } from "../../../src/services/UserDeletionService";
 import { CachePatterns } from "../../../src/services";
 import { getFileUrl } from "../../../src/middleware/upload";
 import { cleanupOldAvatar } from "../../../src/utils/avatarCleanup";
-import { EmailService } from "../../../src/services/infrastructure/emailService";
+import { EmailService } from "../../../src/services/infrastructure/EmailServiceFacade";
 import { socketService } from "../../../src/services/infrastructure/SocketService";
 
 describe("UserAdminController", () => {

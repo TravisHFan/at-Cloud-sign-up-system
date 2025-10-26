@@ -17,7 +17,7 @@ import { socketService } from "../services/infrastructure/SocketService";
 import { AutoEmailNotificationService } from "../services/infrastructure/autoEmailNotificationService";
 import { UnifiedMessageController } from "./unifiedMessageController";
 import { CachePatterns } from "../services";
-import { EmailService } from "../services/infrastructure/emailService";
+import { EmailService } from "../services/infrastructure/EmailServiceFacade";
 import { formatActorDisplay } from "../utils/systemMessageFormatUtils";
 import { createLogger } from "../services/LoggerService";
 

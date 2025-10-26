@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { EmailService } from "../../../../src/services/infrastructure/emailService";
+import { EmailService } from "../../../../src/services/infrastructure/EmailServiceFacade";
 
 // We validate the server-side unified date-time range by intercepting the HTML
 // produced by sendEventReminderEmail, which uses EmailService.formatDateTimeRange.

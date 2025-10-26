@@ -1,7 +1,7 @@
 import { EmailTransporter } from "../../../../src/services/email/EmailTransporter";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import nodemailer from "nodemailer";
-import { EmailService } from "../../../../src/services/infrastructure/emailService";
+import { EmailService } from "../../../../src/services/infrastructure/EmailServiceFacade";
 
 // Covers production && hasRealCredentials short-circuit false branch -> jsonTransport
 describe("EmailService.getTransporter - production with placeholder creds uses jsonTransport", () => {

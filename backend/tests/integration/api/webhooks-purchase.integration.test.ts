@@ -27,7 +27,7 @@ import User from "../../../src/models/User";
 import Program from "../../../src/models/Program";
 import { Purchase } from "../../../src/models";
 import { ensureIntegrationDB } from "../setup/connect";
-import { EmailService } from "../../../src/services/infrastructure/emailService";
+import { EmailService } from "../../../src/services/infrastructure/EmailServiceFacade";
 
 // Mock Stripe webhook construction and stripe instance
 vi.mock("../../../src/services/stripeService", async () => {

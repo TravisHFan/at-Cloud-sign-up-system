@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { EmailService } from "../../../../src/services/infrastructure/emailService";
+import { EmailService } from "../../../../src/services/infrastructure/EmailServiceFacade";
 
 // NOTE: Previously this test replaced the whole module via vi.mock and spread the
 // class into a plain object, which dropped non-enumerable static methods like

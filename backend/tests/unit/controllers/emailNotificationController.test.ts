@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { Request, Response } from "express";
 import { EmailNotificationController } from "../../../src/controllers/emailNotificationController";
 import { EmailRecipientUtils } from "../../../src/utils/emailRecipientUtils";
-import { EmailService } from "../../../src/services/infrastructure/emailService";
+import { EmailService } from "../../../src/services/infrastructure/EmailServiceFacade";
 import { AutoEmailNotificationService } from "../../../src/services/infrastructure/autoEmailNotificationService";
 import { RoleUtils } from "../../../src/utils/roleUtils";
 import { UnifiedMessageController } from "../../../src/controllers/unifiedMessageController";

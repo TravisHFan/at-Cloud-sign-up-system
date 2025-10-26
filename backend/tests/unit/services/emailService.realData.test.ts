@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { EmailService } from "../../../src/services/infrastructure/emailService";
+import { EmailService } from "../../../src/services/infrastructure/EmailServiceFacade";
 
 // Simple test to verify real email service behavior with realistic data
 describe("EmailService Real Data Test", () => {

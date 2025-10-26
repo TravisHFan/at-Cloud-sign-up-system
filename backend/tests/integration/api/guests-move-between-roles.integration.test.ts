@@ -5,7 +5,7 @@ import User from "../../../src/models/User";
 import Event from "../../../src/models/Event";
 import GuestRegistration from "../../../src/models/GuestRegistration";
 import Registration from "../../../src/models/Registration";
-import { EmailService } from "../../../src/services/infrastructure/emailService";
+import { EmailService } from "../../../src/services/infrastructure/EmailServiceFacade";
 
 describe("Guest move between roles triggers email", () => {
   let adminToken: string;

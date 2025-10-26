@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { EmailService } from "../services/infrastructure/emailService";
+import { EmailService } from "../services/infrastructure/EmailServiceFacade";
 
 // Response helper utilities (following the pattern from userController)
 class ResponseHelper {

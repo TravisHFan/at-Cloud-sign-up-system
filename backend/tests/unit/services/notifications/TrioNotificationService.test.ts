@@ -9,7 +9,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { TrioNotificationService } from "../../../../src/services/notifications/TrioNotificationService";
 import { TrioTransaction } from "../../../../src/services/notifications/TrioTransaction";
 import { NotificationErrorHandler } from "../../../../src/services/notifications/NotificationErrorHandler";
-import { EmailService } from "../../../../src/services/infrastructure/emailService";
+import { EmailService } from "../../../../src/services/infrastructure/EmailServiceFacade";
 import { UnifiedMessageController } from "../../../../src/controllers/unifiedMessageController";
 import { socketService } from "../../../../src/services/infrastructure/SocketService";
 

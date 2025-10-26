@@ -4,7 +4,7 @@ import mongoose from "mongoose";
 import app from "../../../src/app";
 import User from "../../../src/models/User";
 import Event from "../../../src/models/Event";
-import { EmailService } from "../../../src/services/infrastructure/emailService";
+import { EmailService } from "../../../src/services/infrastructure/EmailServiceFacade";
 
 async function createAdminAndLogin(seed: string) {
   const admin = {

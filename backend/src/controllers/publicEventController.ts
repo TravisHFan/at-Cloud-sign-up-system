@@ -11,7 +11,7 @@ import GuestRegistration from "../models/GuestRegistration";
 import { CapacityService } from "../services/CapacityService";
 import { CorrelatedLogger } from "../services/CorrelatedLogger";
 import { lockService } from "../services/LockService";
-import { EmailService } from "../services/infrastructure/emailService";
+import { EmailService } from "../services/infrastructure/EmailServiceFacade";
 import { socketService } from "../services/infrastructure/SocketService";
 import { ResponseBuilderService } from "../services/ResponseBuilderService";
 import { GUEST_MAX_ROLES_PER_EVENT } from "../middleware/guestValidation";

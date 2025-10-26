@@ -1,7 +1,7 @@
 import { EmailTransporter } from "../../../../src/services/email/EmailTransporter";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import nodemailer from "nodemailer";
-import { EmailService } from "../../../../src/services/infrastructure/emailService";
+import { EmailService } from "../../../../src/services/infrastructure/EmailServiceFacade";
 
 // Covers default SMTP_PORT fallback (parseInt(process.env.SMTP_PORT || "587")) in production with real creds
 describe("EmailService.getTransporter - production port default fallback", () => {

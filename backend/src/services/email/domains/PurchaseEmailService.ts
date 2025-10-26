@@ -6,7 +6,10 @@
  * receipts, discounts (Class Rep, Early Bird), and payment summaries.
  */
 
-import { EmailService } from "../../infrastructure/emailService";
+import Stripe from "stripe";
+import nodemailer from "nodemailer";
+import { EmailService } from "../../infrastructure/EmailServiceFacade";
+import { EmailOptions } from "../../email";
 import { createLogger } from "../../LoggerService";
 
 const log = createLogger("PurchaseEmailService");

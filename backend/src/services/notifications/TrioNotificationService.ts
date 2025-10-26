@@ -15,7 +15,7 @@
  */
 
 import { UnifiedMessageController } from "../../controllers/unifiedMessageController";
-import { EmailService } from "../infrastructure/emailService";
+import { EmailService } from "../infrastructure/EmailServiceFacade";
 import { socketService } from "../infrastructure/SocketService";
 import { NOTIFICATION_CONFIG } from "../../config/notificationConfig";
 import { NotificationErrorHandler } from "./NotificationErrorHandler";

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { EmailService } from "../../../../src/services/infrastructure/emailService";
+import { EmailService } from "../../../../src/services/infrastructure/EmailServiceFacade";
 
 // Covers fallback branches where first/last names may be missing ("" fallback and trim)
 describe("EmailService.sendDemotionNotificationToUser - name fallbacks", () => {

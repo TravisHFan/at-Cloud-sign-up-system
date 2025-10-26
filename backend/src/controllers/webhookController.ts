@@ -8,7 +8,7 @@ import {
   constructWebhookEvent,
   getPaymentIntent,
 } from "../services/stripeService";
-import { EmailService } from "../services/infrastructure/emailService";
+import { EmailService } from "../services/infrastructure/EmailServiceFacade";
 import { lockService } from "../services/LockService";
 import { TrioNotificationService } from "../services/notifications/TrioNotificationService";
 

@@ -14,7 +14,7 @@ import {
   test,
   vi,
 } from "vitest";
-import { EmailService } from "../../../src/services/infrastructure/emailService";
+import { EmailService } from "../../../src/services/infrastructure/EmailServiceFacade";
 import { createPublishedEvent } from "../../test-utils/eventTestHelpers";
 import { ensureIntegrationDB } from "../setup/connect";
 

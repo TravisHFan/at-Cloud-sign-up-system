@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { TrioNotificationService } from "../../../../src/services/notifications/TrioNotificationService";
 import { UnifiedMessageController } from "../../../../src/controllers/unifiedMessageController";
-import { EmailService } from "../../../../src/services/infrastructure/emailService";
+import { EmailService } from "../../../../src/services/infrastructure/EmailServiceFacade";
 import { socketService } from "../../../../src/services/infrastructure/SocketService";
 
 vi.mock("../../../../src/controllers/unifiedMessageController", () => ({

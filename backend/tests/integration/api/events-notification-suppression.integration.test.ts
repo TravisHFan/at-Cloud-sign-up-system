@@ -6,7 +6,7 @@ import User from "../../../src/models/User";
 import Event from "../../../src/models/Event";
 import Registration from "../../../src/models/Registration";
 import GuestRegistration from "../../../src/models/GuestRegistration";
-import { EmailService } from "../../../src/services/infrastructure/emailService";
+import { EmailService } from "../../../src/services/infrastructure/EmailServiceFacade";
 import { UnifiedMessageController } from "../../../src/controllers/unifiedMessageController";
 
 /**

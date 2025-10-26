@@ -1,7 +1,7 @@
 import { EmailTransporter } from "../../../../src/services/email/EmailTransporter";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import nodemailer from "nodemailer";
-import { EmailService } from "../../../../src/services/infrastructure/emailService";
+import { EmailService } from "../../../../src/services/infrastructure/EmailServiceFacade";
 
 // This covers the admin demotion notification path where impact resolves to Standard (e.g., Leader -> Administrator)
 // Ensures no Security Review link is included and key admin buttons exist.

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { EmailService } from "../../../../src/services/infrastructure/emailService";
+import { EmailService } from "../../../../src/services/infrastructure/EmailServiceFacade";
 
 // Tests for timezone-aware formatting in Co-Organizer Assignment email
 describe("EmailService Co-Organizer assignment - timezone formatting", () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { EmailService } from "../../../../src/services/infrastructure/emailService";
+import { EmailService } from "../../../../src/services/infrastructure/EmailServiceFacade";
 
 // Covers the name fallback branches (firstName/lastName may be missing)
 // in sendDemotionNotificationToAdmins to close uncovered logical || paths.

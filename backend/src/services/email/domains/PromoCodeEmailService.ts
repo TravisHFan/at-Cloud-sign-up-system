@@ -8,7 +8,7 @@
  * - Promo code reactivation (code re-enabled by admin)
  */
 
-import { EmailService } from "../../infrastructure/emailService";
+import { EmailService } from "../../infrastructure/EmailServiceFacade";
 import { createLogger } from "../../LoggerService";
 
 const log = createLogger("PromoCodeEmailService");

@@ -27,8 +27,10 @@ export class RoleEmailService {
    * This is a convenience method to avoid importing EmailTransporter in every method
    */
   private static async sendEmail(options: EmailOptions): Promise<boolean> {
-    // Import EmailService dynamically to avoid circular dependency
-    const { EmailService } = await import("../../infrastructure/emailService");
+    // Import EmailServiceFacade dynamically to avoid circular dependency
+    const { EmailService } = await import(
+      "../../infrastructure/EmailServiceFacade"
+    );
     return EmailService.sendEmail(options);
   }
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { EmailService } from "../../../../src/services/infrastructure/emailService";
+import { EmailService } from "../../../../src/services/infrastructure/EmailServiceFacade";
 import { EventEmailService } from "../../../../src/services/email/domains/EventEmailService";
 
 describe("EmailService deduplication (bulk helpers)", () => {

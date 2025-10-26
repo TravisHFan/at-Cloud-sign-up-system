@@ -15,7 +15,7 @@ import {
   handleValidationErrors,
 } from "../middleware/validation";
 import { searchLimiter } from "../middleware/rateLimiting";
-import { EmailService } from "../services/infrastructure/emailService";
+import { EmailService } from "../services/infrastructure/EmailServiceFacade";
 import { EmailRecipientUtils } from "../utils/emailRecipientUtils";
 import { Event } from "../models";
 import { buildRegistrationICS } from "../services/ICSBuilder";

@@ -81,7 +81,7 @@ vi.mock("crypto", () => ({
 import { AuthController } from "../../../src/controllers/authController";
 import { User } from "../../../src/models";
 import { TokenService } from "../../../src/middleware/auth";
-import { EmailService } from "../../../src/services/infrastructure/emailService";
+import { EmailService } from "../../../src/services/infrastructure/EmailServiceFacade";
 import { AutoEmailNotificationService } from "../../../src/services/infrastructure/autoEmailNotificationService";
 import { UnifiedMessageController } from "../../../src/controllers/unifiedMessageController";
 import { CachePatterns } from "../../../src/services";

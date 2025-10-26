@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { EmailService } from "../../../../src/services/infrastructure/emailService";
+import { EmailService } from "../../../../src/services/infrastructure/EmailServiceFacade";
 
 // Targets the audit-log anchor FRONTEND_URL fallback vs override within the
 // admin demotion notification template to ensure both sides of the `||` are hit.
