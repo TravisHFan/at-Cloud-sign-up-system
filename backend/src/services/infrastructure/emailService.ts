@@ -15,6 +15,9 @@ import {
   EmailHelpers,
   EmailOptions,
 } from "../email";
+import { AuthEmailService } from "../email/domains/AuthEmailService";
+import { EventEmailService } from "../email/domains/EventEmailService";
+import { RoleEmailService } from "../email/domains/RoleEmailService";
 
 dotenv.config();
 
@@ -1545,150 +1548,11 @@ export class EmailService {
       role: string;
     }
   ): Promise<boolean> {
-    const userName = `${userData.firstName} ${userData.lastName}`.trim();
-    const adminName = `${changedBy.firstName} ${changedBy.lastName}`.trim();
-
-    // Get role-specific welcome message and permissions
-    const getRoleWelcomeContent = (role: string) => {
-      switch (role) {
-        case "Super Admin":
-          return {
-            welcome: "Welcome to the highest level of system administration!",
-            permissions:
-              "You now have full system control, user management, and ministry oversight capabilities.",
-            responsibilities:
-              "Guide the ministry's digital presence and ensure smooth operations for all members.",
-            icon: "👑",
-          };
-        case "Administrator":
-          return {
-            welcome: "Welcome to the administrative team!",
-            permissions:
-              "You can now manage users, oversee events, and handle system configurations.",
-            responsibilities:
-              "Help maintain the ministry's operations and support other members.",
-            icon: "⚡",
-          };
-        case "Leader":
-          return {
-            welcome: "Welcome to ministry leadership!",
-            permissions:
-              "You can now create and manage events, lead ministry initiatives, and guide participants.",
-            responsibilities:
-              "Shepherd others in their faith journey and organize meaningful ministry activities.",
-            icon: "🌟",
-          };
-        default:
-          return {
-            welcome: "Welcome to your new role!",
-            permissions:
-              "You have been granted new capabilities within the ministry.",
-            responsibilities:
-              "Continue to grow in faith and serve the community.",
-            icon: "✨",
-          };
-      }
-    };
-
-    const roleContent = getRoleWelcomeContent(userData.newRole);
-
-    const html = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Congratulations on Your Promotion - @Cloud Ministry</title>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-            .header h1 { margin: 0; font-size: 24px; }
-            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .promotion-card { background: white; padding: 25px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745; }
-            .role-change { background: linear-gradient(90deg, #e9ecef 0%, #f8f9fa 100%); padding: 20px; border-radius: 8px; margin: 15px 0; }
-            .role-item { display: inline-block; padding: 8px 16px; margin: 5px; border-radius: 20px; font-weight: bold; }
-            .old-role { background: #6c757d; color: white; }
-            .new-role { background: #28a745; color: white; }
-            .arrow { font-size: 20px; margin: 0 10px; color: #28a745; }
-            .permissions-section { background: #e8f5e8; padding: 20px; border-radius: 8px; margin: 15px 0; }
-            .button { display: inline-block; padding: 12px 30px; background: #28a745; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
-            .icon { font-size: 48px; margin-bottom: 10px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <div class="icon">${roleContent.icon}</div>
-              <h1>🎉 Congratulations on Your Promotion!</h1>
-            </div>
-            <div class="content">
-              <h2>Dear ${userName},</h2>
-              
-              <div class="promotion-card">
-                <p>We are excited to inform you that you have been promoted within @Cloud Ministry!</p>
-                
-                <div class="role-change">
-                  <div style="text-align: center;">
-                    <span class="role-item old-role">${userData.oldRole}</span>
-                    <span class="arrow">→</span>
-                    <span class="role-item new-role">${userData.newRole}</span>
-                  </div>
-                </div>
-
-                <p><strong>${roleContent.welcome}</strong></p>
-                
-                <div class="permissions-section">
-                  <h3>🔑 Your New Capabilities:</h3>
-                  <p>${roleContent.permissions}</p>
-                  
-                  <h3>💼 Your Responsibilities:</h3>
-                  <p>${roleContent.responsibilities}</p>
-                </div>
-
-                <p>This promotion was approved by <strong>${adminName}</strong> (${
-      changedBy.role
-    }).</p>
-              </div>
-
-              <p>We believe in your ability to excel in this new role and make a positive impact on our ministry community. Your dedication and service have not gone unnoticed.</p>
-
-              <div style="text-align: center;">
-                <a href="${
-                  process.env.FRONTEND_URL || "http://localhost:5173"
-                }/dashboard" class="button">
-                  Explore Your New Dashboard
-                </a>
-              </div>
-
-              <p><em>"For I know the plans I have for you," declares the Lord, "plans to prosper you and not to harm you, to give you hope and a future." - Jeremiah 29:11</em></p>
-
-              <p>Congratulations once again, and may God bless your new journey in ministry leadership!</p>
-              
-              <p>In His service,<br>The @Cloud Ministry Team</p>
-            </div>
-            <div class="footer">
-              <p>@Cloud Ministry | Building Community Through Faith</p>
-              <p>If you have any questions about your new role, please contact us at atcloudministry@gmail.com</p>
-            </div>
-          </div>
-        </body>
-      </html>
-    `;
-
-    return this.sendEmail({
-      to: email,
-      subject: `🎉 Congratulations! You've been promoted to ${userData.newRole}`,
-      html,
-      text: `Congratulations ${userName}! You have been promoted from ${
-        userData.oldRole
-      } to ${userData.newRole} by ${adminName}. ${
-        roleContent.welcome
-      } Visit your dashboard to explore your new capabilities: ${
-        process.env.FRONTEND_URL || "http://localhost:5173"
-      }/dashboard`,
-    });
+    return RoleEmailService.sendPromotionNotificationToUser(
+      email,
+      userData,
+      changedBy
+    );
   }
 
   /**
