@@ -26,7 +26,7 @@ vi.mock("../../../src/middleware/auth", () => ({
   },
 }));
 
-vi.mock("../../../src/services/infrastructure/emailService", () => ({
+vi.mock("../../../src/services/infrastructure/EmailServiceFacade", () => ({
   EmailService: {
     sendVerificationEmail: vi.fn(),
     sendWelcomeEmail: vi.fn(),

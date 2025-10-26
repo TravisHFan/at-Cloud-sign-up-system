@@ -11,7 +11,7 @@ vi.mock("../../../../src/controllers/unifiedMessageController", () => ({
     }),
   },
 }));
-vi.mock("../../../../src/services/infrastructure/emailService", () => ({
+vi.mock("../../../../src/services/infrastructure/EmailServiceFacade", () => ({
   EmailService: {
     sendEventRoleAssignedEmail: vi.fn().mockResolvedValue(true),
   },

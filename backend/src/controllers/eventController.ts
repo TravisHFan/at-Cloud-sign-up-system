@@ -3372,7 +3372,7 @@ export class EventController {
       if (autoUnpublished) {
         try {
           const { EmailService } = await import(
-            "../services/infrastructure/emailService"
+            "../services/infrastructure/EmailServiceFacade"
           );
           const { domainEvents, EVENT_AUTO_UNPUBLISHED } = await import(
             "../services/domainEvents"

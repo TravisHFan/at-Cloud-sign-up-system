@@ -1,8 +1,8 @@
 import { describe, it, beforeEach, afterEach, expect, vi } from "vitest";
 import { AutoEmailNotificationService } from "../../../../src/services/infrastructure/autoEmailNotificationService";
 
-// We’ll stub EmailService and EmailRecipientUtils functions at call sites.
-vi.mock("../../../../src/services/infrastructure/emailService", () => ({
+// We'll stub EmailService and EmailRecipientUtils functions at call sites.
+vi.mock("../../../../src/services/infrastructure/EmailServiceFacade", () => ({
   EmailService: {
     sendPromotionNotificationToUser: vi.fn(),
     sendPromotionNotificationToAdmins: vi.fn(),
@@ -47,7 +47,7 @@ describe("AutoEmailNotificationService catch branches", () => {
 
   it("handles admin promotion email failures (inner catch) and still returns success with messagesCreated when messages succeed", async () => {
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const { EmailRecipientUtils } = await import(
       "../../../../src/utils/emailRecipientUtils"
@@ -88,7 +88,7 @@ describe("AutoEmailNotificationService catch branches", () => {
 
   it("outer catch: returns success:false when unexpected error thrown", async () => {
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const { EmailRecipientUtils } = await import(
       "../../../../src/utils/emailRecipientUtils"

@@ -11,7 +11,7 @@ vi.spyOn(TrioNotificationService as any, "createTrio").mockImplementation(
     })
 );
 
-vi.mock("../../../../src/services/infrastructure/emailService", () => ({
+vi.mock("../../../../src/services/infrastructure/EmailServiceFacade", () => ({
   EmailService: { sendTemplateEmail: vi.fn() },
 }));
 vi.mock("../../../../src/services/infrastructure/SocketService", () => ({

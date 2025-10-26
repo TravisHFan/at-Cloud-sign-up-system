@@ -38,7 +38,7 @@ const TEST_CONFIG = {
 Object.assign(NOTIFICATION_CONFIG, TEST_CONFIG);
 
 // Mock external services for integration testing
-vi.mock("../../../src/services/infrastructure/emailService", () => ({
+vi.mock("../../../src/services/infrastructure/EmailServiceFacade", () => ({
   EmailService: {
     sendWelcomeEmail: vi.fn().mockResolvedValue(true),
     sendPasswordResetSuccessEmail: vi.fn().mockResolvedValue(true),
@@ -182,7 +182,7 @@ describe("Trio System Integration", () => {
     it("should handle email service failures gracefully", async () => {
       // Arrange - Mock email service to fail
       const { EmailService } = await import(
-        "../../../src/services/infrastructure/emailService"
+        "../../../src/services/infrastructure/EmailServiceFacade"
       );
       vi.mocked(EmailService.sendWelcomeEmail).mockRejectedValue(
         new Error("Email service down")
@@ -287,7 +287,7 @@ describe("Trio System Integration", () => {
     it("should respect timeout configurations", async () => {
       // Arrange - Mock a slow email service
       const { EmailService } = await import(
-        "../../../src/services/infrastructure/emailService"
+        "../../../src/services/infrastructure/EmailServiceFacade"
       );
       vi.mocked(EmailService.sendWelcomeEmail).mockImplementation(
         () =>
@@ -317,7 +317,7 @@ describe("Trio System Integration", () => {
 
       // Reset all mocks to work properly
       const { EmailService } = await import(
-        "../../../src/services/infrastructure/emailService"
+        "../../../src/services/infrastructure/EmailServiceFacade"
       );
       const { UnifiedMessageController } = await import(
         "../../../src/controllers/unifiedMessageController"

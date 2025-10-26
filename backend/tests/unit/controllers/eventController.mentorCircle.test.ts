@@ -97,7 +97,7 @@ vi.mock("../../../src/services/infrastructure/SocketService", () => ({
   },
 }));
 
-vi.mock("../../../src/services/infrastructure/emailService", () => ({
+vi.mock("../../../src/services/infrastructure/EmailServiceFacade", () => ({
   EmailService: {
     sendEventCreatedEmail: vi.fn().mockResolvedValue(true),
     sendGenericNotificationEmail: vi.fn().mockResolvedValue(true),

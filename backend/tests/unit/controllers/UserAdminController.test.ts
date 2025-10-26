@@ -146,7 +146,7 @@ vi.mock("../../../src/services", () => ({
   },
 }));
 
-vi.mock("../../../src/services/infrastructure/emailService", () => ({
+vi.mock("../../../src/services/infrastructure/EmailServiceFacade", () => ({
   EmailService: {
     sendAccountDeactivationEmail: vi.fn().mockResolvedValue(true),
     sendAccountReactivationEmail: vi.fn().mockResolvedValue(true),

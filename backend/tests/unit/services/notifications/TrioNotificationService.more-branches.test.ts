@@ -7,7 +7,14 @@ import { NotificationErrorHandler } from "../../../../src/services/notifications
 import { TrioTransaction } from "../../../../src/services/notifications/TrioTransaction";
 import { NOTIFICATION_CONFIG } from "../../../../src/config/notificationConfig";
 
-vi.mock("../../../../src/services/infrastructure/emailService");
+vi.mock("../../../../src/services/infrastructure/EmailServiceFacade", () => ({
+  EmailService: {
+    sendEventCreatedEmail: vi.fn(),
+    sendCoOrganizerAssignedEmail: vi.fn(),
+    sendNewLeaderSignupEmail: vi.fn(),
+    sendEventReminderEmail: vi.fn(),
+  },
+}));
 vi.mock("../../../../src/controllers/unifiedMessageController");
 vi.mock("../../../../src/services/infrastructure/SocketService");
 vi.mock("../../../../src/services/notifications/NotificationErrorHandler");

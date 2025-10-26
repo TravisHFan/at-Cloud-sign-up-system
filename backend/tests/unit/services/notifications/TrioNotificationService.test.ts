@@ -55,7 +55,13 @@ vi.mock("../../../../src/models/Message", () => ({
 }));
 
 // Mock dependencies
-vi.mock("../../../../src/services/infrastructure/emailService");
+vi.mock("../../../../src/services/infrastructure/EmailServiceFacade", () => ({
+  EmailService: {
+    sendWelcomeEmail: vi.fn(),
+    sendPasswordResetSuccessEmail: vi.fn(),
+    sendEventReminderEmail: vi.fn(),
+  },
+}));
 vi.mock("../../../../src/controllers/unifiedMessageController");
 vi.mock("../../../../src/services/infrastructure/SocketService");
 vi.mock("../../../../src/services/notifications/NotificationErrorHandler");
@@ -90,7 +96,7 @@ describe("TrioNotificationService", () => {
       vi.mocked(EmailService.sendWelcomeEmail).mockResolvedValue(true);
       vi.mocked(
         UnifiedMessageController.createTargetedSystemMessage
-      ).mockResolvedValue(mockMessageResult);
+      ).mockResolvedValue(mockMessageResult as any);
       vi.mocked(socketService.emitSystemMessageUpdate).mockResolvedValue(
         undefined
       );
@@ -144,7 +150,7 @@ describe("TrioNotificationService", () => {
     it("should handle email-only trio (no email provided)", async () => {
       // Arrange
       const mockMessageResult = {
-        _id: { toString: () => "message-456" },
+        _id: { toString: () => "message-456" } as any,
         toJSON: () => ({
           id: "message-456",
           title: "Alert",
@@ -156,7 +162,7 @@ describe("TrioNotificationService", () => {
 
       vi.mocked(
         UnifiedMessageController.createTargetedSystemMessage
-      ).mockResolvedValue(mockMessageResult);
+      ).mockResolvedValue(mockMessageResult as any);
       vi.mocked(socketService.emitSystemMessageUpdate).mockResolvedValue(
         undefined
       );
@@ -187,7 +193,7 @@ describe("TrioNotificationService", () => {
     it("should rollback operations on failure when rollback is enabled", async () => {
       // Arrange
       const mockMessageResult = {
-        _id: { toString: () => "message-456" },
+        _id: { toString: () => "message-456" } as any,
         toJSON: () => ({ id: "message-456", title: "Test", content: "Test" }),
         save: vi.fn().mockResolvedValue(undefined),
         isActive: true,
@@ -244,14 +250,14 @@ describe("TrioNotificationService", () => {
       );
 
       const mockMessageResult = {
-        _id: { toString: () => "message-456" },
+        _id: { toString: () => "message-456" } as any,
         toJSON: () => ({ id: "message-456", title: "Test", content: "Test" }),
         save: vi.fn().mockResolvedValue(undefined),
         isActive: true,
       };
       vi.mocked(
         UnifiedMessageController.createTargetedSystemMessage
-      ).mockResolvedValue(mockMessageResult);
+      ).mockResolvedValue(mockMessageResult as any);
       vi.mocked(socketService.emitSystemMessageUpdate).mockResolvedValue(
         undefined
       );
@@ -291,14 +297,14 @@ describe("TrioNotificationService", () => {
     it("should update metrics correctly on success and failure", async () => {
       // Test successful trio
       const mockMessageResult = {
-        _id: { toString: () => "message-456" },
+        _id: { toString: () => "message-456" } as any,
         toJSON: () => ({ id: "message-456", title: "Test", content: "Test" }),
         save: vi.fn().mockResolvedValue(undefined),
         isActive: true,
       };
       vi.mocked(
         UnifiedMessageController.createTargetedSystemMessage
-      ).mockResolvedValue(mockMessageResult);
+      ).mockResolvedValue(mockMessageResult as any);
       vi.mocked(socketService.emitSystemMessageUpdate).mockResolvedValue(
         undefined
       );
@@ -347,11 +353,11 @@ describe("TrioNotificationService", () => {
       vi.mocked(
         UnifiedMessageController.createTargetedSystemMessage
       ).mockResolvedValue({
-        _id: { toString: () => "message-456" },
+        _id: { toString: () => "message-456" } as any,
         toJSON: () => ({ id: "message-456", title: "Test", content: "Test" }),
         save: vi.fn().mockResolvedValue(undefined),
         isActive: true,
-      });
+      } as any);
       vi.mocked(socketService.emitSystemMessageUpdate).mockResolvedValue(
         undefined
       );
@@ -467,14 +473,14 @@ describe("TrioNotificationService", () => {
     it("should track performance metrics correctly", async () => {
       // Arrange
       const mockMessageResult = {
-        _id: { toString: () => "message-456" },
+        _id: { toString: () => "message-456" } as any,
         toJSON: () => ({ id: "message-456", title: "Test", content: "Test" }),
         save: vi.fn().mockResolvedValue(undefined),
         isActive: true,
       };
       vi.mocked(
         UnifiedMessageController.createTargetedSystemMessage
-      ).mockResolvedValue(mockMessageResult);
+      ).mockResolvedValue(mockMessageResult as any);
       vi.mocked(socketService.emitSystemMessageUpdate).mockResolvedValue(
         undefined
       );

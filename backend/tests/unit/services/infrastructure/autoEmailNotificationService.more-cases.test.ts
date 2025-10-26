@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { AutoEmailNotificationService } from "../../../../src/services/infrastructure/autoEmailNotificationService";
 
-vi.mock("../../../../src/services/infrastructure/emailService", () => ({
+vi.mock("../../../../src/services/infrastructure/EmailServiceFacade", () => ({
   EmailService: {
     sendPromotionNotificationToUser: vi.fn(),
     sendPromotionNotificationToAdmins: vi.fn(),
@@ -56,7 +56,7 @@ describe("AutoEmailNotificationService - more branches", () => {
 
   it("promotion: admin message early-return when no admin users resolved -> messagesCreated only 1", async () => {
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const { EmailRecipientUtils } = await import(
       "../../../../src/utils/emailRecipientUtils"
@@ -99,7 +99,7 @@ describe("AutoEmailNotificationService - more branches", () => {
       "../../../../src/utils/emailRecipientUtils"
     );
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const UserModule = await import("../../../../src/models/User");
     const { UnifiedMessageController } = await import(
@@ -162,7 +162,7 @@ describe("AutoEmailNotificationService - more branches", () => {
       "../../../../src/utils/emailRecipientUtils"
     );
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const UserModule = await import("../../../../src/models/User");
     const { UnifiedMessageController } = await import(
@@ -233,7 +233,7 @@ describe("AutoEmailNotificationService - more branches", () => {
       "../../../../src/utils/emailRecipientUtils"
     );
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const UserModule = await import("../../../../src/models/User");
 
@@ -281,7 +281,7 @@ describe("AutoEmailNotificationService - more branches", () => {
       "../../../../src/utils/emailRecipientUtils"
     );
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const UserModule = await import("../../../../src/models/User");
     const { UnifiedMessageController } = await import(
@@ -354,7 +354,7 @@ describe("AutoEmailNotificationService - more branches", () => {
       "../../../../src/utils/emailRecipientUtils"
     );
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const UserModule = await import("../../../../src/models/User");
     const { UnifiedMessageController } = await import(
@@ -413,7 +413,7 @@ describe("AutoEmailNotificationService - more branches", () => {
 
   it("demotion: user email rejects (inner catch) but flow continues and returns success when messages succeed", async () => {
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const { EmailRecipientUtils } = await import(
       "../../../../src/utils/emailRecipientUtils"
@@ -452,7 +452,7 @@ describe("AutoEmailNotificationService - more branches", () => {
 
   it("promotion: zero admin recipients still resolves with success and counts only user email", async () => {
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const { EmailRecipientUtils } = await import(
       "../../../../src/utils/emailRecipientUtils"
@@ -488,7 +488,7 @@ describe("AutoEmailNotificationService - more branches", () => {
 
   it("demotion: zero admin recipients -> counts only user email and still creates both messages", async () => {
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const { EmailRecipientUtils } = await import(
       "../../../../src/utils/emailRecipientUtils"
@@ -537,7 +537,7 @@ describe("AutoEmailNotificationService - more branches", () => {
 
   it("demotion: admin email returns false is not counted; only user email counted", async () => {
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const { EmailRecipientUtils } = await import(
       "../../../../src/utils/emailRecipientUtils"
@@ -591,7 +591,7 @@ describe("AutoEmailNotificationService - more branches", () => {
 
   it("demotion: admin recipients throws triggers catch; returns success and counts only user email", async () => {
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const { EmailRecipientUtils } = await import(
       "../../../../src/utils/emailRecipientUtils"
@@ -631,7 +631,7 @@ describe("AutoEmailNotificationService - more branches", () => {
       "../../../../src/utils/emailRecipientUtils"
     );
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
 
     // No admins discovered in email-sending phase
@@ -675,7 +675,7 @@ describe("AutoEmailNotificationService - more branches", () => {
       "../../../../src/utils/emailRecipientUtils"
     );
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const UserModule = await import("../../../../src/models/User");
     const { UnifiedMessageController } = await import(
@@ -740,7 +740,7 @@ describe("AutoEmailNotificationService - more branches", () => {
 
   it("promotion: admin email returns false is not counted; only user email counted", async () => {
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const { EmailRecipientUtils } = await import(
       "../../../../src/utils/emailRecipientUtils"
@@ -798,7 +798,7 @@ describe("AutoEmailNotificationService - more branches", () => {
   it("demotion: user email times out -> not counted; admin email true counted", async () => {
     vi.useFakeTimers();
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const { EmailRecipientUtils } = await import(
       "../../../../src/utils/emailRecipientUtils"
@@ -871,7 +871,7 @@ describe("AutoEmailNotificationService - more branches", () => {
   it("promotion: user email times out; zero admin recipients -> emailsSent 0; messages still created", async () => {
     vi.useFakeTimers();
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const { EmailRecipientUtils } = await import(
       "../../../../src/utils/emailRecipientUtils"
@@ -925,7 +925,7 @@ describe("AutoEmailNotificationService - more branches", () => {
 
   it("promotion: admin recipients fetch throws -> only user email counted; flow continues", async () => {
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const { EmailRecipientUtils } = await import(
       "../../../../src/utils/emailRecipientUtils"
@@ -1030,7 +1030,7 @@ describe("AutoEmailNotificationService - more branches", () => {
 
   it("promotion: user system message creation fails (catch) but admin message succeeds", async () => {
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const { EmailRecipientUtils } = await import(
       "../../../../src/utils/emailRecipientUtils"
@@ -1100,7 +1100,7 @@ describe("AutoEmailNotificationService - more branches", () => {
       "../../../../src/utils/emailRecipientUtils"
     );
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const UserModule = await import("../../../../src/models/User");
 
@@ -1144,7 +1144,7 @@ describe("AutoEmailNotificationService - more branches", () => {
 
   it("demotion: admin email rejects (timeout/failure) while user email succeeds -> emailsSent only user; messagesCreated only user", async () => {
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const { EmailRecipientUtils } = await import(
       "../../../../src/utils/emailRecipientUtils"
@@ -1187,7 +1187,7 @@ describe("AutoEmailNotificationService - more branches", () => {
 
   it("demotion: user email rejects with a string (non-Error) -> inner catch uses fallback; messages still created", async () => {
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const { EmailRecipientUtils } = await import(
       "../../../../src/utils/emailRecipientUtils"
@@ -1239,7 +1239,7 @@ describe("AutoEmailNotificationService - more branches", () => {
 
   it("demotion: admin recipients fetch rejects with a string -> only user email counted; logs handled", async () => {
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const { EmailRecipientUtils } = await import(
       "../../../../src/utils/emailRecipientUtils"
@@ -1386,7 +1386,7 @@ describe("AutoEmailNotificationService - more branches", () => {
       "../../../../src/utils/emailRecipientUtils"
     );
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const UserModule = await import("../../../../src/models/User");
 
@@ -1431,7 +1431,7 @@ describe("AutoEmailNotificationService - more branches", () => {
 
   it("promotion: two admins where one rejects (timeout/error) -> counts user + one admin only", async () => {
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const { EmailRecipientUtils } = await import(
       "../../../../src/utils/emailRecipientUtils"
@@ -1476,7 +1476,7 @@ describe("AutoEmailNotificationService - more branches", () => {
       "../../../../src/utils/emailRecipientUtils"
     );
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const UserModule = await import("../../../../src/models/User");
     const { UnifiedMessageController } = await import(
@@ -1536,7 +1536,7 @@ describe("AutoEmailNotificationService - more branches", () => {
       "../../../../src/utils/emailRecipientUtils"
     );
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const UserModule = await import("../../../../src/models/User");
 
@@ -1592,7 +1592,7 @@ describe("AutoEmailNotificationService - more branches", () => {
       "../../../../src/utils/emailRecipientUtils"
     );
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const UserModule = await import("../../../../src/models/User");
     const { UnifiedMessageController } = await import(
@@ -1652,7 +1652,7 @@ describe("AutoEmailNotificationService - more branches", () => {
 
   it("promotion: user email rejects with a string (non-Error) -> inner catch uses fallback and flow continues", async () => {
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const { EmailRecipientUtils } = await import(
       "../../../../src/utils/emailRecipientUtils"
@@ -1703,7 +1703,7 @@ describe("AutoEmailNotificationService - more branches", () => {
 
   it("promotion: admin recipients fetch rejects with a string -> only user email counted; logs handled", async () => {
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const { EmailRecipientUtils } = await import(
       "../../../../src/utils/emailRecipientUtils"
@@ -1756,7 +1756,7 @@ describe("AutoEmailNotificationService - more branches", () => {
 
   it("user message author.id falls back to 'system' when changedBy._id missing", async () => {
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const { EmailRecipientUtils } = await import(
       "../../../../src/utils/emailRecipientUtils"
@@ -1809,7 +1809,7 @@ describe("AutoEmailNotificationService - more branches", () => {
 
   it("promotion: user email rejects (inner catch) -> emailsSent 0; messagesCreated 2", async () => {
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const { EmailRecipientUtils } = await import(
       "../../../../src/utils/emailRecipientUtils"
@@ -1860,7 +1860,7 @@ describe("AutoEmailNotificationService - more branches", () => {
 
   it("promotion: admin recipients fetch throws (outer catch) -> only user email counted; logs", async () => {
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const { EmailRecipientUtils } = await import(
       "../../../../src/utils/emailRecipientUtils"
@@ -1916,7 +1916,7 @@ describe("AutoEmailNotificationService - more branches", () => {
       "../../../../src/utils/emailRecipientUtils"
     );
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const UserModule = await import("../../../../src/models/User");
     const { UnifiedMessageController } = await import(
@@ -1983,7 +1983,7 @@ describe("AutoEmailNotificationService - more branches", () => {
 
   it("demotion: user message content omits Context when reason is absent", async () => {
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const { EmailRecipientUtils } = await import(
       "../../../../src/utils/emailRecipientUtils"
@@ -2100,7 +2100,7 @@ describe("AutoEmailNotificationService - more branches", () => {
       "../../../../src/utils/emailRecipientUtils"
     );
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const UserModule = await import("../../../../src/models/User");
     const { UnifiedMessageController } = await import(
@@ -2159,7 +2159,7 @@ describe("AutoEmailNotificationService - more branches", () => {
       "../../../../src/utils/emailRecipientUtils"
     );
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const UserModule = await import("../../../../src/models/User");
     const { UnifiedMessageController } = await import(
@@ -2230,7 +2230,7 @@ describe("AutoEmailNotificationService - more branches", () => {
 
   it("promotion: admin message content includes Reason when reason is provided", async () => {
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const { EmailRecipientUtils } = await import(
       "../../../../src/utils/emailRecipientUtils"
@@ -2298,7 +2298,7 @@ describe("AutoEmailNotificationService - more branches", () => {
 
   it("demotion: admin message content includes Reason when reason is provided", async () => {
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const { EmailRecipientUtils } = await import(
       "../../../../src/utils/emailRecipientUtils"
@@ -2366,7 +2366,7 @@ describe("AutoEmailNotificationService - more branches", () => {
 
   it("promotion: user message author mapping includes username, avatar, provided gender and role/authLevel", async () => {
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const { EmailRecipientUtils } = await import(
       "../../../../src/utils/emailRecipientUtils"
@@ -2516,7 +2516,7 @@ describe("AutoEmailNotificationService - more branches", () => {
       "../../../../src/utils/emailRecipientUtils"
     );
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const UserModule = await import("../../../../src/models/User");
     const { UnifiedMessageController } = await import(
@@ -2574,7 +2574,7 @@ describe("AutoEmailNotificationService - more branches", () => {
       "../../../../src/utils/emailRecipientUtils"
     );
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const UserModule = await import("../../../../src/models/User");
     const { UnifiedMessageController } = await import(
@@ -2635,7 +2635,7 @@ describe("AutoEmailNotificationService - more branches", () => {
       "../../../../src/utils/emailRecipientUtils"
     );
     const { EmailService } = await import(
-      "../../../../src/services/infrastructure/emailService"
+      "../../../../src/services/infrastructure/EmailServiceFacade"
     );
     const UserModule = await import("../../../../src/models/User");
     const { UnifiedMessageController } = await import(

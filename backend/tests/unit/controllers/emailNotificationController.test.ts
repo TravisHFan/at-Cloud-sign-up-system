@@ -12,7 +12,17 @@ import mongoose from "mongoose";
 
 // Mock all dependencies
 vi.mock("../../../src/utils/emailRecipientUtils");
-vi.mock("../../../src/services/infrastructure/emailService");
+vi.mock("../../../src/services/infrastructure/EmailServiceFacade", () => ({
+  EmailService: {
+    sendEventCreatedEmail: vi.fn(),
+    sendEventReminderEmailBulk: vi.fn(),
+    sendEventReminderEmail: vi.fn(),
+    sendCoOrganizerAssignedEmail: vi.fn(),
+    sendNewLeaderSignupEmail: vi.fn(),
+    sendAtCloudRoleChangeToUser: vi.fn(),
+    sendAtCloudRoleChangeToAdmins: vi.fn(),
+  },
+}));
 vi.mock("../../../src/services/infrastructure/autoEmailNotificationService");
 vi.mock("../../../src/utils/roleUtils");
 vi.mock("../../../src/controllers/unifiedMessageController");

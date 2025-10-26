@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 let __userSelectResult: any[] = [];
 
 // Mocks: infrastructure dependencies
-vi.mock("../../../../src/services/infrastructure/emailService", () => ({
+vi.mock("../../../../src/services/infrastructure/EmailServiceFacade", () => ({
   EmailService: {
     // Role change emails
     sendPromotionNotificationToUser: vi.fn().mockResolvedValue(true),

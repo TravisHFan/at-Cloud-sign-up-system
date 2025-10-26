@@ -6,7 +6,11 @@ import mongoose from "mongoose";
 vi.mock("../../../src/models", () => ({
   Event: Object.assign(vi.fn(), {
     findById: vi.fn(),
-    find: vi.fn(),
+    find: vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        lean: vi.fn().mockResolvedValue([]),
+      }),
+    }),
     findOne: vi.fn(),
     create: vi.fn(),
     findByIdAndUpdate: vi.fn(),
@@ -91,7 +95,7 @@ vi.mock("../../../src/services", () => {
   };
 });
 
-vi.mock("../../../src/services/infrastructure/emailService", () => ({
+vi.mock("../../../src/services/infrastructure/EmailServiceFacade", () => ({
   EmailService: {
     sendEventCreatedEmail: vi.fn(),
     sendCoOrganizerAssignedEmail: vi.fn(),

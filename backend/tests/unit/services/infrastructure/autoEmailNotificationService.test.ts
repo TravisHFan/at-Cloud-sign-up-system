@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 let __userSelectResult: any[] = [];
 
 // Mocks for heavy/static imports used by the service
-vi.mock("../../../../src/services/infrastructure/emailService", () => ({
+vi.mock("../../../../src/services/infrastructure/EmailServiceFacade", () => ({
   EmailService: {
     sendPromotionNotificationToUser: vi.fn(),
     sendPromotionNotificationToAdmins: vi.fn(),
@@ -51,7 +51,7 @@ describe("AutoEmailNotificationService", () => {
     vi.clearAllMocks();
     // Load mocked modules
     EmailService = (
-      await import("../../../../src/services/infrastructure/emailService")
+      await import("../../../../src/services/infrastructure/EmailServiceFacade")
     ).EmailService;
     EmailRecipientUtils = (
       await import("../../../../src/utils/emailRecipientUtils")

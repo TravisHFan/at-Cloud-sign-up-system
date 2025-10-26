@@ -47,7 +47,7 @@ vi.mock("../../../src/models/User", () => ({
   },
 }));
 
-vi.mock("../../../src/services/infrastructure/emailService", () => ({
+vi.mock("../../../src/services/infrastructure/EmailServiceFacade", () => ({
   EmailService: {
     sendGuestConfirmationEmail: vi.fn().mockResolvedValue(true),
     sendGuestRegistrationNotification: vi.fn().mockResolvedValue(true),
