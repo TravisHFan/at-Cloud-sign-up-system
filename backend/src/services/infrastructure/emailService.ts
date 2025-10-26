@@ -1496,29 +1496,10 @@ export class EmailService {
     },
     reminderType: "1h" | "24h" | "1week"
   ): Promise<boolean[]> {
-    const seen = new Set<string>();
-    const unique = recipients.filter((r) => {
-      const key = (r.email || "").trim().toLowerCase();
-      if (!key) return false;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-    return Promise.all(
-      unique.map((r) =>
-        EmailService.sendEventReminderEmail(
-          r.email,
-          r.name || r.email,
-          eventData,
-          reminderType
-        ).catch((err) => {
-          console.error(
-            `❌ Failed to send event reminder email to ${r.email}:`,
-            err
-          );
-          return false;
-        })
-      )
+    return EventEmailService.sendEventReminderEmailBulk(
+      recipients,
+      eventData,
+      reminderType
     );
   }
 
