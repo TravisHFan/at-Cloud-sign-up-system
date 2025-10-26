@@ -235,18 +235,11 @@ export class EmailService {
     name: string,
     confirmToken: string
   ): Promise<boolean> {
-    const confirmUrl = `${
-      process.env.FRONTEND_URL || "http://localhost:5173"
-    }/change-password/confirm/${confirmToken}`;
-
-    const html = generatePasswordChangeRequestEmail({ name, confirmUrl });
-
-    return this.sendEmail({
-      to: email,
-      subject: "Password Change Request - @Cloud Ministry",
-      html,
-      text: `Password change requested. Please confirm by visiting: ${confirmUrl} (expires in 10 minutes)`,
-    });
+    return AuthEmailService.sendPasswordChangeRequestEmail(
+      email,
+      name,
+      confirmToken
+    );
   }
 
   // ===== Guest Email Helpers =====
