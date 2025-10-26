@@ -2113,72 +2113,11 @@ export class EmailService {
       previousRoleInAtCloud: string;
     }
   ): Promise<boolean> {
-    const userName = `${userData.firstName} ${userData.lastName}`.trim();
-
-    const html = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>@Cloud Co-worker Role Removed - Admin Notification</title>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 20px; }
-            .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-            .header { background: linear-gradient(135deg, #fd7e14 0%, #ffc107 100%); color: white; padding: 30px; text-align: center; }
-            .content { padding: 30px; }
-            .admin-alert { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px; }
-            .user-details { background: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 4px; }
-            .button { display: inline-block; background: #fd7e14; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
-            .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 12px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>⚠️ @Cloud Co-worker Role Removed</h1>
-              <p>Administrative Oversight Notification</p>
-            </div>
-            <div class="content">
-              <h2>Hello ${adminName},</h2>
-              <div class="admin-alert">
-                <h3>@Cloud Co-worker Role Removal</h3>
-                <p>A user has removed their @Cloud co-worker role.</p>
-              </div>
-              <div class="user-details">
-                <h4>User Details</h4>
-                <p><strong>Name:</strong> ${userName}</p>
-                <p><strong>Email:</strong> ${userData.email}</p>
-                <p><strong>Previous @Cloud Role:</strong> ${
-                  userData.previousRoleInAtCloud
-                }</p>
-                <p><strong>Status:</strong> No longer an @Cloud Co-worker</p>
-              </div>
-              <div style="text-align: center;">
-                <a href="${
-                  process.env.FRONTEND_URL || "http://localhost:5173"
-                }/admin/users" class="button">
-                  Review in Admin Dashboard
-                </a>
-              </div>
-              <p>Please review this role removal and ensure appropriate ministry transitions are handled.</p>
-              <p>Best regards,<br>@Cloud Ministry System</p>
-            </div>
-            <div class="footer">
-              <p>@Cloud Ministry | Administrative Oversight</p>
-            </div>
-          </div>
-        </body>
-      </html>
-    `;
-
-    return this.sendEmail({
-      to: adminEmail,
-      subject: `⚠️ @Cloud Co-worker Role Removed - ${userName}`,
-      html,
-      text: `@Cloud Co-worker Role Removed: ${userName} (${userData.email}) has removed his or her @Cloud co-worker role. 
-      Previous role: ${userData.previousRoleInAtCloud}`,
-    });
+    return RoleEmailService.sendAtCloudRoleRemovedToAdmins(
+      adminEmail,
+      adminName,
+      userData
+    );
   }
 
   /**
