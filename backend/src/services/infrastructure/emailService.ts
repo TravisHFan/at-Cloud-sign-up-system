@@ -1059,77 +1059,7 @@ export class EmailService {
     name: string,
     data: EmailTemplateData
   ): Promise<boolean> {
-    const html = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Event Notification - @Cloud Ministry</title>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .button { display: inline-block; padding: 12px 30px; background: #4facfe; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>Event Update</h1>
-            </div>
-            <div class="content">
-              <h2>Hello ${name},</h2>
-              <p>We have an update regarding the event: <strong>${
-                data.eventTitle
-              }</strong></p>
-              <div class="event-detail">
-                <strong>📅 Date & Time:</strong> ${(() => {
-                  const date = (data as any).eventDate || (data as any).date;
-                  const time = (data as any).eventTime || (data as any).time;
-                  const endTime =
-                    (data as any).eventEndTime || (data as any).endTime;
-                  const endDate =
-                    (data as any).eventEndDate || (data as any).endDate;
-                  const tz = (data as any).timeZone;
-                  if (date && time) {
-                    return EmailService.formatDateTimeRange(
-                      date,
-                      time,
-                      endTime,
-                      endDate,
-                      tz
-                    );
-                  }
-                  return (data as any).eventDate || "TBD";
-                })()}
-              </div>
-              <p>${
-                data.message || "Please check your dashboard for more details."
-              }</p>
-              <div style="text-align: center;">
-                <a href="${
-                  process.env.FRONTEND_URL || "http://localhost:5173"
-                }/dashboard" class="button">View Dashboard</a>
-              </div>
-              <p>Thank you for your participation in @Cloud Ministry events!</p>
-              <p>Blessings,<br>The @Cloud Ministry Team</p>
-            </div>
-            <div class="footer">
-              <p>@Cloud Ministry | Building Community Through Faith</p>
-            </div>
-          </div>
-        </body>
-      </html>
-    `;
-
-    return this.sendEmail({
-      to: email,
-      subject: `Event Update: ${data.eventTitle}`,
-      html,
-    });
+    return EventEmailService.sendEventNotificationEmail(email, name, data);
   }
 
   /**
