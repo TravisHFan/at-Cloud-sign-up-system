@@ -215,18 +215,11 @@ export class EmailService {
     name: string,
     verificationToken: string
   ): Promise<boolean> {
-    const verificationUrl = `${
-      process.env.FRONTEND_URL || "http://localhost:5173"
-    }/verify-email/${verificationToken}`;
-
-    const html = generateVerificationEmail({ name, verificationUrl });
-
-    return this.sendEmail({
-      to: email,
-      subject: "Welcome to @Cloud Ministry - Please Verify Your Email",
-      html,
-      text: `Welcome to @Cloud Ministry! Please verify your email by visiting: ${verificationUrl}`,
-    });
+    return AuthEmailService.sendVerificationEmail(
+      email,
+      name,
+      verificationToken
+    );
   }
 
   static async sendPasswordResetEmail(
