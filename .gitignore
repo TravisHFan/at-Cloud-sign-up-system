@@ -74,3 +74,11 @@ test-*.js
 *.debug.*
 
 .github/
+# Backup files
+*.backup
+*.backup[0-9]
+*.backup[0-9][0-9]
+*.bak
+*.tmp
+*~
+
