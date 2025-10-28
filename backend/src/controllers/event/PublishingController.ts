@@ -1,13 +1,15 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
-import Event from "../../models/Event";
+import { Event } from "../../models";
 import type { IEvent } from "../../models/Event";
 import AuditLog from "../../models/AuditLog";
 import { generateUniquePublicSlug } from "../../utils/publicSlug";
 import { serializePublicEvent } from "../../utils/publicEventSerializer";
 import { Logger } from "../../services/LoggerService";
-
-const logger = Logger.getInstance().child("PublishingController");
+import { validateEventForPublish } from "../../utils/validatePublish";
+import { bumpPublicEventsListVersion } from "../../services/PublicEventsListCache";
+import { ShortLinkService } from "../../services/ShortLinkService";
+import { shortLinkExpireCounter } from "../../services/PrometheusMetricsService";
 
 /**
  * PublishingController
@@ -38,9 +40,6 @@ export class PublishingController {
         return;
       }
       // Validation (extended rules)
-      const { validateEventForPublish } = await import(
-        "../../utils/validatePublish"
-      );
       const validation = validateEventForPublish(event as unknown as IEvent);
       if (!validation.valid) {
         // Detect aggregate missing necessary publish fields error
@@ -83,9 +82,6 @@ export class PublishingController {
       // NOTE: auto-unpublish flag only applies on update mutations; publish endpoint
       // never auto-unpublishes, so no notification logic is required here.
       try {
-        const { bumpPublicEventsListVersion } = await import(
-          "../../services/PublicEventsListCache"
-        );
         bumpPublicEventsListVersion();
       } catch {}
       // Audit log
@@ -108,7 +104,9 @@ export class PublishingController {
       res.status(200).json({ success: true, data: payload });
     } catch (err) {
       try {
-        logger.error("Failed to publish event", err as Error);
+        Logger.getInstance()
+          .child("PublishingController")
+          .error("Failed to publish event", err as Error);
       } catch {
         // swallow logging error
       }
@@ -143,19 +141,10 @@ export class PublishingController {
       event.publish = false;
       await event.save();
       try {
-        const { bumpPublicEventsListVersion } = await import(
-          "../../services/PublicEventsListCache"
-        );
         bumpPublicEventsListVersion();
       } catch {}
       // Expire all short links for this event (non-blocking failure) and record metrics
       try {
-        const { ShortLinkService } = await import(
-          "../../services/ShortLinkService"
-        );
-        const { shortLinkExpireCounter } = await import(
-          "../../services/PrometheusMetricsService"
-        );
         const expired = await ShortLinkService.expireAllForEvent(
           event._id.toString()
         );
@@ -166,10 +155,12 @@ export class PublishingController {
         }
       } catch (e) {
         try {
-          logger.warn("Failed to expire short links on unpublish", undefined, {
-            eventId: id,
-            error: (e as Error)?.message,
-          });
+          Logger.getInstance()
+            .child("PublishingController")
+            .warn("Failed to expire short links on unpublish", undefined, {
+              eventId: id,
+              error: (e as Error)?.message,
+            });
         } catch {}
       }
       // Audit log
@@ -186,7 +177,9 @@ export class PublishingController {
       res.status(200).json({ success: true, message: "Event unpublished" });
     } catch (err) {
       try {
-        logger.error("Failed to unpublish event", err as Error);
+        Logger.getInstance()
+          .child("PublishingController")
+          .error("Failed to unpublish event", err as Error);
       } catch {
         // swallow logging error
       }
