@@ -2,19 +2,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { TrioNotificationService } from "../../../../src/services/notifications/TrioNotificationService";
 import { UnifiedMessageController } from "../../../../src/controllers/unifiedMessageController";
 import { socketService } from "../../../../src/services/infrastructure/SocketService";
-import { EmailService } from "../../../../src/services/infrastructure/EmailServiceFacade";
+import { EventEmailService } from "../../../../src/services/email/domains/EventEmailService";
+import { RoleEmailService } from "../../../../src/services/email/domains/RoleEmailService";
 import { NotificationErrorHandler } from "../../../../src/services/notifications/NotificationErrorHandler";
 import { TrioTransaction } from "../../../../src/services/notifications/TrioTransaction";
 import { NOTIFICATION_CONFIG } from "../../../../src/config/notificationConfig";
 
-vi.mock("../../../../src/services/infrastructure/EmailServiceFacade", () => ({
-  EmailService: {
-    sendEventCreatedEmail: vi.fn(),
-    sendCoOrganizerAssignedEmail: vi.fn(),
-    sendNewLeaderSignupEmail: vi.fn(),
-    sendEventReminderEmail: vi.fn(),
-  },
-}));
 vi.mock("../../../../src/controllers/unifiedMessageController");
 vi.mock("../../../../src/services/infrastructure/SocketService");
 vi.mock("../../../../src/services/notifications/NotificationErrorHandler");
@@ -23,6 +16,24 @@ describe("TrioNotificationService - more branches", () => {
   beforeEach(() => {
     TrioNotificationService.resetMetrics();
     vi.clearAllMocks();
+
+    // Set up spies for EventEmailService methods
+    vi.spyOn(EventEmailService, "sendEventCreatedEmail").mockResolvedValue(
+      true
+    );
+    // Co-organizer assignment is routed via RoleEmailService in the facade
+    vi.spyOn(
+      RoleEmailService,
+      "sendCoOrganizerAssignedEmail"
+    ).mockResolvedValue(true);
+    vi.spyOn(EventEmailService, "sendEventReminderEmail").mockResolvedValue(
+      true
+    );
+
+    // Set up spy for RoleEmailService method
+    vi.spyOn(RoleEmailService, "sendNewLeaderSignupEmail").mockResolvedValue(
+      true
+    );
   });
 
   afterEach(() => {
@@ -150,13 +161,13 @@ describe("TrioNotificationService - more branches", () => {
     );
 
     // Stub email methods to succeed
-    vi.mocked(EmailService.sendEventCreatedEmail).mockResolvedValue(
+    vi.mocked(EventEmailService.sendEventCreatedEmail).mockResolvedValue(
       true as any
     );
-    vi.mocked(EmailService.sendCoOrganizerAssignedEmail).mockResolvedValue(
+    vi.mocked(RoleEmailService.sendCoOrganizerAssignedEmail).mockResolvedValue(
       true as any
     );
-    vi.mocked(EmailService.sendNewLeaderSignupEmail).mockResolvedValue(
+    vi.mocked(RoleEmailService.sendNewLeaderSignupEmail).mockResolvedValue(
       true as any
     );
 
@@ -170,7 +181,7 @@ describe("TrioNotificationService - more branches", () => {
       systemMessage: { title: "T", content: "C" },
       recipients: ["u1"],
     } as any);
-    expect(EmailService.sendEventCreatedEmail).toHaveBeenCalledWith(
+    expect(EventEmailService.sendEventCreatedEmail).toHaveBeenCalledWith(
       "a@x.com",
       "U",
       { id: 1 }
@@ -190,7 +201,7 @@ describe("TrioNotificationService - more branches", () => {
       systemMessage: { title: "T", content: "C" },
       recipients: ["u1"],
     } as any);
-    expect(EmailService.sendCoOrganizerAssignedEmail).toHaveBeenCalledWith(
+    expect(RoleEmailService.sendCoOrganizerAssignedEmail).toHaveBeenCalledWith(
       "b@x.com",
       { id: "u2" },
       { id: 2 },
@@ -210,7 +221,7 @@ describe("TrioNotificationService - more branches", () => {
       systemMessage: { title: "T", content: "C" },
       recipients: ["u1"],
     } as any);
-    expect(EmailService.sendNewLeaderSignupEmail).toHaveBeenCalledWith(
+    expect(RoleEmailService.sendNewLeaderSignupEmail).toHaveBeenCalledWith(
       { id: "new" },
       "admin@x.com",
       [{ id: "a1" }]
@@ -337,7 +348,7 @@ describe("TrioNotificationService - more branches", () => {
     );
 
     const sendReminderSpy = vi
-      .mocked(EmailService.sendEventReminderEmail)
+      .mocked(EventEmailService.sendEventReminderEmail)
       .mockResolvedValue(true as any);
 
     await TrioNotificationService.createTrio({

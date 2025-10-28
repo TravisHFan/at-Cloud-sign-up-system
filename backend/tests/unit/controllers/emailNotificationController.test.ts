@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { Request, Response } from "express";
 import { EmailNotificationController } from "../../../src/controllers/emailNotificationController";
 import { EmailRecipientUtils } from "../../../src/utils/emailRecipientUtils";
-import { EmailService } from "../../../src/services/infrastructure/EmailServiceFacade";
+import { EventEmailService } from "../../../src/services/email/domains/EventEmailService";
+import { RoleEmailService } from "../../../src/services/email/domains/RoleEmailService";
 import { AutoEmailNotificationService } from "../../../src/services/infrastructure/autoEmailNotificationService";
 import { RoleUtils } from "../../../src/utils/roleUtils";
 import { UnifiedMessageController } from "../../../src/controllers/unifiedMessageController";
@@ -12,17 +13,6 @@ import mongoose from "mongoose";
 
 // Mock all dependencies
 vi.mock("../../../src/utils/emailRecipientUtils");
-vi.mock("../../../src/services/infrastructure/EmailServiceFacade", () => ({
-  EmailService: {
-    sendEventCreatedEmail: vi.fn(),
-    sendEventReminderEmailBulk: vi.fn(),
-    sendEventReminderEmail: vi.fn(),
-    sendCoOrganizerAssignedEmail: vi.fn(),
-    sendNewLeaderSignupEmail: vi.fn(),
-    sendAtCloudRoleChangeToUser: vi.fn(),
-    sendAtCloudRoleChangeToAdmins: vi.fn(),
-  },
-}));
 vi.mock("../../../src/services/infrastructure/autoEmailNotificationService");
 vi.mock("../../../src/utils/roleUtils");
 vi.mock("../../../src/controllers/unifiedMessageController");
@@ -82,6 +72,34 @@ describe("EmailNotificationController", () => {
     // Reset all mocks before each test
     vi.clearAllMocks();
 
+    // Set up spies for EventEmailService methods
+    vi.spyOn(EventEmailService, "sendEventCreatedEmail").mockResolvedValue(
+      true
+    );
+    // Co-organizer assignment is routed via RoleEmailService in the facade
+    vi.spyOn(
+      RoleEmailService,
+      "sendCoOrganizerAssignedEmail"
+    ).mockResolvedValue(true);
+    vi.spyOn(EventEmailService, "sendEventReminderEmail").mockResolvedValue(
+      true
+    );
+    vi.spyOn(EventEmailService, "sendEventReminderEmailBulk").mockResolvedValue(
+      []
+    );
+
+    // Set up spies for RoleEmailService methods
+    vi.spyOn(RoleEmailService, "sendAtCloudRoleChangeToUser").mockResolvedValue(
+      true
+    );
+    vi.spyOn(
+      RoleEmailService,
+      "sendAtCloudRoleChangeToAdmins"
+    ).mockResolvedValue(true);
+    vi.spyOn(RoleEmailService, "sendNewLeaderSignupEmail").mockResolvedValue(
+      true
+    );
+
     // Setup console mocks to avoid test output clutter
     vi.spyOn(console, "error").mockImplementation(() => {});
     vi.spyOn(console, "log").mockImplementation(() => {});
@@ -96,8 +114,9 @@ describe("EmailNotificationController", () => {
     };
 
     // Ensure EmailService dedupe cache doesn't suppress sends across tests
+    // Note: With domain services, dedupe is handled differently
     try {
-      (EmailService as any).__clearDedupeCacheForTests?.();
+      (EventEmailService as any).__clearDedupeCacheForTests?.();
     } catch {}
   });
 
@@ -212,14 +231,16 @@ describe("EmailNotificationController", () => {
       vi.mocked(EmailRecipientUtils.getActiveVerifiedUsers).mockResolvedValue(
         mockRecipients
       );
-      vi.mocked(EmailService.sendEventCreatedEmail).mockResolvedValue(true);
+      vi.mocked(EventEmailService.sendEventCreatedEmail).mockResolvedValue(
+        true
+      );
 
       await EmailNotificationController.sendEventCreatedNotification(
         mockRequest as Request,
         mockResponse as Response
       );
 
-      expect(EmailService.sendEventCreatedEmail).toHaveBeenCalledTimes(2);
+      expect(EventEmailService.sendEventCreatedEmail).toHaveBeenCalledTimes(2);
       expect(mockStatus).toHaveBeenCalledWith(200);
       expect(mockJson).toHaveBeenCalledWith({
         success: true,
@@ -236,7 +257,7 @@ describe("EmailNotificationController", () => {
       vi.mocked(EmailRecipientUtils.getActiveVerifiedUsers).mockResolvedValue(
         mockRecipients
       );
-      vi.mocked(EmailService.sendEventCreatedEmail).mockRejectedValue(
+      vi.mocked(EventEmailService.sendEventCreatedEmail).mockRejectedValue(
         new Error("Email service error")
       );
 
@@ -290,14 +311,16 @@ describe("EmailNotificationController", () => {
       vi.mocked(EmailRecipientUtils.getActiveVerifiedUsers).mockResolvedValue(
         mockRecipients
       );
-      vi.mocked(EmailService.sendEventCreatedEmail).mockResolvedValue(true);
+      vi.mocked(EventEmailService.sendEventCreatedEmail).mockResolvedValue(
+        true
+      );
 
       await EmailNotificationController.sendEventCreatedNotification(
         mockRequest as Request,
         mockResponse as Response
       );
 
-      expect(EmailService.sendEventCreatedEmail).toHaveBeenCalledWith(
+      expect(EventEmailService.sendEventCreatedEmail).toHaveBeenCalledWith(
         "user1@example.com",
         "John Doe",
         {
@@ -558,15 +581,15 @@ describe("EmailNotificationController", () => {
         },
       ];
 
-      vi.mocked(EmailService.sendAtCloudRoleChangeToUser).mockResolvedValue(
+      vi.mocked(RoleEmailService.sendAtCloudRoleChangeToUser).mockResolvedValue(
         true
       );
       vi.mocked(
         EmailRecipientUtils.getSystemAuthorizationChangeRecipients
       ).mockResolvedValue(mockAdmins);
-      vi.mocked(EmailService.sendAtCloudRoleChangeToAdmins).mockResolvedValue(
-        true
-      );
+      vi.mocked(
+        RoleEmailService.sendAtCloudRoleChangeToAdmins
+      ).mockResolvedValue(true);
 
       await EmailNotificationController.sendAtCloudRoleChangeNotification(
         mockRequest as Request,
@@ -598,15 +621,15 @@ describe("EmailNotificationController", () => {
         },
       ];
 
-      vi.mocked(EmailService.sendAtCloudRoleChangeToUser).mockResolvedValue(
+      vi.mocked(RoleEmailService.sendAtCloudRoleChangeToUser).mockResolvedValue(
         false
       );
       vi.mocked(
         EmailRecipientUtils.getSystemAuthorizationChangeRecipients
       ).mockResolvedValue(mockAdmins);
-      vi.mocked(EmailService.sendAtCloudRoleChangeToAdmins).mockResolvedValue(
-        true
-      );
+      vi.mocked(
+        RoleEmailService.sendAtCloudRoleChangeToAdmins
+      ).mockResolvedValue(true);
 
       await EmailNotificationController.sendAtCloudRoleChangeNotification(
         mockRequest as Request,
@@ -644,13 +667,13 @@ describe("EmailNotificationController", () => {
         },
       ];
 
-      vi.mocked(EmailService.sendAtCloudRoleChangeToUser).mockResolvedValue(
+      vi.mocked(RoleEmailService.sendAtCloudRoleChangeToUser).mockResolvedValue(
         true
       );
       vi.mocked(
         EmailRecipientUtils.getSystemAuthorizationChangeRecipients
       ).mockResolvedValue(mockAdmins);
-      vi.mocked(EmailService.sendAtCloudRoleChangeToAdmins)
+      vi.mocked(RoleEmailService.sendAtCloudRoleChangeToAdmins)
         .mockResolvedValueOnce(true)
         .mockResolvedValueOnce(false);
 
@@ -675,7 +698,7 @@ describe("EmailNotificationController", () => {
     });
 
     it("should handle database errors", async () => {
-      vi.mocked(EmailService.sendAtCloudRoleChangeToUser).mockRejectedValue(
+      vi.mocked(RoleEmailService.sendAtCloudRoleChangeToUser).mockRejectedValue(
         new Error("Database error")
       );
 
@@ -758,7 +781,9 @@ describe("EmailNotificationController", () => {
       vi.mocked(EmailRecipientUtils.getAdminUsers).mockResolvedValue(
         mockAdmins
       );
-      vi.mocked(EmailService.sendNewLeaderSignupEmail).mockResolvedValue(true);
+      vi.mocked(RoleEmailService.sendNewLeaderSignupEmail).mockResolvedValue(
+        true
+      );
       vi.mocked(User.find).mockResolvedValue(mockUserDocuments);
       vi.mocked(
         UnifiedMessageController.createTargetedSystemMessage
@@ -769,7 +794,9 @@ describe("EmailNotificationController", () => {
         mockResponse as Response
       );
 
-      expect(EmailService.sendNewLeaderSignupEmail).toHaveBeenCalledTimes(2);
+      expect(RoleEmailService.sendNewLeaderSignupEmail).toHaveBeenCalledTimes(
+        2
+      );
       expect(mockStatus).toHaveBeenCalledWith(200);
       expect(mockJson).toHaveBeenCalledWith({
         success: true,
@@ -791,7 +818,7 @@ describe("EmailNotificationController", () => {
       vi.mocked(EmailRecipientUtils.getAdminUsers).mockResolvedValue(
         mockAdmins
       );
-      vi.mocked(EmailService.sendNewLeaderSignupEmail).mockRejectedValue(
+      vi.mocked(RoleEmailService.sendNewLeaderSignupEmail).mockRejectedValue(
         new Error("Email failed")
       );
       vi.mocked(User.find).mockResolvedValue([]);
@@ -822,7 +849,9 @@ describe("EmailNotificationController", () => {
       vi.mocked(EmailRecipientUtils.getAdminUsers).mockResolvedValue(
         mockAdmins
       );
-      vi.mocked(EmailService.sendNewLeaderSignupEmail).mockResolvedValue(true);
+      vi.mocked(RoleEmailService.sendNewLeaderSignupEmail).mockResolvedValue(
+        true
+      );
       vi.mocked(User.find).mockRejectedValue(new Error("Database error"));
 
       await EmailNotificationController.sendNewLeaderSignupNotification(
@@ -877,7 +906,9 @@ describe("EmailNotificationController", () => {
       vi.mocked(EmailRecipientUtils.getAdminUsers).mockResolvedValue(
         mockAdmins
       );
-      vi.mocked(EmailService.sendNewLeaderSignupEmail).mockResolvedValue(true);
+      vi.mocked(RoleEmailService.sendNewLeaderSignupEmail).mockResolvedValue(
+        true
+      );
       vi.mocked(User.find).mockResolvedValue([]);
 
       await EmailNotificationController.sendNewLeaderSignupNotification(
@@ -885,7 +916,7 @@ describe("EmailNotificationController", () => {
         mockResponse as Response
       );
 
-      expect(EmailService.sendNewLeaderSignupEmail).toHaveBeenCalledWith(
+      expect(RoleEmailService.sendNewLeaderSignupEmail).toHaveBeenCalledWith(
         "admin1@example.com",
         "Admin One",
         expect.objectContaining({
@@ -953,16 +984,18 @@ describe("EmailNotificationController", () => {
     });
 
     it("should send notification successfully", async () => {
-      vi.mocked(EmailService.sendCoOrganizerAssignedEmail).mockResolvedValue(
-        true
-      );
+      vi.mocked(
+        RoleEmailService.sendCoOrganizerAssignedEmail
+      ).mockResolvedValue(true);
 
       await EmailNotificationController.sendCoOrganizerAssignedNotification(
         mockRequest as Request,
         mockResponse as Response
       );
 
-      expect(EmailService.sendCoOrganizerAssignedEmail).toHaveBeenCalledWith(
+      expect(
+        RoleEmailService.sendCoOrganizerAssignedEmail
+      ).toHaveBeenCalledWith(
         "organizer@example.com",
         { firstName: "John", lastName: "Doe" },
         {
@@ -983,9 +1016,9 @@ describe("EmailNotificationController", () => {
     });
 
     it("should handle email failure", async () => {
-      vi.mocked(EmailService.sendCoOrganizerAssignedEmail).mockResolvedValue(
-        false
-      );
+      vi.mocked(
+        RoleEmailService.sendCoOrganizerAssignedEmail
+      ).mockResolvedValue(false);
 
       await EmailNotificationController.sendCoOrganizerAssignedNotification(
         mockRequest as Request,
@@ -1017,16 +1050,18 @@ describe("EmailNotificationController", () => {
         },
       };
 
-      vi.mocked(EmailService.sendCoOrganizerAssignedEmail).mockResolvedValue(
-        true
-      );
+      vi.mocked(
+        RoleEmailService.sendCoOrganizerAssignedEmail
+      ).mockResolvedValue(true);
 
       await EmailNotificationController.sendCoOrganizerAssignedNotification(
         mockRequest as Request,
         mockResponse as Response
       );
 
-      expect(EmailService.sendCoOrganizerAssignedEmail).toHaveBeenCalledWith(
+      expect(
+        RoleEmailService.sendCoOrganizerAssignedEmail
+      ).toHaveBeenCalledWith(
         "organizer@example.com",
         { firstName: "John", lastName: "" },
         { title: "Test Event", date: "TBD", time: "TBD", location: "TBD" },
@@ -1035,9 +1070,9 @@ describe("EmailNotificationController", () => {
     });
 
     it("should handle database errors", async () => {
-      vi.mocked(EmailService.sendCoOrganizerAssignedEmail).mockRejectedValue(
-        new Error("Database error")
-      );
+      vi.mocked(
+        RoleEmailService.sendCoOrganizerAssignedEmail
+      ).mockRejectedValue(new Error("Database error"));
 
       await EmailNotificationController.sendCoOrganizerAssignedNotification(
         mockRequest as Request,
@@ -1164,10 +1199,9 @@ describe("EmailNotificationController", () => {
       vi.mocked(EmailRecipientUtils.getEventParticipants).mockResolvedValue(
         mockParticipants
       );
-      vi.mocked(EmailService.sendEventReminderEmailBulk).mockResolvedValue([
-        true,
-        true,
-      ]);
+      vi.mocked(EventEmailService.sendEventReminderEmailBulk).mockResolvedValue(
+        [true, true]
+      );
       vi.mocked(CachePatterns.invalidateEventCache).mockResolvedValue(
         undefined
       );
@@ -1180,7 +1214,9 @@ describe("EmailNotificationController", () => {
         mockResponse as Response
       );
 
-      expect(EmailService.sendEventReminderEmailBulk).toHaveBeenCalledTimes(1);
+      expect(
+        EventEmailService.sendEventReminderEmailBulk
+      ).toHaveBeenCalledTimes(1);
       expect(
         UnifiedMessageController.createTargetedSystemMessage
       ).toHaveBeenCalledWith(
@@ -1223,9 +1259,9 @@ describe("EmailNotificationController", () => {
       vi.mocked(EmailRecipientUtils.getEventParticipants).mockResolvedValue(
         mockParticipants
       );
-      vi.mocked(EmailService.sendEventReminderEmailBulk).mockResolvedValue([
-        false,
-      ]);
+      vi.mocked(EventEmailService.sendEventReminderEmailBulk).mockResolvedValue(
+        [false]
+      );
       vi.mocked(CachePatterns.invalidateEventCache).mockResolvedValue(
         undefined
       );
@@ -1268,9 +1304,9 @@ describe("EmailNotificationController", () => {
       vi.mocked(EmailRecipientUtils.getEventParticipants).mockResolvedValue(
         mockParticipants
       );
-      vi.mocked(EmailService.sendEventReminderEmailBulk).mockResolvedValue([
-        true,
-      ]);
+      vi.mocked(EventEmailService.sendEventReminderEmailBulk).mockResolvedValue(
+        [true]
+      );
       vi.mocked(CachePatterns.invalidateEventCache).mockResolvedValue(
         undefined
       );
@@ -1323,10 +1359,9 @@ describe("EmailNotificationController", () => {
         mockParticipants
       );
       // Use bulk sender (controller uses deduped bulk helper)
-      vi.mocked(EmailService.sendEventReminderEmailBulk).mockResolvedValue([
-        true,
-        true,
-      ] as any);
+      vi.mocked(EventEmailService.sendEventReminderEmailBulk).mockResolvedValue(
+        [true, true] as any
+      );
       vi.mocked(CachePatterns.invalidateEventCache).mockResolvedValue(
         undefined
       );
@@ -1340,9 +1375,11 @@ describe("EmailNotificationController", () => {
       );
 
       // Bulk method should be called once with correct defaults
-      expect(EmailService.sendEventReminderEmailBulk).toHaveBeenCalledTimes(1);
-      const bulkArgs = vi.mocked(EmailService.sendEventReminderEmailBulk).mock
-        .calls[0];
+      expect(
+        EventEmailService.sendEventReminderEmailBulk
+      ).toHaveBeenCalledTimes(1);
+      const bulkArgs = vi.mocked(EventEmailService.sendEventReminderEmailBulk)
+        .mock.calls[0];
       expect(bulkArgs[0]).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ email: "user1@example.com" }),
@@ -1406,9 +1443,9 @@ describe("EmailNotificationController", () => {
       vi.mocked(EmailRecipientUtils.getEventParticipants).mockResolvedValue(
         mockParticipants
       );
-      vi.mocked(EmailService.sendEventReminderEmailBulk).mockResolvedValue([
-        true,
-      ]);
+      vi.mocked(EventEmailService.sendEventReminderEmailBulk).mockResolvedValue(
+        [true]
+      );
       vi.mocked(
         UnifiedMessageController.createTargetedSystemMessage
       ).mockResolvedValue({} as any);
@@ -1419,7 +1456,9 @@ describe("EmailNotificationController", () => {
       );
 
       // Should continue processing despite atomic check failure
-      expect(EmailService.sendEventReminderEmailBulk).toHaveBeenCalledTimes(1);
+      expect(
+        EventEmailService.sendEventReminderEmailBulk
+      ).toHaveBeenCalledTimes(1);
       expect(mockStatus).toHaveBeenCalledWith(200);
     });
 
@@ -1438,10 +1477,9 @@ describe("EmailNotificationController", () => {
       vi.mocked(EmailRecipientUtils.getEventParticipants).mockResolvedValue(
         mockParticipants
       );
-      vi.mocked(EmailService.sendEventReminderEmailBulk).mockResolvedValue([
-        true,
-        true,
-      ]);
+      vi.mocked(EventEmailService.sendEventReminderEmailBulk).mockResolvedValue(
+        [true, true]
+      );
       vi.mocked(CachePatterns.invalidateEventCache).mockResolvedValue(
         undefined
       );
@@ -1479,7 +1517,9 @@ describe("EmailNotificationController", () => {
       vi.mocked(EmailRecipientUtils.getEventParticipants).mockResolvedValue(
         mockParticipants
       );
-      vi.mocked(EmailService.sendEventReminderEmail).mockResolvedValue(true);
+      vi.mocked(EventEmailService.sendEventReminderEmail).mockResolvedValue(
+        true
+      );
       vi.mocked(
         UnifiedMessageController.createTargetedSystemMessage
       ).mockResolvedValue({} as any);
@@ -1511,12 +1551,13 @@ describe("EmailNotificationController", () => {
         mockGuests as any
       );
       // Controller uses the bulk method; return two successes for two guests
-      vi.mocked(EmailService.sendEventReminderEmailBulk).mockResolvedValue([
-        true,
-        true,
-      ]);
+      vi.mocked(EventEmailService.sendEventReminderEmailBulk).mockResolvedValue(
+        [true, true]
+      );
       // Legacy single-send mock (kept harmlessly in case other branches reference it)
-      vi.mocked(EmailService.sendEventReminderEmail).mockResolvedValue(true);
+      vi.mocked(EventEmailService.sendEventReminderEmail).mockResolvedValue(
+        true
+      );
       vi.mocked(CachePatterns.invalidateEventCache).mockResolvedValue(
         undefined
       );
@@ -1528,7 +1569,9 @@ describe("EmailNotificationController", () => {
       );
 
       // Assert: two emails sent (guests), and no system message when no participants
-      expect(EmailService.sendEventReminderEmailBulk).toHaveBeenCalledTimes(1);
+      expect(
+        EventEmailService.sendEventReminderEmailBulk
+      ).toHaveBeenCalledTimes(1);
       expect(
         UnifiedMessageController.createTargetedSystemMessage
       ).not.toHaveBeenCalled();
@@ -1582,11 +1625,9 @@ describe("EmailNotificationController", () => {
         mockGuests as any
       );
 
-      vi.mocked(EmailService.sendEventReminderEmailBulk).mockResolvedValue([
-        true,
-        true,
-        true,
-      ]);
+      vi.mocked(EventEmailService.sendEventReminderEmailBulk).mockResolvedValue(
+        [true, true, true]
+      );
       vi.mocked(CachePatterns.invalidateEventCache).mockResolvedValue(
         undefined
       );
@@ -1601,7 +1642,9 @@ describe("EmailNotificationController", () => {
       );
 
       // Assert
-      expect(EmailService.sendEventReminderEmailBulk).toHaveBeenCalledTimes(1);
+      expect(
+        EventEmailService.sendEventReminderEmailBulk
+      ).toHaveBeenCalledTimes(1);
       expect(
         UnifiedMessageController.createTargetedSystemMessage
       ).toHaveBeenCalledWith(
@@ -1646,10 +1689,9 @@ describe("EmailNotificationController", () => {
       vi.mocked(EmailRecipientUtils.getEventGuests).mockResolvedValue(
         mockGuests as any
       );
-      vi.mocked(EmailService.sendEventReminderEmailBulk).mockResolvedValue([
-        true,
-        true,
-      ]);
+      vi.mocked(EventEmailService.sendEventReminderEmailBulk).mockResolvedValue(
+        [true, true]
+      );
       vi.mocked(CachePatterns.invalidateEventCache).mockResolvedValue(
         undefined
       );
@@ -1661,7 +1703,9 @@ describe("EmailNotificationController", () => {
       );
 
       // Assert
-      expect(EmailService.sendEventReminderEmailBulk).toHaveBeenCalledTimes(1);
+      expect(
+        EventEmailService.sendEventReminderEmailBulk
+      ).toHaveBeenCalledTimes(1);
       expect(
         UnifiedMessageController.createTargetedSystemMessage
       ).not.toHaveBeenCalled();

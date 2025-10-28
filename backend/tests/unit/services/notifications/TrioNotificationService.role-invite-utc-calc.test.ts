@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { TrioNotificationService } from "../../../../src/services/notifications/TrioNotificationService";
+import { EventEmailService } from "../../../../src/services/email/domains/EventEmailService";
 
 vi.mock("../../../../src/controllers/unifiedMessageController", () => ({
   UnifiedMessageController: {
@@ -11,11 +12,6 @@ vi.mock("../../../../src/controllers/unifiedMessageController", () => ({
     }),
   },
 }));
-vi.mock("../../../../src/services/infrastructure/EmailServiceFacade", () => ({
-  EmailService: {
-    sendEventRoleAssignedEmail: vi.fn().mockResolvedValue(true),
-  },
-}));
 vi.mock("../../../../src/services/infrastructure/SocketService", () => ({
   socketService: {
     emitSystemMessageUpdate: vi.fn().mockResolvedValue(undefined),
@@ -25,14 +21,14 @@ vi.mock("../../../../src/services/infrastructure/SocketService", () => ({
 const createTrioSpy = () =>
   vi.spyOn(TrioNotificationService as any, "createTrio");
 
-/**
- * This test verifies that backend now computes eventDateTimeUtc using timezone aware search.
- * Scenario: 2025-10-02 15:00 America/New_York should correspond to 2025-10-02T19:00:00.000Z.
- */
-
+// Tests for eventDateTimeUtc calculation
 describe("TrioNotificationService eventDateTimeUtc calculation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Set up spy for EventEmailService method
+    vi.spyOn(EventEmailService, "sendEventRoleAssignedEmail").mockResolvedValue(
+      true
+    );
   });
 
   it("derives correct UTC instant for NY -> 19:00Z", async () => {

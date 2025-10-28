@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { TrioNotificationService } from "../../../../src/services/notifications/TrioNotificationService";
+import { EventEmailService } from "../../../../src/services/email/domains/EventEmailService";
 
 // Speed: mock the internal createTrio to a fast-resolving promise to avoid any DB/network layer.
 vi.spyOn(TrioNotificationService as any, "createTrio").mockImplementation(
@@ -11,9 +12,6 @@ vi.spyOn(TrioNotificationService as any, "createTrio").mockImplementation(
     })
 );
 
-vi.mock("../../../../src/services/infrastructure/EmailServiceFacade", () => ({
-  EmailService: { sendTemplateEmail: vi.fn() },
-}));
 vi.mock("../../../../src/services/infrastructure/SocketService", () => ({
   socketService: {
     emitSystemMessageUpdate: vi.fn().mockResolvedValue(undefined),

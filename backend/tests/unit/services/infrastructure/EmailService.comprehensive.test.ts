@@ -94,9 +94,8 @@ describe("EmailService - Comprehensive Validation", () => {
       // Verify EmailService class exists and has critical methods
       expect(EmailService).toBeDefined();
       expect(typeof EmailService.sendEmail).toBe("function");
-      expect(typeof EmailService.sendVerificationEmail).toBe("function");
-      expect(typeof EmailService.sendPasswordResetEmail).toBe("function");
-      expect(typeof EmailService.sendWelcomeEmail).toBe("function");
+      // Auth methods (sendVerificationEmail, sendPasswordResetEmail, sendWelcomeEmail)
+      // are now tested in AuthEmailService.test.ts
       expect(typeof EmailService.sendEventCreatedEmail).toBe("function");
     });
 
@@ -652,7 +651,7 @@ describe("EmailService - Comprehensive Validation", () => {
 
       // Verify different subjects for different timing
       const calls = mockTransporter.sendMail.mock.calls;
-      calls.forEach((call) => {
+      calls.forEach((call: any) => {
         expect(call[0].subject).toContain("Reminder");
       });
     });

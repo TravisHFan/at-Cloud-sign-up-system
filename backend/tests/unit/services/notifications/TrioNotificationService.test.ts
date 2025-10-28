@@ -9,7 +9,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { TrioNotificationService } from "../../../../src/services/notifications/TrioNotificationService";
 import { TrioTransaction } from "../../../../src/services/notifications/TrioTransaction";
 import { NotificationErrorHandler } from "../../../../src/services/notifications/NotificationErrorHandler";
-import { EmailService } from "../../../../src/services/infrastructure/EmailServiceFacade";
+import { AuthEmailService } from "../../../../src/services/email/domains/AuthEmailService";
+import { EventEmailService } from "../../../../src/services/email/domains/EventEmailService";
 import { UnifiedMessageController } from "../../../../src/controllers/unifiedMessageController";
 import { socketService } from "../../../../src/services/infrastructure/SocketService";
 
@@ -55,13 +56,6 @@ vi.mock("../../../../src/models/Message", () => ({
 }));
 
 // Mock dependencies
-vi.mock("../../../../src/services/infrastructure/EmailServiceFacade", () => ({
-  EmailService: {
-    sendWelcomeEmail: vi.fn(),
-    sendPasswordResetSuccessEmail: vi.fn(),
-    sendEventReminderEmail: vi.fn(),
-  },
-}));
 vi.mock("../../../../src/controllers/unifiedMessageController");
 vi.mock("../../../../src/services/infrastructure/SocketService");
 vi.mock("../../../../src/services/notifications/NotificationErrorHandler");
@@ -71,6 +65,18 @@ describe("TrioNotificationService", () => {
     // Reset metrics before each test
     TrioNotificationService.resetMetrics();
     vi.clearAllMocks();
+
+    // Set up spies for AuthEmailService methods
+    vi.spyOn(AuthEmailService, "sendWelcomeEmail").mockResolvedValue(true);
+    vi.spyOn(
+      AuthEmailService,
+      "sendPasswordResetSuccessEmail"
+    ).mockResolvedValue(true);
+
+    // Set up spy for EventEmailService method
+    vi.spyOn(EventEmailService, "sendEventReminderEmail").mockResolvedValue(
+      true
+    );
   });
 
   afterEach(() => {
@@ -93,7 +99,7 @@ describe("TrioNotificationService", () => {
       };
 
       // Mock successful operations
-      vi.mocked(EmailService.sendWelcomeEmail).mockResolvedValue(true);
+      vi.mocked(AuthEmailService.sendWelcomeEmail).mockResolvedValue(true);
       vi.mocked(
         UnifiedMessageController.createTargetedSystemMessage
       ).mockResolvedValue(mockMessageResult as any);
@@ -133,7 +139,7 @@ describe("TrioNotificationService", () => {
       });
 
       // Verify all services were called
-      expect(EmailService.sendWelcomeEmail).toHaveBeenCalledWith(
+      expect(AuthEmailService.sendWelcomeEmail).toHaveBeenCalledWith(
         "test@example.com",
         "Test User"
       );
@@ -187,7 +193,7 @@ describe("TrioNotificationService", () => {
       expect(result.notificationsSent).toBe(1);
 
       // Verify email service was not called
-      expect(EmailService.sendWelcomeEmail).not.toHaveBeenCalled();
+      expect(AuthEmailService.sendWelcomeEmail).not.toHaveBeenCalled();
     });
 
     it("should rollback operations on failure when rollback is enabled", async () => {
@@ -200,7 +206,7 @@ describe("TrioNotificationService", () => {
       };
 
       // Mock system message creation to fail after email succeeds
-      vi.mocked(EmailService.sendWelcomeEmail).mockResolvedValue(true);
+      vi.mocked(AuthEmailService.sendWelcomeEmail).mockResolvedValue(true);
       vi.mocked(
         UnifiedMessageController.createTargetedSystemMessage
       ).mockRejectedValue(new Error("Database error"));
@@ -245,7 +251,7 @@ describe("TrioNotificationService", () => {
 
       // Test that the service properly handles retries by expecting it to fail
       // after multiple attempts (testing the failure path with retry logic)
-      vi.mocked(EmailService.sendWelcomeEmail).mockRejectedValue(
+      vi.mocked(AuthEmailService.sendWelcomeEmail).mockRejectedValue(
         new Error("Service unavailable")
       );
 
@@ -288,7 +294,7 @@ describe("TrioNotificationService", () => {
       expect(result.error).toBeDefined();
 
       // But should have attempted the email multiple times (retry logic)
-      expect(EmailService.sendWelcomeEmail).toHaveBeenCalledTimes(3);
+      expect(AuthEmailService.sendWelcomeEmail).toHaveBeenCalledTimes(3);
 
       // Restore real timers
       vi.useRealTimers();
@@ -345,11 +351,11 @@ describe("TrioNotificationService", () => {
   describe("convenience methods", () => {
     beforeEach(() => {
       // Mock successful operations for convenience method tests
-      vi.mocked(EmailService.sendWelcomeEmail).mockResolvedValue(true);
-      vi.mocked(EmailService.sendPasswordResetSuccessEmail).mockResolvedValue(
+      vi.mocked(AuthEmailService.sendWelcomeEmail).mockResolvedValue(true);
+      vi.mocked(AuthEmailService.sendPasswordResetSuccessEmail).mockResolvedValue(
         true
       );
-      vi.mocked(EmailService.sendEventReminderEmail).mockResolvedValue(true);
+      vi.mocked(EventEmailService.sendEventReminderEmail).mockResolvedValue(true);
       vi.mocked(
         UnifiedMessageController.createTargetedSystemMessage
       ).mockResolvedValue({
@@ -373,7 +379,7 @@ describe("TrioNotificationService", () => {
 
       // Assert
       expect(result.success).toBe(true);
-      expect(EmailService.sendWelcomeEmail).toHaveBeenCalledWith(
+      expect(AuthEmailService.sendWelcomeEmail).toHaveBeenCalledWith(
         "test@example.com",
         "Test User"
       );
@@ -404,7 +410,7 @@ describe("TrioNotificationService", () => {
 
       // Assert
       expect(result.success).toBe(true);
-      expect(EmailService.sendPasswordResetSuccessEmail).toHaveBeenCalledWith(
+      expect(AuthEmailService.sendPasswordResetSuccessEmail).toHaveBeenCalledWith(
         "test@example.com",
         "Test User"
       );
@@ -446,7 +452,7 @@ describe("TrioNotificationService", () => {
 
       // Assert
       expect(result.success).toBe(true);
-      expect(EmailService.sendEventReminderEmail).toHaveBeenCalledWith(
+      expect(EventEmailService.sendEventReminderEmail).toHaveBeenCalledWith(
         mockEvent,
         mockUser,
         "upcoming",

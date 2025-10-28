@@ -1,27 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { RoleEmailService } from "../../../../src/services/email/domains/RoleEmailService";
+import { UserEmailService } from "../../../../src/services/email/domains/UserEmailService";
 
 // Local mutable to simulate User.find().select() return value
 let __userSelectResult: any[] = [];
 
 // Mocks: infrastructure dependencies
-vi.mock("../../../../src/services/infrastructure/EmailServiceFacade", () => ({
-  EmailService: {
-    // Role change emails
-    sendPromotionNotificationToUser: vi.fn().mockResolvedValue(true),
-    sendPromotionNotificationToAdmins: vi.fn().mockResolvedValue(true),
-    sendDemotionNotificationToUser: vi.fn().mockResolvedValue(true),
-    sendDemotionNotificationToAdmins: vi.fn().mockResolvedValue(true),
-    // @Cloud role change emails
-    sendNewAtCloudLeaderSignupToAdmins: vi.fn().mockResolvedValue(true),
-    sendAtCloudRoleAssignedToAdmins: vi.fn().mockResolvedValue(true),
-    sendAtCloudRoleRemovedToAdmins: vi.fn().mockResolvedValue(true),
-    // Account status change emails
-    sendUserDeactivatedAlertToAdmin: vi.fn().mockResolvedValue(true),
-    sendUserReactivatedAlertToAdmin: vi.fn().mockResolvedValue(true),
-    sendUserDeletedAlertToAdmin: vi.fn().mockResolvedValue(true),
-  },
-}));
-
 vi.mock("../../../../src/utils/emailRecipientUtils", () => ({
   EmailRecipientUtils: {
     getSystemAuthorizationChangeRecipients: vi.fn().mockResolvedValue([
@@ -69,6 +53,49 @@ describe("AutoEmailNotificationService - admin message formatting", () => {
         lastName: "Two",
       },
     ];
+
+    // Set up spies for RoleEmailService methods
+    vi.spyOn(
+      RoleEmailService,
+      "sendPromotionNotificationToUser"
+    ).mockResolvedValue(true);
+    vi.spyOn(
+      RoleEmailService,
+      "sendPromotionNotificationToAdmins"
+    ).mockResolvedValue(true);
+    vi.spyOn(
+      RoleEmailService,
+      "sendDemotionNotificationToUser"
+    ).mockResolvedValue(true);
+    vi.spyOn(
+      RoleEmailService,
+      "sendDemotionNotificationToAdmins"
+    ).mockResolvedValue(true);
+    vi.spyOn(
+      RoleEmailService,
+      "sendAtCloudRoleAssignedToAdmins"
+    ).mockResolvedValue(true);
+    vi.spyOn(
+      RoleEmailService,
+      "sendAtCloudRoleRemovedToAdmins"
+    ).mockResolvedValue(true);
+
+    // Set up spies for UserEmailService methods
+    vi.spyOn(
+      UserEmailService,
+      "sendNewAtCloudLeaderSignupToAdmins"
+    ).mockResolvedValue(true);
+    vi.spyOn(
+      UserEmailService,
+      "sendUserDeactivatedAlertToAdmin"
+    ).mockResolvedValue(true);
+    vi.spyOn(
+      UserEmailService,
+      "sendUserReactivatedAlertToAdmin"
+    ).mockResolvedValue(true);
+    vi.spyOn(UserEmailService, "sendUserDeletedAlertToAdmin").mockResolvedValue(
+      true
+    );
 
     UnifiedMessageController = (
       await import("../../../../src/controllers/unifiedMessageController")

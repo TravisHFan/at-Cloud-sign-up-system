@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { TrioNotificationService } from "../../../../src/services/notifications/TrioNotificationService";
 import { UnifiedMessageController } from "../../../../src/controllers/unifiedMessageController";
-import { EmailService } from "../../../../src/services/infrastructure/EmailServiceFacade";
+import { EventEmailService } from "../../../../src/services/email/domains/EventEmailService";
 import { socketService } from "../../../../src/services/infrastructure/SocketService";
 
 vi.mock("../../../../src/controllers/unifiedMessageController", () => ({
@@ -14,11 +14,6 @@ vi.mock("../../../../src/controllers/unifiedMessageController", () => ({
     }),
   },
 }));
-vi.mock("../../../../src/services/infrastructure/EmailServiceFacade", () => ({
-  EmailService: {
-    sendEventRoleAssignmentRejectedEmail: vi.fn().mockResolvedValue(true),
-  },
-}));
 vi.mock("../../../../src/services/infrastructure/SocketService", () => ({
   socketService: {
     emitSystemMessageUpdate: vi.fn().mockResolvedValue(undefined),
@@ -28,6 +23,12 @@ vi.mock("../../../../src/services/infrastructure/SocketService", () => ({
 describe("TrioNotificationService.createEventRoleAssignmentRejectedTrio", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // Set up spy for EventEmailService method
+    vi.spyOn(
+      EventEmailService,
+      "sendEventRoleAssignmentRejectedEmail"
+    ).mockResolvedValue(true);
   });
 
   it("includes email template when assignerEmail provided", async () => {

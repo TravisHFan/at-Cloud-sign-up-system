@@ -1,18 +1,9 @@
 import { describe, it, beforeEach, afterEach, expect, vi } from "vitest";
 import { AutoEmailNotificationService } from "../../../../src/services/infrastructure/autoEmailNotificationService";
+import { RoleEmailService } from "../../../../src/services/email/domains/RoleEmailService";
+import { UserEmailService } from "../../../../src/services/email/domains/UserEmailService";
 
 // We'll stub EmailService and EmailRecipientUtils functions at call sites.
-vi.mock("../../../../src/services/infrastructure/EmailServiceFacade", () => ({
-  EmailService: {
-    sendPromotionNotificationToUser: vi.fn(),
-    sendPromotionNotificationToAdmins: vi.fn(),
-    sendDemotionNotificationToUser: vi.fn(),
-    sendDemotionNotificationToAdmins: vi.fn(),
-    sendAtCloudRoleAssignedToAdmins: vi.fn(),
-    sendAtCloudRoleRemovedToAdmins: vi.fn(),
-  },
-}));
-
 vi.mock("../../../../src/utils/emailRecipientUtils", () => ({
   EmailRecipientUtils: {
     getSystemAuthorizationChangeRecipients: vi.fn(),
@@ -39,6 +30,38 @@ describe("AutoEmailNotificationService catch branches", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.restoreAllMocks();
+
+    // Set up spies for RoleEmailService methods
+    vi.spyOn(
+      RoleEmailService,
+      "sendPromotionNotificationToUser"
+    ).mockResolvedValue(true);
+    vi.spyOn(
+      RoleEmailService,
+      "sendPromotionNotificationToAdmins"
+    ).mockResolvedValue(true);
+    vi.spyOn(
+      RoleEmailService,
+      "sendDemotionNotificationToUser"
+    ).mockResolvedValue(true);
+    vi.spyOn(
+      RoleEmailService,
+      "sendDemotionNotificationToAdmins"
+    ).mockResolvedValue(true);
+    vi.spyOn(
+      RoleEmailService,
+      "sendAtCloudRoleAssignedToAdmins"
+    ).mockResolvedValue(true);
+    vi.spyOn(
+      RoleEmailService,
+      "sendAtCloudRoleRemovedToAdmins"
+    ).mockResolvedValue(true);
+
+    // Set up spy for UserEmailService method
+    vi.spyOn(
+      UserEmailService,
+      "sendNewAtCloudLeaderSignupToAdmins"
+    ).mockResolvedValue(true);
   });
 
   afterEach(() => {
@@ -54,7 +77,7 @@ describe("AutoEmailNotificationService catch branches", () => {
     );
 
     // User promotion email succeeds
-    (EmailService.sendPromotionNotificationToUser as any).mockResolvedValue(
+    (RoleEmailService.sendPromotionNotificationToUser as any).mockResolvedValue(
       true
     );
     // Admin recipients throw inside try to hit catch
@@ -95,10 +118,10 @@ describe("AutoEmailNotificationService catch branches", () => {
     );
 
     // Ensure Promise.race settles immediately by resolving primary promises
-    (EmailService.sendDemotionNotificationToUser as any).mockResolvedValue(
+    (RoleEmailService.sendDemotionNotificationToUser as any).mockResolvedValue(
       true
     );
-    (EmailService.sendDemotionNotificationToAdmins as any).mockResolvedValue(
+    (RoleEmailService.sendDemotionNotificationToAdmins as any).mockResolvedValue(
       true
     );
     (

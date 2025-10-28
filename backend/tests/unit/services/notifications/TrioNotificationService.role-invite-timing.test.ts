@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { TrioNotificationService } from "../../../../src/services/notifications/TrioNotificationService";
 import { UnifiedMessageController } from "../../../../src/controllers/unifiedMessageController";
-import { EmailService } from "../../../../src/services/infrastructure/EmailServiceFacade";
+import { EventEmailService } from "../../../../src/services/email/domains/EventEmailService";
 import { socketService } from "../../../../src/services/infrastructure/SocketService";
 
 vi.mock("../../../../src/controllers/unifiedMessageController", () => ({
@@ -12,12 +12,6 @@ vi.mock("../../../../src/controllers/unifiedMessageController", () => ({
       save: vi.fn(),
       isActive: true,
     }),
-  },
-}));
-vi.mock("../../../../src/services/infrastructure/EmailServiceFacade", () => ({
-  EmailService: {
-    sendTemplateEmail: vi.fn(),
-    sendEventRoleAssignedEmail: vi.fn().mockResolvedValue(true),
   },
 }));
 vi.mock("../../../../src/services/infrastructure/SocketService", () => ({

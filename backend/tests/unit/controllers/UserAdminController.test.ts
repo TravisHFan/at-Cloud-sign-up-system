@@ -146,16 +146,6 @@ vi.mock("../../../src/services", () => ({
   },
 }));
 
-vi.mock("../../../src/services/infrastructure/EmailServiceFacade", () => ({
-  EmailService: {
-    sendAccountDeactivationEmail: vi.fn().mockResolvedValue(true),
-    sendAccountReactivationEmail: vi.fn().mockResolvedValue(true),
-    sendUserDeactivatedAlertToAdmin: vi.fn().mockResolvedValue(true),
-    sendUserReactivatedAlertToAdmin: vi.fn().mockResolvedValue(true),
-    sendUserDeletedAlertToAdmin: vi.fn().mockResolvedValue(true),
-  },
-}));
-
 // Import mocked modules for direct access
 import { User, Program, Message } from "../../../src/models";
 import { hasPermission, ROLES, RoleUtils } from "../../../src/utils/roleUtils";
@@ -165,7 +155,8 @@ import { UserDeletionService } from "../../../src/services/UserDeletionService";
 import { CachePatterns } from "../../../src/services";
 import { getFileUrl } from "../../../src/middleware/upload";
 import { cleanupOldAvatar } from "../../../src/utils/avatarCleanup";
-import { EmailService } from "../../../src/services/infrastructure/EmailServiceFacade";
+import { AuthEmailService } from "../../../src/services/email/domains/AuthEmailService";
+import { UserEmailService } from "../../../src/services/email/domains/UserEmailService";
 import { socketService } from "../../../src/services/infrastructure/SocketService";
 
 describe("UserAdminController", () => {
@@ -177,6 +168,16 @@ describe("UserAdminController", () => {
   beforeEach(() => {
     // Reset all mocks
     vi.clearAllMocks();
+
+    // Set up spies for AuthEmailService methods
+    vi.spyOn(
+      AuthEmailService,
+      "sendAccountDeactivationEmail"
+    ).mockResolvedValue(true);
+    vi.spyOn(
+      AuthEmailService,
+      "sendAccountReactivationEmail"
+    ).mockResolvedValue(true);
 
     // Setup mock response
     jsonMock = vi.fn();
@@ -1080,7 +1081,9 @@ describe("UserAdminController", () => {
         "507f1f77bcf86cd799439012"
       );
       // Email sent to the deactivated user
-      expect(EmailService.sendAccountDeactivationEmail).toHaveBeenCalledWith(
+      expect(
+        AuthEmailService.sendAccountDeactivationEmail
+      ).toHaveBeenCalledWith(
         "target@example.com",
         "Target User",
         expect.objectContaining({
@@ -1247,7 +1250,9 @@ describe("UserAdminController", () => {
         "507f1f77bcf86cd799439012"
       );
       // Email sent to the reactivated user
-      expect(EmailService.sendAccountReactivationEmail).toHaveBeenCalledWith(
+      expect(
+        AuthEmailService.sendAccountReactivationEmail
+      ).toHaveBeenCalledWith(
         "target@example.com",
         "Target User",
         expect.objectContaining({

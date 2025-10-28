@@ -97,14 +97,6 @@ vi.mock("../../../src/services/infrastructure/SocketService", () => ({
   },
 }));
 
-vi.mock("../../../src/services/infrastructure/EmailServiceFacade", () => ({
-  EmailService: {
-    sendEventCreatedEmail: vi.fn().mockResolvedValue(true),
-    sendGenericNotificationEmail: vi.fn().mockResolvedValue(true),
-    sendCoOrganizerAssignedEmail: vi.fn().mockResolvedValue(true),
-  },
-}));
-
 vi.mock("../../../src/services", () => ({
   CachePatterns: {
     invalidateEventCache: vi.fn(),

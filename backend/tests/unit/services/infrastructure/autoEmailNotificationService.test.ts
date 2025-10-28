@@ -1,20 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { RoleEmailService } from "../../../../src/services/email/domains/RoleEmailService";
+import { UserEmailService } from "../../../../src/services/email/domains/UserEmailService";
 // Mutable store used by the User model mock for chainable select()
 let __userSelectResult: any[] = [];
 
 // Mocks for heavy/static imports used by the service
-vi.mock("../../../../src/services/infrastructure/EmailServiceFacade", () => ({
-  EmailService: {
-    sendPromotionNotificationToUser: vi.fn(),
-    sendPromotionNotificationToAdmins: vi.fn(),
-    sendDemotionNotificationToUser: vi.fn(),
-    sendDemotionNotificationToAdmins: vi.fn(),
-    sendNewAtCloudLeaderSignupToAdmins: vi.fn(),
-    sendAtCloudRoleAssignedToAdmins: vi.fn(),
-    sendAtCloudRoleRemovedToAdmins: vi.fn(),
-  },
-}));
-
 vi.mock("../../../../src/utils/emailRecipientUtils", () => ({
   EmailRecipientUtils: {
     getSystemAuthorizationChangeRecipients: vi.fn(),
@@ -43,16 +33,12 @@ vi.mock("../../../../src/models/User", () => ({
 }));
 
 describe("AutoEmailNotificationService", () => {
-  let EmailService: any;
   let EmailRecipientUtils: any;
   let UnifiedMessageController: any;
 
   beforeEach(async () => {
     vi.clearAllMocks();
     // Load mocked modules
-    EmailService = (
-      await import("../../../../src/services/infrastructure/EmailServiceFacade")
-    ).EmailService;
     EmailRecipientUtils = (
       await import("../../../../src/utils/emailRecipientUtils")
     ).EmailRecipientUtils;
@@ -60,6 +46,38 @@ describe("AutoEmailNotificationService", () => {
     UnifiedMessageController = (
       await import("../../../../src/controllers/unifiedMessageController")
     ).UnifiedMessageController;
+
+    // Set up spies for RoleEmailService methods
+    vi.spyOn(
+      RoleEmailService,
+      "sendPromotionNotificationToUser"
+    ).mockResolvedValue(true);
+    vi.spyOn(
+      RoleEmailService,
+      "sendPromotionNotificationToAdmins"
+    ).mockResolvedValue(true);
+    vi.spyOn(
+      RoleEmailService,
+      "sendDemotionNotificationToUser"
+    ).mockResolvedValue(true);
+    vi.spyOn(
+      RoleEmailService,
+      "sendDemotionNotificationToAdmins"
+    ).mockResolvedValue(true);
+    vi.spyOn(
+      RoleEmailService,
+      "sendAtCloudRoleAssignedToAdmins"
+    ).mockResolvedValue(true);
+    vi.spyOn(
+      RoleEmailService,
+      "sendAtCloudRoleRemovedToAdmins"
+    ).mockResolvedValue(true);
+
+    // Set up spy for UserEmailService method
+    vi.spyOn(
+      UserEmailService,
+      "sendNewAtCloudLeaderSignupToAdmins"
+    ).mockResolvedValue(true);
   });
 
   afterEach(() => {
@@ -111,8 +129,10 @@ describe("AutoEmailNotificationService", () => {
           },
         ]
       );
-      EmailService.sendPromotionNotificationToUser.mockResolvedValue(true);
-      EmailService.sendPromotionNotificationToAdmins.mockResolvedValue(true);
+      vi.mocked(RoleEmailService.sendPromotionNotificationToUser).mockResolvedValue(true);
+      vi.mocked(RoleEmailService.sendPromotionNotificationToAdmins).mockResolvedValue(
+        true
+      );
       // Dynamic import of User.find().select() will resolve to this list
       __userSelectResult = [
         { _id: "id1", email: "a1@x.com", firstName: "A1", lastName: "X" },
@@ -172,9 +192,9 @@ describe("AutoEmailNotificationService", () => {
           },
         ]
       );
-      EmailService.sendDemotionNotificationToUser.mockResolvedValue(true);
+      vi.mocked(RoleEmailService.sendDemotionNotificationToUser).mockResolvedValue(true);
       // Admin emails reject -> counted as 0
-      EmailService.sendDemotionNotificationToAdmins.mockRejectedValue(
+      vi.mocked(RoleEmailService.sendDemotionNotificationToAdmins).mockRejectedValue(
         new Error("SMTP down")
       );
       // No admin users found by IDs -> still creates user message; admin message path will return null
@@ -235,11 +255,13 @@ describe("AutoEmailNotificationService", () => {
       ]);
 
       // User email promise never resolves -> will be rejected by timeout race
-      EmailService.sendPromotionNotificationToUser.mockReturnValue(
+      vi.mocked(RoleEmailService.sendPromotionNotificationToUser).mockReturnValue(
         new Promise(() => {})
       );
       // Admin email succeeds
-      EmailService.sendPromotionNotificationToAdmins.mockResolvedValue(true);
+      vi.mocked(RoleEmailService.sendPromotionNotificationToAdmins).mockResolvedValue(
+        true
+      );
 
       // Admin user IDs present for admin message creation
       __userSelectResult = [
@@ -295,8 +317,10 @@ describe("AutoEmailNotificationService", () => {
       EmailRecipientUtils.getAdminUsers.mockResolvedValue([
         { email: "a1@x.com", firstName: "A1", lastName: "X", role: "Admin" },
       ]);
-      EmailService.sendPromotionNotificationToUser.mockResolvedValue(true);
-      EmailService.sendPromotionNotificationToAdmins.mockResolvedValue(true);
+      vi.mocked(RoleEmailService.sendPromotionNotificationToUser).mockResolvedValue(true);
+      vi.mocked(RoleEmailService.sendPromotionNotificationToAdmins).mockResolvedValue(
+        true
+      );
       __userSelectResult = [
         { _id: "id1", email: "a1@x.com", firstName: "A1", lastName: "X" },
       ];
@@ -359,7 +383,7 @@ describe("AutoEmailNotificationService", () => {
       EmailRecipientUtils.getAdminUsers.mockResolvedValue(admins);
 
       // Each admin email resolves true
-      EmailService.sendAtCloudRoleAssignedToAdmins.mockResolvedValue(true);
+      vi.mocked(RoleEmailService.sendAtCloudRoleAssignedToAdmins).mockResolvedValue(true);
 
       // Dynamic import of User.find().select() => materialize admin ids
       __userSelectResult = [
@@ -394,7 +418,7 @@ describe("AutoEmailNotificationService", () => {
       expect(res.emailsSent).toBe(2);
       expect(res.messagesCreated).toBe(1);
       expect(
-        EmailService.sendAtCloudRoleAssignedToAdmins
+        RoleEmailService.sendAtCloudRoleAssignedToAdmins
       ).toHaveBeenCalledTimes(2);
       expect(
         UnifiedMessageController.createTargetedSystemMessage
@@ -410,7 +434,7 @@ describe("AutoEmailNotificationService", () => {
           role: "Administrator",
         },
       ]);
-      EmailService.sendAtCloudRoleRemovedToAdmins.mockRejectedValue(
+      vi.mocked(RoleEmailService.sendAtCloudRoleRemovedToAdmins).mockRejectedValue(
         new Error("SMTP down")
       );
       __userSelectResult = [
@@ -501,7 +525,9 @@ describe("AutoEmailNotificationService", () => {
         },
       ];
       EmailRecipientUtils.getAdminUsers.mockResolvedValue(admins);
-      EmailService.sendNewAtCloudLeaderSignupToAdmins.mockResolvedValue(true);
+      vi.mocked(UserEmailService.sendNewAtCloudLeaderSignupToAdmins).mockResolvedValue(
+        true
+      );
       __userSelectResult = [
         { _id: "id1", email: "a1@x.com", firstName: "A1", lastName: "X" },
         { _id: "id2", email: "a2@x.com", firstName: "A2", lastName: "Y" },
@@ -534,7 +560,7 @@ describe("AutoEmailNotificationService", () => {
       expect(res.emailsSent).toBe(2);
       expect(res.messagesCreated).toBe(1);
       expect(
-        EmailService.sendNewAtCloudLeaderSignupToAdmins
+        UserEmailService.sendNewAtCloudLeaderSignupToAdmins
       ).toHaveBeenCalledTimes(2);
       expect(
         UnifiedMessageController.createTargetedSystemMessage
@@ -551,7 +577,9 @@ describe("AutoEmailNotificationService", () => {
           role: "Administrator",
         },
       ]);
-      EmailService.sendNewAtCloudLeaderSignupToAdmins.mockResolvedValue(true);
+      vi.mocked(UserEmailService.sendNewAtCloudLeaderSignupToAdmins).mockResolvedValue(
+        true
+      );
       __userSelectResult = [
         { _id: "id1", email: "a1@x.com", firstName: "A1", lastName: "X" },
       ];

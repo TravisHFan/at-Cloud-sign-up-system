@@ -47,14 +47,6 @@ vi.mock("../../../src/models/User", () => ({
   },
 }));
 
-vi.mock("../../../src/services/infrastructure/EmailServiceFacade", () => ({
-  EmailService: {
-    sendGuestConfirmationEmail: vi.fn().mockResolvedValue(true),
-    sendGuestRegistrationNotification: vi.fn().mockResolvedValue(true),
-    sendEventRoleRemovedEmail: vi.fn().mockResolvedValue(true),
-  },
-}));
-
 vi.mock("../../../src/services/infrastructure/SocketService", () => ({
   socketService: {
     emitEventUpdate: vi.fn(),
