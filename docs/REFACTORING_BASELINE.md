@@ -1,10 +1,46 @@
-# Refactoring Baseline
+# Refactoring Baseline (Quick Reference)
 
 **Date:** October 23, 2025 (Initial baseline)  
 **Last Updated:** October 27, 2025 (Post-Phase 2)  
-**Purpose:** Pre-refactoring baseline to ensure no regressions during architectural improvements
+**Purpose:** Quick reference for baseline metrics and current state
+
+> 📚 **For comprehensive refactoring plan, see**: [GIANT_FILE_REFACTORING_MASTER_PLAN.md](./GIANT_FILE_REFACTORING_MASTER_PLAN.md)
 
 ---
+
+## Current State (Post-Phase 2)
+
+### Test Suite Summary
+
+- **Total Tests:** 4,028 (✅ All passing)
+  - Unit Tests: 2,575
+  - Integration Tests: 821
+  - Frontend Tests: 632
+
+### Coverage Metrics
+
+- **Lines:** 76.17% (+2.78% from baseline)
+- **Functions:** 81.92% (+0.30%)
+- **Branches:** 79.36% (-0.63%, acceptable variance)
+- **Statements:** 76.17% (+2.78%)
+
+### Completed Work
+
+- ✅ **Phase 2 (Email Service Refactoring):** All 7 sub-phases complete
+  - Commits: `239847c`, `434695a`, `ad23edd`
+  - Details: See [GIANT_FILE_REFACTORING_MASTER_PLAN.md](./GIANT_FILE_REFACTORING_MASTER_PLAN.md)
+
+### Remaining Giant Files
+
+1. **Priority 1:** `backend/src/controllers/eventController.ts` (3,300 lines)
+2. **Priority 2:** `frontend/src/pages/EventDetail.tsx` (4,298 lines)
+3. **Priority 2:** `frontend/src/pages/CreateEvent.tsx` + `EditEvent.tsx` (4,651 combined)
+4. **Priority 3:** `frontend/src/services/api.ts` (3,134 lines)
+
+---
+
+<details>
+<summary><b>Historical Baseline (Pre-Phase 2) - Click to expand</b></summary>
 
 ## Test Suite Status
 
@@ -246,46 +282,26 @@ Before starting refactoring, ensure:
 
 **Test Count**: Increased from 3,396 to 4,028 tests (+18.6%)
 
-- Backend Unit: 2,575 tests
-- Backend Integration: 821 tests
-- Frontend: 632 tests
-
-**Coverage Improvement**:
-
-- Lines: 73.39% → 76.17% (+2.78%)
-- Functions: 81.62% → 81.92% (+0.30%)
-- Statements: 73.39% → 76.17% (+2.78%)
-- Branches: 79.99% → 79.36% (-0.63%, within acceptable variance)
-
-**Key Discoveries**:
-
-- Fixed co-organizer notification routing (EventEmailService → RoleEmailService)
-- All integration tests now passing (was ~97 failing)
-- Trio system tests optimized and passing
-
-**Commits**:
-
-- Phase 2.3: 239847c (Unit test migration)
-- Phase 2.4: 434695a (Integration test updates)
-
-**Documentation**: See [PHASE_2_TEST_ORGANIZATION_PLAN.md](./PHASE_2_TEST_ORGANIZATION_PLAN.md) for detailed breakdown
+</details>
 
 ---
 
-## Timeline Estimate (Updated)
+## Quick Stats
 
-- ✅ **Test Hardening (Phase 0):** 3-5 days - COMPLETE
-- ✅ **Phase 2: Test Organization:** 5 days - COMPLETE (2025-10-27)
-- **Quick Wins (Phase 1):** 3-5 days (api.ts split, email template extraction)
-- **Major Refactoring (Phase 3):** 2-3 weeks (EventController, EventDetail, Event forms)
-- **Verification & Cleanup (Phase 4):** 1 day
-- **Total Remaining:** 3-4 weeks
+**Initial Baseline (Oct 23):** 3,396 tests, 73.39% line coverage  
+**Current (Oct 27):** 4,028 tests, 76.17% line coverage  
+**Improvement:** +632 tests (+18.6%), +2.78% coverage
+
+**Timeline Estimate:**
+
+- ✅ Phase 2 (Test Organization): COMPLETE
+- Phase 3 (Giant Files): 2-3 weeks
+- Phase 4 (Final Validation): 1 day
 
 ---
 
-## Notes
+_For detailed metrics, test strategies, and progress tracking, see the [Master Plan](./GIANT_FILE_REFACTORING_MASTER_PLAN.md)._
 
-- This baseline was generated on **October 23, 2025** before any refactoring work
 - Coverage data from unit tests only (backend) and full test suite (frontend)
 - Integration test failures need to be fixed before refactoring
 - All refactoring must maintain or improve these coverage numbers

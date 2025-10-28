@@ -43,6 +43,10 @@ import {
   getMaxRolesPerEvent,
   getMaxRolesDescription,
 } from "../utils/roleRegistrationLimits";
+import {
+  toInstantFromWallClock,
+  instantToWallClock,
+} from "../utils/event/timezoneUtils";
 
 /**
  * Capacity semantics (important):
@@ -144,136 +148,7 @@ export class EventController {
     }
     return String(val);
   }
-  // Convert a wall-clock date+time (YYYY-MM-DD, HH:mm) in a given IANA timeZone to a UTC instant.
-  private static toInstantFromWallClock(
-    date: string,
-    time: string,
-    timeZone?: string
-  ): Date {
-    const [y, mo, d] = date.split("-").map((v) => parseInt(v, 10));
-    const [hh, mi] = time.split(":").map((v) => parseInt(v, 10));
-    if (!timeZone) {
-      const local = new Date();
-      local.setFullYear(y, mo - 1, d);
-      local.setHours(hh, mi, 0, 0);
-      return local;
-    }
-    const target = {
-      year: String(y).padStart(4, "0"),
-      month: String(mo).padStart(2, "0"),
-      day: String(d).padStart(2, "0"),
-      hour: String(hh).padStart(2, "0"),
-      minute: String(mi).padStart(2, "0"),
-    } as const;
-    const fmt = new Intl.DateTimeFormat("en-US", {
-      timeZone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-    const base = Date.UTC(y, mo - 1, d, hh, mi, 0, 0);
-    const matches = (ts: number) => {
-      const parts = fmt
-        .formatToParts(ts)
-        .reduce<Record<string, string>>((acc, p) => {
-          if (p.type !== "literal") acc[p.type] = p.value;
-          return acc;
-        }, {});
-      return (
-        parts.year === target.year &&
-        parts.month === target.month &&
-        parts.day === target.day &&
-        parts.hour === target.hour &&
-        parts.minute === target.minute
-      );
-    };
-    let found: Date | null = null;
-    const stepMs = 15 * 60 * 1000;
-    const rangeMs = 24 * 60 * 60 * 1000;
-    for (let offset = -rangeMs; offset <= rangeMs; offset += stepMs) {
-      const ts = base + offset;
-      if (matches(ts)) {
-        found = new Date(ts);
-        break;
-      }
-    }
-    if (found) return found;
 
-    // Fallback: If no exact wall-clock match (e.g., during DST spring-forward when
-    // the local time doesn't exist), round FORWARD to the next representable
-    // wall-clock instant in the given time zone. This maps e.g. 02:30 -> 03:00
-    // on the spring-forward day in America/Los_Angeles.
-    const wallParts = (ts: number) => {
-      const parts = fmt
-        .formatToParts(ts)
-        .reduce<Record<string, string>>((acc, p) => {
-          if (p.type !== "literal") acc[p.type] = p.value;
-          return acc;
-        }, {});
-      return {
-        date: `${parts.year}-${parts.month}-${parts.day}`,
-        time: `${parts.hour}:${parts.minute}`,
-      };
-    };
-    const cmp = (
-      a: { date: string; time: string },
-      b: { date: string; time: string }
-    ) =>
-      a.date < b.date ? -1 : a.date > b.date ? 1 : a.time.localeCompare(b.time);
-
-    const targetWall = {
-      date: `${target.year}-${target.month}-${target.day}`,
-      time: `${target.hour}:${target.minute}`,
-    };
-    // Search forward minute-by-minute up to 24 hours to find the first representable wall time >= target
-    const minute = 60 * 1000;
-    for (let ts = base; ts <= base + 24 * 60 * minute; ts += minute) {
-      const wp = wallParts(ts);
-      if (cmp(wp, targetWall) >= 0) {
-        return new Date(ts);
-      }
-    }
-
-    // As a last resort, return the base UTC time (best-effort)
-    return new Date(base);
-  }
-
-  // Format a UTC instant into wall-clock strings in a given IANA timeZone.
-  private static instantToWallClock(
-    instant: Date,
-    timeZone?: string
-  ): { date: string; time: string } {
-    if (!timeZone) {
-      const yyyy = instant.getFullYear();
-      const mm = String(instant.getMonth() + 1).padStart(2, "0");
-      const dd = String(instant.getDate()).padStart(2, "0");
-      const hh = String(instant.getHours()).padStart(2, "0");
-      const mi = String(instant.getMinutes()).padStart(2, "0");
-      return { date: `${yyyy}-${mm}-${dd}`, time: `${hh}:${mi}` };
-    }
-    const fmt = new Intl.DateTimeFormat("en-US", {
-      timeZone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-    const parts = fmt
-      .formatToParts(instant)
-      .reduce<Record<string, string>>((acc, p) => {
-        if (p.type !== "literal") acc[p.type] = p.value;
-        return acc;
-      }, {});
-    return {
-      date: `${parts.year}-${parts.month}-${parts.day}`,
-      time: `${parts.hour}:${parts.minute}`,
-    };
-  }
   // Determine if a new timespan overlaps with any existing event timespan.
   private static async findConflictingEvents(
     startDate: string,
@@ -333,12 +208,12 @@ export class EventController {
       candidates = (await (chained as Promise<unknown>)) as CandidateEvent[];
     }
 
-    const newStart = EventController.toInstantFromWallClock(
+    const newStart = toInstantFromWallClock(
       startDate,
       startTime,
       candidateTimeZone
     );
-    const newEnd = EventController.toInstantFromWallClock(
+    const newEnd = toInstantFromWallClock(
       endDate,
       endTime,
       candidateTimeZone
@@ -346,12 +221,12 @@ export class EventController {
 
     const conflicts: Array<{ id: string; title: string }> = [];
     for (const ev of candidates) {
-      const evStart = EventController.toInstantFromWallClock(
+      const evStart = toInstantFromWallClock(
         ev.date,
         ev.time,
         ev.timeZone
       );
-      const evEnd = EventController.toInstantFromWallClock(
+      const evEnd = toInstantFromWallClock(
         ev.endDate || ev.date,
         ev.endTime,
         ev.timeZone
@@ -397,13 +272,13 @@ export class EventController {
       let checkEndDate = effectiveEndDate as string;
       let checkEndTime = effectiveEndTime as string;
       if (!endDate || mode === "point") {
-        const pt = EventController.toInstantFromWallClock(
+        const pt = toInstantFromWallClock(
           startDate,
           startTime,
           timeZone
         );
         const plus = new Date(pt.getTime() + 60 * 1000);
-        const wc = EventController.instantToWallClock(plus, timeZone);
+        const wc = instantToWallClock(plus, timeZone);
         checkEndDate = wc.date;
         checkEndTime = wc.time;
       }
@@ -707,12 +582,12 @@ export class EventController {
     }
 
     // Build instants using timezone-aware conversion; falls back to local if tz absent
-    const startInstant = EventController.toInstantFromWallClock(
+    const startInstant = toInstantFromWallClock(
       eventDate,
       eventTime,
       timeZone
     );
-    const endInstant = EventController.toInstantFromWallClock(
+    const endInstant = toInstantFromWallClock(
       eventEndDate,
       eventEndTime,
       timeZone
@@ -1653,12 +1528,12 @@ export class EventController {
       }
 
       // Validate date order and time order (timezone-aware if provided)
-      const startDateObj = EventController.toInstantFromWallClock(
+      const startDateObj = toInstantFromWallClock(
         eventData.date,
         eventData.time,
         eventData.timeZone
       );
-      const endDateObj = EventController.toInstantFromWallClock(
+      const endDateObj = toInstantFromWallClock(
         eventData.endDate!,
         eventData.endTime,
         eventData.timeZone
@@ -1934,12 +1809,12 @@ export class EventController {
       };
 
       // Compute first occurrence wall-clock instants for recurring math
-      const firstStartInstant = EventController.toInstantFromWallClock(
+      const firstStartInstant = toInstantFromWallClock(
         eventData.date,
         eventData.time,
         eventData.timeZone
       );
-      const firstEndInstant = EventController.toInstantFromWallClock(
+      const firstEndInstant = toInstantFromWallClock(
         eventData.endDate!,
         eventData.endTime,
         eventData.timeZone
@@ -2008,11 +1883,11 @@ export class EventController {
             const candidateEnd = new Date(
               candidateStart.getTime() + durationMs
             );
-            const wallStart = EventController.instantToWallClock(
+            const wallStart = instantToWallClock(
               candidateStart,
               eventData.timeZone
             );
-            const wallEnd = EventController.instantToWallClock(
+            const wallEnd = instantToWallClock(
               candidateEnd,
               eventData.timeZone
             );
@@ -2052,11 +1927,11 @@ export class EventController {
             const candidateEnd = new Date(
               scheduledStart.getTime() + durationMs
             );
-            const wallStart = EventController.instantToWallClock(
+            const wallStart = instantToWallClock(
               scheduledStart,
               eventData.timeZone
             );
-            const wallEnd = EventController.instantToWallClock(
+            const wallEnd = instantToWallClock(
               candidateEnd,
               eventData.timeZone
             );
@@ -2097,11 +1972,11 @@ export class EventController {
             const candidateEnd = new Date(
               scheduledStart.getTime() + durationMs
             );
-            const wallStart = EventController.instantToWallClock(
+            const wallStart = instantToWallClock(
               scheduledStart,
               eventData.timeZone
             );
-            const wallEnd = EventController.instantToWallClock(
+            const wallEnd = instantToWallClock(
               candidateEnd,
               eventData.timeZone
             );
@@ -2788,12 +2663,12 @@ export class EventController {
         const effectiveTz =
           (updateData.timeZone as string | undefined) || event.timeZone;
 
-        const startObj = EventController.toInstantFromWallClock(
+        const startObj = toInstantFromWallClock(
           newStartDate,
           newStartTime,
           effectiveTz
         );
-        const endObj = EventController.toInstantFromWallClock(
+        const endObj = toInstantFromWallClock(
           newEndDate,
           newEndTime,
           effectiveTz

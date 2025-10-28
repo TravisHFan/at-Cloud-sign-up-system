@@ -1,18 +1,15 @@
 import { describe, it, expect } from "vitest";
-import { EventController as ECClass } from "../../src/controllers/eventController";
-
-// Reach into private static via any to test cadence behavior deterministically by simulating addCycle logic
-const EC: any = ECClass;
+import { toInstantFromWallClock } from "../../src/utils/event/timezoneUtils";
 
 function weekday(dateStr: string, time: string, tz?: string) {
-  const d: Date = EC.toInstantFromWallClock(dateStr, time, tz);
+  const d: Date = toInstantFromWallClock(dateStr, time, tz);
   return d.getDay();
 }
 
 describe("Recurring cadence helpers (monthly)", () => {
   it("monthly cadence advances month and preserves weekday (same local weekday)", () => {
     const tz = "America/Los_Angeles";
-    const base = EC.toInstantFromWallClock("2025-01-06", "10:00", tz); // Mon
+    const base = toInstantFromWallClock("2025-01-06", "10:00", tz); // Mon
     const originalWeekday = base.getDay();
 
     // Emulate addCycle for monthly from controller: add 1 month, then adjust forward to same weekday
