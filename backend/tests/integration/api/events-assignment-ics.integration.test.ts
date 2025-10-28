@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { TrioNotificationService } from "../../../src/services/notifications/TrioNotificationService";
-import { EmailService } from "../../../src/services/infrastructure/EmailServiceFacade";
+import { EmailService } from "../../../src/services";
 
 // Mock the ICS builder
 vi.mock("../../../src/services/ICSBuilder", () => ({

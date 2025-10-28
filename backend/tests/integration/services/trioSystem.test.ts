@@ -37,13 +37,24 @@ const TEST_CONFIG = {
 // Apply test configuration
 Object.assign(NOTIFICATION_CONFIG, TEST_CONFIG);
 
-// Mock external services for integration testing
-vi.mock("../../../src/services/infrastructure/EmailServiceFacade", () => ({
-  EmailService: {
+// Mock domain email services for integration testing
+// These mocks prevent actual email sending during integration tests
+vi.mock("../../../src/services/email/domains/AuthEmailService", () => ({
+  AuthEmailService: {
     sendWelcomeEmail: vi.fn().mockResolvedValue(true),
     sendPasswordResetSuccessEmail: vi.fn().mockResolvedValue(true),
+  },
+}));
+
+vi.mock("../../../src/services/email/domains/EventEmailService", () => ({
+  EventEmailService: {
     sendEventReminderEmail: vi.fn().mockResolvedValue(true),
     sendEventCreatedEmail: vi.fn().mockResolvedValue(true),
+  },
+}));
+
+vi.mock("../../../src/services/email/domains/RoleEmailService", () => ({
+  RoleEmailService: {
     sendCoOrganizerAssignedEmail: vi.fn().mockResolvedValue(true),
     sendNewLeaderSignupEmail: vi.fn().mockResolvedValue(true),
   },
@@ -58,7 +69,7 @@ vi.mock("../../../src/services/infrastructure/SocketService", () => ({
 vi.mock("../../../src/controllers/unifiedMessageController", () => ({
   UnifiedMessageController: {
     createTargetedSystemMessage: vi.fn().mockResolvedValue({
-      _id: { toString: () => "mock-message-id" },
+      _id: { toString: () => "mock-message-id" } as any,
       title: "Test Message",
       content: "Test Content",
       isActive: true,
@@ -69,7 +80,7 @@ vi.mock("../../../src/controllers/unifiedMessageController", () => ({
         isActive: true,
       }),
       save: vi.fn().mockResolvedValue(true),
-    }),
+    } as any),
   },
 }));
 
@@ -180,11 +191,11 @@ describe("Trio System Integration", () => {
 
   describe("Error Scenarios", () => {
     it("should handle email service failures gracefully", async () => {
-      // Arrange - Mock email service to fail
-      const { EmailService } = await import(
-        "../../../src/services/infrastructure/EmailServiceFacade"
+      // Arrange - Mock auth email service to fail
+      const { AuthEmailService } = await import(
+        "../../../src/services/email/domains/AuthEmailService"
       );
-      vi.mocked(EmailService.sendWelcomeEmail).mockRejectedValue(
+      vi.mocked(AuthEmailService.sendWelcomeEmail).mockRejectedValue(
         new Error("Email service down")
       );
 
@@ -238,7 +249,7 @@ describe("Trio System Integration", () => {
       vi.mocked(
         UnifiedMessageController.createTargetedSystemMessage
       ).mockResolvedValue({
-        _id: { toString: () => "mock-message-id" },
+        _id: { toString: () => "mock-message-id" } as any,
         title: "Test Message",
         content: "Test Content",
         isActive: true,
@@ -249,7 +260,7 @@ describe("Trio System Integration", () => {
           isActive: true,
         }),
         save: vi.fn().mockResolvedValue(true),
-      });
+      } as any);
 
       const { socketService } = await import(
         "../../../src/services/infrastructure/SocketService"
@@ -286,10 +297,10 @@ describe("Trio System Integration", () => {
   describe("Performance and Configuration", () => {
     it("should respect timeout configurations", async () => {
       // Arrange - Mock a slow email service
-      const { EmailService } = await import(
-        "../../../src/services/infrastructure/EmailServiceFacade"
+      const { AuthEmailService } = await import(
+        "../../../src/services/email/domains/AuthEmailService"
       );
-      vi.mocked(EmailService.sendWelcomeEmail).mockImplementation(
+      vi.mocked(AuthEmailService.sendWelcomeEmail).mockImplementation(
         () =>
           new Promise((_, reject) =>
             setTimeout(
@@ -316,18 +327,18 @@ describe("Trio System Integration", () => {
       TrioNotificationService.resetMetrics();
 
       // Reset all mocks to work properly
-      const { EmailService } = await import(
-        "../../../src/services/infrastructure/EmailServiceFacade"
+      const { AuthEmailService } = await import(
+        "../../../src/services/email/domains/AuthEmailService"
       );
       const { UnifiedMessageController } = await import(
         "../../../src/controllers/unifiedMessageController"
       );
 
-      vi.mocked(EmailService.sendWelcomeEmail).mockResolvedValue(true);
+      vi.mocked(AuthEmailService.sendWelcomeEmail).mockResolvedValue(true);
       vi.mocked(
         UnifiedMessageController.createTargetedSystemMessage
       ).mockResolvedValue({
-        _id: { toString: () => "mock-message-id" },
+        _id: { toString: () => "mock-message-id" } as any,
         title: "Test Message",
         content: "Test Content",
         isActive: true,
@@ -338,7 +349,7 @@ describe("Trio System Integration", () => {
           isActive: true,
         }),
         save: vi.fn().mockResolvedValue(true),
-      });
+      } as any);
 
       // Act - Create multiple trios
       await TrioNotificationService.createWelcomeTrio(
@@ -353,7 +364,7 @@ describe("Trio System Integration", () => {
       );
 
       // Create a failing trio - disable retry to force failure
-      vi.mocked(EmailService.sendWelcomeEmail).mockRejectedValue(
+      vi.mocked(AuthEmailService.sendWelcomeEmail).mockRejectedValue(
         new Error("Email failed")
       );
 
