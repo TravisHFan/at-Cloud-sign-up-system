@@ -6,11 +6,11 @@
  */
 
 import { Request, Response } from "express";
+import mongoose, { Types } from "mongoose";
 import { Event } from "../../models";
 import { ResponseBuilderService } from "../../services/ResponseBuilderService";
 import { CorrelatedLogger } from "../../services/CorrelatedLogger";
 import { CachePatterns } from "../../services";
-import { Types } from "mongoose";
 import { EventController } from "../eventController";
 
 export class EventQueryController {
@@ -378,6 +378,84 @@ export class EventQueryController {
       res.status(500).json({
         success: false,
         message: "Failed to retrieve events.",
+      });
+    }
+  }
+
+  // Get single event by ID with registration data
+  static async getEventById(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        res.status(400).json({
+          success: false,
+          message: "Invalid event ID.",
+        });
+        return;
+      }
+
+      const event = await Event.findById(id).populate(
+        "createdBy",
+        "username firstName lastName avatar"
+      );
+
+      if (!event) {
+        res.status(404).json({
+          success: false,
+          message: "Event not found.",
+        });
+        return;
+      }
+
+      // Update event status based on current time
+      await EventController.updateEventStatusIfNeeded(event);
+
+      // FIX: Use ResponseBuilderService to include registration data
+      // This ensures frontend shows current registrations for each role
+      console.log(
+        `🔍 [getEventById] Building event data with registrations for event ${id}`
+      );
+      const eventWithRegistrations =
+        await ResponseBuilderService.buildEventWithRegistrations(
+          id,
+          req.user ? EventController.toIdString(req.user._id) : undefined
+        );
+
+      if (!eventWithRegistrations) {
+        res.status(404).json({
+          success: false,
+          message: "Event not found or failed to build registration data.",
+        });
+        return;
+      }
+
+      console.log(
+        `✅ [getEventById] Successfully built event data with ${eventWithRegistrations.roles.length} roles`
+      );
+      eventWithRegistrations.roles.forEach((role, index) => {
+        console.log(
+          `   Role ${index + 1}: ${role.name} - ${role.currentCount}/${
+            role.maxParticipants
+          } registered`
+        );
+      });
+
+      res.status(200).json({
+        success: true,
+        data: { event: eventWithRegistrations },
+      });
+    } catch (error: unknown) {
+      console.error("Get event error:", error);
+      CorrelatedLogger.fromRequest(req, "EventController").error(
+        "getEventById failed",
+        error as Error,
+        undefined,
+        { eventId: req.params?.id }
+      );
+      res.status(500).json({
+        success: false,
+        message: "Failed to retrieve event.",
       });
     }
   }
