@@ -48,6 +48,7 @@ import {
   instantToWallClock,
 } from "../utils/event/timezoneUtils";
 import { validateRoles } from "../utils/event/eventValidation";
+import { isEventOrganizer } from "../utils/event/eventPermissions";
 
 /**
  * Capacity semantics (important):
@@ -480,30 +481,7 @@ export class EventController {
 
   // generateUniquePublicSlug moved to utils/publicSlug.ts
   // validateRoles moved to utils/event/eventValidation.ts
-  /**
-   * Helper function to check if a user is an organizer (creator or co-organizer) of an event
-   */
-  private static isEventOrganizer(
-    event: {
-      createdBy?: Types.ObjectId | string;
-      organizerDetails?: Array<{ userId?: Types.ObjectId | string }>;
-    },
-    userId: string
-  ): boolean {
-    // Check if user is the event creator
-    if (event.createdBy && event.createdBy.toString() === userId.toString()) {
-      return true;
-    }
-
-    // Check if user is a co-organizer
-    if (event.organizerDetails && event.organizerDetails.length > 0) {
-      return event.organizerDetails.some(
-        (organizer) => organizer.userId?.toString() === userId.toString()
-      );
-    }
-
-    return false;
-  }
+  // isEventOrganizer moved to utils/event/eventPermissions.ts
 
   // Helper method to determine event status based on date and time
   private static getEventStatus(
@@ -2553,12 +2531,12 @@ export class EventController {
         req.user.role,
         PERMISSIONS.EDIT_OWN_EVENT
       );
-      const isEventOrganizer = EventController.isEventOrganizer(
+      const userIsOrganizer = isEventOrganizer(
         event,
         EventController.toIdString(req.user._id)
       );
 
-      if (!canEditAnyEvent && !(canEditOwnEvent && isEventOrganizer)) {
+      if (!canEditAnyEvent && !(canEditOwnEvent && userIsOrganizer)) {
         res.status(403).json({
           success: false,
           message:
@@ -3805,12 +3783,12 @@ export class EventController {
         req.user.role,
         PERMISSIONS.DELETE_OWN_EVENT
       );
-      const isEventOrganizer = EventController.isEventOrganizer(
+      const userIsOrganizer = isEventOrganizer(
         event,
         EventController.toIdString(req.user._id)
       );
 
-      if (!canDeleteAnyEvent && !(canDeleteOwnEvent && isEventOrganizer)) {
+      if (!canDeleteAnyEvent && !(canDeleteOwnEvent && userIsOrganizer)) {
         res.status(403).json({
           success: false,
           message:
@@ -3822,7 +3800,7 @@ export class EventController {
       // If event has participants, ensure caller has force-delete permission
       if (event.signedUp > 0) {
         const canForceDelete =
-          canDeleteAnyEvent || (canDeleteOwnEvent && isEventOrganizer);
+          canDeleteAnyEvent || (canDeleteOwnEvent && userIsOrganizer);
         if (!canForceDelete) {
           res.status(400).json({
             success: false,
@@ -5325,12 +5303,12 @@ export class EventController {
         req.user.role,
         PERMISSIONS.MODERATE_EVENT_PARTICIPANTS
       );
-      const isEventOrganizer = EventController.isEventOrganizer(
+      const userIsOrganizer = isEventOrganizer(
         event,
         EventController.toIdString(req.user._id)
       );
 
-      if (!canViewParticipants && !isEventOrganizer) {
+      if (!canViewParticipants && !userIsOrganizer) {
         res.status(403).json({
           success: false,
           message:
