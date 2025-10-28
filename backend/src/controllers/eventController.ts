@@ -47,6 +47,7 @@ import {
   toInstantFromWallClock,
   instantToWallClock,
 } from "../utils/event/timezoneUtils";
+import { validateRoles } from "../utils/event/eventValidation";
 
 /**
  * Capacity semantics (important):
@@ -213,19 +214,11 @@ export class EventController {
       startTime,
       candidateTimeZone
     );
-    const newEnd = toInstantFromWallClock(
-      endDate,
-      endTime,
-      candidateTimeZone
-    );
+    const newEnd = toInstantFromWallClock(endDate, endTime, candidateTimeZone);
 
     const conflicts: Array<{ id: string; title: string }> = [];
     for (const ev of candidates) {
-      const evStart = toInstantFromWallClock(
-        ev.date,
-        ev.time,
-        ev.timeZone
-      );
+      const evStart = toInstantFromWallClock(ev.date, ev.time, ev.timeZone);
       const evEnd = toInstantFromWallClock(
         ev.endDate || ev.date,
         ev.endTime,
@@ -272,11 +265,7 @@ export class EventController {
       let checkEndDate = effectiveEndDate as string;
       let checkEndTime = effectiveEndTime as string;
       if (!endDate || mode === "point") {
-        const pt = toInstantFromWallClock(
-          startDate,
-          startTime,
-          timeZone
-        );
+        const pt = toInstantFromWallClock(startDate, startTime, timeZone);
         const plus = new Date(pt.getTime() + 60 * 1000);
         const wc = instantToWallClock(plus, timeZone);
         checkEndDate = wc.date;
@@ -490,47 +479,7 @@ export class EventController {
   }
 
   // generateUniquePublicSlug moved to utils/publicSlug.ts
-  // Basic validation for roles: non-empty names, positive capacity, no duplicates
-  // Templates are now database-only suggestions, not enforced constraints
-  private static validateRoles(
-    roles: Array<{ name: string; maxParticipants: number }>
-  ): { valid: true } | { valid: false; errors: string[] } {
-    const errors: string[] = [];
-    const seenNames = new Set<string>();
-
-    for (const role of roles) {
-      const roleName = (role?.name || "").trim();
-      const max = role?.maxParticipants;
-
-      if (!roleName) {
-        errors.push("Role name is required");
-        continue;
-      }
-
-      if (seenNames.has(roleName)) {
-        errors.push(`Duplicate role not allowed: ${roleName}`);
-      } else {
-        seenNames.add(roleName);
-      }
-
-      if (typeof max !== "number" || Number.isNaN(max) || max < 1) {
-        errors.push(
-          `Role "${roleName}": maxParticipants must be a positive integer`
-        );
-        continue;
-      }
-
-      // Maximum capacity per role: 500 (reasonable upper bound)
-      if (max > 500) {
-        errors.push(
-          `Role "${roleName}" exceeds maximum allowed capacity (500).`
-        );
-      }
-    }
-
-    if (errors.length > 0) return { valid: false, errors };
-    return { valid: true };
-  }
+  // validateRoles moved to utils/event/eventValidation.ts
   /**
    * Helper function to check if a user is an organizer (creator or co-organizer) of an event
    */
@@ -582,11 +531,7 @@ export class EventController {
     }
 
     // Build instants using timezone-aware conversion; falls back to local if tz absent
-    const startInstant = toInstantFromWallClock(
-      eventDate,
-      eventTime,
-      timeZone
-    );
+    const startInstant = toInstantFromWallClock(eventDate, eventTime, timeZone);
     const endInstant = toInstantFromWallClock(
       eventEndDate,
       eventEndTime,
@@ -1602,7 +1547,7 @@ export class EventController {
       }
 
       // Enforce server-side role validation
-      const roleValidation = EventController.validateRoles(
+      const roleValidation = validateRoles(
         eventData.roles.map((r) => ({
           name: r.name,
           maxParticipants: r.maxParticipants,
@@ -2812,7 +2757,7 @@ export class EventController {
         } else {
           // Normal path: validate roles against existing registrations
           // Validate roles
-          const roleValidation = EventController.validateRoles(
+          const roleValidation = validateRoles(
             updateData.roles.map(
               (r: { name: string; maxParticipants: number }) => ({
                 name: r.name,
