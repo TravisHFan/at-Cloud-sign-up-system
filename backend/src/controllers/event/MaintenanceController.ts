@@ -3,6 +3,8 @@ import mongoose from "mongoose";
 import { Event, Registration } from "../../models";
 import { CorrelatedLogger } from "../../services/CorrelatedLogger";
 import { EventController } from "../eventController";
+import { PERMISSIONS, hasPermission } from "../../utils/roleUtils";
+import { isEventOrganizer } from "../../utils/event/eventPermissions";
 
 /**
  * MaintenanceController
@@ -11,6 +13,7 @@ import { EventController } from "../eventController";
  * - hasRegistrations: Check if an event has any registrations
  * - getUserEvents: Get user's registered events with pagination
  * - getCreatedEvents: Get events created by the user
+ * - getEventParticipants: Get event participants for organizers/admins
  */
 export class MaintenanceController {
   /**
@@ -272,6 +275,90 @@ export class MaintenanceController {
       res.status(500).json({
         success: false,
         message: "Failed to retrieve created events.",
+      });
+    }
+  }
+
+  // Get event participants (for event organizers and admins)
+  static async getEventParticipants(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { id } = req.params;
+
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        res.status(400).json({
+          success: false,
+          message: "Invalid event ID.",
+        });
+        return;
+      }
+
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          message: "Authentication required.",
+        });
+        return;
+      }
+
+      const event = await Event.findById(id);
+
+      if (!event) {
+        res.status(404).json({
+          success: false,
+          message: "Event not found.",
+        });
+        return;
+      }
+
+      // Check permissions
+      const canViewParticipants = hasPermission(
+        req.user.role,
+        PERMISSIONS.MODERATE_EVENT_PARTICIPANTS
+      );
+      const userIsOrganizer = isEventOrganizer(
+        event,
+        EventController.toIdString(req.user._id)
+      );
+
+      if (!canViewParticipants && !userIsOrganizer) {
+        res.status(403).json({
+          success: false,
+          message:
+            "Insufficient permissions to view participants. You must be the event creator or a co-organizer.",
+        });
+        return;
+      }
+
+      // Get detailed registrations (no status filtering needed)
+      const registrations = await Registration.find({
+        eventId: id,
+      }).populate("userId", "username firstName lastName email avatar role");
+
+      res.status(200).json({
+        success: true,
+        data: {
+          event: {
+            id: event._id,
+            title: event.title,
+            roles: event.roles,
+          },
+          registrations,
+        },
+      });
+    } catch (error: unknown) {
+      console.error("Get event participants error:", error);
+      CorrelatedLogger.fromRequest(req, "EventController").error(
+        "getEventParticipants failed",
+        error as Error,
+        undefined,
+        { eventId: req.params?.id }
+      );
+      res.status(500).json({
+        success: false,
+        message: "Failed to retrieve event participants.",
       });
     }
   }

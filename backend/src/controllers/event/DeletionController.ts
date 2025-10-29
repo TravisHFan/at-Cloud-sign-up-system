@@ -1,12 +1,15 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
-import { Event } from "../../models";
+import { Event, Registration } from "../../models";
 import { PERMISSIONS, hasPermission } from "../../utils/roleUtils";
 import { isEventOrganizer } from "../../utils/event/eventPermissions";
 import { CorrelatedLogger } from "../../services/CorrelatedLogger";
+import { Logger } from "../../services/LoggerService";
 import { EventCascadeService } from "../../services";
 import AuditLog from "../../models/AuditLog";
 import { EventController } from "../eventController";
+
+const logger = Logger.getInstance().child("DeletionController");
 
 /**
  * DeletionController
@@ -167,5 +170,47 @@ export class DeletionController {
         message: "Failed to delete event.",
       });
     }
+  }
+
+  public static async deleteAllRegistrationsForEvent(eventId: string): Promise<{
+    deletedRegistrations: number;
+    deletedGuestRegistrations: number;
+  }> {
+    let deletedRegistrationsCount = 0;
+    let deletedGuestRegistrationsCount = 0;
+
+    // Delete all user registrations
+    try {
+      const deletionResult = await Registration.deleteMany({ eventId });
+      deletedRegistrationsCount = deletionResult.deletedCount || 0;
+    } catch (err) {
+      logger.error(
+        `Failed to delete user registrations for event ${eventId}`,
+        err as Error
+      );
+      throw err; // Fail-fast to avoid partial state
+    }
+
+    // Delete all guest registrations
+    try {
+      const { GuestRegistration } = await import("../../models");
+      const guestDeletion = await GuestRegistration.deleteMany({ eventId });
+      deletedGuestRegistrationsCount = guestDeletion.deletedCount || 0;
+    } catch (err) {
+      logger.error(
+        `Failed to delete guest registrations for event ${eventId}`,
+        err as Error
+      );
+      throw err; // Fail-fast to avoid partial state
+    }
+
+    logger.info(
+      `Deleted ${deletedRegistrationsCount} user registrations and ${deletedGuestRegistrationsCount} guest registrations for event ${eventId}`
+    );
+
+    return {
+      deletedRegistrations: deletedRegistrationsCount,
+      deletedGuestRegistrations: deletedGuestRegistrationsCount,
+    };
   }
 }
