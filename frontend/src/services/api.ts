@@ -2344,47 +2344,45 @@ class ApiClient {
 
   async getUserDeletionImpact(userId: string): Promise<{
     user: {
-      id: string;
       email: string;
       name: string;
       role: string;
+      createdAt: Date;
     };
-    deletedData: {
+    impact: {
       registrations: number;
       eventsCreated: number;
       eventOrganizations: number;
+      messageStates: number;
       messagesCreated: number;
-    };
-    updatedStatistics: {
-      events: Array<{
+      affectedEvents: Array<{
         id: string;
         title: string;
-        attendeeCount: number;
-        organizerCount: number;
+        participantCount: number;
       }>;
     };
+    risks: string[];
   }> {
     const response = await this.request<{
       user: {
-        id: string;
         email: string;
         name: string;
         role: string;
+        createdAt: Date;
       };
-      deletedData: {
+      impact: {
         registrations: number;
         eventsCreated: number;
         eventOrganizations: number;
+        messageStates: number;
         messagesCreated: number;
-      };
-      updatedStatistics: {
-        events: Array<{
+        affectedEvents: Array<{
           id: string;
           title: string;
-          attendeeCount: number;
-          organizerCount: number;
+          participantCount: number;
         }>;
       };
+      risks: string[];
     }>(`/users/${userId}/deletion-impact`, {
       method: "GET",
     });

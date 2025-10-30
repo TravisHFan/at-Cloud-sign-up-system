@@ -11,21 +11,25 @@ import { userService } from "../services/api";
 
 // Types for confirmation modal
 interface DeletionImpact {
-  user: { id: string; email: string; name: string; role: string };
-  deletedData: {
+  user: {
+    email: string;
+    name: string;
+    role: string;
+    createdAt: Date;
+  };
+  impact: {
     registrations: number;
     eventsCreated: number;
     eventOrganizations: number;
+    messageStates: number;
     messagesCreated: number;
-  };
-  updatedStatistics: {
-    events: Array<{
+    affectedEvents: Array<{
       id: string;
       title: string;
-      attendeeCount: number;
-      organizerCount: number;
+      participantCount: number;
     }>;
   };
+  risks: string[];
 }
 
 interface ConfirmationAction {
@@ -198,19 +202,19 @@ export function useManagement(providedUsers?: User[]) {
   const showDeleteConfirmation = async (user: User) => {
     try {
       // Fetch deletion impact analysis
-      const impact = await userService.getUserDeletionImpact(user.id);
+      const impactData = await userService.getUserDeletionImpact(user.id);
 
       // Build detailed impact message
       const impactDetails = `
 Deletion Impact Analysis:
-• Event Registrations: ${impact.deletedData.registrations} will be deleted
-• Events Created: ${impact.deletedData.eventsCreated} will be deleted
+• Event Registrations: ${impactData.impact.registrations} will be deleted
+• Events Created: ${impactData.impact.eventsCreated} will be deleted
 • Events Organized: ${
-        impact.deletedData.eventOrganizations
+        impactData.impact.eventOrganizations
       } organizations will be removed
-• Messages: ${impact.deletedData.messagesCreated} will be deleted${
-        impact.updatedStatistics.events.length > 0
-          ? `\n• Affected Events: ${impact.updatedStatistics.events.length} events will have updated statistics`
+• Messages: ${impactData.impact.messagesCreated} will be deleted${
+        impactData.impact.affectedEvents.length > 0
+          ? `\n• Affected Events: ${impactData.impact.affectedEvents.length} events will have updated statistics`
           : ""
       }`;
 
@@ -221,7 +225,7 @@ Deletion Impact Analysis:
         message: `Are you sure you want to permanently delete ${user.firstName} ${user.lastName}?\n\n${impactDetails}\n\nThis action will:\n• Permanently remove their account\n• Delete all their data and activity history\n• Remove them from all events and conversations\n• Cannot be undone\n\nPlease type the user's full name to confirm this irreversible action.`,
         confirmText: "Delete User",
         actionType: "danger",
-        deletionImpact: impact,
+        deletionImpact: impactData,
       });
     } catch (error) {
       console.error("Failed to fetch deletion impact:", error);
