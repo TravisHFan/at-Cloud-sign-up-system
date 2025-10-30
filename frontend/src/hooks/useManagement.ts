@@ -7,8 +7,27 @@ import { useUserPermissions } from "./useUserPermissions";
 import { useAuth } from "./useAuth";
 import { MANAGEMENT_CONFIG } from "../config/managementConstants";
 import { useUserData } from "./useUserData";
+import { userService } from "../services/api";
 
 // Types for confirmation modal
+interface DeletionImpact {
+  user: { id: string; email: string; name: string; role: string };
+  deletedData: {
+    registrations: number;
+    eventsCreated: number;
+    eventOrganizations: number;
+    messagesCreated: number;
+  };
+  updatedStatistics: {
+    events: Array<{
+      id: string;
+      title: string;
+      attendeeCount: number;
+      organizerCount: number;
+    }>;
+  };
+}
+
 interface ConfirmationAction {
   type: "promote" | "demote" | "delete" | "deactivate" | "reactivate";
   user: User;
@@ -17,6 +36,7 @@ interface ConfirmationAction {
   message: string;
   confirmText: string;
   actionType: "danger" | "warning" | "info";
+  deletionImpact?: DeletionImpact;
 }
 
 export function useManagement(providedUsers?: User[]) {
@@ -175,15 +195,47 @@ export function useManagement(providedUsers?: User[]) {
     setOpenDropdown(null);
   };
 
-  const showDeleteConfirmation = (user: User) => {
-    setConfirmationAction({
-      type: "delete",
-      user,
-      title: "Confirm User Deletion",
-      message: `Are you sure you want to permanently delete ${user.firstName} ${user.lastName}?\n\nThis action will:\n• Permanently remove their account\n• Delete all their data and activity history\n• Remove them from all events and conversations\n• Cannot be undone\n\nPlease type the user's full name to confirm this irreversible action.`,
-      confirmText: "Delete User",
-      actionType: "danger",
-    });
+  const showDeleteConfirmation = async (user: User) => {
+    try {
+      // Fetch deletion impact analysis
+      const impact = await userService.getUserDeletionImpact(user.id);
+
+      // Build detailed impact message
+      const impactDetails = `
+Deletion Impact Analysis:
+• Event Registrations: ${impact.deletedData.registrations} will be deleted
+• Events Created: ${impact.deletedData.eventsCreated} will be deleted
+• Events Organized: ${
+        impact.deletedData.eventOrganizations
+      } organizations will be removed
+• Messages: ${impact.deletedData.messagesCreated} will be deleted${
+        impact.updatedStatistics.events.length > 0
+          ? `\n• Affected Events: ${impact.updatedStatistics.events.length} events will have updated statistics`
+          : ""
+      }`;
+
+      setConfirmationAction({
+        type: "delete",
+        user,
+        title: "Confirm User Deletion",
+        message: `Are you sure you want to permanently delete ${user.firstName} ${user.lastName}?\n\n${impactDetails}\n\nThis action will:\n• Permanently remove their account\n• Delete all their data and activity history\n• Remove them from all events and conversations\n• Cannot be undone\n\nPlease type the user's full name to confirm this irreversible action.`,
+        confirmText: "Delete User",
+        actionType: "danger",
+        deletionImpact: impact,
+      });
+    } catch (error) {
+      console.error("Failed to fetch deletion impact:", error);
+
+      // Fallback to generic confirmation if impact fetch fails
+      setConfirmationAction({
+        type: "delete",
+        user,
+        title: "Confirm User Deletion",
+        message: `Are you sure you want to permanently delete ${user.firstName} ${user.lastName}?\n\nThis action will:\n• Permanently remove their account\n• Delete all their data and activity history\n• Remove them from all events and conversations\n• Cannot be undone\n\nPlease type the user's full name to confirm this irreversible action.`,
+        confirmText: "Delete User",
+        actionType: "danger",
+      });
+    }
     setOpenDropdown(null);
   };
 
@@ -331,10 +383,10 @@ export function useManagement(providedUsers?: User[]) {
     }
   };
 
-  const handleDeleteUser = (userId: string) => {
+  const handleDeleteUser = async (userId: string) => {
     const user = users.find((u) => u.id === userId);
     if (user) {
-      showDeleteConfirmation(user);
+      await showDeleteConfirmation(user);
     }
   };
 

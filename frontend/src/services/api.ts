@@ -2342,6 +2342,58 @@ class ApiClient {
     });
   }
 
+  async getUserDeletionImpact(userId: string): Promise<{
+    user: {
+      id: string;
+      email: string;
+      name: string;
+      role: string;
+    };
+    deletedData: {
+      registrations: number;
+      eventsCreated: number;
+      eventOrganizations: number;
+      messagesCreated: number;
+    };
+    updatedStatistics: {
+      events: Array<{
+        id: string;
+        title: string;
+        attendeeCount: number;
+        organizerCount: number;
+      }>;
+    };
+  }> {
+    const response = await this.request<{
+      user: {
+        id: string;
+        email: string;
+        name: string;
+        role: string;
+      };
+      deletedData: {
+        registrations: number;
+        eventsCreated: number;
+        eventOrganizations: number;
+        messagesCreated: number;
+      };
+      updatedStatistics: {
+        events: Array<{
+          id: string;
+          title: string;
+          attendeeCount: number;
+          organizerCount: number;
+        }>;
+      };
+    }>(`/users/${userId}/deletion-impact`, {
+      method: "GET",
+    });
+    if (!response.data) {
+      throw new Error("Failed to fetch deletion impact");
+    }
+    return response.data;
+  }
+
   // New secure password change methods
   async requestPasswordChange(
     currentPassword: string,
@@ -2999,6 +3051,8 @@ export const userService = {
   updateUserRole: (userId: string, role: string) =>
     apiClient.updateUserRole(userId, role),
   deleteUser: (userId: string) => apiClient.deleteUser(userId),
+  getUserDeletionImpact: (userId: string) =>
+    apiClient.getUserDeletionImpact(userId),
   // New secure password change methods
   requestPasswordChange: (currentPassword: string, newPassword: string) =>
     apiClient.requestPasswordChange(currentPassword, newPassword),
