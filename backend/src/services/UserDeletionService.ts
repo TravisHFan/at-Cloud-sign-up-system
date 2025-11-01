@@ -4,7 +4,12 @@ import User from "../models/User";
 import Registration from "../models/Registration";
 import Event from "../models/Event";
 import Message from "../models/Message";
+import PromoCode from "../models/PromoCode";
+import Program from "../models/Program";
+import ShortLink from "../models/ShortLink";
 import { CachePatterns } from "./infrastructure/CacheService";
+import fs from "fs/promises";
+import path from "path";
 
 export interface UserDeletionReport {
   userId: string;
@@ -16,6 +21,13 @@ export interface UserDeletionReport {
     eventOrganizations: number;
     messageStates: number;
     messagesCreated: number;
+    promoCodes: number;
+    programMentorships: number;
+    programClassReps: number;
+    programMentees: number;
+    shortLinks: number;
+    avatarFile: boolean;
+    eventFlyerFiles: number;
   };
   updatedStatistics: {
     events: string[];
@@ -43,6 +55,13 @@ export class UserDeletionService {
         eventOrganizations: 0,
         messageStates: 0,
         messagesCreated: 0,
+        promoCodes: 0,
+        programMentorships: 0,
+        programClassReps: 0,
+        programMentees: 0,
+        shortLinks: 0,
+        avatarFile: false,
+        eventFlyerFiles: 0,
       },
       updatedStatistics: {
         events: [],
@@ -136,11 +155,107 @@ export class UserDeletionService {
       });
       report.deletedData.messagesCreated = deletedMessages.deletedCount || 0;
 
-      // 9. Finally, delete the user record
+      // 9. Delete promo codes where user is in allowedUsers array
+      const deletedPromoCodes = await PromoCode.deleteMany({
+        ownerId: new mongoose.Types.ObjectId(userId),
+      });
+      report.deletedData.promoCodes = deletedPromoCodes.deletedCount || 0;
+
+      // 10. Remove user from program mentors arrays
+      const programsAsMentor = await Program.updateMany(
+        { "mentors.userId": new mongoose.Types.ObjectId(userId) },
+        {
+          $pull: {
+            mentors: { userId: new mongoose.Types.ObjectId(userId) },
+          },
+        }
+      );
+      report.deletedData.programMentorships =
+        programsAsMentor.modifiedCount || 0;
+
+      // 11. Remove user from program adminEnrollments.classReps arrays
+      const programsAsClassRep = await Program.updateMany(
+        { "adminEnrollments.classReps": new mongoose.Types.ObjectId(userId) },
+        {
+          $pull: {
+            "adminEnrollments.classReps": new mongoose.Types.ObjectId(userId),
+          },
+          $inc: {
+            classRepCount: -1,
+          },
+        }
+      );
+      report.deletedData.programClassReps =
+        programsAsClassRep.modifiedCount || 0;
+
+      // 12. Remove user from program adminEnrollments.mentees arrays
+      const programsAsMentee = await Program.updateMany(
+        { "adminEnrollments.mentees": new mongoose.Types.ObjectId(userId) },
+        {
+          $pull: {
+            "adminEnrollments.mentees": new mongoose.Types.ObjectId(userId),
+          },
+        }
+      );
+      report.deletedData.programMentees = programsAsMentee.modifiedCount || 0;
+
+      // 13. Delete shortlinks for events created by this user
+      const eventIdsCreatedByUser = eventsCreatedByUser.map((e) =>
+        (e._id as mongoose.Types.ObjectId).toString()
+      );
+      const deletedShortLinks = await ShortLink.deleteMany({
+        targetEventId: { $in: eventIdsCreatedByUser },
+      });
+      report.deletedData.shortLinks = deletedShortLinks.deletedCount || 0;
+
+      // 14. Delete avatar file if exists
+      if (userToDelete.avatar) {
+        try {
+          const uploadsDir = path.join(__dirname, "../../uploads/avatars");
+          const avatarPath = path.join(
+            uploadsDir,
+            path.basename(userToDelete.avatar)
+          );
+          await fs.unlink(avatarPath);
+          report.deletedData.avatarFile = true;
+        } catch (error) {
+          // File might not exist or already deleted, log but don't fail
+          console.warn(
+            `Failed to delete avatar file: ${userToDelete.avatar}`,
+            error
+          );
+        }
+      }
+
+      // 15. Delete event flyer files for events created by user
+      for (const event of eventsCreatedByUser) {
+        if (event.flyerUrl) {
+          try {
+            const uploadsDir = path.join(
+              __dirname,
+              "../../uploads/event-flyers"
+            );
+            const flyerPath = path.join(
+              uploadsDir,
+              path.basename(event.flyerUrl)
+            );
+            await fs.unlink(flyerPath);
+            report.deletedData.eventFlyerFiles++;
+          } catch (error) {
+            // File might not exist, log but don't fail
+            console.warn(
+              `Failed to delete flyer file: ${event.flyerUrl}`,
+              error
+            );
+          }
+        }
+      }
+
+      // 16. Finally, delete the user record
       await User.findByIdAndDelete(userId);
       report.deletedData.userRecord = true;
 
-      // 10. Update statistics for affected events
+      // 17. Update statistics for affected events
       const affectedEvents = await Event.find({
         _id: {
           $in: eventsCreatedByUser.map((e) => e._id),
@@ -154,7 +269,7 @@ export class UserDeletionService {
         );
       }
 
-      // 11. Invalidate all relevant caches after user deletion
+      // 18. Invalidate all relevant caches after user deletion
       await CachePatterns.invalidateUserCache(userId);
       await CachePatterns.invalidateAllUserCaches(); // For user listings
       await CachePatterns.invalidateAnalyticsCache(); // For user count analytics
@@ -194,6 +309,13 @@ export class UserDeletionService {
       eventOrganizations: number;
       messageStates: number;
       messagesCreated: number;
+      promoCodes: number;
+      programMentorships: number;
+      programClassReps: number;
+      programMentees: number;
+      shortLinks: number;
+      avatarFile: boolean;
+      eventFlyerFiles: number;
       affectedEvents: Array<{
         id: string;
         title: string;
@@ -239,6 +361,42 @@ export class UserDeletionService {
         ],
       });
 
+      // Count promo codes owned by user
+      const promoCodesCount = await PromoCode.countDocuments({
+        ownerId: new mongoose.Types.ObjectId(userId),
+      });
+
+      // Count program mentorships
+      const programMentorships = await Program.countDocuments({
+        "mentors.userId": new mongoose.Types.ObjectId(userId),
+      });
+
+      // Count program class rep enrollments
+      const programClassReps = await Program.countDocuments({
+        "adminEnrollments.classReps": new mongoose.Types.ObjectId(userId),
+      });
+
+      // Count program mentee enrollments
+      const programMentees = await Program.countDocuments({
+        "adminEnrollments.mentees": new mongoose.Types.ObjectId(userId),
+      });
+
+      // Count shortlinks for events created by user
+      const eventIdsForShortLinks = eventsCreated.map((e) =>
+        (e._id as mongoose.Types.ObjectId).toString()
+      );
+      const shortLinksCount = await ShortLink.countDocuments({
+        targetEventId: { $in: eventIdsForShortLinks },
+      });
+
+      // Check if avatar file exists
+      const hasAvatarFile = !!user.avatar;
+
+      // Count event flyer files
+      const eventFlyerFilesCount = eventsCreated.filter(
+        (event) => !!event.flyerUrl
+      ).length;
+
       // Analyze risks
       const risks: string[] = [];
       if (eventsCreated.length > 0) {
@@ -248,6 +406,16 @@ export class UserDeletionService {
       }
       if (registrationCount > 0) {
         risks.push(`Will remove ${registrationCount} event registrations`);
+      }
+      if (promoCodesCount > 0) {
+        risks.push(
+          `Will delete ${promoCodesCount} promo codes owned by this user`
+        );
+      }
+      if (programMentorships > 0) {
+        risks.push(
+          `Will remove user from ${programMentorships} programs as mentor`
+        );
       }
       if (user.role === "Super Admin") {
         risks.push("WARNING: Attempting to delete a Super Admin user");
@@ -266,6 +434,13 @@ export class UserDeletionService {
           eventOrganizations,
           messageStates: messagesWithStates,
           messagesCreated,
+          promoCodes: promoCodesCount,
+          programMentorships,
+          programClassReps,
+          programMentees,
+          shortLinks: shortLinksCount,
+          avatarFile: hasAvatarFile,
+          eventFlyerFiles: eventFlyerFilesCount,
           affectedEvents: eventsCreated.map((event) => ({
             id: (event._id as mongoose.Types.ObjectId).toString(),
             title: event.title,

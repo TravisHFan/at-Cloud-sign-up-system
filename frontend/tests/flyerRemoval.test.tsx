@@ -44,6 +44,8 @@ vi.mock("../src/services/api", async (orig) => {
       ...actual.programService,
       getProgram: vi.fn(),
       updateProgram: vi.fn(),
+      list: vi.fn(),
+      getById: vi.fn(),
     },
   };
 });
@@ -68,6 +70,8 @@ vi.mock("../services/api", async (orig) => {
       ...actual.programService,
       getProgram: vi.fn(),
       updateProgram: vi.fn(),
+      list: vi.fn(),
+      getById: vi.fn(),
     },
   };
 });
@@ -120,6 +124,9 @@ beforeEach(() => {
     occupation: "",
     company: "",
   });
+
+  // Mock programService.list for EditEvent pages
+  programService.list.mockResolvedValue([]);
 });
 
 afterEach(() => {
@@ -209,7 +216,7 @@ describe("Flyer removal forms", () => {
     expect(payload.flyerUrl).toBeNull();
   });
   it("sends flyerUrl:null when removing existing flyer on EditProgram", async () => {
-    programService.getProgram.mockResolvedValue({
+    const mockProgramData = {
       id: "prog1",
       title: "Program Title",
       programType: "Effective Communication Workshops",
@@ -227,7 +234,9 @@ describe("Flyer removal forms", () => {
       fullPriceTicket: 0,
       classRepDiscount: 0,
       earlyBirdDiscount: 0,
-    });
+    };
+    programService.getProgram.mockResolvedValue(mockProgramData);
+    programService.getById.mockResolvedValue(mockProgramData);
     programService.updateProgram.mockResolvedValue({});
 
     const EditProgram = (await import("../src/pages/EditProgram"))
@@ -393,7 +402,7 @@ describe("Flyer removal forms", () => {
   });
 
   it("omits flyerUrl when unchanged on EditProgram (no-op)", async () => {
-    programService.getProgram.mockResolvedValue({
+    const mockProgramData2 = {
       id: "prog2",
       title: "Program Title",
       programType: "Effective Communication Workshops",
@@ -411,7 +420,9 @@ describe("Flyer removal forms", () => {
       fullPriceTicket: 0,
       classRepDiscount: 0,
       earlyBirdDiscount: 0,
-    });
+    };
+    programService.getProgram.mockResolvedValue(mockProgramData2);
+    programService.getById.mockResolvedValue(mockProgramData2);
     programService.updateProgram.mockResolvedValue({});
     const EditProgram = (await import("../src/pages/EditProgram"))
       .default as React.ComponentType;
@@ -435,7 +446,7 @@ describe("Flyer removal forms", () => {
   });
 
   it("sends flyerUrl new value when replaced on EditProgram", async () => {
-    programService.getProgram.mockResolvedValue({
+    const mockProgramData3 = {
       id: "prog3",
       title: "Program Title",
       programType: "Effective Communication Workshops",
@@ -453,7 +464,9 @@ describe("Flyer removal forms", () => {
       fullPriceTicket: 0,
       classRepDiscount: 0,
       earlyBirdDiscount: 0,
-    });
+    };
+    programService.getProgram.mockResolvedValue(mockProgramData3);
+    programService.getById.mockResolvedValue(mockProgramData3);
     programService.updateProgram.mockResolvedValue({});
     const EditProgram = (await import("../src/pages/EditProgram"))
       .default as React.ComponentType;

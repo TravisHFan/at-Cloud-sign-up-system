@@ -38,7 +38,7 @@ export default function FlyerCarousel({
         <img
           src={flyers[0]}
           alt="Event flyer"
-          className="w-full h-auto rounded-lg border border-gray-200 object-contain"
+          className="w-full max-h-full rounded-lg border border-gray-200 object-contain"
         />
       </div>
     );
@@ -60,7 +60,7 @@ export default function FlyerCarousel({
         <img
           src={flyers[currentIndex]}
           alt={`Event flyer ${currentIndex + 1}`}
-          className="w-full h-auto object-contain transition-opacity duration-300"
+          className="w-full max-h-full object-contain transition-opacity duration-300"
         />
 
         {/* Navigation Buttons - visible on hover */}

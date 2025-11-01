@@ -173,7 +173,7 @@ export const useEventForm = (
           onClick: () => {
             const userRole = currentUser?.role;
             if (userRole === "Guest Expert" || userRole === "Participant") {
-              window.location.href = "/dashboard/welcome";
+              window.location.href = "/dashboard";
             } else {
               window.location.href = "/dashboard/upcoming";
             }

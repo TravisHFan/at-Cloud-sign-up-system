@@ -23,6 +23,13 @@ interface DeletionImpact {
     eventOrganizations: number;
     messageStates: number;
     messagesCreated: number;
+    promoCodes: number;
+    programMentorships: number;
+    programClassReps: number;
+    programMentees: number;
+    shortLinks: number;
+    avatarFile: boolean;
+    eventFlyerFiles: number;
     affectedEvents: Array<{
       id: string;
       title: string;
@@ -208,11 +215,32 @@ export function useManagement(providedUsers?: User[]) {
       const impactDetails = `
 Deletion Impact Analysis:
 • Event Registrations: ${impactData.impact.registrations} will be deleted
-• Events Created: ${impactData.impact.eventsCreated} will be deleted
-• Events Organized: ${
+• Events Created: ${
+        impactData.impact.eventsCreated
+      } will be permanently deleted${
+        impactData.impact.eventFlyerFiles > 0
+          ? ` (including ${impactData.impact.eventFlyerFiles} flyer files)`
+          : ""
+      }
+• Event Organizer Roles: ${
         impactData.impact.eventOrganizations
       } organizations will be removed
-• Messages: ${impactData.impact.messagesCreated} will be deleted${
+• Messages: ${impactData.impact.messagesCreated} will be deleted
+• Promo Codes: ${impactData.impact.promoCodes} owned codes will be deleted
+• Program Mentorships: ${
+        impactData.impact.programMentorships
+      } programs will lose this mentor
+• Program Class Rep: ${
+        impactData.impact.programClassReps
+      } enrollments will be removed
+• Program Mentee: ${
+        impactData.impact.programMentees
+      } enrollments will be removed
+• Published Event Links: ${
+        impactData.impact.shortLinks
+      } shortlinks will be deleted${
+        impactData.impact.avatarFile ? "\n• Avatar File: Will be deleted" : ""
+      }${
         impactData.impact.affectedEvents.length > 0
           ? `\n• Affected Events: ${impactData.impact.affectedEvents.length} events will have updated statistics`
           : ""

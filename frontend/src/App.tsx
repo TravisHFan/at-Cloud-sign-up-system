@@ -90,7 +90,7 @@ function App() {
               element={<CompletePasswordChange />}
             />
             <Route path="/dashboard" element={<DashboardLayout />}>
-              <Route index element={<Welcome />} />
+              <Route index element={<Programs />} />
               <Route path="welcome" element={<Welcome />} />
               <Route path="upcoming" element={<UpcomingEvents />} />
               <Route path="passed" element={<PassedEvents />} />

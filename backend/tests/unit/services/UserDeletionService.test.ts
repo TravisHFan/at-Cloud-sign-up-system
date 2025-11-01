@@ -34,11 +34,43 @@ vi.mock("../../../src/models/Message", () => ({
   },
 }));
 
+vi.mock("../../../src/models/PromoCode", () => ({
+  default: {
+    deleteMany: vi.fn(),
+    countDocuments: vi.fn(),
+  },
+}));
+
+vi.mock("../../../src/models/Program", () => ({
+  default: {
+    updateMany: vi.fn(),
+    countDocuments: vi.fn(),
+  },
+}));
+
+vi.mock("../../../src/models/ShortLink", () => ({
+  default: {
+    deleteMany: vi.fn(),
+    countDocuments: vi.fn(),
+  },
+}));
+
+// Mock filesystem operations
+vi.mock("fs/promises", () => ({
+  default: {
+    unlink: vi.fn(),
+  },
+}));
+
 // Now import mocked modules and service
 import User from "../../../src/models/User";
 import Registration from "../../../src/models/Registration";
 import Event from "../../../src/models/Event";
 import Message from "../../../src/models/Message";
+import PromoCode from "../../../src/models/PromoCode";
+import Program from "../../../src/models/Program";
+import ShortLink from "../../../src/models/ShortLink";
+import fs from "fs/promises";
 import { UserDeletionService } from "../../../src/services/UserDeletionService";
 
 describe("UserDeletionService", () => {
@@ -87,6 +119,15 @@ describe("UserDeletionService", () => {
         vi.mocked(Message.deleteMany).mockResolvedValue({
           deletedCount: 1,
         } as any);
+        vi.mocked(PromoCode.deleteMany).mockResolvedValue({
+          deletedCount: 0,
+        } as any);
+        vi.mocked(Program.updateMany).mockResolvedValue({
+          modifiedCount: 0,
+        } as any);
+        vi.mocked(ShortLink.deleteMany).mockResolvedValue({
+          deletedCount: 0,
+        } as any);
         vi.mocked(User.findByIdAndDelete).mockResolvedValue(mockUser);
 
         // Act
@@ -106,6 +147,13 @@ describe("UserDeletionService", () => {
             eventOrganizations: 0,
             messageStates: 3,
             messagesCreated: 1,
+            promoCodes: 0,
+            programMentorships: 0,
+            programClassReps: 0,
+            programMentees: 0,
+            shortLinks: 0,
+            avatarFile: false,
+            eventFlyerFiles: 0,
           },
           updatedStatistics: {
             events: [],
@@ -121,6 +169,9 @@ describe("UserDeletionService", () => {
         expect(Event.find).toHaveBeenCalled();
         expect(Message.updateMany).toHaveBeenCalled();
         expect(Message.deleteMany).toHaveBeenCalled();
+        expect(PromoCode.deleteMany).toHaveBeenCalled();
+        expect(Program.updateMany).toHaveBeenCalled();
+        expect(ShortLink.deleteMany).toHaveBeenCalled();
         expect(User.findByIdAndDelete).toHaveBeenCalledWith(mockUserId);
       });
 
@@ -159,6 +210,15 @@ describe("UserDeletionService", () => {
         vi.mocked(Message.deleteMany).mockResolvedValue({
           deletedCount: 0,
         } as any);
+        vi.mocked(PromoCode.deleteMany).mockResolvedValue({
+          deletedCount: 0,
+        } as any);
+        vi.mocked(Program.updateMany).mockResolvedValue({
+          modifiedCount: 0,
+        } as any);
+        vi.mocked(ShortLink.deleteMany).mockResolvedValue({
+          deletedCount: 0,
+        } as any);
         vi.mocked(User.findByIdAndDelete).mockResolvedValue(mockUser);
 
         // Act
@@ -193,6 +253,15 @@ describe("UserDeletionService", () => {
           modifiedCount: 0,
         } as any);
         vi.mocked(Message.deleteMany).mockResolvedValue({
+          deletedCount: 0,
+        } as any);
+        vi.mocked(PromoCode.deleteMany).mockResolvedValue({
+          deletedCount: 0,
+        } as any);
+        vi.mocked(Program.updateMany).mockResolvedValue({
+          modifiedCount: 0,
+        } as any);
+        vi.mocked(ShortLink.deleteMany).mockResolvedValue({
           deletedCount: 0,
         } as any);
         vi.mocked(User.findByIdAndDelete).mockResolvedValue(mockUser);
@@ -238,6 +307,15 @@ describe("UserDeletionService", () => {
         vi.mocked(Message.deleteMany).mockResolvedValue({
           deletedCount: 3,
         } as any); // 3 messages deleted
+        vi.mocked(PromoCode.deleteMany).mockResolvedValue({
+          deletedCount: 0,
+        } as any);
+        vi.mocked(Program.updateMany).mockResolvedValue({
+          modifiedCount: 0,
+        } as any);
+        vi.mocked(ShortLink.deleteMany).mockResolvedValue({
+          deletedCount: 0,
+        } as any);
         vi.mocked(User.findByIdAndDelete).mockResolvedValue(mockUser);
 
         // Act
@@ -351,6 +429,15 @@ describe("UserDeletionService", () => {
         vi.mocked(Message.deleteMany).mockResolvedValue({
           deletedCount: 2,
         } as any); // Created messages
+        vi.mocked(PromoCode.deleteMany).mockResolvedValue({
+          deletedCount: 0,
+        } as any);
+        vi.mocked(Program.updateMany).mockResolvedValue({
+          modifiedCount: 0,
+        } as any);
+        vi.mocked(ShortLink.deleteMany).mockResolvedValue({
+          deletedCount: 0,
+        } as any);
         vi.mocked(User.findByIdAndDelete).mockResolvedValue(mockUser);
 
         // Act
@@ -370,6 +457,13 @@ describe("UserDeletionService", () => {
             eventOrganizations: 4,
             messageStates: 7,
             messagesCreated: 2,
+            promoCodes: 0,
+            programMentorships: 0,
+            programClassReps: 0,
+            programMentees: 0,
+            shortLinks: 0,
+            avatarFile: false,
+            eventFlyerFiles: 0,
           },
           updatedStatistics: {
             events: [
@@ -388,6 +482,400 @@ describe("UserDeletionService", () => {
         expect(complexEvents[1].save).toHaveBeenCalled();
       });
     });
+
+    describe("Enhanced deletion features", () => {
+      it("should delete promo codes owned by user", async () => {
+        // Arrange
+        vi.mocked(User.findById).mockResolvedValue(mockUser);
+        vi.mocked(Registration.deleteMany).mockResolvedValue({
+          deletedCount: 0,
+        } as any);
+        vi.mocked(Registration.updateMany).mockResolvedValue({
+          modifiedCount: 0,
+        } as any);
+        vi.mocked(Event.find).mockResolvedValue([]);
+        vi.mocked(Event.updateMany).mockResolvedValue({
+          modifiedCount: 0,
+        } as any);
+        vi.mocked(Message.updateMany).mockResolvedValue({
+          modifiedCount: 0,
+        } as any);
+        vi.mocked(Message.deleteMany).mockResolvedValue({
+          deletedCount: 0,
+        } as any);
+        vi.mocked(PromoCode.deleteMany).mockResolvedValue({
+          deletedCount: 3,
+        } as any);
+        vi.mocked(Program.updateMany).mockResolvedValue({
+          modifiedCount: 0,
+        } as any);
+        vi.mocked(ShortLink.deleteMany).mockResolvedValue({
+          deletedCount: 0,
+        } as any);
+        vi.mocked(User.findByIdAndDelete).mockResolvedValue(mockUser);
+
+        // Act
+        const result = await UserDeletionService.deleteUserCompletely(
+          mockUserId,
+          mockPerformedBy as any
+        );
+
+        // Assert
+        expect(result.deletedData.promoCodes).toBe(3);
+        expect(PromoCode.deleteMany).toHaveBeenCalledWith({
+          ownerId: new mongoose.Types.ObjectId(mockUserId),
+        });
+      });
+
+      it("should remove user from program mentors array", async () => {
+        // Arrange
+        vi.mocked(User.findById).mockResolvedValue(mockUser);
+        vi.mocked(Registration.deleteMany).mockResolvedValue({
+          deletedCount: 0,
+        } as any);
+        vi.mocked(Registration.updateMany).mockResolvedValue({
+          modifiedCount: 0,
+        } as any);
+        vi.mocked(Event.find).mockResolvedValue([]);
+        vi.mocked(Event.updateMany).mockResolvedValue({
+          modifiedCount: 0,
+        } as any);
+        vi.mocked(Message.updateMany).mockResolvedValue({
+          modifiedCount: 0,
+        } as any);
+        vi.mocked(Message.deleteMany).mockResolvedValue({
+          deletedCount: 0,
+        } as any);
+        vi.mocked(PromoCode.deleteMany).mockResolvedValue({
+          deletedCount: 0,
+        } as any);
+        vi.mocked(Program.updateMany)
+          .mockResolvedValueOnce({ modifiedCount: 2 } as any) // Mentors
+          .mockResolvedValueOnce({ modifiedCount: 0 } as any) // ClassReps
+          .mockResolvedValueOnce({ modifiedCount: 0 } as any); // Mentees
+        vi.mocked(ShortLink.deleteMany).mockResolvedValue({
+          deletedCount: 0,
+        } as any);
+        vi.mocked(User.findByIdAndDelete).mockResolvedValue(mockUser);
+
+        // Act
+        const result = await UserDeletionService.deleteUserCompletely(
+          mockUserId,
+          mockPerformedBy as any
+        );
+
+        // Assert
+        expect(result.deletedData.programMentorships).toBe(2);
+        expect(Program.updateMany).toHaveBeenCalledWith(
+          { "mentors.userId": new mongoose.Types.ObjectId(mockUserId) },
+          {
+            $pull: {
+              mentors: { userId: new mongoose.Types.ObjectId(mockUserId) },
+            },
+          }
+        );
+      });
+
+      it("should remove user from program adminEnrollments", async () => {
+        // Arrange
+        vi.mocked(User.findById).mockResolvedValue(mockUser);
+        vi.mocked(Registration.deleteMany).mockResolvedValue({
+          deletedCount: 0,
+        } as any);
+        vi.mocked(Registration.updateMany).mockResolvedValue({
+          modifiedCount: 0,
+        } as any);
+        vi.mocked(Event.find).mockResolvedValue([]);
+        vi.mocked(Event.updateMany).mockResolvedValue({
+          modifiedCount: 0,
+        } as any);
+        vi.mocked(Message.updateMany).mockResolvedValue({
+          modifiedCount: 0,
+        } as any);
+        vi.mocked(Message.deleteMany).mockResolvedValue({
+          deletedCount: 0,
+        } as any);
+        vi.mocked(PromoCode.deleteMany).mockResolvedValue({
+          deletedCount: 0,
+        } as any);
+        vi.mocked(Program.updateMany)
+          .mockResolvedValueOnce({ modifiedCount: 0 } as any) // Mentors
+          .mockResolvedValueOnce({ modifiedCount: 1 } as any) // ClassReps
+          .mockResolvedValueOnce({ modifiedCount: 2 } as any); // Mentees
+        vi.mocked(ShortLink.deleteMany).mockResolvedValue({
+          deletedCount: 0,
+        } as any);
+        vi.mocked(User.findByIdAndDelete).mockResolvedValue(mockUser);
+
+        // Act
+        const result = await UserDeletionService.deleteUserCompletely(
+          mockUserId,
+          mockPerformedBy as any
+        );
+
+        // Assert
+        expect(result.deletedData.programClassReps).toBe(1);
+        expect(result.deletedData.programMentees).toBe(2);
+        expect(Program.updateMany).toHaveBeenCalledWith(
+          {
+            "adminEnrollments.classReps": new mongoose.Types.ObjectId(
+              mockUserId
+            ),
+          },
+          {
+            $pull: {
+              "adminEnrollments.classReps": new mongoose.Types.ObjectId(
+                mockUserId
+              ),
+            },
+            $inc: {
+              classRepCount: -1,
+            },
+          }
+        );
+        expect(Program.updateMany).toHaveBeenCalledWith(
+          {
+            "adminEnrollments.mentees": new mongoose.Types.ObjectId(mockUserId),
+          },
+          {
+            $pull: {
+              "adminEnrollments.mentees": new mongoose.Types.ObjectId(
+                mockUserId
+              ),
+            },
+          }
+        );
+      });
+
+      it("should delete shortlinks for user's created events", async () => {
+        // Arrange
+        const mockEvents = [
+          {
+            _id: new mongoose.Types.ObjectId(),
+            title: "Event 1",
+            save: vi.fn(),
+          },
+          {
+            _id: new mongoose.Types.ObjectId(),
+            title: "Event 2",
+            save: vi.fn(),
+          },
+        ];
+
+        vi.mocked(User.findById).mockResolvedValue(mockUser);
+        vi.mocked(Registration.deleteMany).mockResolvedValue({
+          deletedCount: 0,
+        } as any);
+        vi.mocked(Registration.updateMany).mockResolvedValue({
+          modifiedCount: 0,
+        } as any);
+        vi.mocked(Event.find)
+          .mockResolvedValueOnce(mockEvents) // Events created by user
+          .mockResolvedValueOnce(mockEvents); // For stats update
+        vi.mocked(Event.findByIdAndDelete).mockResolvedValue({});
+        vi.mocked(Event.updateMany).mockResolvedValue({
+          modifiedCount: 0,
+        } as any);
+        vi.mocked(Message.updateMany).mockResolvedValue({
+          modifiedCount: 0,
+        } as any);
+        vi.mocked(Message.deleteMany).mockResolvedValue({
+          deletedCount: 0,
+        } as any);
+        vi.mocked(PromoCode.deleteMany).mockResolvedValue({
+          deletedCount: 0,
+        } as any);
+        vi.mocked(Program.updateMany).mockResolvedValue({
+          modifiedCount: 0,
+        } as any);
+        vi.mocked(ShortLink.deleteMany).mockResolvedValue({
+          deletedCount: 2,
+        } as any);
+        vi.mocked(User.findByIdAndDelete).mockResolvedValue(mockUser);
+
+        // Act
+        const result = await UserDeletionService.deleteUserCompletely(
+          mockUserId,
+          mockPerformedBy as any
+        );
+
+        // Assert
+        expect(result.deletedData.shortLinks).toBe(2);
+        expect(ShortLink.deleteMany).toHaveBeenCalled();
+        // Verify it was called with an $in query containing event IDs (as strings)
+        const callArg = vi.mocked(ShortLink.deleteMany).mock.calls[0][0] as any;
+        expect(callArg.targetEventId.$in).toHaveLength(2);
+      });
+
+      it("should delete avatar file when exists", async () => {
+        // Arrange
+        const userWithAvatar = {
+          _id: mockUserId,
+          email: "user@example.com",
+          avatar: "user123.jpg",
+        };
+
+        vi.mocked(User.findById).mockResolvedValue(userWithAvatar as any);
+        vi.mocked(Registration.deleteMany).mockResolvedValue({
+          deletedCount: 0,
+        } as any);
+        vi.mocked(Registration.updateMany).mockResolvedValue({
+          modifiedCount: 0,
+        } as any);
+        vi.mocked(Event.find).mockResolvedValue([]);
+        vi.mocked(Event.updateMany).mockResolvedValue({
+          modifiedCount: 0,
+        } as any);
+        vi.mocked(Message.updateMany).mockResolvedValue({
+          modifiedCount: 0,
+        } as any);
+        vi.mocked(Message.deleteMany).mockResolvedValue({
+          deletedCount: 0,
+        } as any);
+        vi.mocked(PromoCode.deleteMany).mockResolvedValue({
+          deletedCount: 0,
+        } as any);
+        vi.mocked(Program.updateMany).mockResolvedValue({
+          modifiedCount: 0,
+        } as any);
+        vi.mocked(ShortLink.deleteMany).mockResolvedValue({
+          deletedCount: 0,
+        } as any);
+        vi.mocked(User.findByIdAndDelete).mockResolvedValue(
+          userWithAvatar as any
+        );
+        vi.mocked(fs.unlink).mockResolvedValue(undefined);
+
+        // Act
+        const result = await UserDeletionService.deleteUserCompletely(
+          mockUserId,
+          mockPerformedBy as any
+        );
+
+        // Assert
+        expect(result.deletedData.avatarFile).toBe(true);
+        expect(fs.unlink).toHaveBeenCalled();
+        const callArg = vi.mocked(fs.unlink).mock.calls[0][0];
+        expect(callArg).toContain("uploads/avatars/user123.jpg");
+      });
+
+      it("should delete event flyer files", async () => {
+        // Arrange
+        const mockEvents = [
+          {
+            _id: new mongoose.Types.ObjectId(),
+            title: "Event 1",
+            flyerUrl: "flyer1.jpg",
+            save: vi.fn(),
+          },
+          {
+            _id: new mongoose.Types.ObjectId(),
+            title: "Event 2",
+            flyerUrl: "flyer2.jpg",
+            save: vi.fn(),
+          },
+          {
+            _id: new mongoose.Types.ObjectId(),
+            title: "Event 3",
+            // No flyer
+            save: vi.fn(),
+          },
+        ];
+
+        vi.mocked(User.findById).mockResolvedValue(mockUser);
+        vi.mocked(Registration.deleteMany).mockResolvedValue({
+          deletedCount: 0,
+        } as any);
+        vi.mocked(Registration.updateMany).mockResolvedValue({
+          modifiedCount: 0,
+        } as any);
+        vi.mocked(Event.find)
+          .mockResolvedValueOnce(mockEvents) // Events created by user
+          .mockResolvedValueOnce(mockEvents); // For stats update
+        vi.mocked(Event.findByIdAndDelete).mockResolvedValue({});
+        vi.mocked(Event.updateMany).mockResolvedValue({
+          modifiedCount: 0,
+        } as any);
+        vi.mocked(Message.updateMany).mockResolvedValue({
+          modifiedCount: 0,
+        } as any);
+        vi.mocked(Message.deleteMany).mockResolvedValue({
+          deletedCount: 0,
+        } as any);
+        vi.mocked(PromoCode.deleteMany).mockResolvedValue({
+          deletedCount: 0,
+        } as any);
+        vi.mocked(Program.updateMany).mockResolvedValue({
+          modifiedCount: 0,
+        } as any);
+        vi.mocked(ShortLink.deleteMany).mockResolvedValue({
+          deletedCount: 0,
+        } as any);
+        vi.mocked(User.findByIdAndDelete).mockResolvedValue(mockUser);
+        vi.mocked(fs.unlink).mockResolvedValue(undefined);
+
+        // Act
+        const result = await UserDeletionService.deleteUserCompletely(
+          mockUserId,
+          mockPerformedBy as any
+        );
+
+        // Assert
+        expect(result.deletedData.eventFlyerFiles).toBe(2);
+        expect(fs.unlink).toHaveBeenCalledTimes(2); // Only 2 events have flyers
+      });
+
+      it("should handle file deletion errors gracefully", async () => {
+        // Arrange
+        const userWithAvatar = {
+          _id: mockUserId,
+          email: "user@example.com",
+          avatar: "user123.jpg",
+        };
+
+        vi.mocked(User.findById).mockResolvedValue(userWithAvatar as any);
+        vi.mocked(Registration.deleteMany).mockResolvedValue({
+          deletedCount: 0,
+        } as any);
+        vi.mocked(Registration.updateMany).mockResolvedValue({
+          modifiedCount: 0,
+        } as any);
+        vi.mocked(Event.find).mockResolvedValue([]);
+        vi.mocked(Event.updateMany).mockResolvedValue({
+          modifiedCount: 0,
+        } as any);
+        vi.mocked(Message.updateMany).mockResolvedValue({
+          modifiedCount: 0,
+        } as any);
+        vi.mocked(Message.deleteMany).mockResolvedValue({
+          deletedCount: 0,
+        } as any);
+        vi.mocked(PromoCode.deleteMany).mockResolvedValue({
+          deletedCount: 0,
+        } as any);
+        vi.mocked(Program.updateMany).mockResolvedValue({
+          modifiedCount: 0,
+        } as any);
+        vi.mocked(ShortLink.deleteMany).mockResolvedValue({
+          deletedCount: 0,
+        } as any);
+        vi.mocked(User.findByIdAndDelete).mockResolvedValue(
+          userWithAvatar as any
+        );
+        vi.mocked(fs.unlink).mockRejectedValue(new Error("File not found"));
+
+        // Act
+        const result = await UserDeletionService.deleteUserCompletely(
+          mockUserId,
+          mockPerformedBy as any
+        );
+
+        // Assert - deletion should still succeed even if file deletion fails
+        expect(result.deletedData.userRecord).toBe(true);
+        expect(result.deletedData.avatarFile).toBe(false); // False when deletion fails
+        expect(fs.unlink).toHaveBeenCalled();
+      });
+    });
   });
 
   describe("getUserDeletionImpact", () => {
@@ -401,6 +889,12 @@ describe("UserDeletionService", () => {
         vi.mocked(Message.countDocuments)
           .mockResolvedValueOnce(3) // Message states
           .mockResolvedValueOnce(1); // Messages created
+        vi.mocked(PromoCode.countDocuments).mockResolvedValue(0);
+        vi.mocked(Program.countDocuments)
+          .mockResolvedValueOnce(0) // Mentorships
+          .mockResolvedValueOnce(0) // ClassReps
+          .mockResolvedValueOnce(0); // Mentees
+        vi.mocked(ShortLink.countDocuments).mockResolvedValue(0);
 
         // Act
         const result = await UserDeletionService.getUserDeletionImpact(
@@ -421,6 +915,13 @@ describe("UserDeletionService", () => {
             eventOrganizations: 1,
             messageStates: 3,
             messagesCreated: 1,
+            promoCodes: 0,
+            programMentorships: 0,
+            programClassReps: 0,
+            programMentees: 0,
+            shortLinks: 0,
+            avatarFile: false,
+            eventFlyerFiles: 0,
             affectedEvents: [],
           },
           risks: ["Will remove 2 event registrations"],
@@ -457,6 +958,12 @@ describe("UserDeletionService", () => {
         vi.mocked(Message.countDocuments)
           .mockResolvedValueOnce(0)
           .mockResolvedValueOnce(4);
+        vi.mocked(PromoCode.countDocuments).mockResolvedValue(0);
+        vi.mocked(Program.countDocuments)
+          .mockResolvedValueOnce(0)
+          .mockResolvedValueOnce(0)
+          .mockResolvedValueOnce(0);
+        vi.mocked(ShortLink.countDocuments).mockResolvedValue(0);
 
         // Act
         const result = await UserDeletionService.getUserDeletionImpact(
@@ -496,6 +1003,12 @@ describe("UserDeletionService", () => {
         vi.mocked(Message.countDocuments)
           .mockResolvedValueOnce(0)
           .mockResolvedValueOnce(0);
+        vi.mocked(PromoCode.countDocuments).mockResolvedValue(0);
+        vi.mocked(Program.countDocuments)
+          .mockResolvedValueOnce(0)
+          .mockResolvedValueOnce(0)
+          .mockResolvedValueOnce(0);
+        vi.mocked(ShortLink.countDocuments).mockResolvedValue(0);
 
         // Act
         const result = await UserDeletionService.getUserDeletionImpact(
@@ -507,6 +1020,127 @@ describe("UserDeletionService", () => {
         expect(result.risks).toContain(
           "WARNING: Attempting to delete a Super Admin user"
         );
+      });
+
+      it("should analyze promo code impact", async () => {
+        // Arrange
+        vi.mocked(User.findById).mockResolvedValue(mockUser);
+        vi.mocked(Registration.countDocuments).mockResolvedValue(0);
+        vi.mocked(Event.find).mockResolvedValue([]);
+        vi.mocked(Event.countDocuments).mockResolvedValue(0);
+        vi.mocked(Message.countDocuments)
+          .mockResolvedValueOnce(0)
+          .mockResolvedValueOnce(0);
+        vi.mocked(PromoCode.countDocuments).mockResolvedValue(5);
+        vi.mocked(Program.countDocuments)
+          .mockResolvedValueOnce(0)
+          .mockResolvedValueOnce(0)
+          .mockResolvedValueOnce(0);
+        vi.mocked(ShortLink.countDocuments).mockResolvedValue(0);
+
+        // Act
+        const result = await UserDeletionService.getUserDeletionImpact(
+          mockUserId
+        );
+
+        // Assert
+        expect(result.impact.promoCodes).toBe(5);
+        expect(result.risks).toContain(
+          "Will delete 5 promo codes owned by this user"
+        );
+        expect(PromoCode.countDocuments).toHaveBeenCalledWith({
+          ownerId: new mongoose.Types.ObjectId(mockUserId),
+        });
+      });
+
+      it("should analyze program mentorship impact", async () => {
+        // Arrange
+        vi.mocked(User.findById).mockResolvedValue(mockUser);
+        vi.mocked(Registration.countDocuments).mockResolvedValue(0);
+        vi.mocked(Event.find).mockResolvedValue([]);
+        vi.mocked(Event.countDocuments).mockResolvedValue(0);
+        vi.mocked(Message.countDocuments)
+          .mockResolvedValueOnce(0)
+          .mockResolvedValueOnce(0);
+        vi.mocked(PromoCode.countDocuments).mockResolvedValue(0);
+        vi.mocked(Program.countDocuments)
+          .mockResolvedValueOnce(3) // Mentorships
+          .mockResolvedValueOnce(1) // ClassReps
+          .mockResolvedValueOnce(2); // Mentees
+        vi.mocked(ShortLink.countDocuments).mockResolvedValue(0);
+
+        // Act
+        const result = await UserDeletionService.getUserDeletionImpact(
+          mockUserId
+        );
+
+        // Assert
+        expect(result.impact.programMentorships).toBe(3);
+        expect(result.impact.programClassReps).toBe(1);
+        expect(result.impact.programMentees).toBe(2);
+        expect(result.risks).toContain(
+          "Will remove user from 3 programs as mentor"
+        );
+        expect(Program.countDocuments).toHaveBeenCalledWith({
+          "mentors.userId": new mongoose.Types.ObjectId(mockUserId),
+        });
+        expect(Program.countDocuments).toHaveBeenCalledWith({
+          "adminEnrollments.classReps": new mongoose.Types.ObjectId(mockUserId),
+        });
+        expect(Program.countDocuments).toHaveBeenCalledWith({
+          "adminEnrollments.mentees": new mongoose.Types.ObjectId(mockUserId),
+        });
+      });
+
+      it("should analyze shortlink and file impact", async () => {
+        // Arrange
+        const userWithAvatar = {
+          ...mockUser,
+          avatar: "user123.jpg",
+        };
+        const mockEvents = [
+          {
+            _id: new mongoose.Types.ObjectId(),
+            title: "Event 1",
+            flyerUrl: "flyer1.jpg",
+            signedUp: 5,
+          },
+          {
+            _id: new mongoose.Types.ObjectId(),
+            title: "Event 2",
+            flyerUrl: "flyer2.jpg",
+            signedUp: 3,
+          },
+        ];
+
+        vi.mocked(User.findById).mockResolvedValue(userWithAvatar as any);
+        vi.mocked(Registration.countDocuments).mockResolvedValue(0);
+        vi.mocked(Event.find).mockResolvedValue(mockEvents);
+        vi.mocked(Event.countDocuments).mockResolvedValue(0);
+        vi.mocked(Message.countDocuments)
+          .mockResolvedValueOnce(0)
+          .mockResolvedValueOnce(0);
+        vi.mocked(PromoCode.countDocuments).mockResolvedValue(0);
+        vi.mocked(Program.countDocuments)
+          .mockResolvedValueOnce(0)
+          .mockResolvedValueOnce(0)
+          .mockResolvedValueOnce(0);
+        vi.mocked(ShortLink.countDocuments).mockResolvedValue(2);
+
+        // Act
+        const result = await UserDeletionService.getUserDeletionImpact(
+          mockUserId
+        );
+
+        // Assert
+        expect(result.impact.shortLinks).toBe(2);
+        expect(result.impact.avatarFile).toBe(true);
+        expect(result.impact.eventFlyerFiles).toBe(2);
+        expect(ShortLink.countDocuments).toHaveBeenCalled();
+        // Verify it was called with an $in query containing event IDs (as strings)
+        const callArg = vi.mocked(ShortLink.countDocuments).mock
+          .calls[0][0] as any;
+        expect(callArg.targetEventId.$in).toHaveLength(2);
       });
     });
 

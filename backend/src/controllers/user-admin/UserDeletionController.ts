@@ -6,6 +6,7 @@ import { AutoEmailNotificationService } from "../../services/infrastructure/auto
 import { UnifiedMessageController } from "../unifiedMessageController";
 import { CachePatterns } from "../../services";
 import { formatActorDisplay } from "../../utils/systemMessageFormatUtils";
+import { lockService } from "../../services/LockService";
 
 // Response helper utilities
 class ResponseHelper {
@@ -104,10 +105,18 @@ export default class UserDeletionController {
         "../../services/UserDeletionService"
       );
 
-      // Perform complete cascading deletion
-      const deletionReport = await UserDeletionService.deleteUserCompletely(
-        userId,
-        currentUser
+      // Perform complete cascading deletion with lock to prevent race conditions
+      // Lock key: user-deletion:{userId} ensures per-user serialization
+      // Timeout: 10000ms (longer than default) due to complex 18-step deletion process
+      const deletionReport = await lockService.withLock(
+        `user-deletion:${userId}`,
+        async () => {
+          return await UserDeletionService.deleteUserCompletely(
+            userId,
+            currentUser
+          );
+        },
+        10000
       );
 
       // Send targeted admin notifications for user deletion (security best practice)
