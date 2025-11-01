@@ -1,27 +1,16 @@
 import { Request, Response } from "express";
-import { hashEmail, truncateIpToCidr } from "../utils/privacy";
+import { truncateIpToCidr } from "../utils/privacy";
 import {
   registrationFailureCounter,
   registrationAttemptCounter,
 } from "../services/PrometheusMetricsService";
 import Event from "../models/Event";
-import User from "../models/User";
-import Registration from "../models/Registration";
-import GuestRegistration from "../models/GuestRegistration";
-import { CapacityService } from "../services/CapacityService";
 import { CorrelatedLogger } from "../services/CorrelatedLogger";
-import { lockService } from "../services/LockService";
-import { EmailService } from "../services/infrastructure/EmailServiceFacade";
-import { socketService } from "../services/infrastructure/SocketService";
-import { ResponseBuilderService } from "../services/ResponseBuilderService";
 import { GUEST_MAX_ROLES_PER_EVENT } from "../middleware/guestValidation";
-import { CachePatterns } from "../services";
-import { buildRegistrationICS } from "../services/ICSBuilder";
-import buildPublicRegistrationConfirmationEmail from "../services/emailTemplates/publicRegistrationConfirmation";
-import AuditLog from "../models/AuditLog";
-import { getMaxRolesPerEvent } from "../utils/roleRegistrationLimits";
-
-// hashEmail + truncateIpToCidr imported from utils/privacy
+import { ValidationHelper } from "./publicEvent/ValidationHelper";
+import { RegistrationHelper } from "./publicEvent/RegistrationHelper";
+import { NotificationHelper } from "./publicEvent/NotificationHelper";
+import { CacheHelper } from "./publicEvent/CacheHelper";
 
 interface PublicRegistrationBody {
   roleId?: string;
@@ -56,66 +45,26 @@ export class PublicEventController {
       const { roleId, attendee, consent }: PublicRegistrationBody =
         req.body || {};
 
-      if (!slug) {
-        log.warn("Public registration validation failure", undefined, {
-          reason: "missing_slug",
-          requestId,
-          ipCidr,
-        });
-        res.status(400).json({ success: false, message: "Missing slug" });
-        try {
-          registrationFailureCounter.inc({ reason: "validation" });
-        } catch {}
-        return;
-      }
-      if (!roleId) {
-        log.warn("Public registration validation failure", undefined, {
-          reason: "missing_roleId",
-          requestId,
-          ipCidr,
+      // 1. Validation phase using ValidationHelper
+      if (!ValidationHelper.validateSlug(slug, log, req, res)) return;
+      if (!ValidationHelper.validateRoleId(roleId, slug, log, req, res)) return;
+      if (
+        !ValidationHelper.validateAttendee(
+          attendee,
           slug,
-        });
-        res.status(400).json({ success: false, message: "roleId is required" });
-        try {
-          registrationFailureCounter.inc({ reason: "validation" });
-        } catch {}
+          roleId!,
+          log,
+          req,
+          res
+        )
+      )
         return;
-      }
-      if (!attendee?.name || !attendee?.email) {
-        log.warn("Public registration validation failure", undefined, {
-          reason: "missing_attendee_fields",
-          requestId,
-          ipCidr,
-          slug,
-          roleId,
-        });
-        res.status(400).json({
-          success: false,
-          message: "attendee.name and attendee.email are required",
-        });
-        try {
-          registrationFailureCounter.inc({ reason: "validation" });
-        } catch {}
+      if (
+        !ValidationHelper.validateConsent(consent, slug, roleId!, log, req, res)
+      )
         return;
-      }
-      // Note: phone is optional at the backend level but may be required by frontend validation
-      if (!consent?.termsAccepted) {
-        log.warn("Public registration validation failure", undefined, {
-          reason: "missing_consent",
-          requestId,
-          ipCidr,
-          slug,
-          roleId,
-        });
-        res
-          .status(400)
-          .json({ success: false, message: "termsAccepted must be true" });
-        try {
-          registrationFailureCounter.inc({ reason: "validation" });
-        } catch {}
-        return;
-      }
 
+      // 2. Event & Role lookup
       const event = await Event.findOne({ publicSlug: slug, publish: true });
       if (!event) {
         log.warn("Public registration event not found", undefined, {
@@ -159,223 +108,37 @@ export class PublicEventController {
       const targetRole: RoleSnapshot | undefined = (
         event.roles as unknown as RoleSnapshot[]
       ).find((r) => r.id === roleId);
-      if (!targetRole) {
-        log.warn("Public registration validation failure", undefined, {
-          reason: "role_not_found",
-          slug,
-          roleId,
-          requestId,
-          ipCidr,
-        });
-        res.status(400).json({ success: false, message: "Role not found" });
-        try {
-          registrationFailureCounter.inc({ reason: "validation" });
-        } catch {}
+      if (
+        !ValidationHelper.validateRole(targetRole, roleId!, slug, log, req, res)
+      )
         return;
-      }
-      if (!targetRole.openToPublic) {
-        log.warn("Public registration validation failure", undefined, {
-          reason: "role_not_open",
+      if (
+        !ValidationHelper.validateRolePublic(
+          targetRole!,
+          roleId!,
           slug,
-          roleId,
-          requestId,
-          ipCidr,
-        });
-        res.status(400).json({
-          success: false,
-          message: "Role is not open to public registration",
-        });
-        try {
-          registrationFailureCounter.inc({ reason: "role_not_open" });
-        } catch {}
+          log,
+          req,
+          res
+        )
+      )
         return;
-      }
 
-      // Acquire application-level lock to enforce capacity + multi-role limit safely
-      // Use event + email to avoid race between different roles for same guest
-      const lockKey = `public-register:${event._id}:$${(
-        attendee.email || ""
-      ).toLowerCase()}`;
-      let registrationId: string | null = null;
-      let registrationType: "user" | "guest" | null = null;
-      let duplicate = false;
-      let capacityBefore: number | null = null;
-      let capacityAfter: number | null = null;
-      let limitReached = false;
-      let limitReachedFor: "guest" | "user" | null = null;
-      let userLimit: number | null = null;
-
-      await lockService.withLock(
-        lockKey,
-        async () => {
-          // Occupancy BEFORE (for capacityBefore + early duplicate idempotency semantics)
-          const occBefore = await CapacityService.getRoleOccupancy(
-            event._id.toString(),
-            roleId
-          );
-          capacityBefore = occBefore.total;
-
-          // at this point attendee.email is guaranteed (validated earlier)
-          const attendeeEmailLc = attendee.email!.toLowerCase();
-          const existingUser = await User.findOne({
-            email: attendeeEmailLc,
-          });
-
-          if (existingUser) {
-            // Duplicate user registration check FIRST (idempotent even if capacity is full now)
-            const existingReg = await Registration.findOne({
-              eventId: event._id,
-              userId: existingUser._id,
-              roleId,
-            });
-            if (existingReg) {
-              registrationId = existingReg._id.toString();
-              registrationType = "user";
-              duplicate = true;
-              return; // Do NOT capacity-check duplicates
-            }
-            // NEW POLICY (2025-10-10): Enforce role-based multi-role limit for authenticated users
-            const userMaxRoles = getMaxRolesPerEvent(existingUser.role);
-            const activeUserRegCount = await Registration.countDocuments({
-              eventId: event._id,
-              userId: existingUser._id,
-              status: "active",
-            });
-            if (activeUserRegCount >= userMaxRoles) {
-              limitReached = true;
-              limitReachedFor = "user";
-              userLimit = userMaxRoles;
-              return; // Exit early - user already at max roles
-            }
-          } else {
-            // Multi-role guest logic: fetch active registrations for this guest & event
-            const existingGuestRegs = await GuestRegistration.find(
-              {
-                eventId: event._id,
-                email: attendeeEmailLc,
-                status: "active",
-              },
-              { _id: 1, roleId: 1 }
-            ).lean();
-
-            const sameRole = existingGuestRegs.find(
-              (g) => (g as { roleId?: string }).roleId === roleId
-            );
-            if (sameRole) {
-              registrationId = (
-                sameRole as { _id: { toString(): string } }
-              )._id.toString();
-              registrationType = "guest";
-              duplicate = true; // same-role idempotent
-              return; // Exit early: do not create new registration
-            }
-
-            // NEW POLICY (2025-10-10): Guests (email-only) limited to 1 role per event
-            if (existingGuestRegs.length >= GUEST_MAX_ROLES_PER_EVENT) {
-              // Reached global per-guest limit for this event
-              limitReached = true;
-              limitReachedFor = "guest";
-              return; // Exit without creating a new registration
-            }
-          }
-
-          // Only enforce capacity after duplicate short-circuit so duplicates remain idempotent post-capacity
-          if (CapacityService.isRoleFull(occBefore)) {
-            throw new Error("Role at full capacity");
-          }
-
-          if (existingUser) {
-            // Double-check capacity under lock again (race)
-            const occBeforeSave = await CapacityService.getRoleOccupancy(
-              event._id.toString(),
-              roleId
-            );
-            if (CapacityService.isRoleFull(occBeforeSave)) {
-              throw new Error("Role at full capacity");
-            }
-            const roleSnapshot = targetRole;
-            const reg = new Registration({
-              eventId: event._id,
-              userId: existingUser._id,
-              roleId,
-              registrationDate: new Date(),
-              registeredBy: existingUser._id,
-              userSnapshot: {
-                username: existingUser.username,
-                firstName: existingUser.firstName,
-                lastName: existingUser.lastName,
-                email: existingUser.email,
-                systemAuthorizationLevel: existingUser.role,
-                roleInAtCloud: existingUser.roleInAtCloud,
-                avatar: existingUser.avatar,
-                gender: existingUser.gender,
-              },
-              eventSnapshot: {
-                title: event.title,
-                date: event.date,
-                time: event.time,
-                location: event.location,
-                type: event.type,
-                roleName: roleSnapshot.name,
-                roleDescription: roleSnapshot.description,
-              },
-            });
-            await reg.save();
-            registrationId = reg._id.toString();
-            registrationType = "user";
-          } else {
-            // Guest creation path
-            const occBeforeGuest = await CapacityService.getRoleOccupancy(
-              event._id.toString(),
-              roleId
-            );
-            if (CapacityService.isRoleFull(occBeforeGuest)) {
-              throw new Error("Role at full capacity");
-            }
-            const guest = new GuestRegistration({
-              eventId: event._id,
-              roleId,
-              fullName: attendee.name,
-              gender: "male", // default placeholder
-              email: attendeeEmailLc,
-              phone: attendee.phone,
-              eventSnapshot: {
-                title: event.title,
-                date: new Date(event.date + "T00:00:00Z"),
-                location: event.location,
-                roleName: targetRole.name,
-              },
-              migrationStatus: "pending",
-            });
-            await guest.save();
-            registrationId = (
-              guest as { _id: { toString(): string } }
-            )._id.toString();
-            registrationType = "guest";
-          }
-
-          if (limitReached) {
-            return; // No creation due to limit
-          }
-
-          // Recompute occupancy AFTER creation (only when something was created)
-          const occAfter = await CapacityService.getRoleOccupancy(
-            event._id.toString(),
-            roleId
-          );
-          capacityAfter = occAfter.total;
-          await event.save();
-        },
-        10000
+      // 3. Execute registration with lock using RegistrationHelper
+      const result = await RegistrationHelper.executeRegistrationWithLock(
+        event,
+        roleId!,
+        targetRole!,
+        attendee!
       );
 
-      // If capacity error inside lock or limit reached or nothing created
-      if (limitReached) {
+      // 4. Handle limit reached errors
+      if (result.limitReached) {
         res.status(400).json({
           success: false,
           message:
-            limitReachedFor === "user"
-              ? `You have reached the ${userLimit}-role limit for this event.`
+            result.limitReachedFor === "user"
+              ? `You have reached the ${result.userLimit}-role limit for this event.`
               : `This guest has reached the ${GUEST_MAX_ROLES_PER_EVENT}-role limit for this event.`,
         });
         try {
@@ -384,7 +147,7 @@ export class PublicEventController {
         return;
       }
 
-      if (!registrationId) {
+      if (!result.registrationId) {
         res.status(400).json({
           success: false,
           message: "Unable to register (possibly full capacity)",
@@ -395,160 +158,52 @@ export class PublicEventController {
         return;
       }
 
+      // 5. Build response payload
       const responsePayload: Record<string, unknown> = {
         status: "ok",
-        registrationId,
-        type: registrationType,
-        duplicate,
+        registrationId: result.registrationId,
+        type: result.registrationType,
+        duplicate: result.duplicate,
         // For backward compatibility with tests expecting the shorter message
-        message: duplicate ? "Already registered" : "Registered successfully",
+        message: result.duplicate
+          ? "Already registered"
+          : "Registered successfully",
       };
 
-      // Fire-and-forget email with ICS attachment (EmailService already skips in test env)
-      try {
-        const roleSnapshot: RoleSnapshot | undefined = (
-          event.roles as unknown as RoleSnapshot[]
-        ).find((r) => r.id === roleId);
-        const ics = buildRegistrationICS({
-          event: {
-            _id: event._id,
-            title: event.title,
-            date: event.date,
-            endDate: event.endDate,
-            time: event.time,
-            endTime: event.endTime,
-            location: event.location,
-            purpose: event.purpose,
-            timeZone: event.timeZone,
-          },
-          role: roleSnapshot
-            ? {
-                name: roleSnapshot.name,
-                description: roleSnapshot.description || "",
-              }
-            : null,
-          attendeeEmail: attendee.email,
-        });
-        const { subject, html, text } =
-          buildPublicRegistrationConfirmationEmail({
-            event: {
-              title: event.title,
-              date: event.date,
-              endDate: event.endDate,
-              time: event.time,
-              endTime: event.endTime,
-              location: event.location,
-              purpose: event.purpose || "",
-              timeZone: event.timeZone || "",
-              isHybrid: event.isHybrid,
-              zoomLink: event.zoomLink,
-              meetingId: event.meetingId,
-              passcode: event.passcode,
-              // include format for hybrid inference when isHybrid flag not set
-              format: event.format,
-            },
-            roleName: roleSnapshot?.name,
-            duplicate,
-          });
-        EmailService.sendEmail({
-          to: attendee.email,
-          subject,
-          html,
-          text,
-          attachments: [
-            {
-              filename: ics.filename,
-              content: ics.content,
-              contentType: "text/calendar; charset=utf-8; method=PUBLISH",
-            },
-          ],
-        }).catch(() => undefined);
-      } catch {
-        /* ignore email build failures */
-      }
+      // 6. Fire-and-forget notifications using NotificationHelper
+      NotificationHelper.sendConfirmationEmail(
+        event,
+        roleId!,
+        attendee!,
+        result.duplicate
+      ).catch(() => undefined);
 
-      // Persist audit log (actorless public action)
-      try {
-        await AuditLog.create({
-          action: "PublicRegistrationCreated",
-          eventId: event._id,
-          emailHash: attendee.email ? hashEmail(attendee.email) : null,
-          metadata: {
-            // Include eventId within metadata so tests querying metadata.eventId can locate this log
-            eventId: event._id.toString(),
-            roleId,
-            registrationType,
-            duplicate,
-            capacityBefore,
-            capacityAfter,
-            requestId,
-            ipCidr,
-          },
-        });
-      } catch (auditErr) {
-        log.warn(
-          "Failed to persist audit log for public registration",
-          undefined,
-          {
-            error: (auditErr as Error).message,
-          }
+      NotificationHelper.createAuditLog(
+        event,
+        roleId!,
+        attendee!,
+        result.registrationType,
+        result.duplicate,
+        result.capacityBefore,
+        result.capacityAfter,
+        requestId,
+        ipCidr || "",
+        log
+      ).catch(() => undefined);
+
+      // 7. Emit real-time updates using CacheHelper (only on non-duplicate success)
+      if (!result.duplicate) {
+        await CacheHelper.emitRegistrationUpdate(
+          event,
+          roleId!,
+          result.registrationType,
+          result.registrationId,
+          attendee?.name,
+          log
         );
       }
 
-      // Also structured application log for observability
-      log.info("Public registration created", undefined, {
-        eventId: event._id.toString(),
-        roleId,
-        registrationType,
-        duplicate,
-        capacityBefore,
-        capacityAfter,
-        emailHash: hashEmail(attendee.email!),
-        requestId,
-        ipCidr,
-      });
-
-      // Emit real-time socket update & invalidate caches only on non-duplicate success
-      if (!duplicate) {
-        try {
-          const eventId = event._id.toString();
-          const updatedEvent =
-            await ResponseBuilderService.buildEventWithRegistrations(eventId);
-          if (registrationType === "guest") {
-            socketService.emitEventUpdate(eventId, "guest_registration", {
-              eventId,
-              roleId,
-              guestName: attendee.name,
-              event: updatedEvent,
-              timestamp: new Date(),
-            });
-          } else if (registrationType === "user") {
-            // Mirror payload contract from eventController user signup path
-            const roleSnapshot: RoleSnapshot | undefined = (
-              event.roles as unknown as RoleSnapshot[]
-            ).find((r) => r.id === roleId);
-            socketService.emitEventUpdate(eventId, "user_signed_up", {
-              userId: registrationId, // userId not directly tracked here; frontend refetch will reconcile accurate roster
-              roleId,
-              roleName: roleSnapshot?.name,
-              event: updatedEvent,
-            });
-          }
-          await CachePatterns.invalidateEventCache(event._id.toString());
-          await CachePatterns.invalidateAnalyticsCache();
-        } catch (socketErr) {
-          log.warn(
-            "Failed to emit realtime update for public registration",
-            undefined,
-            {
-              error: (socketErr as Error).message,
-              eventId: event._id.toString(),
-              roleId,
-            }
-          );
-        }
-      }
-
+      // 8. Success response
       res.status(200).json({ success: true, data: responsePayload });
     } catch (err) {
       if (
