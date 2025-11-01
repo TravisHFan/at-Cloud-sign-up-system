@@ -475,11 +475,9 @@ describe("Users API Integration Tests", () => {
         success: true,
         message: expect.stringContaining("updated"),
         data: {
-          user: {
-            firstName: "Updated",
-            lastName: "Name",
-            phone: "+1234567890",
-          },
+          firstName: "Updated",
+          lastName: "Name",
+          phone: "+1234567890",
         },
       });
     });
