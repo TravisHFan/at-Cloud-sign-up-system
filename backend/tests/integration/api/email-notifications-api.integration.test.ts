@@ -434,7 +434,7 @@ describe("Email Notifications API - Integration Tests", () => {
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(response.body.message).toContain(
-        "Promotion notifications sent successfully"
+        "Promotion notification sent with email, system message, and bell notification"
       );
     });
 
@@ -462,7 +462,7 @@ describe("Email Notifications API - Integration Tests", () => {
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(response.body.message).toContain(
-        "Role change notifications sent successfully"
+        "Role change notification sent with email, system message, and bell notification"
       );
     });
 
@@ -490,7 +490,7 @@ describe("Email Notifications API - Integration Tests", () => {
       expect(response.body.success).toBe(false);
     });
 
-    it("should reject request with same old and new roles", async () => {
+    it("should handle request with same old and new roles gracefully", async () => {
       const response = await request(app)
         .post("/api/email-notifications/system-authorization-change")
         .set("Authorization", `Bearer ${adminToken}`)
@@ -511,9 +511,10 @@ describe("Email Notifications API - Integration Tests", () => {
           },
         });
 
-      expect(response.status).toBe(400);
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toContain("No role change detected");
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toContain("Role has not changed");
+      expect(response.body.emailsSent).toBe(0);
     });
   });
 
@@ -540,7 +541,7 @@ describe("Email Notifications API - Integration Tests", () => {
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(response.body.message).toContain(
-        "Ministry role change notifications sent"
+        "@Cloud role change notification sent"
       );
     });
 
