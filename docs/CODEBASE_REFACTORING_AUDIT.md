@@ -12,14 +12,59 @@ This audit identifies **large, complex files** in the codebase that are candidat
 
 ### Completed Refactorings ✅
 
-| File                | Original Size | Final Size | Reduction | Status      |
-| ------------------- | ------------- | ---------- | --------- | ----------- |
-| **EditEvent.tsx**   | 2,184 lines   | 651 lines  | **70.2%** | ✅ Complete |
-| **CreateEvent.tsx** | 2,201 lines   | 800 lines  | **63.7%** | ✅ Complete |
+| File                    | Original Size | Final Size | Reduction | Status      |
+| ----------------------- | ------------- | ---------- | --------- | ----------- |
+| **EditEvent.tsx**       | 2,184 lines   | 651 lines  | **70.2%** | ✅ Complete |
+| **CreateEvent.tsx**     | 2,201 lines   | 800 lines  | **63.7%** | ✅ Complete |
+| **AdminPromoCodes.tsx** | 1,777 lines   | 153 lines  | **91.4%** | ✅ Complete |
 
-**Total Lines Eliminated:** 2,934 lines  
-**Total Lines of Reusable Components Created:** 1,985 lines  
+**Total Lines Eliminated:** 4,558 lines  
+**Total Lines of Reusable Components Created:** 3,737 lines (1,985 + 1,752)  
 **Net Architectural Improvement:** Significant reduction in duplication and complexity
+
+---
+
+### 🎉 Phase 6.1 Complete: AdminPromoCodes.tsx (Nov 3, 2024)
+
+**Achievement: 91.4% reduction - Exceeds all previous refactorings!**
+
+**Components Extracted:**
+
+1. ✅ `PromoCodeFilters.tsx` - 116 lines (commit 8b58e4f)
+   - Search input, type filter, status filter
+   - Clean separation of filter UI controls
+2. ✅ `PromoCodeList.tsx` - 323 lines (commit 41941b2)
+   - Full table rendering with badges
+   - Pagination, copy, deactivate, reactivate actions
+   - Status/type formatting utilities
+3. ✅ `usePromoCodeOperations.ts` - 163 lines (commit 4c51e4c)
+   - Custom hook managing all CRUD operations
+   - Pagination, loading, error states
+   - Copy functionality
+4. ✅ `StaffCodeCreator.tsx` - 841 lines (commit a7a19d3)
+   - Dual-form interface (personal/general staff codes)
+   - User selection, program access configuration
+   - Success modal with code display
+5. ✅ `BundleConfigManager.tsx` - 309 lines (commit 526fabc)
+   - Bundle discount configuration UI
+   - Live preview, enable/disable toggle
+   - Discount slider, expiration settings
+
+**Integration (commit bd282ee):**
+
+- Removed legacy interfaces (now in components)
+- Refactored AllCodesTab to use PromoCodeFilters + PromoCodeList
+- Tab content renders StaffCodeCreator and BundleConfigManager directly
+- Fixed hook usage: currentPage managed internally
+
+**Test Results:** ✅ All 632 frontend tests passing
+
+**Quality Metrics:**
+
+- Zero TypeScript errors
+- Clean separation of concerns
+- Reusable components with clear interfaces
+- Proper state management patterns
 
 ---
 
@@ -29,44 +74,21 @@ This audit identifies **large, complex files** in the codebase that are candidat
 
 These files represent the highest complexity and should be refactored next:
 
-#### 1. **AdminPromoCodes.tsx** - 1,777 lines
+#### 1. **AdminPromoCodes.tsx** - ✅ COMPLETED
 
 **Location:** `frontend/src/pages/AdminPromoCodes.tsx`
 
-**Current Structure:**
+**Status:** ✅ **Refactored** (Nov 3, 2024)
 
-- Tab-based page with 3 major sections (all codes, create staff, bundle config)
-- Multiple sub-components embedded within: AllCodesTab, CreateStaffTab, BundleConfigTab
-- Extensive state management (20+ useState hooks)
-- Complex filtering, pagination, and modal logic
-- CRUD operations for promo codes
+**Results:**
 
-**Refactoring Opportunity:**
+- **Original:** 1,777 lines
+- **Final:** 153 lines
+- **Reduction:** 91.4%
+- **Components Extracted:** 5 (1,752 lines total)
+- **Test Status:** All 632 tests passing ✅
 
-```
-Estimated Reduction: 65-70% (1,777 → ~550 lines)
-
-Extractable Components:
-1. PromoCodeList.tsx (~400 lines) - Code listing with filters/search
-2. PromoCodeFilters.tsx (~150 lines) - Filter controls
-3. StaffCodeCreator.tsx (~300 lines) - Staff code creation form
-4. BundleConfigManager.tsx (~350 lines) - Bundle configuration
-5. PromoCodeModals.tsx (~200 lines) - Deactivate/reactivate modals
-
-Reusable Hooks:
-1. usePromoCodeFilters.ts (~100 lines) - Filter state logic
-2. usePromoCodeOperations.ts (~150 lines) - CRUD operations
-3. usePagination.ts (~80 lines) - Generic pagination logic
-```
-
-**Complexity Score:** 🔴 **9/10**
-
-- Multiple nested components (~3 full tab components)
-- 20+ state variables
-- Complex async operations
-- Extensive conditional rendering
-
-**Business Impact:** ⚡ **High** - Critical admin functionality
+**See "Completed Refactorings" section above for full details.**
 
 ---
 
