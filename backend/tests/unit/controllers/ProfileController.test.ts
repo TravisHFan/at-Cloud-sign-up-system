@@ -60,7 +60,7 @@ vi.mock("../../../src/middleware/upload", () => ({
 }));
 
 vi.mock("../../../src/utils/avatarCleanup", () => ({
-  cleanupOldAvatar: vi.fn(),
+  cleanupOldAvatar: vi.fn(() => Promise.resolve(true)),
 }));
 
 vi.mock("../../../src/services/infrastructure/SocketService", () => ({
@@ -126,6 +126,9 @@ describe("ProfileController", () => {
   beforeEach(() => {
     // Reset all mocks
     vi.clearAllMocks();
+
+    // Ensure cleanupOldAvatar returns a Promise
+    vi.mocked(cleanupOldAvatar).mockReturnValue(Promise.resolve(true));
 
     // Setup mock response
     jsonMock = vi.fn();
@@ -270,7 +273,7 @@ describe("ProfileController", () => {
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith({
         success: false,
-        message: "Role in @Cloud is required for @Cloud co-workers.",
+        message: "@Cloud co-worker must have a role specified.",
       });
     });
 
@@ -288,12 +291,12 @@ describe("ProfileController", () => {
       expect(User.findByIdAndUpdate).toHaveBeenCalledWith(
         "507f1f77bcf86cd799439011",
         {
-          $set: expect.objectContaining({
+          $set: {
             isAtCloudLeader: false,
             roleInAtCloud: undefined,
-          }),
+          },
         },
-        { new: true, runValidators: true }
+        { new: true, runValidators: true, select: "-password" }
       );
     });
 
@@ -303,7 +306,7 @@ describe("ProfileController", () => {
       const mockUser = {
         _id: "507f1f77bcf86cd799439011",
         avatar: "/old-avatar.jpg",
-        save: vi.fn(),
+        gender: "male",
       };
 
       vi.mocked(User.findById).mockResolvedValue(mockUser as any);
@@ -313,8 +316,19 @@ describe("ProfileController", () => {
         mockResponse as Response
       );
 
-      expect(mockUser.avatar).toBe("/default-avatar-female.jpg");
-      expect(mockUser.save).toHaveBeenCalled();
+      // Check that findByIdAndUpdate was called with the new avatar URL
+      expect(User.findByIdAndUpdate).toHaveBeenCalledWith(
+        "507f1f77bcf86cd799439011",
+        expect.objectContaining({
+          $set: expect.objectContaining({
+            gender: "female",
+            avatar: "https://i.pravatar.cc/300?img=47",
+          }),
+        }),
+        expect.objectContaining({ new: true, runValidators: true })
+      );
+
+      // Check that cleanup was called for the old avatar
       expect(cleanupOldAvatar).toHaveBeenCalledWith(
         "507f1f77bcf86cd799439011",
         "/old-avatar.jpg"
@@ -328,6 +342,17 @@ describe("ProfileController", () => {
         roleInAtCloud: "Leader",
       };
 
+      const oldUser = {
+        _id: "507f1f77bcf86cd799439011",
+        firstName: "Test",
+        lastName: "User",
+        email: "test@example.com",
+        isAtCloudLeader: false,
+        roleInAtCloud: "",
+        gender: "male",
+        avatar: "https://i.pravatar.cc/300?img=12",
+      };
+
       const updatedUser = {
         _id: "507f1f77bcf86cd799439011",
         firstName: "Test",
@@ -337,6 +362,7 @@ describe("ProfileController", () => {
         roleInAtCloud: "Leader",
       };
 
+      vi.mocked(User.findById).mockResolvedValue(oldUser as any);
       vi.mocked(User.findByIdAndUpdate).mockResolvedValue(updatedUser as any);
 
       await ProfileController.updateProfile(
@@ -356,12 +382,14 @@ describe("ProfileController", () => {
             roleInAtCloud: "Leader",
           },
           changeType: "assigned",
-          systemUser: expect.objectContaining({
-            _id: "507f1f77bcf86cd799439011",
-            firstName: "Test",
-            lastName: "User",
-            email: "test@example.com",
-          }),
+          systemUser: {
+            _id: "system",
+            firstName: "System",
+            lastName: "",
+            email: "",
+            role: "system",
+            avatar: "",
+          },
         })
       );
     });
@@ -373,6 +401,17 @@ describe("ProfileController", () => {
         isAtCloudLeader: false,
       };
 
+      const oldUser = {
+        _id: "507f1f77bcf86cd799439011",
+        firstName: "Test",
+        lastName: "User",
+        email: "test@example.com",
+        isAtCloudLeader: true,
+        roleInAtCloud: "Leader",
+        gender: "male",
+        avatar: "https://i.pravatar.cc/300?img=12",
+      };
+
       const updatedUser = {
         _id: "507f1f77bcf86cd799439011",
         firstName: "Test",
@@ -382,6 +421,7 @@ describe("ProfileController", () => {
         roleInAtCloud: undefined,
       };
 
+      vi.mocked(User.findById).mockResolvedValue(oldUser as any);
       vi.mocked(User.findByIdAndUpdate).mockResolvedValue(updatedUser as any);
 
       await ProfileController.updateProfile(
@@ -401,12 +441,14 @@ describe("ProfileController", () => {
             previousRoleInAtCloud: "Leader",
           },
           changeType: "removed",
-          systemUser: expect.objectContaining({
-            _id: "507f1f77bcf86cd799439011",
-            firstName: "Test",
-            lastName: "User",
-            email: "test@example.com",
-          }),
+          systemUser: {
+            _id: "system",
+            firstName: "System",
+            lastName: "",
+            email: "",
+            role: "system",
+            avatar: "",
+          },
         })
       );
     });
@@ -419,12 +461,27 @@ describe("ProfileController", () => {
         roleInAtCloud: "Co-Leader",
       };
 
+      const oldUser = {
+        _id: "507f1f77bcf86cd799439011",
+        firstName: "Test",
+        lastName: "User",
+        email: "test@example.com",
+        isAtCloudLeader: true,
+        roleInAtCloud: "Leader",
+        gender: "male",
+        avatar: "https://i.pravatar.cc/300?img=12",
+      };
+
       const updatedUser = {
         _id: "507f1f77bcf86cd799439011",
+        firstName: "Test",
+        lastName: "User",
+        email: "test@example.com",
         isAtCloudLeader: true,
         roleInAtCloud: "Co-Leader",
       };
 
+      vi.mocked(User.findById).mockResolvedValue(oldUser as any);
       vi.mocked(User.findByIdAndUpdate).mockResolvedValue(updatedUser as any);
 
       await ProfileController.updateProfile(
@@ -509,7 +566,7 @@ describe("ProfileController", () => {
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: true,
-          message: "Profile updated successfully!",
+          message: "Profile updated successfully.",
         })
       );
     });

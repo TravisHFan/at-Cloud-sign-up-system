@@ -96,6 +96,13 @@ vi.mock("../../services/api", () => ({
       },
     }),
   },
+  // Needed by useEventDataLoader hook
+  roleTemplateService: {
+    getAllRolesTemplates: vi.fn().mockResolvedValue({}),
+  },
+  purchaseService: {
+    checkProgramAccess: vi.fn().mockResolvedValue({ hasAccess: true }),
+  },
 }));
 
 // Mock react-router-dom hooks
@@ -120,6 +127,23 @@ const TestWrapper = ({ children }: { children: React.ReactNode }) => (
 describe("EditEvent - Field Update Bug Fixes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // Mock authService.getProfile for AuthProvider
+    vi.mocked(authService.getProfile).mockResolvedValue({
+      id: "u-main",
+      username: "main",
+      email: "main@example.com",
+      firstName: "Main",
+      lastName: "One",
+      role: "Leader",
+      isAtCloudLeader: true,
+      roleInAtCloud: "Leader",
+      avatar: null,
+      gender: "female",
+      phone: "555-1111",
+      createdAt: new Date().toISOString(),
+      emailVerified: true,
+    } as any);
 
     // Mock successful user context
     vi.mocked(eventService.getEvent).mockResolvedValue({
@@ -231,7 +255,7 @@ describe("EditEvent - Field Update Bug Fixes", () => {
 
     // Choose the don't send option
     const dontSendRadio = screen.getByRole("radio", {
-      name: /don’t send notifications now/i,
+      name: /don't send notifications now.*i'll notify users later/i,
     });
     fireEvent.click(dontSendRadio);
 

@@ -45,8 +45,8 @@ describe("Public Events API - openToPublic toggle", () => {
       .send({
         title: "Toggle Event",
         type: "Webinar",
-        date: "2025-11-01",
-        endDate: "2025-11-01",
+        date: "2099-01-01",
+        endDate: "2099-01-01",
         time: "09:00",
         endTime: "10:00",
         location: "Online",
@@ -55,11 +55,16 @@ describe("Public Events API - openToPublic toggle", () => {
         roles: [
           { name: "Participant", description: "Role", maxParticipants: 5 },
         ],
-        purpose: "Toggle test",
+        purpose:
+          "Toggle test purpose that is long enough to satisfy validation requirements for event creation.",
+        zoomLink: "https://example.com/zoom/toggle",
+        meetingId: "TOGGLE123",
+        passcode: "toggle",
+        timeZone: "America/Los_Angeles",
         suppressNotifications: true,
       });
     expect(createRes.status).toBe(201);
-    const ev = createRes.body.data.event;
+    const ev = createRes.body.data?.event || createRes.body.data;
     eventId = ev.id || ev._id;
     roleId = ev.roles[0].id;
     expect(ev.roles[0].openToPublic || false).toBe(false);

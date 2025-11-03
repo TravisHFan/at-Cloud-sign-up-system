@@ -4,16 +4,50 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import EventDetail from "../../pages/EventDetail";
 import guestApi from "../../services/guestApi";
 
-// Mock guest API with admin actions (use factory without external refs; access via imported guestApi)
-vi.mock("../../services/guestApi", () => ({
+// Mock extracted EventDetail components (except EventRolesSection and EventModals which contain guest UI and modals)
+vi.mock("../../components/EventDetail/WorkshopGroupsSection", () => ({
   __esModule: true,
-  default: {
+  default: () => null,
+}));
+vi.mock("../../components/EventDetail/FlyerDisplay", () => ({
+  __esModule: true,
+  default: () => null,
+}));
+vi.mock("../../components/EventDetail/EventBasicDetails", () => ({
+  __esModule: true,
+  default: () => null,
+}));
+vi.mock("../../components/EventDetail/EventHostAndPurpose", () => ({
+  __esModule: true,
+  default: () => null,
+}));
+vi.mock("../../components/EventDetail/EventCapacityAndAgenda", () => ({
+  __esModule: true,
+  default: () => null,
+}));
+vi.mock("../../components/EventDetail/EventHeader", () => ({
+  __esModule: true,
+  default: ({ event }: any) => (
+    <div>
+      <h1>{event?.title}</h1>
+    </div>
+  ),
+}));
+
+// Mock guest API with admin actions (use factory without external refs; access via imported guestApi)
+vi.mock("../../services/guestApi", () => {
+  const mock = {
     getEventGuests: vi.fn(),
     resendManageLink: vi.fn(),
     adminCancelGuest: vi.fn(),
     adminUpdateGuest: vi.fn(),
-  },
-}));
+  };
+  return {
+    __esModule: true,
+    default: mock,
+    GuestApi: mock,
+  };
+});
 
 // Mock event service
 vi.mock("../../services/api", () => ({
@@ -83,6 +117,13 @@ describe("EventDetail - Admin guest actions", () => {
     (guestApi.adminCancelGuest as any).mockClear();
     (guestApi.adminUpdateGuest as any).mockClear();
     (guestApi.getEventGuests as any).mockClear();
+    (guestApi.resendManageLink as any).mockClear();
+
+    // Mock successful API responses
+    (guestApi.adminCancelGuest as any).mockResolvedValue({});
+    (guestApi.adminUpdateGuest as any).mockResolvedValue({});
+    (guestApi.resendManageLink as any).mockResolvedValue({});
+
     (guestApi.getEventGuests as any).mockResolvedValue({
       guests: [
         {
@@ -104,6 +145,12 @@ describe("EventDetail - Admin guest actions", () => {
         </Routes>
       </MemoryRouter>
     );
+
+    // Enter management mode first
+    const manageButton = await screen.findByRole("button", {
+      name: /Manage Sign-ups/i,
+    });
+    fireEvent.click(manageButton);
 
     await waitFor(() =>
       expect(screen.getByText(/Guests:/i)).toBeInTheDocument()
@@ -138,6 +185,12 @@ describe("EventDetail - Admin guest actions", () => {
         </Routes>
       </MemoryRouter>
     );
+
+    // Enter management mode first
+    const manageButton = await screen.findByRole("button", {
+      name: /Manage Sign-ups/i,
+    });
+    fireEvent.click(manageButton);
 
     await waitFor(() =>
       expect(screen.getByText(/Guests:/i)).toBeInTheDocument()
@@ -181,6 +234,12 @@ describe("EventDetail - Admin guest actions", () => {
         </Routes>
       </MemoryRouter>
     );
+
+    // Enter management mode first
+    const manageButton = await screen.findByRole("button", {
+      name: /Manage Sign-ups/i,
+    });
+    fireEvent.click(manageButton);
 
     await waitFor(() =>
       expect(screen.getByText(/Guests:/i)).toBeInTheDocument()
@@ -227,6 +286,12 @@ describe("EventDetail - Admin guest actions", () => {
         </Routes>
       </MemoryRouter>
     );
+
+    // Enter management mode first
+    const manageButton = await screen.findByRole("button", {
+      name: /Manage Sign-ups/i,
+    });
+    fireEvent.click(manageButton);
 
     await waitFor(() =>
       expect(screen.getByText(/Guests:/i)).toBeInTheDocument()

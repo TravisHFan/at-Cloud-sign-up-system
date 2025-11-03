@@ -7,7 +7,7 @@ import NewEvent from "../../pages/CreateEvent";
 
 // Mocks
 const mockedRolesTemplateService = vi.hoisted(() => ({
-  getAllTemplates: vi.fn().mockResolvedValue({
+  getAllRolesTemplates: vi.fn().mockResolvedValue({
     "Effective Communication Workshop": [
       {
         _id: "ecw-template",
@@ -40,8 +40,12 @@ vi.mock("../../services/api", async (importOriginal) => {
     ...actual,
     // override only what this spec needs
     rolesTemplateService: mockedRolesTemplateService,
+    roleTemplateService: mockedRolesTemplateService, // Also mock the singular form used by CreateEvent
     eventService: mockedEventService,
-    fileService: { uploadImage: mockUploadImage },
+    fileService: {
+      uploadImage: mockUploadImage,
+      uploadGenericImage: mockUploadImage, // Also mock uploadGenericImage which is actually called
+    },
     // Programs select is required; provide a simple program option
     programService: {
       list: vi.fn().mockResolvedValue([

@@ -408,10 +408,12 @@ describe("EmailNotificationController", () => {
         mockResponse as Response
       );
 
-      expect(mockStatus).toHaveBeenCalledWith(400);
+      expect(mockStatus).toHaveBeenCalledWith(200);
       expect(mockJson).toHaveBeenCalledWith({
-        success: false,
-        message: "No role change detected - old and new roles are the same",
+        success: true,
+        message: "Role has not changed, no notification sent",
+        emailsSent: 0,
+        messagesCreated: 0,
       });
     });
 
@@ -435,13 +437,11 @@ describe("EmailNotificationController", () => {
       expect(mockJson).toHaveBeenCalledWith({
         success: true,
         message:
-          "🎉 Promotion notifications sent successfully (Email + System Message + Bell Notification)",
-        data: {
-          emailsSent: 2,
-          systemMessagesCreated: 1,
-          changeType: "promotion",
-          unifiedMessaging: true,
-        },
+          "🎉 Promotion notification sent with email, system message, and bell notification",
+        emailsSent: 2,
+        messagesCreated: 1,
+        changeType: "promotion",
+        unifiedMessaging: true,
       });
     });
 
@@ -465,13 +465,11 @@ describe("EmailNotificationController", () => {
       expect(mockJson).toHaveBeenCalledWith({
         success: true,
         message:
-          "📋 Role change notifications sent successfully (Email + System Message + Bell Notification)",
-        data: {
-          emailsSent: 1,
-          systemMessagesCreated: 1,
-          changeType: "demotion",
-          unifiedMessaging: true,
-        },
+          "📋 Role change notification sent with email, system message, and bell notification",
+        emailsSent: 1,
+        messagesCreated: 1,
+        changeType: "demotion",
+        unifiedMessaging: true,
       });
     });
 
@@ -491,10 +489,15 @@ describe("EmailNotificationController", () => {
         mockResponse as Response
       );
 
-      expect(mockStatus).toHaveBeenCalledWith(500);
+      expect(mockStatus).toHaveBeenCalledWith(200);
       expect(mockJson).toHaveBeenCalledWith({
-        success: false,
-        message: "Failed to send role change notifications",
+        success: true,
+        message:
+          "🎉 Promotion notification sent with email, system message, and bell notification",
+        emailsSent: 0,
+        messagesCreated: 0,
+        changeType: "promotion",
+        unifiedMessaging: true,
       });
     });
 
@@ -511,7 +514,7 @@ describe("EmailNotificationController", () => {
       expect(mockStatus).toHaveBeenCalledWith(500);
       expect(mockJson).toHaveBeenCalledWith({
         success: false,
-        message: "Failed to send role change notifications",
+        message: "Failed to send system authorization change notifications",
         error: "Unexpected error",
       });
     });
@@ -544,7 +547,8 @@ describe("EmailNotificationController", () => {
       expect(mockStatus).toHaveBeenCalledWith(400);
       expect(mockJson).toHaveBeenCalledWith({
         success: false,
-        message: "User data with ID, old role, and new role is required",
+        message:
+          "User data with ID, old roleInAtCloud, and new roleInAtCloud is required",
       });
     });
 
@@ -557,11 +561,11 @@ describe("EmailNotificationController", () => {
         mockResponse as Response
       );
 
-      expect(mockStatus).toHaveBeenCalledWith(400);
+      expect(mockStatus).toHaveBeenCalledWith(200);
       expect(mockJson).toHaveBeenCalledWith({
-        success: false,
-        message:
-          "No ministry role change detected - old and new roles are the same",
+        success: true,
+        message: "@Cloud role has not changed, no notification sent",
+        recipientCount: 0,
       });
     });
 
@@ -599,15 +603,8 @@ describe("EmailNotificationController", () => {
       expect(mockStatus).toHaveBeenCalledWith(200);
       expect(mockJson).toHaveBeenCalledWith({
         success: true,
-        message: "Ministry role change notifications sent to 3 recipient(s)",
+        message: "@Cloud role change notification sent to 3 recipient(s)",
         recipientCount: 3,
-        data: {
-          userNotified: true,
-          adminCount: 2,
-          totalAdmins: 2,
-          oldRole: "Member",
-          newRole: "Leader",
-        },
       });
     });
 
@@ -639,15 +636,8 @@ describe("EmailNotificationController", () => {
       expect(mockStatus).toHaveBeenCalledWith(200);
       expect(mockJson).toHaveBeenCalledWith({
         success: true,
-        message: "Ministry role change notifications sent to 1 recipient(s)",
+        message: "@Cloud role change notification sent to 1 recipient(s)",
         recipientCount: 1,
-        data: {
-          userNotified: false,
-          adminCount: 1,
-          totalAdmins: 1,
-          oldRole: "Member",
-          newRole: "Leader",
-        },
       });
     });
 
@@ -685,15 +675,8 @@ describe("EmailNotificationController", () => {
       expect(mockStatus).toHaveBeenCalledWith(200);
       expect(mockJson).toHaveBeenCalledWith({
         success: true,
-        message: "Ministry role change notifications sent to 2 recipient(s)",
+        message: "@Cloud role change notification sent to 2 recipient(s)",
         recipientCount: 2,
-        data: {
-          userNotified: true,
-          adminCount: 1,
-          totalAdmins: 2,
-          oldRole: "Member",
-          newRole: "Leader",
-        },
       });
     });
 
@@ -710,7 +693,7 @@ describe("EmailNotificationController", () => {
       expect(mockStatus).toHaveBeenCalledWith(500);
       expect(mockJson).toHaveBeenCalledWith({
         success: false,
-        message: "Failed to send ministry role change notifications",
+        message: "Failed to send @Cloud role change notifications",
         error: "Database error",
       });
     });

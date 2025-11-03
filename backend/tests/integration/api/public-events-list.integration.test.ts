@@ -34,7 +34,7 @@ async function createPublished(
   token: string,
   title: string,
   type = "Webinar",
-  date = "2025-11-01"
+  date = "2099-01-01"
 ) {
   const create = await request(app)
     .post("/api/events")
@@ -58,7 +58,17 @@ async function createPublished(
       timeZone: "America/Los_Angeles",
       suppressNotifications: true,
     });
-  const eventId = create.body.data.event.id;
+
+  // Handle both response structures: data.event or just data
+  const eventId = create.body.data?.event?.id || create.body.data?.id;
+  if (!eventId) {
+    throw new Error(
+      `Failed to create event. Status: ${create.status}, Body: ${JSON.stringify(
+        create.body
+      )}`
+    );
+  }
+
   await Event.findByIdAndUpdate(eventId, {
     $set: { "roles.0.openToPublic": true },
   });

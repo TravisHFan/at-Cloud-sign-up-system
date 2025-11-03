@@ -8,6 +8,36 @@ import {
 } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import EventDetail from "../../pages/EventDetail";
+
+// Mock extracted EventDetail components (except EventRolesSection and EventModals which contain guest UI and modals)
+vi.mock("../../components/EventDetail/WorkshopGroupsSection", () => ({
+  __esModule: true,
+  default: () => null,
+}));
+vi.mock("../../components/EventDetail/FlyerDisplay", () => ({
+  __esModule: true,
+  default: () => null,
+}));
+vi.mock("../../components/EventDetail/EventBasicDetails", () => ({
+  __esModule: true,
+  default: () => null,
+}));
+vi.mock("../../components/EventDetail/EventHostAndPurpose", () => ({
+  __esModule: true,
+  default: () => null,
+}));
+vi.mock("../../components/EventDetail/EventCapacityAndAgenda", () => ({
+  __esModule: true,
+  default: () => null,
+}));
+vi.mock("../../components/EventDetail/EventHeader", () => ({
+  __esModule: true,
+  default: ({ event }: any) => (
+    <div>
+      <h1>{event?.title}</h1>
+    </div>
+  ),
+}));
 // Hoisted socket mock & emitter to safely use inside vi.mock
 const socketTest = vi.hoisted(() => {
   let handler: ((payload: any) => void) | null = null;
@@ -86,6 +116,9 @@ vi.mock("../../services/api", () => ({
     moveGuestBetweenRoles: apiMocks.moveGuestBetweenRoles,
     moveUserBetweenRoles: vi.fn(),
     assignUserToRole: vi.fn(),
+  },
+  guestService: {
+    moveGuestBetweenRoles: apiMocks.moveGuestBetweenRoles,
   },
 }));
 

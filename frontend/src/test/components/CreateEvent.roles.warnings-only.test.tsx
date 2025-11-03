@@ -5,13 +5,40 @@ import { AuthProvider } from "../../contexts/AuthContext";
 import { NotificationProvider } from "../../contexts/NotificationModalContext";
 import NewEvent from "../../pages/CreateEvent";
 
-// Mock backend services
+// Mock services
 const mockedEventService = vi.hoisted(() => ({
   createEvent: vi.fn().mockResolvedValue({ success: true }),
 }));
 
+const mockedRolesTemplateService = vi.hoisted(() => ({
+  getAllRolesTemplates: vi.fn().mockResolvedValue({
+    Conference: [
+      {
+        _id: "tpl1",
+        name: "Conference Template",
+        roles: [
+          {
+            name: "Attendee",
+            description: "Participant",
+            maxParticipants: 100,
+            openToPublic: true,
+          },
+          {
+            name: "Host",
+            description: "Event host",
+            maxParticipants: 1,
+            openToPublic: false,
+          },
+        ],
+      },
+    ],
+  }),
+}));
+
 vi.mock("../../services/api", () => ({
   eventService: mockedEventService,
+  roleTemplateService: mockedRolesTemplateService, // Add to fix template loading
+  rolesTemplateService: mockedRolesTemplateService, // Keep for backwards compatibility
   fileService: { uploadImage: vi.fn() },
   authService: {
     getProfile: vi.fn().mockResolvedValue({
@@ -26,25 +53,6 @@ vi.mock("../../services/api", () => ({
       roleInAtCloud: "Leader",
       gender: "male",
     }),
-  },
-  rolesTemplateService: {
-    getAllTemplates: vi.fn().mockResolvedValue({
-      Conference: [
-        {
-          _id: "tpl1",
-          name: "Conference Template",
-          roles: [
-            {
-              name: "Attendee",
-              description: "General attendee",
-              maxParticipants: 100,
-            },
-            { name: "Host", description: "Event host", maxParticipants: 1 },
-          ],
-        },
-      ],
-    }),
-    getByEventType: vi.fn().mockResolvedValue([]),
   },
   programService: {
     list: vi.fn().mockResolvedValue([]),

@@ -61,6 +61,13 @@ vi.mock("../../services/api", () => ({
       gender: "male",
     }),
   },
+  // Needed by useEventDataLoader hook
+  roleTemplateService: {
+    getAllRolesTemplates: vi.fn().mockResolvedValue({}),
+  },
+  purchaseService: {
+    checkProgramAccess: vi.fn().mockResolvedValue({ hasAccess: true }),
+  },
 }));
 
 const Wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -165,7 +172,9 @@ describe("EditEvent — roles UI protections", () => {
 
     // Select notification preference (required)
     fireEvent.click(
-      screen.getByRole("radio", { name: /don’t send notifications now/i })
+      screen.getByRole("radio", {
+        name: /don't send notifications now.*i'll notify users later/i,
+      })
     );
 
     // Submit

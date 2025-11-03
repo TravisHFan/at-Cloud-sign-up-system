@@ -5,9 +5,9 @@ import { AuthProvider } from "../../contexts/AuthContext";
 import { NotificationProvider } from "../../contexts/NotificationModalContext";
 import NewEvent from "../../pages/CreateEvent";
 
-// Mock services
+// hoisted mocks// Mock services
 const mockedRolesTemplateService = vi.hoisted(() => ({
-  getAllTemplates: vi.fn().mockResolvedValue({
+  getAllRolesTemplates: vi.fn().mockResolvedValue({
     Conference: [
       {
         _id: "template1",
@@ -83,6 +83,7 @@ const mockedEventService = vi.hoisted(() => ({
 
 vi.mock("../../services/api", () => ({
   rolesTemplateService: mockedRolesTemplateService,
+  roleTemplateService: mockedRolesTemplateService, // Also mock the singular form used by CreateEvent
   programService: mockedProgramService,
   eventService: mockedEventService,
   userService: {

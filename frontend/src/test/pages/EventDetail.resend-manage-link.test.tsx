@@ -1,13 +1,49 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import {
+  render,
+  screen,
+  waitFor,
+  fireEvent,
+  within,
+} from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import EventDetail from "../../pages/EventDetail";
 import { NotificationProvider } from "../../contexts/NotificationModalContext";
+import { GuestApi } from "../../services/guestApi";
+
+// Mock extracted EventDetail components (except EventRolesSection and EventModals which contain guest UI and modals)
+vi.mock("../../components/EventDetail/WorkshopGroupsSection", () => ({
+  __esModule: true,
+  default: () => null,
+}));
+vi.mock("../../components/EventDetail/FlyerDisplay", () => ({
+  __esModule: true,
+  default: () => null,
+}));
+vi.mock("../../components/EventDetail/EventBasicDetails", () => ({
+  __esModule: true,
+  default: () => null,
+}));
+vi.mock("../../components/EventDetail/EventHostAndPurpose", () => ({
+  __esModule: true,
+  default: () => null,
+}));
+vi.mock("../../components/EventDetail/EventCapacityAndAgenda", () => ({
+  __esModule: true,
+  default: () => null,
+}));
+vi.mock("../../components/EventDetail/EventHeader", () => ({
+  __esModule: true,
+  default: ({ event }: any) => (
+    <div>
+      <h1>{event?.title}</h1>
+    </div>
+  ),
+}));
 
 // Mock guest API with resendManageLink
-vi.mock("../../services/guestApi", () => ({
-  __esModule: true,
-  default: {
+vi.mock("../../services/guestApi", () => {
+  const mock = {
     getEventGuests: vi.fn(async () => ({
       guests: [
         {
@@ -19,9 +55,14 @@ vi.mock("../../services/guestApi", () => ({
         },
       ],
     })),
-    resendManageLink: vi.fn(async (_id: string) => {}),
-  },
-}));
+    resendManageLink: vi.fn(async (_id: string) => ({ success: true })),
+  };
+  return {
+    __esModule: true,
+    default: mock,
+    GuestApi: mock,
+  };
+});
 
 // Mock event service
 vi.mock("../../services/api", () => ({
@@ -91,14 +132,10 @@ describe("EventDetail - Re-send manage link", () => {
     toastSpies.info.mockReset();
     toastSpies.warning.mockReset();
     // Also reset API mock call counts between tests
-    import("../../services/guestApi").then((api) => {
-      (api.default as any).resendManageLink?.mockReset?.();
-    });
+    (GuestApi.resendManageLink as any)?.mockReset?.();
   });
 
   it("shows button for admins and calls API after confirm", async () => {
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
-
     render(
       <NotificationProvider>
         <MemoryRouter initialEntries={["/events/e1"]}>
@@ -109,6 +146,12 @@ describe("EventDetail - Re-send manage link", () => {
       </NotificationProvider>
     );
 
+    // Enter management mode first
+    const manageButton = await screen.findByRole("button", {
+      name: /Manage Sign-ups/i,
+    });
+    fireEvent.click(manageButton);
+
     await waitFor(() =>
       expect(screen.getByText(/Guests:/i)).toBeInTheDocument()
     );
@@ -116,20 +159,21 @@ describe("EventDetail - Re-send manage link", () => {
     const btn = screen.getByRole("button", { name: /Re-send manage link/i });
     fireEvent.click(btn);
 
-    const api = await import("../../services/guestApi");
+    // Click the modal confirmation button
+    const confirmBtn = await screen.findByRole("button", {
+      name: /Yes, Send Link/i,
+    });
+    fireEvent.click(confirmBtn);
+
     await waitFor(() => {
-      expect((api.default as any).resendManageLink).toHaveBeenCalledWith(
+      expect(GuestApi.resendManageLink).toHaveBeenCalledWith(
         "g1",
         expect.objectContaining({ eventId: "e1" })
       );
     });
-
-    confirmSpy.mockRestore();
   });
 
   it("shows error toast when API fails (e.g., 400)", async () => {
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
-
     render(
       <NotificationProvider>
         <MemoryRouter initialEntries={["/events/e1"]}>
@@ -140,30 +184,37 @@ describe("EventDetail - Re-send manage link", () => {
       </NotificationProvider>
     );
 
+    // Enter management mode
+    const manageButton = await screen.findByRole("button", {
+      name: /Manage Sign-ups/i,
+    });
+    fireEvent.click(manageButton);
+
     await waitFor(() =>
       expect(screen.getByText(/Guests:/i)).toBeInTheDocument()
     );
 
-    const api = await import("../../services/guestApi");
     const err: any = new Error(
       "Cannot re-send link for cancelled registration"
     );
     err.status = 400;
-    (api.default as any).resendManageLink.mockRejectedValueOnce(err);
+    (GuestApi.resendManageLink as any).mockRejectedValueOnce(err);
 
     const btn = screen.getByRole("button", { name: /Re-send manage link/i });
     fireEvent.click(btn);
 
+    // Click modal confirmation
+    const confirmBtn = await screen.findByRole("button", {
+      name: /Yes, Send Link/i,
+    });
+    fireEvent.click(confirmBtn);
+
     await waitFor(() => {
       expect(toastSpies.error).toHaveBeenCalled();
     });
-
-    confirmSpy.mockRestore();
   });
 
   it("does nothing when admin cancels confirmation dialog", async () => {
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
-
     render(
       <NotificationProvider>
         <MemoryRouter initialEntries={["/events/e1"]}>
@@ -174,23 +225,36 @@ describe("EventDetail - Re-send manage link", () => {
       </NotificationProvider>
     );
 
+    // Enter management mode
+    const manageButton = await screen.findByRole("button", {
+      name: /Manage Sign-ups/i,
+    });
+    fireEvent.click(manageButton);
+
     await waitFor(() =>
       expect(screen.getByText(/Guests:/i)).toBeInTheDocument()
     );
 
-    const api = await import("../../services/guestApi");
     const btn = screen.getByRole("button", { name: /Re-send manage link/i });
     fireEvent.click(btn);
 
-    await new Promise((r) => setTimeout(r, 50));
-    expect((api.default as any).resendManageLink).not.toHaveBeenCalled();
+    // Wait for modal to appear
+    await screen.findByText(/Send a fresh manage link/i);
 
-    confirmSpy.mockRestore();
+    // Click cancel in modal (find button inside the modal)
+    const modal = screen
+      .getByText(/Send a fresh manage link/i)
+      .closest("div[class*='bg-white']");
+    const cancelBtn = within(modal as HTMLElement).getByRole("button", {
+      name: /Cancel/i,
+    });
+    fireEvent.click(cancelBtn);
+
+    await new Promise((r) => setTimeout(r, 50));
+    expect(GuestApi.resendManageLink).not.toHaveBeenCalled();
   });
 
   it("shows not-found error toast when API responds 404", async () => {
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
-
     render(
       <NotificationProvider>
         <MemoryRouter initialEntries={["/events/e1"]}>
@@ -201,22 +265,31 @@ describe("EventDetail - Re-send manage link", () => {
       </NotificationProvider>
     );
 
+    // Enter management mode
+    const manageButton = await screen.findByRole("button", {
+      name: /Manage Sign-ups/i,
+    });
+    fireEvent.click(manageButton);
+
     await waitFor(() =>
       expect(screen.getByText(/Guests:/i)).toBeInTheDocument()
     );
 
-    const api = await import("../../services/guestApi");
     const err: any = new Error("Guest registration not found");
     err.status = 404;
-    (api.default as any).resendManageLink.mockRejectedValueOnce(err);
+    (GuestApi.resendManageLink as any).mockRejectedValueOnce(err);
 
     const btn = screen.getByRole("button", { name: /Re-send manage link/i });
     fireEvent.click(btn);
+
+    // Click modal confirmation
+    const confirmBtn = await screen.findByRole("button", {
+      name: /Yes, Send Link/i,
+    });
+    fireEvent.click(confirmBtn);
 
     await waitFor(() => {
       expect(toastSpies.error).toHaveBeenCalled();
     });
-
-    confirmSpy.mockRestore();
   });
 });

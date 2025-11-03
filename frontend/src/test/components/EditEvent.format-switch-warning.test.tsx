@@ -66,6 +66,13 @@ vi.mock("../../services/api", () => ({
       },
     })),
   },
+  // Needed by useEventDataLoader hook
+  roleTemplateService: {
+    getAllRolesTemplates: vi.fn().mockResolvedValue({}),
+  },
+  purchaseService: {
+    checkProgramAccess: vi.fn().mockResolvedValue({ hasAccess: true }),
+  },
 }));
 
 // Provide baseline published Online event missing location so switching to Hybrid triggers warning

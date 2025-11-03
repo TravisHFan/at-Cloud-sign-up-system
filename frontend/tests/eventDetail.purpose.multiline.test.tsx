@@ -12,7 +12,52 @@ vi.mock("../src/components/common", () => ({
   EditButton: ({ children }: any) => <button>{children}</button>,
 }));
 vi.mock("../src/components/share/ShareModal", () => ({
-  ShareModal: () => null,
+  __esModule: true,
+  default: () => null,
+}));
+
+// Mock extracted EventDetail components
+vi.mock("../src/components/EventDetail/WorkshopGroupsSection", () => ({
+  __esModule: true,
+  default: () => null,
+}));
+vi.mock("../src/components/EventDetail/EventModals", () => ({
+  __esModule: true,
+  default: () => null,
+}));
+vi.mock("../src/components/EventDetail/EventRolesSection", () => ({
+  __esModule: true,
+  default: () => null,
+}));
+vi.mock("../src/components/EventDetail/FlyerDisplay", () => ({
+  __esModule: true,
+  default: () => null,
+}));
+vi.mock("../src/components/EventDetail/EventBasicDetails", () => ({
+  __esModule: true,
+  default: () => null,
+}));
+vi.mock("../src/components/EventDetail/EventHostAndPurpose", () => ({
+  __esModule: true,
+  default: ({ event }: any) => (
+    <div>
+      {event?.purpose && (
+        <div data-testid="event-detail-purpose">{event.purpose}</div>
+      )}
+    </div>
+  ),
+}));
+vi.mock("../src/components/EventDetail/EventCapacityAndAgenda", () => ({
+  __esModule: true,
+  default: () => null,
+}));
+vi.mock("../src/components/EventDetail/EventHeader", () => ({
+  __esModule: true,
+  default: ({ event }: any) => (
+    <div>
+      <h1>{event?.title}</h1>
+    </div>
+  ),
 }));
 
 // Router mock (EventDetail uses useParams/useNavigate/useLocation)

@@ -8,6 +8,36 @@ import {
 } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import EventDetail from "../../pages/EventDetail";
+
+// Mock extracted EventDetail components (except EventRolesSection and EventModals which contain guest UI and modals)
+vi.mock("../../components/EventDetail/WorkshopGroupsSection", () => ({
+  __esModule: true,
+  default: () => null,
+}));
+vi.mock("../../components/EventDetail/FlyerDisplay", () => ({
+  __esModule: true,
+  default: () => null,
+}));
+vi.mock("../../components/EventDetail/EventBasicDetails", () => ({
+  __esModule: true,
+  default: () => null,
+}));
+vi.mock("../../components/EventDetail/EventHostAndPurpose", () => ({
+  __esModule: true,
+  default: () => null,
+}));
+vi.mock("../../components/EventDetail/EventCapacityAndAgenda", () => ({
+  __esModule: true,
+  default: () => null,
+}));
+vi.mock("../../components/EventDetail/EventHeader", () => ({
+  __esModule: true,
+  default: ({ event }: any) => (
+    <div>
+      <h1>{event?.title}</h1>
+    </div>
+  ),
+}));
 import { NotificationProvider } from "../../contexts/NotificationModalContext";
 
 vi.mock("../../contexts/NotificationModalContext", () => ({
@@ -70,6 +100,10 @@ vi.mock("../../services/api", async (importOriginal) => {
       moveGuestBetweenRoles: apiMocks.moveGuestBetweenRoles,
       moveUserBetweenRoles: vi.fn(),
       assignUserToRole: vi.fn(),
+    },
+    guestService: {
+      ...(actual.guestService || {}),
+      moveGuestBetweenRoles: apiMocks.moveGuestBetweenRoles,
     },
   } as any;
 });

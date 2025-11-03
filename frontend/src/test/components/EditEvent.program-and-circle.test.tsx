@@ -59,6 +59,13 @@ vi.mock("../../services/api", () => ({
       },
     }),
   },
+  // Needed by useEventDataLoader hook
+  roleTemplateService: {
+    getAllRolesTemplates: vi.fn().mockResolvedValue({}),
+  },
+  purchaseService: {
+    checkProgramAccess: vi.fn().mockResolvedValue({ hasAccess: true }),
+  },
 }));
 
 vi.mock("react-router-dom", async () => {

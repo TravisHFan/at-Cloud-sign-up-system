@@ -35,6 +35,15 @@ const mockedEventService = vi.hoisted(() => ({
   createEvent: vi.fn(),
 }));
 
+const mockedRolesTemplateService = vi.hoisted(() => ({
+  getAllRolesTemplates: vi.fn().mockResolvedValue({
+    "Mentor Circle": [],
+    "Effective Communication Workshop": [],
+    Conference: [],
+    Webinar: [],
+  }),
+}));
+
 const mockedProgramService = vi.hoisted(() => ({
   list: vi
     .fn()
@@ -46,6 +55,8 @@ const mockedProgramService = vi.hoisted(() => ({
 
 vi.mock("../../services/api", () => ({
   eventService: mockedEventService,
+  roleTemplateService: mockedRolesTemplateService, // Add to fix template loading
+  rolesTemplateService: mockedRolesTemplateService, // Keep for backwards compatibility
   programService: mockedProgramService,
   userService: { getUsers: vi.fn().mockResolvedValue({ users: [], total: 0 }) },
   authService: {

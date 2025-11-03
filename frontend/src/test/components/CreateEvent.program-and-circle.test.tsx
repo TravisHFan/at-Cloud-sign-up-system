@@ -11,7 +11,7 @@ const mockedEventService = vi.hoisted(() => ({
 }));
 
 const mockedRolesTemplateService = vi.hoisted(() => ({
-  getAllTemplates: vi.fn().mockResolvedValue({
+  getAllRolesTemplates: vi.fn().mockResolvedValue({
     "Mentor Circle": [
       {
         _id: "tpl1",
@@ -60,6 +60,7 @@ const mockedProgramService = vi.hoisted(() => ({
 vi.mock("../../services/api", () => ({
   eventService: mockedEventService,
   rolesTemplateService: mockedRolesTemplateService,
+  roleTemplateService: mockedRolesTemplateService, // Also mock the singular form used by CreateEvent
   programService: mockedProgramService,
   // Provide a minimal userService to satisfy any imports from hooks/components
   userService: {
