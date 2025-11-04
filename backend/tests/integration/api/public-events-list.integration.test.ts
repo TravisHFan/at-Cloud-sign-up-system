@@ -118,8 +118,8 @@ describe("Public events listing", () => {
 
   it("applies type filter and pagination", async () => {
     const token = await createAdmin();
-    await createPublished(token, "Webinar 1", "Webinar", "2025-11-02");
-    await createPublished(token, "Conference 1", "Conference", "2025-11-03");
+    await createPublished(token, "Webinar 1", "Webinar", "2099-11-02");
+    await createPublished(token, "Conference 1", "Conference", "2099-11-03");
 
     const webinarOnly = await request(app).get(
       "/api/public/events?type=Webinar&page=1&pageSize=1"
@@ -150,7 +150,7 @@ describe("Public events listing", () => {
       token,
       "Future Event",
       "Webinar",
-      "2025-12-01"
+      "2099-12-01"
     );
 
     // Create another event with future date, then mark it as completed (should NOT appear)
@@ -158,7 +158,7 @@ describe("Public events listing", () => {
       token,
       "Past Event",
       "Webinar",
-      "2025-11-15"
+      "2099-11-15"
     );
     // Manually mark the event as completed to simulate a past event
     await Event.findByIdAndUpdate(pastEvent.eventId, { status: "completed" });

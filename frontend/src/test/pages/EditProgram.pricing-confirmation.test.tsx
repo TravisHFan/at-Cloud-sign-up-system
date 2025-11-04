@@ -14,7 +14,7 @@ import { NotificationProvider } from "../../contexts/NotificationModalContext";
 vi.mock("../../services/api", () => ({
   programService: {
     getById: vi.fn(),
-    update: vi.fn(),
+    updateProgram: vi.fn(),
   },
   fileService: {
     uploadFile: vi.fn(),
@@ -107,7 +107,9 @@ describe("EditProgram - Pricing Confirmation", () => {
     // Mock the program service to return test data
     const { programService } = await import("../../services/api");
     vi.mocked(programService.getById).mockResolvedValue(mockProgram);
-    vi.mocked(programService.update).mockResolvedValue({ success: true });
+    vi.mocked(programService.updateProgram).mockResolvedValue({
+      success: true,
+    });
   });
 
   const renderEditProgram = () => {
@@ -139,9 +141,9 @@ describe("EditProgram - Pricing Confirmation", () => {
     });
 
     // Change the full price ticket value (this should trigger pricing confirmation)
-    // Note: values are in cents, so 15000 = $150.00
+    // Note: form input is in dollars, so 150 = $150.00
     const fullPriceInput = screen.getByLabelText(/full price ticket/i);
-    fireEvent.change(fullPriceInput, { target: { value: "15000" } });
+    fireEvent.change(fullPriceInput, { target: { value: "150" } });
 
     // Submit the form
     const updateButton = screen.getByRole("button", {
@@ -160,9 +162,16 @@ describe("EditProgram - Pricing Confirmation", () => {
     ).toBeInTheDocument();
 
     // Should show the pricing change details
-    expect(
-      await screen.findByText(/Full price: \$100\.00 → \$150\.00/)
-    ).toBeInTheDocument();
+    const priceChangeElements = await screen.findAllByText(
+      (_content, element) => {
+        return (
+          element?.textContent === "• Full price: $100.00 → $150.00" ||
+          element?.textContent?.includes("Full price: $100.00 → $150.00") ||
+          false
+        );
+      }
+    );
+    expect(priceChangeElements.length).toBeGreaterThan(0);
   });
 
   it("shows second confirmation step after clicking Continue", async () => {
@@ -175,7 +184,7 @@ describe("EditProgram - Pricing Confirmation", () => {
 
     // Change the full price ticket value
     const fullPriceInput = screen.getByLabelText(/full price ticket/i);
-    fireEvent.change(fullPriceInput, { target: { value: "15000" } });
+    fireEvent.change(fullPriceInput, { target: { value: "150" } });
 
     // Submit the form
     const updateButton = screen.getByRole("button", {
@@ -233,7 +242,7 @@ describe("EditProgram - Pricing Confirmation", () => {
 
     // Should call the update API with new pricing
     await waitFor(() => {
-      expect(programService.update).toHaveBeenCalledWith(
+      expect(programService.updateProgram).toHaveBeenCalledWith(
         "program1",
         expect.objectContaining({
           fullPriceTicket: 15000, // in cents ($150.00)
@@ -252,7 +261,7 @@ describe("EditProgram - Pricing Confirmation", () => {
 
     // Change the full price ticket value
     const fullPriceInput = screen.getByLabelText(/full price ticket/i);
-    fireEvent.change(fullPriceInput, { target: { value: "15000" } });
+    fireEvent.change(fullPriceInput, { target: { value: "150" } });
 
     // Submit the form
     const updateButton = screen.getByRole("button", {
@@ -304,7 +313,7 @@ describe("EditProgram - Pricing Confirmation", () => {
     ).not.toBeInTheDocument();
 
     await waitFor(() => {
-      expect(programService.update).toHaveBeenCalledWith(
+      expect(programService.updateProgram).toHaveBeenCalledWith(
         "program1",
         expect.objectContaining({
           title: "Updated Test Program",

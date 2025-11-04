@@ -97,7 +97,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
 
       const data = await systemMessageService.getSystemMessages();
 
-      const processedMessages = data.map((message: unknown) => {
+      const processedMessages = (data || []).map((message: unknown) => {
         const base = (message ?? {}) as Record<string, unknown> & {
           createdAt?: string;
         };

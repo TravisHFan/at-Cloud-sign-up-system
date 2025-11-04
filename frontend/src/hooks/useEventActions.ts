@@ -225,7 +225,7 @@ export function useEventActions({
                 notification.success(`"${event.title}" has been restored.`, {
                   title: "Event Restored",
                 });
-              } catch (error) {
+              } catch {
                 notification.error("Unable to restore event.", {
                   title: "Restore Failed",
                 });
