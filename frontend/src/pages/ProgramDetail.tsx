@@ -11,13 +11,12 @@ import type { EventData } from "../types/event";
 import { getAvatarAlt } from "../utils/avatarUtils";
 import { useAvatarUpdates } from "../hooks/useAvatarUpdates";
 import { socketService } from "../services/socketService";
-import { PlusIcon } from "@heroicons/react/24/outline";
-import EditButton from "../components/common/EditButton";
 import { Icon } from "../components/common";
 import { LoadingSpinner } from "../components/ui/LoadingStates";
 import { useAuth } from "../contexts/AuthContext";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import { ProgramParticipants } from "../components/program/ProgramParticipants";
+import ProgramHeader from "../components/ProgramDetail/ProgramHeader";
 import type { ProgramType } from "../constants/programTypes";
 
 type Program = {
@@ -439,29 +438,6 @@ export default function ProgramDetail({
     setDeleteCascade(false);
   };
 
-  const periodText = (p?: Program["period"]) => {
-    if (!p) return "";
-    const monthCodeToName: Record<string, string> = {
-      "01": "January",
-      "02": "February",
-      "03": "March",
-      "04": "April",
-      "05": "May",
-      "06": "June",
-      "07": "July",
-      "08": "August",
-      "09": "September",
-      "10": "October",
-      "11": "November",
-      "12": "December",
-    };
-    const normalize = (m?: string) =>
-      m && monthCodeToName[m] ? monthCodeToName[m] : m;
-    const s = [normalize(p.startMonth), p.startYear].filter(Boolean).join(" ");
-    const e = [normalize(p.endMonth), p.endYear].filter(Boolean).join(" ");
-    return [s, e].filter(Boolean).join(" – ");
-  };
-
   if (loading)
     return (
       <div className="flex justify-center items-center min-h-64">
@@ -611,57 +587,19 @@ export default function ProgramDetail({
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        {/* Title Row */}
-        <div className="flex items-center space-x-4 mb-4">
-          <button
-            onClick={() => navigate(-1)}
-            className="text-gray-600 hover:text-gray-900"
-          >
-            <Icon name="arrow-left" className="w-6 h-6" />
-          </button>
-          <h1 className="text-2xl font-bold text-gray-900">{program.title}</h1>
-        </div>
+      <ProgramHeader
+        programId={id!}
+        title={program.title}
+        programType={program.programType}
+        period={program.period}
+        canEdit={hasRole(["Administrator", "Super Admin"])}
+        canDelete={hasRole(["Administrator", "Super Admin"])}
+        onDelete={openDelete}
+      />
 
-        {/* Action Buttons Row */}
-        <div className="flex items-center space-x-3 mb-4">
-          {hasRole(["Administrator", "Super Admin"]) && (
-            <EditButton
-              onClick={() => navigate(`/dashboard/programs/${id}/edit`)}
-            />
-          )}
-          {hasRole(["Administrator", "Super Admin"]) && (
-            <button
-              onClick={openDelete}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-            >
-              Delete Program
-            </button>
-          )}
-          <button
-            onClick={() => navigate(`/dashboard/event-config?programId=${id}`)}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            <PlusIcon className="h-4 w-4 mr-1.5" />
-            Create New Event
-          </button>
-        </div>
-
-        {/* Program Details with Icons */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <div className="flex items-center text-gray-600">
-            <Icon name="tag" className="w-5 h-5 mr-3" />
-            <span>{program.programType}</span>
-          </div>
-          {program.period && (
-            <div className="flex items-center text-gray-600">
-              <Icon name="calendar" className="w-5 h-5 mr-3" />
-              <span>{periodText(program.period)}</span>
-            </div>
-          )}
-        </div>
-
-        {program.introduction && (
+      {/* Introduction Section */}
+      {program.introduction && (
+        <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="space-y-4">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
@@ -725,8 +663,8 @@ export default function ProgramDetail({
                 ))}
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Program Flyer (optional) */}
       {program.flyerUrl && (
