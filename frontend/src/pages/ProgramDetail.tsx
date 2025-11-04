@@ -1,14 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { formatCurrency } from "../utils/currency";
-import {
-  useParams,
-  useNavigate,
-  useSearchParams,
-  Link,
-} from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { programService, purchaseService } from "../services/api";
 import type { EventData } from "../types/event";
-import { getAvatarAlt } from "../utils/avatarUtils";
 import { useAvatarUpdates } from "../hooks/useAvatarUpdates";
 import { socketService } from "../services/socketService";
 import { useAuth } from "../contexts/AuthContext";
@@ -17,6 +11,7 @@ import { ProgramParticipants } from "../components/program/ProgramParticipants";
 import ProgramHeader from "../components/ProgramDetail/ProgramHeader";
 import DeleteProgramModal from "../components/ProgramDetail/DeleteProgramModal";
 import ProgramIntroSection from "../components/ProgramDetail/ProgramIntroSection";
+import ProgramMentors from "../components/ProgramDetail/ProgramMentors";
 import type { ProgramType } from "../constants/programTypes";
 
 type Program = {
@@ -481,117 +476,12 @@ export default function ProgramDetail({
       />
 
       {/* Mentors section */}
-      {program.mentors && program.mentors.length > 0 && (
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Mentors</h2>
-          <p className="text-gray-600 text-sm mb-4 italic">
-            — Spiritual Guides and Leadership Coaches
-            <br />
-            Mentors are seasoned ministry & business leaders who model
-            Christ-centered leadership and guide others in faith, personal
-            growth, and practical skills.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {program.mentors.map((m) => {
-              // Use avatar URL directly from database (backend updates it atomically)
-              let avatarUrl = m.avatar;
-
-              if (!avatarUrl || avatarUrl.includes("default-avatar")) {
-                // Use default avatar based on gender
-                const gender =
-                  (m.gender as "male" | "female" | undefined) || "male";
-                avatarUrl =
-                  gender === "male"
-                    ? "/default-avatar-male.jpg"
-                    : "/default-avatar-female.jpg";
-              }
-
-              // Check if current user can see mentor contact info
-              // Visible to: Admins, Mentees, and Class Reps
-              const isAdmin =
-                currentUser?.role === "Super Admin" ||
-                currentUser?.role === "Administrator";
-              const isEnrolled =
-                accessReason === "purchased" || accessReason === "free";
-              const canViewContact = isAdmin || isEnrolled;
-
-              const isOwnCard = currentUser?.id === m.userId;
-              const profileLink = isOwnCard
-                ? "/dashboard/profile"
-                : `/dashboard/profile/${m.userId}`;
-
-              // Check if user has permission to view other profiles
-              const canViewProfiles =
-                currentUser?.role === "Super Admin" ||
-                currentUser?.role === "Administrator" ||
-                currentUser?.role === "Leader";
-
-              const mentorInfoContent = (
-                <div className="flex items-start space-x-3 mb-3">
-                  <img
-                    src={avatarUrl}
-                    alt={getAvatarAlt(
-                      m.firstName || "",
-                      m.lastName || "",
-                      !!m.avatar
-                    )}
-                    className="h-12 w-12 rounded-full object-cover flex-shrink-0"
-                  />
-                  <div className="flex-1">
-                    <div
-                      className={`font-medium text-gray-900 ${
-                        canViewProfiles
-                          ? "hover:text-blue-600 transition-colors"
-                          : ""
-                      }`}
-                    >
-                      {[m.firstName, m.lastName].filter(Boolean).join(" ") ||
-                        "Mentor"}
-                    </div>
-                    {m.roleInAtCloud && (
-                      <div className="text-sm text-gray-600">
-                        {m.roleInAtCloud}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-
-              return (
-                <div
-                  key={m.userId}
-                  className="bg-gray-50 rounded-lg p-4 border border-gray-200"
-                >
-                  {canViewProfiles ? (
-                    <Link to={profileLink} className="block">
-                      {mentorInfoContent}
-                    </Link>
-                  ) : (
-                    mentorInfoContent
-                  )}
-                  {canViewContact && m.email && (
-                    <div className="space-y-1">
-                      <div className="flex items-center text-sm text-gray-600">
-                        <img
-                          src="/mail.svg"
-                          alt="Mail icon"
-                          className="w-3.5 h-3.5 mr-3"
-                        />
-                        <a
-                          href={`mailto:${m.email}`}
-                          className="text-blue-600 hover:text-blue-800 hover:underline"
-                        >
-                          {m.email}
-                        </a>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      <ProgramMentors
+        mentors={program.mentors || []}
+        currentUserId={currentUser?.id || null}
+        currentUserRole={currentUser?.role || null}
+        accessReason={accessReason}
+      />
 
       {/* Program Participants (Mentees & Class Representatives) - Only shown for paid programs */}
       {program && !program.isFree && (
