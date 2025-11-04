@@ -12,6 +12,7 @@ import ProgramHeader from "../components/ProgramDetail/ProgramHeader";
 import DeleteProgramModal from "../components/ProgramDetail/DeleteProgramModal";
 import ProgramIntroSection from "../components/ProgramDetail/ProgramIntroSection";
 import ProgramMentors from "../components/ProgramDetail/ProgramMentors";
+import ProgramEventsList from "../components/ProgramDetail/ProgramEventsList";
 import type { ProgramType } from "../constants/programTypes";
 
 type Program = {
@@ -299,33 +300,6 @@ export default function ProgramDetail({
     if (!isNaN(startTs)) return now < startTs ? "upcoming" : "past";
     // If no parseable date, default to upcoming (neutral)
     return "upcoming";
-  };
-
-  const StatusBadge = ({
-    status,
-  }: {
-    status: ReturnType<typeof getEventStatus>;
-  }) => {
-    const style =
-      status === "upcoming"
-        ? "bg-green-100 text-green-800 border-green-200"
-        : status === "ongoing"
-        ? "bg-yellow-100 text-yellow-800 border-yellow-200"
-        : "bg-gray-100 text-gray-800 border-gray-200"; // past
-    const text =
-      status === "past"
-        ? "Past"
-        : status === "ongoing"
-        ? "Ongoing"
-        : "Upcoming";
-    return (
-      <span
-        className={`ml-2 inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${style}`}
-        aria-label={`Event status: ${text}`}
-      >
-        {text}
-      </span>
-    );
   };
 
   // Linked events count for delete dialog
@@ -691,213 +665,86 @@ export default function ProgramDetail({
       </div>
 
       {/* Events in program */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-gray-900">Events</h2>
-          {(serverPaginationEnabled || events.length > 0) && (
-            <div className="flex items-center gap-3">
-              <label className="text-sm text-gray-700">
-                Sort:
-                <select
-                  aria-label="Sort events"
-                  className="ml-2 border rounded px-2 py-1 text-sm"
-                  value={sortDir}
-                  onChange={(e) => setSortDir(e.target.value as "asc" | "desc")}
-                >
-                  <option value="asc">Date asc</option>
-                  <option value="desc">Date desc</option>
-                </select>
-              </label>
-              <span className="sr-only" aria-live="polite">
-                {announceText}
-              </span>
-              <label className="text-sm text-gray-700 flex items-center gap-2">
-                <span className="whitespace-nowrap">Go to page</span>
-                <input
-                  aria-label="Go to page"
-                  type="text"
-                  inputMode="numeric"
-                  min={1}
-                  max={totalPages}
-                  className="w-20 border rounded px-2 py-1 text-sm"
-                  value={pageInput}
-                  onChange={(e) => {
-                    setPageInput(e.target.value);
-                    // show helper for invalid or out-of-range
-                    const n = Number(e.target.value);
-                    if (Number.isNaN(n)) {
-                      setPageHelper(
-                        "Enter a number between 1 and " + totalPages
-                      );
-                    } else if (n < 1 || n > totalPages) {
-                      setPageHelper(`Page must be between 1 and ${totalPages}`);
-                    } else {
-                      setPageHelper("");
-                    }
-                  }}
-                  onBlur={() => {
-                    const n = Number(pageInput);
-                    if (!Number.isNaN(n)) {
-                      const clamped = Math.max(1, Math.min(totalPages, n));
-                      setPageSafe(clamped);
-                      // If input was previously marked out-of-range or is out-of-range now,
-                      // announce clamping even if the browser/JSDOM auto-clamped the value.
-                      const wasOutOfRange =
-                        n < 1 ||
-                        n > totalPages ||
-                        (pageHelper ?? "").length > 0;
-                      setAnnounceText(
-                        wasOutOfRange || clamped !== n
-                          ? `Clamped to page ${clamped} of ${totalPages}`
-                          : `Moved to page ${clamped} of ${totalPages}`
-                      );
-                      setPageHelper("");
-                    } else {
-                      setPageInput(String(page));
-                      setAnnounceText(
-                        `Invalid page. Staying on page ${page} of ${totalPages}`
-                      );
-                      setPageHelper(
-                        "Enter a number between 1 and " + totalPages
-                      );
-                    }
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      const n = Number(pageInput);
-                      if (!Number.isNaN(n)) {
-                        const clamped = Math.max(1, Math.min(totalPages, n));
-                        // debounce commit by 300ms
-                        if (pageDebounceId) window.clearTimeout(pageDebounceId);
-                        const id = window.setTimeout(() => {
-                          setPageSafe(clamped);
-                          const wasOutOfRange =
-                            n < 1 ||
-                            n > totalPages ||
-                            (pageHelper ?? "").length > 0;
-                          setAnnounceText(
-                            wasOutOfRange || clamped !== n
-                              ? `Clamped to page ${clamped} of ${totalPages}`
-                              : `Moved to page ${clamped} of ${totalPages}`
-                          );
-                          setPageHelper("");
-                        }, 300);
-                        setPageDebounceId(id);
-                      } else {
-                        setPageInput(String(page));
-                        setAnnounceText(
-                          `Invalid page. Staying on page ${page} of ${totalPages}`
-                        );
-                        setPageHelper(
-                          "Enter a number between 1 and " + totalPages
-                        );
-                      }
-                    }
-                  }}
-                />
-              </label>
-              {pageHelper && (
-                <div className="text-xs text-red-600" role="note">
-                  {pageHelper}
-                </div>
-              )}
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-700">
-                  Page {page} of {totalPages}
-                </span>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    aria-label="Previous page"
-                    className="px-3 py-1 text-sm border rounded disabled:opacity-50"
-                    onClick={() => setPageSafe(page - 1)}
-                    disabled={page <= 1}
-                  >
-                    Prev
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Next page"
-                    className="px-3 py-1 text-sm border rounded disabled:opacity-50"
-                    onClick={() => setPageSafe(page + 1)}
-                    disabled={page >= totalPages}
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-        {serverPaginationEnabled ? (
-          <div>
-            {isListLoading ? (
-              <div
-                className="flex justify-center items-center gap-2 py-6"
-                role="status"
-                aria-live="polite"
-              >
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-                <span>Loading events…</span>
-              </div>
-            ) : serverPageEvents && serverPageEvents.length > 0 ? (
-              <ul className="divide-y">
-                {pageEvents.map((e) => (
-                  <li
-                    key={e.id}
-                    className="py-3 flex justify-between items-center"
-                  >
-                    <div>
-                      <div className="font-medium text-gray-900 flex items-center">
-                        <span>{e.title}</span>
-                        <StatusBadge status={getEventStatus(e)} />
-                      </div>
-                      <div className="text-sm text-gray-600">{e.type}</div>
-                    </div>
-                    <button
-                      className="text-blue-600 hover:text-blue-800 hover:underline text-sm"
-                      onClick={() => navigate(`/dashboard/event/${e.id}`)}
-                    >
-                      View
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-gray-700">
-                No events linked to this program yet.
-              </p>
-            )}
-          </div>
-        ) : events.length === 0 ? (
-          <p className="text-gray-700">No events linked to this program yet.</p>
-        ) : (
-          <div>
-            <ul className="divide-y">
-              {pageEvents.map((e) => (
-                <li
-                  key={e.id}
-                  className="py-3 flex justify-between items-center"
-                >
-                  <div>
-                    <div className="font-medium text-gray-900 flex items-center">
-                      <span>{e.title}</span>
-                      <StatusBadge status={getEventStatus(e)} />
-                    </div>
-                    <div className="text-sm text-gray-600">{e.type}</div>
-                  </div>
-                  <button
-                    className="text-blue-600 hover:text-blue-800 hover:underline text-sm"
-                    onClick={() => navigate(`/dashboard/event/${e.id}`)}
-                  >
-                    View
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </div>
+      <ProgramEventsList
+        events={events}
+        pageEvents={pageEvents}
+        page={page}
+        totalPages={totalPages}
+        pageInput={pageInput}
+        pageHelper={pageHelper}
+        announceText={announceText}
+        sortDir={sortDir}
+        isListLoading={isListLoading}
+        serverPaginationEnabled={serverPaginationEnabled}
+        serverPageEvents={serverPageEvents}
+        onSortChange={setSortDir}
+        onPageChange={setPageSafe}
+        onPageInputChange={(value) => {
+          setPageInput(value);
+          // show helper for invalid or out-of-range
+          const n = Number(value);
+          if (Number.isNaN(n)) {
+            setPageHelper("Enter a number between 1 and " + totalPages);
+          } else if (n < 1 || n > totalPages) {
+            setPageHelper(`Page must be between 1 and ${totalPages}`);
+          } else {
+            setPageHelper("");
+          }
+        }}
+        onPageInputBlur={() => {
+          const n = Number(pageInput);
+          if (!Number.isNaN(n)) {
+            const clamped = Math.max(1, Math.min(totalPages, n));
+            setPageSafe(clamped);
+            // If input was previously marked out-of-range or is out-of-range now,
+            // announce clamping even if the browser/JSDOM auto-clamped the value.
+            const wasOutOfRange =
+              n < 1 || n > totalPages || (pageHelper ?? "").length > 0;
+            setAnnounceText(
+              wasOutOfRange || clamped !== n
+                ? `Clamped to page ${clamped} of ${totalPages}`
+                : `Moved to page ${clamped} of ${totalPages}`
+            );
+            setPageHelper("");
+          } else {
+            setPageInput(String(page));
+            setAnnounceText(
+              `Invalid page. Staying on page ${page} of ${totalPages}`
+            );
+            setPageHelper("Enter a number between 1 and " + totalPages);
+          }
+        }}
+        onPageInputKeyDown={(e) => {
+          if (e.key === "Enter") {
+            const n = Number(pageInput);
+            if (!Number.isNaN(n)) {
+              const clamped = Math.max(1, Math.min(totalPages, n));
+              // debounce commit by 300ms
+              if (pageDebounceId) window.clearTimeout(pageDebounceId);
+              const id = window.setTimeout(() => {
+                setPageSafe(clamped);
+                const wasOutOfRange =
+                  n < 1 || n > totalPages || (pageHelper ?? "").length > 0;
+                setAnnounceText(
+                  wasOutOfRange || clamped !== n
+                    ? `Clamped to page ${clamped} of ${totalPages}`
+                    : `Moved to page ${clamped} of ${totalPages}`
+                );
+                setPageHelper("");
+              }, 300);
+              setPageDebounceId(id);
+            } else {
+              setPageInput(String(page));
+              setAnnounceText(
+                `Invalid page. Staying on page ${page} of ${totalPages}`
+              );
+              setPageHelper("Enter a number between 1 and " + totalPages);
+            }
+          }
+        }}
+        onEventClick={(eventId) => navigate(`/dashboard/event/${eventId}`)}
+        getEventStatus={getEventStatus}
+      />
     </div>
   );
 }
