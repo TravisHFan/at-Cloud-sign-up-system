@@ -11,12 +11,11 @@ import type { EventData } from "../types/event";
 import { getAvatarAlt } from "../utils/avatarUtils";
 import { useAvatarUpdates } from "../hooks/useAvatarUpdates";
 import { socketService } from "../services/socketService";
-import { Icon } from "../components/common";
-import { LoadingSpinner } from "../components/ui/LoadingStates";
 import { useAuth } from "../contexts/AuthContext";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import { ProgramParticipants } from "../components/program/ProgramParticipants";
 import ProgramHeader from "../components/ProgramDetail/ProgramHeader";
+import DeleteProgramModal from "../components/ProgramDetail/DeleteProgramModal";
 import type { ProgramType } from "../constants/programTypes";
 
 type Program = {
@@ -110,7 +109,7 @@ export default function ProgramDetail({
         let evts: unknown[] = [];
         if (!serverPaginationEnabled) {
           // Client-side mode: fetch all events once here
-          evts = (await programService.listEvents(id)) as unknown[];
+          evts = (await (programService as any).listEvents(id)) as unknown[];
         }
         if (cancelled) return;
         setProgram(p as Program);
@@ -236,7 +235,7 @@ export default function ProgramDetail({
     (async () => {
       try {
         setIsListLoading(true);
-        const res = await programService.listEventsPaged(id, {
+        const res = await (programService as any).listEventsPaged(id, {
           page,
           limit,
           sort: sortDir === "asc" ? "date:asc" : "date:desc",
@@ -362,7 +361,7 @@ export default function ProgramDetail({
     if (!id) return;
     try {
       setIsDeleting(true);
-      const result = await programService.remove(id, {
+      const result = await (programService as any).remove(id, {
         deleteLinkedEvents: !!deleteCascade,
       });
 
@@ -449,143 +448,17 @@ export default function ProgramDetail({
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 min-h-full">
-      {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="fixed inset-0 bg-black/50" aria-hidden="true" />
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="program-delete-title"
-            className="relative bg-white rounded-lg shadow-xl w-full max-w-lg mx-4"
-          >
-            <div className="p-6">
-              <h2
-                id="program-delete-title"
-                className="text-xl font-semibold text-gray-900"
-              >
-                Delete Program
-              </h2>
-              <p className="mt-2 text-sm text-gray-700">
-                This action cannot be undone. Choose how to handle the program's
-                linked events.
-              </p>
-              <div className="mt-4 space-y-3">
-                <label className="flex items-start gap-3 p-3 border rounded-md hover:bg-gray-50 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="delete-mode"
-                    checked={!deleteCascade}
-                    onChange={() => setDeleteCascade(false)}
-                    className="mt-1"
-                  />
-                  <div>
-                    <div className="font-medium text-gray-900">
-                      Delete program only
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      Keep its {linkedEventsCount} linked{" "}
-                      {linkedEventsCount === 1 ? "event" : "events"}, and remove
-                      their program association so these events become
-                      independent (not part of any program).
-                    </div>
-                  </div>
-                </label>
-                <label className="flex items-start gap-3 p-3 border rounded-md hover:bg-gray-50 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="delete-mode"
-                    checked={!!deleteCascade}
-                    onChange={() => setDeleteCascade(true)}
-                    className="mt-1"
-                  />
-                  <div>
-                    <div className="font-medium text-gray-900">
-                      Delete program and all linked events
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      Permanently remove this program and its{" "}
-                      {linkedEventsCount} linked{" "}
-                      {linkedEventsCount === 1 ? "event" : "events"}. This
-                      action will delete everything under the events, including
-                      registrations and guest registrations.
-                    </div>
-                  </div>
-                </label>
-              </div>
-              <div className="mt-6 flex justify-end gap-3">
-                <button
-                  onClick={cancelDelete}
-                  className="px-4 py-2 rounded-md border text-gray-700 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={onProceedToFinalConfirm}
-                  className="px-4 py-2 rounded-md bg-orange-600 text-white hover:bg-orange-700"
-                >
-                  Continue
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Final Confirmation Modal */}
-      {showFinalConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="fixed inset-0 bg-black/50" aria-hidden="true" />
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="final-confirm-title"
-            className="relative bg-white rounded-lg shadow-xl w-full max-w-md mx-4"
-          >
-            <div className="p-6">
-              <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full mb-4">
-                <Icon name="x-circle" className="w-6 h-6 text-red-600" />
-              </div>
-              <h2
-                id="final-confirm-title"
-                className="text-xl font-semibold text-gray-900 text-center mb-2"
-              >
-                Final Confirmation
-              </h2>
-              <p className="text-sm text-gray-700 text-center mb-6">
-                Are you absolutely sure you want to{" "}
-                {deleteCascade
-                  ? `delete this program and all ${linkedEventsCount} linked ${
-                      linkedEventsCount === 1 ? "event" : "events"
-                    }?`
-                  : "delete this program and unlink its events?"}
-                <br />
-                <strong className="text-red-600 mt-2 block">
-                  This action cannot be undone.
-                </strong>
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={cancelDelete}
-                  className="flex-1 px-4 py-2 rounded-md border text-gray-700 hover:bg-gray-50"
-                  disabled={isDeleting}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={onConfirmDelete}
-                  className="flex-1 px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-60 flex items-center justify-center gap-2"
-                  disabled={isDeleting}
-                >
-                  {isDeleting && (
-                    <LoadingSpinner size="sm" className="text-white" />
-                  )}
-                  {isDeleting ? "Deleting..." : "Yes, Delete"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <DeleteProgramModal
+        isOpen={showDeleteModal}
+        showFinalConfirm={showFinalConfirm}
+        isDeleting={isDeleting}
+        linkedEventsCount={linkedEventsCount}
+        deleteCascade={deleteCascade}
+        onCascadeChange={setDeleteCascade}
+        onProceedToFinalConfirm={onProceedToFinalConfirm}
+        onConfirmDelete={onConfirmDelete}
+        onCancel={cancelDelete}
+      />
 
       <ProgramHeader
         programId={id!}
