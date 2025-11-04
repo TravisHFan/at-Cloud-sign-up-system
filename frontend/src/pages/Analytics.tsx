@@ -20,6 +20,7 @@ import { AnalyticsOverviewCards } from "../components/analytics/AnalyticsOvervie
 import { EventStatisticsCards } from "../components/analytics/EventStatisticsCards";
 import { RoleFormatDistribution } from "../components/analytics/RoleFormatDistribution";
 import { UserEngagementSection } from "../components/analytics/UserEngagementSection";
+import { ParticipantDemographics } from "../components/analytics/ParticipantDemographics";
 
 export default function Analytics() {
   const { currentUser } = useAuth();
@@ -225,134 +226,12 @@ export default function Analytics() {
         {isLoading ? (
           <AnalyticsCardSectionLoadingState cardCount={2} itemCount={6} />
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-2">
-            <div className="bg-white border rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Church Statistics
-              </h3>
-              <div className="space-y-4">
-                <SummaryRow
-                  label="Total Churches"
-                  value={churchAnalytics.totalChurches}
-                />
-                <SummaryRow
-                  label="Church Locations"
-                  value={churchAnalytics.totalChurchLocations}
-                />
-                <SummaryRow
-                  label="Users with Church Info"
-                  value={churchAnalytics.usersWithChurchInfo}
-                  accent="text-green-600"
-                />
-                <SummaryRow
-                  label="Participation Rate"
-                  value={`${churchAnalytics.churchParticipationRate.toFixed(
-                    1
-                  )}%`}
-                />
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-purple-500 h-2 rounded-full"
-                    style={{
-                      width: `${churchAnalytics.churchParticipationRate}%`,
-                    }}
-                  />
-                </div>
-                <div className="mt-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">
-                    Most Common Churches:
-                  </h4>
-                  <div className="space-y-2">
-                    {Object.entries(churchAnalytics.weeklyChurchStats)
-                      .sort(([, a], [, b]) => b - a)
-                      .slice(0, 5)
-                      .map(([church, count]) => (
-                        <div
-                          key={church}
-                          className="flex justify-between text-xs"
-                        >
-                          <span className="text-gray-600 truncate">
-                            {church}
-                          </span>
-                          <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs font-medium">
-                            {count}
-                          </span>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="bg-white border rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Occupation Statistics
-              </h3>
-              <div className="space-y-4">
-                <SummaryRow
-                  label="Total Occupations"
-                  value={occupationAnalytics.totalOccupationTypes}
-                />
-                <SummaryRow
-                  label="Users with Occupation"
-                  value={occupationAnalytics.usersWithOccupation}
-                  accent="text-green-600"
-                />
-                <SummaryRow
-                  label="Completion Rate"
-                  value={`${occupationAnalytics.occupationCompletionRate.toFixed(
-                    1
-                  )}%`}
-                />
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-blue-500 h-2 rounded-full"
-                    style={{
-                      width: `${occupationAnalytics.occupationCompletionRate}%`,
-                    }}
-                  />
-                </div>
-                <div className="mt-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">
-                    Most Common Occupations:
-                  </h4>
-                  <div className="space-y-2">
-                    {occupationAnalytics.topOccupations.map((o) => (
-                      <div
-                        key={o.occupation}
-                        className="flex justify-between text-xs"
-                      >
-                        <span className="text-gray-600 truncate">
-                          {o.occupation}
-                        </span>
-                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
-                          {o.count}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <ParticipantDemographics
+            churchAnalytics={churchAnalytics}
+            occupationAnalytics={occupationAnalytics}
+          />
         )}
       </div>
-    </div>
-  );
-}
-
-function SummaryRow({
-  label,
-  value,
-  accent,
-}: {
-  label: string;
-  value: string | number;
-  accent?: string;
-}) {
-  return (
-    <div className="flex justify-between">
-      <span className="text-sm text-gray-600">{label}:</span>
-      <span className={`font-medium ${accent || ""}`}>{value}</span>
     </div>
   );
 }
