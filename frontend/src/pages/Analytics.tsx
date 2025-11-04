@@ -9,7 +9,6 @@ import {
   AnalyticsCardSectionLoadingState,
 } from "../components/ui/LoadingStates";
 import type { EventData } from "../types/event";
-import { getEngagementBadgeClassNames } from "../constants/ui";
 import {
   calculateEventAnalytics,
   calculateUserEngagement,
@@ -20,6 +19,7 @@ import {
 import { AnalyticsOverviewCards } from "../components/analytics/AnalyticsOverviewCards";
 import { EventStatisticsCards } from "../components/analytics/EventStatisticsCards";
 import { RoleFormatDistribution } from "../components/analytics/RoleFormatDistribution";
+import { UserEngagementSection } from "../components/analytics/UserEngagementSection";
 
 export default function Analytics() {
   const { currentUser } = useAuth();
@@ -210,68 +210,15 @@ export default function Analytics() {
         {isLoading ? (
           <AnalyticsCardSectionLoadingState cardCount={2} itemCount={6} />
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <div className="bg-white border rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Most Active Participants
-              </h3>
-              <div className="space-y-3">
-                {engagementMetrics.mostActiveUsers.length === 0 ? (
-                  <p className="text-sm text-gray-500">No data available.</p>
-                ) : (
-                  engagementMetrics.mostActiveUsers.map((user) => (
-                    <div
-                      key={user.userId}
-                      className="flex items-center justify-between"
-                    >
-                      <span className="text-sm text-gray-700 truncate">
-                        {user.name}
-                      </span>
-                      <span
-                        className={`${getEngagementBadgeClassNames(
-                          user.eventCount
-                        )} px-2 py-1 rounded-full text-xs font-medium`}
-                      >
-                        {user.eventCount}{" "}
-                        {user.eventCount === 1 ? "event" : "events"}
-                      </span>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-            <div className="bg-white border rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Engagement Summary
-              </h3>
-              <div className="space-y-3">
-                <SummaryRow
-                  label="Unique Participants"
-                  value={engagementMetrics.uniqueParticipants}
-                />
-                <SummaryRow
-                  label="Total Role Signups"
-                  value={engagementMetrics.userSignups}
-                />
-                <SummaryRow
-                  label="Guest Signups"
-                  value={guestAggregates.guestSignups}
-                />
-                <SummaryRow
-                  label="Unique Guests"
-                  value={guestAggregates.uniqueGuests}
-                />
-                <SummaryRow
-                  label="Total Unique Events"
-                  value={eventAnalytics.totalEvents}
-                />
-                <SummaryRow
-                  label="Avg. Roles per Participant"
-                  value={avgRolesPerParticipant.toFixed(1)}
-                />
-              </div>
-            </div>
-          </div>
+          <UserEngagementSection
+            mostActiveUsers={engagementMetrics.mostActiveUsers}
+            uniqueParticipants={engagementMetrics.uniqueParticipants}
+            userSignups={engagementMetrics.userSignups}
+            guestSignups={guestAggregates.guestSignups}
+            uniqueGuests={guestAggregates.uniqueGuests}
+            totalEvents={eventAnalytics.totalEvents}
+            avgRolesPerParticipant={avgRolesPerParticipant}
+          />
         )}
 
         {/* Church & Occupation */}
