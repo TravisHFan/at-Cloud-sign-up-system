@@ -16,6 +16,7 @@ import { useToastReplacement } from "../contexts/NotificationModalContext";
 import { ProgramParticipants } from "../components/program/ProgramParticipants";
 import ProgramHeader from "../components/ProgramDetail/ProgramHeader";
 import DeleteProgramModal from "../components/ProgramDetail/DeleteProgramModal";
+import ProgramIntroSection from "../components/ProgramDetail/ProgramIntroSection";
 import type { ProgramType } from "../constants/programTypes";
 
 type Program = {
@@ -470,90 +471,14 @@ export default function ProgramDetail({
         onDelete={openDelete}
       />
 
-      {/* Introduction Section */}
-      {program.introduction && (
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Introduction
-              </h3>
-              <p className="text-gray-700 leading-relaxed whitespace-pre-line">
-                {program.introduction}
-              </p>
-
-              {/* Enrollment CTA or Thank You Message */}
-              {!program.isFree &&
-                hasAccess !== null &&
-                (hasAccess ? (
-                  <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <div className="flex items-center">
-                      <img
-                        src="/check.svg"
-                        alt="Enrolled"
-                        className="w-6 h-6 mr-3"
-                      />
-                      <div>
-                        <p className="font-semibold text-green-900">
-                          {accessReason === "admin" || accessReason === "mentor"
-                            ? "Congratulations!"
-                            : "You're enrolled!"}
-                        </p>
-                        <p className="text-sm text-green-700 mt-1">
-                          {accessReason === "admin"
-                            ? "As an administrator, you have full access to all programs."
-                            : accessReason === "mentor"
-                            ? "As a mentor of this program, you have full access."
-                            : "Thank you for enrolling. You now have access to all events in this program."}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mt-6">
-                    <button
-                      onClick={() =>
-                        navigate(`/dashboard/programs/${id}/enroll`)
-                      }
-                      className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-8 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
-                    >
-                      <span>Enroll Now</span>
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 5l7 7-7 7"
-                        />
-                      </svg>
-                    </button>
-                  </div>
-                ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Program Flyer (optional) */}
-      {program.flyerUrl && (
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            Program Flyer
-          </h2>
-          <div className="flex">
-            <img
-              src={program.flyerUrl}
-              alt="Program flyer"
-              className="w-full max-w-2xl h-auto rounded border border-gray-200 object-contain"
-            />
-          </div>
-        </div>
-      )}
+      <ProgramIntroSection
+        programId={id!}
+        introduction={program.introduction}
+        flyerUrl={program.flyerUrl}
+        isFree={program.isFree}
+        hasAccess={hasAccess}
+        accessReason={accessReason}
+      />
 
       {/* Mentors section */}
       {program.mentors && program.mentors.length > 0 && (
