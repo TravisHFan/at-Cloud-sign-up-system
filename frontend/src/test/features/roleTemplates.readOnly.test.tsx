@@ -94,7 +94,7 @@ vi.mock("../../services/api", () => ({
     login: vi.fn(),
     logout: vi.fn(),
   },
-  rolesTemplateService: {
+  roleTemplateService: {
     getAllTemplates: () => mockGetAllTemplates(),
     getTemplateById: (id: string) => mockGetTemplateById(id),
     deleteTemplate: (id: string) => mockDeleteTemplate(id),

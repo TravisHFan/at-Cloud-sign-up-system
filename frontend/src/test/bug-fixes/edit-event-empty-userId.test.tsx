@@ -51,7 +51,7 @@ vi.mock("../../services/api", () => ({
       totalPages: 1,
     }),
   },
-  rolesTemplateService: {
+  roleTemplateService: {
     list: vi.fn().mockResolvedValue([]),
   },
 }));

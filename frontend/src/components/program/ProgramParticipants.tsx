@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { programService, type ProgramParticipant } from "../../services/api";
+import {
+  programService,
+  apiClient,
+  type ProgramParticipant,
+} from "../../services/api";
 import { getAvatarAlt } from "../../utils/avatarUtils";
 import { useAvatarUpdates } from "../../hooks/useAvatarUpdates";
 import { useAuth } from "../../contexts/AuthContext";
@@ -228,7 +232,7 @@ export function ProgramParticipants({
   const handleEnroll = async (enrollAs: "mentee" | "classRep") => {
     try {
       setEnrolling(true);
-      await programService.adminEnroll(programId, enrollAs);
+      await apiClient.adminEnroll(programId, enrollAs);
       notification.success(
         `Successfully enrolled as ${
           enrollAs === "mentee" ? "mentee" : "class representative"
@@ -246,7 +250,7 @@ export function ProgramParticipants({
   const handleUnenroll = async () => {
     try {
       setUnenrolling(true);
-      await programService.adminUnenroll(programId);
+      await apiClient.adminUnenroll(programId);
       notification.success("Successfully unenrolled from program.");
       await fetchParticipants();
     } catch (error) {

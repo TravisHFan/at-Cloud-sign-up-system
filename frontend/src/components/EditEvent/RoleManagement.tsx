@@ -2,7 +2,7 @@ import React from "react";
 import type { ChangeEvent } from "react";
 import type { UseFormSetValue } from "react-hook-form";
 
-// FormRole interface - matches EditEvent.tsx watch type
+// Type for roles in the form (before submission)
 interface FormRole {
   id: string;
   name: string;
@@ -35,6 +35,7 @@ interface RoleValidation {
 interface RoleManagementProps {
   selectedEventType: string | null;
   formRoles: FormRole[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   setValue: UseFormSetValue<any>;
   showTemplateSelector: boolean;
   setShowTemplateSelector: (value: boolean) => void;

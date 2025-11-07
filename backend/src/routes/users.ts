@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { UserController } from "../controllers/userController";
 import { ProfileController } from "../controllers/ProfileController";
 import { UserAdminController } from "../controllers/UserAdminController";
 import { UserAnalyticsController } from "../controllers/UserAnalyticsController";

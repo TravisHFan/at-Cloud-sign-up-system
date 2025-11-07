@@ -1,52 +1,51 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
-import React from "react";
-import EventDetail from "../src/pages/EventDetail";
+import EventDetail from "../../pages/EventDetail";
 
 // Core shared component & modal mocks (single definition)
-vi.mock("../src/components/common", () => ({
+vi.mock("../../components/common", () => ({
   __esModule: true,
   Icon: () => <span />,
   EventDeletionModal: () => null,
   ConfirmationModal: () => null,
   EditButton: ({ children }: any) => <button>{children}</button>,
 }));
-vi.mock("../src/components/share/ShareModal", () => ({
+vi.mock("../../components/share/ShareModal", () => ({
   __esModule: true,
   default: () => null,
 }));
 
 // Mock extracted EventDetail components
-vi.mock("../src/components/EventDetail/WorkshopGroupsSection", () => ({
+vi.mock("../../components/EventDetail/WorkshopGroupsSection", () => ({
   __esModule: true,
   default: () => null,
 }));
-vi.mock("../src/components/EventDetail/EventModals", () => ({
+vi.mock("../../components/EventDetail/EventModals", () => ({
   __esModule: true,
   default: () => null,
 }));
-vi.mock("../src/components/EventDetail/EventRolesSection", () => ({
+vi.mock("../../components/EventDetail/EventRolesSection", () => ({
   __esModule: true,
   default: () => null,
 }));
-vi.mock("../src/components/EventDetail/FlyerDisplay", () => ({
+vi.mock("../../components/EventDetail/FlyerDisplay", () => ({
   __esModule: true,
   default: () => null,
 }));
-vi.mock("../src/components/EventDetail/EventBasicDetails", () => ({
+vi.mock("../../components/EventDetail/EventBasicDetails", () => ({
   __esModule: true,
   default: () => null,
 }));
-vi.mock("../src/components/EventDetail/EventHostAndPurpose", () => ({
+vi.mock("../../components/EventDetail/EventHostAndPurpose", () => ({
   __esModule: true,
   default: () => null,
 }));
-vi.mock("../src/components/EventDetail/EventCapacityAndAgenda", () => ({
+vi.mock("../../components/EventDetail/EventCapacityAndAgenda", () => ({
   __esModule: true,
   default: () => null,
 }));
-vi.mock("../src/components/EventDetail/EventHeader", () => ({
+vi.mock("../../components/EventDetail/EventHeader", () => ({
   __esModule: true,
   default: ({ event }: any) => (
     <div>
@@ -69,13 +68,13 @@ vi.mock("react-router-dom", () => ({
 }));
 
 // Mock components that internally use useAuth to avoid provider requirements
-vi.mock("../src/components/common/NameCardActionModal", () => ({
+vi.mock("../../components/common/NameCardActionModal", () => ({
   __esModule: true,
   default: () => null,
 }));
 
 // Mock auth context & re-exported hook (paths relative to tests directory)
-vi.mock("../src/contexts/AuthContext", () => ({
+vi.mock("../../contexts/AuthContext", () => ({
   useAuth: () => ({
     currentUser: {
       id: "user1",
@@ -91,7 +90,7 @@ vi.mock("../src/contexts/AuthContext", () => ({
     isAuthenticated: true,
   }),
 }));
-vi.mock("../src/hooks/useAuth", () => ({
+vi.mock("../../hooks/useAuth", () => ({
   useAuth: () => ({
     currentUser: {
       id: "user1",
@@ -109,7 +108,7 @@ vi.mock("../src/hooks/useAuth", () => ({
 }));
 
 // Mock notification context (../contexts/NotificationModalContext)
-vi.mock("../src/contexts/NotificationModalContext", () => ({
+vi.mock("../../contexts/NotificationModalContext", () => ({
   useToastReplacement: () => ({
     notify: () => {},
   }),
@@ -117,7 +116,7 @@ vi.mock("../src/contexts/NotificationModalContext", () => ({
 
 // Mock socket service (../services/socketService)
 // Provide full interface used by EventDetail
-vi.mock("../src/services/socketService", () => {
+vi.mock("../../services/socketService", () => {
   const handlers: Record<string, (...args: unknown[]) => void> = {};
   return {
     socketService: {
@@ -144,7 +143,7 @@ vi.mock("../src/services/socketService", () => {
 });
 
 // Mock API service used by EventDetail (../services/api)
-vi.mock("../src/services/api", () => ({
+vi.mock("../../services/api", () => ({
   eventService: {
     getEvent: async () => ({
       id: "evt1",

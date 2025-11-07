@@ -6,7 +6,7 @@ import {
   getAvatarAlt,
 } from "../../utils/avatarUtils";
 import { eventService } from "../../services/api";
-import type { EventData } from "../../types/event";
+import type { EventData, EventParticipant } from "../../types/event";
 
 interface BackendRole {
   id: string;
@@ -14,7 +14,7 @@ interface BackendRole {
   description: string;
   maxParticipants: number;
   registrations?: BackendRegistration[];
-  currentSignups?: any[];
+  currentSignups?: EventParticipant[];
 }
 
 interface BackendRegistration {
@@ -709,7 +709,7 @@ function EventRolesSection({
                         maxParticipants: role.maxParticipants,
                         currentSignups: role.registrations
                           ? role.registrations.map(
-                              (reg: BackendRegistration) => ({
+                              (reg: BackendRegistration): EventParticipant => ({
                                 userId: reg.user.id,
                                 username: reg.user.username,
                                 firstName: reg.user.firstName,
@@ -717,14 +717,16 @@ function EventRolesSection({
                                 email: reg.user.email,
                                 phone: reg.user.phone,
                                 avatar: reg.user.avatar,
-                                gender: reg.user.gender,
+                                gender: reg.user.gender as
+                                  | "male"
+                                  | "female"
+                                  | undefined,
                                 systemAuthorizationLevel: ((
                                   reg.user as { role?: string }
                                 ).role ||
                                   reg.user.systemAuthorizationLevel) as string,
                                 roleInAtCloud: reg.user.roleInAtCloud,
                                 notes: reg.notes,
-                                registeredAt: reg.registeredAt,
                               })
                             )
                           : role.currentSignups || [],

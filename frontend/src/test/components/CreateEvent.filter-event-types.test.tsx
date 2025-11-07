@@ -55,8 +55,7 @@ const mockedProgramService = vi.hoisted(() => ({
 
 vi.mock("../../services/api", () => ({
   eventService: mockedEventService,
-  roleTemplateService: mockedRolesTemplateService, // Add to fix template loading
-  rolesTemplateService: mockedRolesTemplateService, // Keep for backwards compatibility
+  roleTemplateService: mockedRolesTemplateService,
   programService: mockedProgramService,
   userService: { getUsers: vi.fn().mockResolvedValue({ users: [], total: 0 }) },
   authService: {

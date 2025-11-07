@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { rolesTemplateService } from "../services/api";
+import { roleTemplateService } from "../services/api";
 import type { GroupedTemplates, RolesTemplate } from "../types/rolesTemplate";
 import { useAuth } from "../hooks/useAuth";
 
@@ -52,7 +52,7 @@ export default function ConfigureRolesTemplates() {
       try {
         setLoading(true);
         setError(null);
-        const data = await rolesTemplateService.getAllTemplates();
+        const data = await roleTemplateService.getAllRolesTemplates();
         setTemplates(data as GroupedTemplates);
       } catch (err) {
         console.error("Failed to load templates:", err);
@@ -73,7 +73,7 @@ export default function ConfigureRolesTemplates() {
 
     try {
       setDeleting(true);
-      await rolesTemplateService.deleteTemplate(templateId);
+      await roleTemplateService.deleteRolesTemplate(templateId);
 
       // Remove from local state
       setTemplates((prev) => {

@@ -379,7 +379,9 @@ export default function Feedback() {
                     const file = inputEl.files?.[0];
                     if (!file) return;
                     try {
-                      const { url } = await fileService.uploadImage(file);
+                      const { url } = await fileService.uploadGenericImage(
+                        file
+                      );
                       insertImageAtCaret(url);
                     } catch (err) {
                       console.error("Image upload failed", err);
@@ -416,7 +418,7 @@ export default function Feedback() {
                   const file = item.getAsFile();
                   if (!file) continue;
                   try {
-                    const { url } = await fileService.uploadImage(file);
+                    const { url } = await fileService.uploadGenericImage(file);
                     insertImageAtCaret(url);
                   } catch (err) {
                     console.error("Paste image upload failed", err);

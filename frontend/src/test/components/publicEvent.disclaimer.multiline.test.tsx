@@ -1,8 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
-import React from "react";
-import PublicEvent from "../src/pages/PublicEvent";
+import PublicEvent from "../../pages/PublicEvent";
 
 // Mock react-router & api client used in PublicEvent
 vi.mock("react-router-dom", async (importOriginal) => {
@@ -15,7 +14,7 @@ vi.mock("react-router-dom", async (importOriginal) => {
   };
 });
 
-vi.mock("../src/services/api", () => {
+vi.mock("../../services/api", () => {
   const apiClient = {
     getPublicEvent: async () => ({
       id: "pub1",

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { RoleEditor } from "../components/RoleEditor";
-import { rolesTemplateService } from "../services/api";
+import { roleTemplateService } from "../services/api";
 import type { EventData } from "../types/event";
 import type { RolesTemplate } from "../types/rolesTemplate";
 import PopulateFromEventModal from "../components/rolesTemplate/PopulateFromEventModal";
@@ -101,7 +101,7 @@ export default function CreateRolesTemplate() {
         roles,
       };
 
-      await rolesTemplateService.createTemplate(payload);
+      await roleTemplateService.createRolesTemplate(payload);
 
       // Navigate back to configure page
       navigate("/dashboard/configure-roles-templates");

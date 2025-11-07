@@ -1,11 +1,4 @@
 import { Request, Response } from "express";
-import mongoose from "mongoose";
-import { Purchase, Program, PromoCode, User } from "../models";
-import type { IProgram } from "../models/Program";
-import type { IPromoCode } from "../models/PromoCode";
-import { createCheckoutSession as stripeCreateCheckoutSession } from "../services/stripeService";
-import { lockService } from "../services/LockService";
-import { TrioNotificationService } from "../services/notifications/TrioNotificationService";
 
 export class PurchaseController {
   /**

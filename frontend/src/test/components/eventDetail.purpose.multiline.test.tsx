@@ -1,43 +1,42 @@
 import { describe, it, expect, vi } from "vitest";
-import React from "react";
 import { render, screen } from "@testing-library/react";
-import EventDetail from "../src/pages/EventDetail";
+import EventDetail from "../../pages/EventDetail";
 
 // Shared component & modal mocks
-vi.mock("../src/components/common", () => ({
+vi.mock("../../components/common", () => ({
   __esModule: true,
   Icon: () => <span />,
   EventDeletionModal: () => null,
   ConfirmationModal: () => null,
   EditButton: ({ children }: any) => <button>{children}</button>,
 }));
-vi.mock("../src/components/share/ShareModal", () => ({
+vi.mock("../../components/share/ShareModal", () => ({
   __esModule: true,
   default: () => null,
 }));
 
 // Mock extracted EventDetail components
-vi.mock("../src/components/EventDetail/WorkshopGroupsSection", () => ({
+vi.mock("../../components/EventDetail/WorkshopGroupsSection", () => ({
   __esModule: true,
   default: () => null,
 }));
-vi.mock("../src/components/EventDetail/EventModals", () => ({
+vi.mock("../../components/EventDetail/EventModals", () => ({
   __esModule: true,
   default: () => null,
 }));
-vi.mock("../src/components/EventDetail/EventRolesSection", () => ({
+vi.mock("../../components/EventDetail/EventRolesSection", () => ({
   __esModule: true,
   default: () => null,
 }));
-vi.mock("../src/components/EventDetail/FlyerDisplay", () => ({
+vi.mock("../../components/EventDetail/FlyerDisplay", () => ({
   __esModule: true,
   default: () => null,
 }));
-vi.mock("../src/components/EventDetail/EventBasicDetails", () => ({
+vi.mock("../../components/EventDetail/EventBasicDetails", () => ({
   __esModule: true,
   default: () => null,
 }));
-vi.mock("../src/components/EventDetail/EventHostAndPurpose", () => ({
+vi.mock("../../components/EventDetail/EventHostAndPurpose", () => ({
   __esModule: true,
   default: ({ event }: any) => (
     <div>
@@ -47,11 +46,11 @@ vi.mock("../src/components/EventDetail/EventHostAndPurpose", () => ({
     </div>
   ),
 }));
-vi.mock("../src/components/EventDetail/EventCapacityAndAgenda", () => ({
+vi.mock("../../components/EventDetail/EventCapacityAndAgenda", () => ({
   __esModule: true,
   default: () => null,
 }));
-vi.mock("../src/components/EventDetail/EventHeader", () => ({
+vi.mock("../../components/EventDetail/EventHeader", () => ({
   __esModule: true,
   default: ({ event }: any) => (
     <div>
@@ -69,7 +68,7 @@ vi.mock("react-router-dom", () => ({
 }));
 
 // API service mock aligned with EventDetail import style
-vi.mock("../src/services/api", () => ({
+vi.mock("../../services/api", () => ({
   eventService: {
     getEvent: async () => ({
       id: "evt1",
@@ -104,21 +103,21 @@ vi.mock("../src/services/api", () => ({
 }));
 
 // Ancillary service stubs (some branches reference them)
-vi.mock("../src/services/userService", () => ({
+vi.mock("../../services/userService", () => ({
   __esModule: true,
   default: { getUser: async () => ({ id: "u1", role: "Administrator" }) },
 }));
-vi.mock("../src/services/programService", () => ({
+vi.mock("../../services/programService", () => ({
   __esModule: true,
   default: { listPrograms: async () => [] },
 }));
-vi.mock("../src/services/shortLinkService", () => ({
+vi.mock("../../services/shortLinkService", () => ({
   __esModule: true,
   default: { getShortLinks: async () => [] },
 }));
 
 // Auth context & hook
-vi.mock("../src/contexts/AuthContext", () => ({
+vi.mock("../../contexts/AuthContext", () => ({
   useAuth: () => ({
     currentUser: {
       id: "u1",
@@ -134,7 +133,7 @@ vi.mock("../src/contexts/AuthContext", () => ({
     isAuthenticated: true,
   }),
 }));
-vi.mock("../src/hooks/useAuth", () => ({
+vi.mock("../../hooks/useAuth", () => ({
   useAuth: () => ({
     currentUser: {
       id: "u1",
@@ -152,10 +151,10 @@ vi.mock("../src/hooks/useAuth", () => ({
 }));
 
 // Notification & modal components that rely on contexts
-vi.mock("../src/contexts/NotificationModalContext", () => ({
+vi.mock("../../contexts/NotificationModalContext", () => ({
   useToastReplacement: () => ({ notify: () => {} }),
 }));
-vi.mock("../src/components/common/NameCardActionModal", () => ({
+vi.mock("../../components/common/NameCardActionModal", () => ({
   __esModule: true,
   default: () => null,
 }));
@@ -163,7 +162,7 @@ vi.mock("../src/components/common/NameCardActionModal", () => ({
 // (Icon already mocked above)
 
 // Socket service full mock
-vi.mock("../src/services/socketService", () => {
+vi.mock("../../services/socketService", () => {
   const handlers: Record<string, (...args: unknown[]) => void> = {};
   return {
     socketService: {

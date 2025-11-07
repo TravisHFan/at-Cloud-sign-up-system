@@ -7,12 +7,15 @@
  */
 
 import { BaseApiClient } from "./common/baseApiClient";
+import { authService } from "./auth.api";
 import { feedbackService } from "./feedback.api";
 import { publicEventsService } from "./publicEvents.api";
 import { eventsService } from "./events.api";
 import { programsService } from "./programs.api";
 import { promoCodesService } from "./promoCodes.api";
 import { usersService } from "./users.api";
+import { guestsService } from "./guests.api";
+import { filesService } from "./files.api";
 
 /**
  * Full-featured ApiClient that exposes service methods directly used by pages
@@ -54,9 +57,46 @@ export class ApiClient extends BaseApiClient {
   updateBundleDiscountConfig = promoCodesService.updateBundleDiscountConfig;
 
   // ============================================
-  // Users Methods (used by session-expired.prompt.test.ts)
+  // Users Methods (used by session-expired.prompt.test.ts, useUsersApi.ts)
   // ============================================
   getUserStats = usersService.getUserStats;
+  getProfile = authService.getProfile;
+
+  // ============================================
+  // Guests Methods (used by guestApi.ts)
+  // ============================================
+  guestSignup = guestsService.guestSignup;
+  getEventGuests = guestsService.getEventGuests;
+  getGuestByToken = guestsService.getGuestByToken;
+  updateGuestByToken = guestsService.updateGuestByToken;
+  cancelGuestByToken = guestsService.cancelGuestByToken;
+  resendGuestManageLinkForEvent = guestsService.resendGuestManageLinkForEvent;
+  resendGuestManageLink = guestsService.resendGuestManageLink;
+  updateGuestRegistrationForEvent =
+    guestsService.updateGuestRegistrationForEvent;
+  updateGuestRegistration = guestsService.updateGuestRegistration;
+  cancelGuestRegistrationForEvent =
+    guestsService.cancelGuestRegistrationForEvent;
+  cancelGuestRegistration = guestsService.cancelGuestRegistration;
+  getGuestDeclineInfo = guestsService.getGuestDeclineInfo;
+  submitGuestDecline = guestsService.submitGuestDecline;
+
+  // ============================================
+  // Files Methods (used by Feedback.tsx, upload operations)
+  // ============================================
+  uploadGenericImage = filesService.uploadGenericImage;
+
+  // ============================================
+  // Programs Methods (used by ProgramParticipants.tsx)
+  // ============================================
+  adminEnroll = programsService.adminEnrollProgram;
+  adminUnenroll = programsService.adminUnenrollProgram;
+
+  // ============================================
+  // Promo Codes Methods (used by promo code service)
+  // ============================================
+  validatePromoCode = promoCodesService.validatePromoCode;
+  getMyPromoCodes = promoCodesService.getMyPromoCodes;
 }
 
 // Create and export a singleton instance

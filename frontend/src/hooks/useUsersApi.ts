@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { userService } from "../services/api";
+import { userService, apiClient } from "../services/api";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 
 // Backend response shapes we actually consume in this hook
@@ -91,7 +91,7 @@ export function useUserProfile(): UseUserProfileReturn {
 
     try {
       const response =
-        (await userService.getProfile()) as unknown as BackendUserBase;
+        (await apiClient.getProfile()) as unknown as BackendUserBase;
 
       // Convert backend user format to frontend UserProfile format
       const convertedProfile: UserProfile = {

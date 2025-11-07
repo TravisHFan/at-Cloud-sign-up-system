@@ -30,8 +30,7 @@ const mockedRolesTemplateService = vi.hoisted(() => ({
 
 vi.mock("../../services/api", () => ({
   eventService: mockedEventService,
-  rolesTemplateService: mockedRolesTemplateService,
-  roleTemplateService: mockedRolesTemplateService, // Also mock the singular form used by CreateEvent
+  roleTemplateService: mockedRolesTemplateService,
   // Provide minimal mocks to satisfy CreateEvent dependencies during render
   programService: {
     list: vi.fn().mockResolvedValue([

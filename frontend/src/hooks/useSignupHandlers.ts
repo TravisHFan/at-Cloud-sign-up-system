@@ -40,6 +40,7 @@ export interface UseSignupHandlersParams {
   event: EventData | null;
   currentUser: { id: string } | null;
   setEvent: React.Dispatch<React.SetStateAction<EventData | null>>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   notification: any;
   navigate: (path: string) => void;
   handleDownloadCalendar: () => Promise<void>;
@@ -53,6 +54,14 @@ export function useSignupHandlers({
   navigate,
   handleDownloadCalendar,
 }: UseSignupHandlersParams): SignupHandlersResult {
+  // Type assertion for notification methods
+  const notify = notification as {
+    error: (message: string, options?: unknown) => void;
+    success: (message: string, options?: unknown) => void;
+    warning: (message: string, options?: unknown) => void;
+    info: (message: string, options?: unknown) => void;
+  };
+
   const handleRoleSignup = async (roleId: string, notes?: string) => {
     if (!event || !currentUser) return;
 
@@ -108,7 +117,7 @@ export function useSignupHandlers({
 
       const roleName =
         event.roles.find((role) => role.id === roleId)?.name || "role";
-      notification.success(`You have successfully signed up for ${roleName}!`, {
+      notify.success(`You have successfully signed up for ${roleName}!`, {
         title: "Signup Confirmed",
         autoCloseDelay: 4000,
         closeButtonText: "Close",
@@ -133,7 +142,7 @@ export function useSignupHandlers({
         error instanceof Error
           ? error.message
           : `Unable to sign up for ${roleName}. Please try again.`;
-      notification.error(message, {
+      notify.error(message, {
         title: "Signup Failed",
         actionButton: {
           text: "Retry Signup",
@@ -199,7 +208,7 @@ export function useSignupHandlers({
 
       const roleName =
         event.roles.find((role) => role.id === roleId)?.name || "role";
-      notification.success(`Your signup for ${roleName} has been canceled.`, {
+      notify.success(`Your signup for ${roleName} has been canceled.`, {
         title: "Signup Canceled",
         autoCloseDelay: 4000,
         closeButtonText: "OK",
@@ -217,7 +226,7 @@ export function useSignupHandlers({
         error instanceof Error
           ? error.message
           : `Unable to cancel signup for ${roleName}. Please try again.`;
-      notification.error(message, {
+      notify.error(message, {
         title: "Cancel Failed",
         actionButton: {
           text: "Retry Cancel",
@@ -290,7 +299,7 @@ export function useSignupHandlers({
       // Update local state with converted data
       setEvent(convertedEvent);
 
-      notification.success(
+      notify.success(
         `${user?.firstName} ${user?.lastName} has been removed from ${roleName}.`,
         {
           title: "User Removed",
@@ -308,7 +317,7 @@ export function useSignupHandlers({
       );
     } catch (error) {
       console.error("Error removing user from role:", error);
-      notification.error("Unable to remove user from role. Please try again.", {
+      notify.error("Unable to remove user from role. Please try again.", {
         title: "Removal Failed",
         actionButton: {
           text: "Retry",

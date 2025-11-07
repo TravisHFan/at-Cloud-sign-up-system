@@ -329,12 +329,12 @@ describe("Uploads API - Integration Tests", () => {
           expect(response.status).toBe(413);
           expect(response.body.success).toBe(false);
         } catch (error: unknown) {
-          // EPIPE error is expected when server closes connection on large file
+          // EPIPE/ECONNRESET errors are expected when server closes connection on large file
           if (
             error &&
             typeof error === "object" &&
             "code" in error &&
-            error.code === "EPIPE"
+            (error.code === "EPIPE" || error.code === "ECONNRESET")
           ) {
             // This is actually the expected behavior - server rejected the large file
             return;
@@ -430,10 +430,46 @@ describe("Uploads API - Integration Tests", () => {
       });
 
       it("should reject non-admin users (leaders)", async () => {
-        const response = await request(app)
-          .post("/api/uploads/avatar")
-          .set("Authorization", `Bearer ${leaderToken}`)
-          .attach("avatar", validImagePath);
+        // Add retry logic to handle EPIPE errors (socket issues)
+        let response;
+        let lastError;
+        const maxRetries = 3;
+
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+          try {
+            response = await request(app)
+              .post("/api/uploads/avatar")
+              .set("Authorization", `Bearer ${leaderToken}`)
+              .attach("avatar", validImagePath)
+              .timeout(5000); // 5 second timeout
+
+            // If we got a response, break out of retry loop
+            break;
+          } catch (error: any) {
+            lastError = error;
+            // Only retry on EPIPE or network errors
+            if (
+              error.code === "EPIPE" ||
+              error.code === "ECONNRESET" ||
+              error.message?.includes("socket")
+            ) {
+              if (attempt < maxRetries - 1) {
+                // Wait a bit before retrying (exponential backoff)
+                await new Promise((resolve) =>
+                  setTimeout(resolve, 100 * Math.pow(2, attempt))
+                );
+                continue;
+              }
+            }
+            // If it's not a network error or we're out of retries, throw
+            throw error;
+          }
+        }
+
+        // If we never got a response, throw the last error
+        if (!response) {
+          throw lastError;
+        }
 
         expect(response.status).toBe(403);
         expect(response.body.success).toBe(false);
@@ -486,12 +522,12 @@ describe("Uploads API - Integration Tests", () => {
           expect(response.status).toBe(413);
           expect(response.body.success).toBe(false);
         } catch (error: unknown) {
-          // EPIPE error is expected when server closes connection on large file
+          // EPIPE/ECONNRESET errors are expected when server closes connection on large file
           if (
             error &&
             typeof error === "object" &&
             "code" in error &&
-            error.code === "EPIPE"
+            (error.code === "EPIPE" || error.code === "ECONNRESET")
           ) {
             // This is actually the expected behavior - server rejected the large file
             return;

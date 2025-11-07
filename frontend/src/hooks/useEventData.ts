@@ -105,7 +105,16 @@ export interface UseEventDataParams {
   id: string | undefined;
   currentUserId: string;
   navigate: (path: string) => void;
-  notificationRef: React.MutableRefObject<any>;
+  notificationRef: React.MutableRefObject<{
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    error: (message: string, options?: any) => void;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    success: (message: string, options?: any) => void;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    warning: (message: string, options?: any) => void;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    info: (message: string, options?: any) => void;
+  }>;
   locationPathname: string;
 }
 

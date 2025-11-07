@@ -9,6 +9,9 @@ describe("Event virtual meeting fields", () => {
   let adminId: string;
 
   beforeAll(async () => {
+    // Clean up any existing events to prevent conflicts
+    await Event.deleteMany({});
+
     // Register and promote an admin user
     const reg = await request(app).post("/api/auth/register").send({
       firstName: "Admin",
@@ -35,18 +38,22 @@ describe("Event virtual meeting fields", () => {
 
   afterAll(async () => {
     await User.deleteOne({ _id: adminId });
+    await Event.deleteMany({});
   });
 
   it("allows adding zoom fields later for Online events created empty", async () => {
+    // Use a unique future date to avoid conflicts (30 days out)
+    const eventDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split("T")[0];
+
     const createRes = await request(app)
       .post("/api/events")
       .set("Authorization", `Bearer ${adminToken}`)
       .send({
-        title: "Online Event",
+        title: "Online Event Virtual Fields Test",
         description: "Test",
-        date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split("T")[0],
+        date: eventDate,
         time: "10:00",
         endTime: "11:00",
         type: "Conference",
@@ -65,6 +72,7 @@ describe("Event virtual meeting fields", () => {
         zoomLink: "",
         meetingId: "",
         passcode: "",
+        suppressNotifications: true, // Suppress to avoid notification overhead
       })
       .expect(201);
 
@@ -89,18 +97,24 @@ describe("Event virtual meeting fields", () => {
     expect(fromDb?.zoomLink).toBe("https://zoom.us/j/123456789");
     expect(fromDb?.meetingId).toBe("123 456 789");
     expect(fromDb?.passcode).toBe("secret");
+
+    // Clean up
+    await Event.findByIdAndDelete(id);
   });
 
   it("allows adding zoom fields later for Hybrid events created empty", async () => {
+    // Use a unique future date to avoid conflicts (35 days out)
+    const eventDate = new Date(Date.now() + 35 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split("T")[0];
+
     const createRes = await request(app)
       .post("/api/events")
       .set("Authorization", `Bearer ${adminToken}`)
       .send({
-        title: "Hybrid Event",
+        title: "Hybrid Event Virtual Fields Test",
         description: "Test",
-        date: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split("T")[0],
+        date: eventDate,
         time: "12:00",
         endTime: "13:00",
         type: "Conference",
@@ -120,6 +134,7 @@ describe("Event virtual meeting fields", () => {
         zoomLink: "",
         meetingId: "",
         passcode: "",
+        suppressNotifications: true, // Suppress to avoid notification overhead
       })
       .expect(201);
 
@@ -144,18 +159,24 @@ describe("Event virtual meeting fields", () => {
     expect(fromDb?.zoomLink).toBe("https://zoom.us/j/987654321");
     expect(fromDb?.meetingId).toBe("987 654 321");
     expect(fromDb?.passcode).toBe("hybrid");
+
+    // Clean up
+    await Event.findByIdAndDelete(id);
   });
 
   it("clears virtual fields when switching to In-person", async () => {
+    // Use a unique future date to avoid conflicts (40 days out)
+    const eventDate = new Date(Date.now() + 40 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split("T")[0];
+
     const createRes = await request(app)
       .post("/api/events")
       .set("Authorization", `Bearer ${adminToken}`)
       .send({
-        title: "Switch Event",
+        title: "Switch Event Virtual Fields Test",
         description: "Test",
-        date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split("T")[0],
+        date: eventDate,
         time: "15:00",
         endTime: "16:00",
         type: "Conference",
@@ -174,6 +195,7 @@ describe("Event virtual meeting fields", () => {
         zoomLink: "https://zoom.us/j/abc",
         meetingId: "m",
         passcode: "p",
+        suppressNotifications: true, // Suppress to avoid notification overhead
       })
       .expect(201);
 
@@ -195,5 +217,8 @@ describe("Event virtual meeting fields", () => {
     expect(fromDb?.zoomLink).toBeUndefined();
     expect(fromDb?.meetingId).toBeUndefined();
     expect(fromDb?.passcode).toBeUndefined();
+
+    // Clean up
+    await Event.findByIdAndDelete(id);
   });
 });

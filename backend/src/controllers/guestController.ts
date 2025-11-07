@@ -1,24 +1,7 @@
 import { Request, Response } from "express";
-import { validationResult } from "express-validator";
-import type { Result, ValidationError } from "express-validator";
-import { GuestRegistration, Event, IEventRole } from "../models";
-import { User } from "../models";
-import {
-  validateGuestUniqueness,
-  validateGuestRateLimit,
-} from "../middleware/guestValidation";
-import { EmailService } from "../services/infrastructure/EmailServiceFacade";
-import crypto from "crypto";
-import { socketService } from "../services/infrastructure/SocketService";
+import { IEventRole } from "../models";
 import mongoose from "mongoose";
-import { CachePatterns } from "../services";
 import { createLogger } from "../services/LoggerService";
-import { ResponseBuilderService } from "../services/ResponseBuilderService";
-import { lockService } from "../services/LockService";
-import { CapacityService } from "../services/CapacityService";
-import { CorrelatedLogger } from "../services/CorrelatedLogger";
-import { createGuestInvitationDeclineToken } from "../utils/guestInvitationDeclineToken";
-import { TrioNotificationService } from "../services/notifications/TrioNotificationService";
 
 /**
  * Guest Registration Controller
@@ -52,24 +35,6 @@ export type UserLike = {
   lastName?: string;
 };
 export type RequestWithUser = Request & { user?: UserLike; userRole?: string };
-type UserModelLike = {
-  findOne?: (
-    query: Record<string, unknown>
-  ) => { select?: (fields: string) => Promise<unknown> } | Promise<unknown>;
-};
-type SavedGuest = {
-  _id: mongoose.Types.ObjectId;
-  registrationDate: Date;
-  status?: string;
-};
-
-// Narrowing helpers to keep casts minimal and avoid `any`
-const asString = (v: unknown): string | undefined =>
-  typeof v === "string" ? v : undefined;
-const asBool = (v: unknown): boolean | undefined =>
-  typeof v === "boolean" ? v : undefined;
-const asDateOrString = (v: unknown): Date | string | undefined =>
-  v instanceof Date || typeof v === "string" ? (v as Date | string) : undefined;
 
 export class GuestController {
   // Structured logger for this controller (console output preserved for tests)

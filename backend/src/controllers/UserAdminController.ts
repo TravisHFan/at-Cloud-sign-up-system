@@ -1,21 +1,7 @@
 import { Request, Response } from "express";
-import { User } from "../models";
-import AuditLog from "../models/AuditLog";
-import {
-  RoleUtils,
-  ROLES,
-  hasPermission,
-  PERMISSIONS,
-} from "../utils/roleUtils";
-import { cleanupOldAvatar } from "../utils/avatarCleanup";
-import { socketService } from "../services/infrastructure/SocketService";
-import { AutoEmailNotificationService } from "../services/infrastructure/autoEmailNotificationService";
-import { UnifiedMessageController } from "./unifiedMessageController";
-import { CachePatterns } from "../services";
-import { EmailService } from "../services/infrastructure/EmailServiceFacade";
-import { formatActorDisplay } from "../utils/systemMessageFormatUtils";
 
 // Response helper utilities
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 class ResponseHelper {
   static success(
     res: Response,

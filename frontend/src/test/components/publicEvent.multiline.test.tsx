@@ -1,14 +1,13 @@
 import { describe, it, expect, vi } from "vitest";
 // Lightweight import of the module to access normalize behavior indirectly by rendering.
-import React from "react";
 import { render } from "@testing-library/react";
 
 // We re-import the page and rely on internal normalizeMultiline via rendering agenda text.
 // To avoid over-coupling, we just check that bullet separators or literal \n sequences produce line breaks in the DOM.
-import PublicEvent from "../src/pages/PublicEvent";
+import PublicEvent from "../../pages/PublicEvent";
 
 // Mock router params & api client
-vi.mock("../src/services/api", () => ({
+vi.mock("../../services/api", () => ({
   __esModule: true,
   default: {
     getPublicEvent: async () => ({

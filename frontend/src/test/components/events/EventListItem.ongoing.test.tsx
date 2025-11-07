@@ -1,13 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import React from "react";
 import { render, screen } from "@testing-library/react";
 // Use the Vitest-specific adapter so jest-dom registers matchers with Vitest's expect safely.
 import "@testing-library/jest-dom/vitest";
-import EventListItem from "../../../../src/components/events/EventListItem";
-import type { EventData } from "../../../../src/types/event";
+import EventListItem from "../../../components/events/EventListItem";
+import type { EventData } from "../../../types/event";
 
 vi.mock("react-router-dom", () => ({ useNavigate: () => vi.fn() }));
-vi.mock("../../../../src/hooks/useAuth", () => ({
+vi.mock("../../../hooks/useAuth", () => ({
   useAuth: () => ({ currentUser: undefined }),
 }));
 

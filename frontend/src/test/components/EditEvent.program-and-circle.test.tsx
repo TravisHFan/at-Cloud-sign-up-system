@@ -21,19 +21,9 @@ const mockedProgramService = vi.hoisted(() => ({
   ]),
 }));
 
-const mockedRolesTemplateService = vi.hoisted(() => ({
-  getAllTemplates: vi.fn().mockResolvedValue({
-    Conference: [],
-    "Mentor Circle": [],
-    Webinar: [],
-    "Effective Communication Workshop": [],
-  }),
-}));
-
 vi.mock("../../services/api", () => ({
   eventService: mockedEventService,
   programService: mockedProgramService,
-  rolesTemplateService: mockedRolesTemplateService,
   authService: {
     getProfile: vi.fn().mockResolvedValue({
       id: "u1",

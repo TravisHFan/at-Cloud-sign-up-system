@@ -18,7 +18,7 @@ export class EmailHelpers {
     }
     const match = t.match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/i);
     if (!match) return t;
-    let [_, hh, mm, ap] = match;
+    const [_, hh, mm, ap] = match;
     let h = parseInt(hh, 10);
     if (/pm/i.test(ap) && h !== 12) h += 12;
     if (/am/i.test(ap) && h === 12) h = 0;

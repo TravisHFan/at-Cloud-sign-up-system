@@ -9,23 +9,23 @@ import {
   beforeAll,
 } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { AuthProvider } from "../src/contexts/AuthContext";
-import { NotificationProvider as NotificationModalProvider } from "../src/contexts/NotificationModalContext";
+import { AuthProvider } from "../../contexts/AuthContext";
+import { NotificationProvider as NotificationModalProvider } from "../../contexts/NotificationModalContext";
 
 // These dynamic imports assume EditEvent / EditProgram default exports are components that rely on router params.
 // We'll mock minimal router context.
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 // Mock hooks that fetch users/organizers to prevent network/auth noise
-vi.mock("../src/hooks/useUsersApi", () => ({
+vi.mock("../../hooks/useUsersApi", () => ({
   useUsers: () => ({ users: [], isLoading: false, error: null }),
   useUserStats: () => ({ stats: {}, isLoading: false, error: null }),
 }));
-vi.mock("../src/hooks/useOrganizersApi", () => ({
+vi.mock("../../hooks/useOrganizersApi", () => ({
   useOrganizers: () => ({ organizers: [], isLoading: false, error: null }),
 }));
 
-vi.mock("../src/services/api", async (orig) => {
+vi.mock("../../services/api", async (orig) => {
   const actual = await (orig as any)();
   return {
     ...actual,
@@ -77,7 +77,7 @@ vi.mock("../services/api", async (orig) => {
 });
 
 // Silence notifications
-vi.mock("../src/components/NotificationProvider", () => ({
+vi.mock("../../components/NotificationProvider", () => ({
   useNotification: () => ({
     success: () => {},
     error: () => {},
@@ -85,7 +85,7 @@ vi.mock("../src/components/NotificationProvider", () => ({
 }));
 
 // Mock fileService to avoid actual uploads
-vi.mock("../src/services/fileService", () => ({
+vi.mock("../../services/fileService", () => ({
   fileService: {
     uploadImage: vi.fn().mockResolvedValue({ url: "/uploads/test-flyer.png" }),
   },
@@ -96,7 +96,7 @@ let programService: any;
 let authService: any;
 
 beforeAll(async () => {
-  const services = await import("../src/services/api");
+  const services = await import("../../services/api");
   eventService = services.eventService;
   programService = services.programService;
   authService = services.authService;
@@ -172,7 +172,7 @@ describe("Flyer removal forms", () => {
     });
     eventService.updateEvent.mockResolvedValue({});
 
-    const EditEvent = (await import("../src/pages/EditEvent"))
+    const EditEvent = (await import("../../pages/EditEvent"))
       .default as React.ComponentType;
 
     render(
@@ -190,10 +190,11 @@ describe("Flyer removal forms", () => {
     );
 
     // Wait for initial flyer input to populate
-    const flyerInputs = await screen.findAllByPlaceholderText(
+    const _flyerInputs = await screen.findAllByPlaceholderText(
       /uploads\/images/i
     );
-    const _flyerInput = flyerInputs[0]; // Use the first input (flyerUrl)
+    const _flyerInput = _flyerInputs[0];
+
     expect((_flyerInput as HTMLInputElement).value).toContain(
       "/uploads/original.png"
     );
@@ -239,7 +240,7 @@ describe("Flyer removal forms", () => {
     programService.getById.mockResolvedValue(mockProgramData);
     programService.updateProgram.mockResolvedValue({});
 
-    const EditProgram = (await import("../src/pages/EditProgram"))
+    const EditProgram = (await import("../../pages/EditProgram"))
       .default as React.ComponentType;
 
     render(
@@ -259,6 +260,7 @@ describe("Flyer removal forms", () => {
     );
 
     const _flyerInput = await screen.findByPlaceholderText(/uploads\/images/i);
+
     if (!(_flyerInput as HTMLInputElement).value) {
       await new Promise((r) => setTimeout(r, 15));
       if (!(_flyerInput as HTMLInputElement).value) {
@@ -315,7 +317,7 @@ describe("Flyer removal forms", () => {
       },
     });
     eventService.updateEvent.mockResolvedValue({});
-    const EditEvent = (await import("../src/pages/EditEvent"))
+    const EditEvent = (await import("../../pages/EditEvent"))
       .default as React.ComponentType;
     render(
       <AuthProvider>
@@ -330,10 +332,7 @@ describe("Flyer removal forms", () => {
         </NotificationModalProvider>
       </AuthProvider>
     );
-    const flyerInputs = await screen.findAllByPlaceholderText(
-      /uploads\/images/i
-    );
-    const _flyerInput = flyerInputs[0]; // Use the first input (flyerUrl)
+
     // Do not change value
     eventService.updateEvent({} as any, { flyerUrl: undefined });
     const payload = eventService.updateEvent.mock.calls[0][1];
@@ -376,7 +375,7 @@ describe("Flyer removal forms", () => {
       },
     });
     eventService.updateEvent.mockResolvedValue({});
-    const EditEvent = (await import("../src/pages/EditEvent"))
+    const EditEvent = (await import("../../pages/EditEvent"))
       .default as React.ComponentType;
     render(
       <AuthProvider>
@@ -391,10 +390,11 @@ describe("Flyer removal forms", () => {
         </NotificationModalProvider>
       </AuthProvider>
     );
-    const flyerInputs = await screen.findAllByPlaceholderText(
+    const _flyerInputs = await screen.findAllByPlaceholderText(
       /uploads\/images/i
     );
-    const _flyerInput = flyerInputs[0]; // Use the first input (flyerUrl)
+    const _flyerInput = _flyerInputs[0];
+
     fireEvent.change(_flyerInput, { target: { value: "/uploads/new.png" } });
     eventService.updateEvent({} as any, { flyerUrl: "/uploads/new.png" });
     const payload = eventService.updateEvent.mock.calls[0][1];
@@ -424,7 +424,7 @@ describe("Flyer removal forms", () => {
     programService.getProgram.mockResolvedValue(mockProgramData2);
     programService.getById.mockResolvedValue(mockProgramData2);
     programService.updateProgram.mockResolvedValue({});
-    const EditProgram = (await import("../src/pages/EditProgram"))
+    const EditProgram = (await import("../../pages/EditProgram"))
       .default as React.ComponentType;
     render(
       <AuthProvider>
@@ -439,7 +439,7 @@ describe("Flyer removal forms", () => {
         </NotificationModalProvider>
       </AuthProvider>
     );
-    const _flyerInput2 = await screen.findByPlaceholderText(/uploads\/images/i);
+
     programService.updateProgram({} as any, {});
     const payload = programService.updateProgram.mock.calls[0][1];
     expect(payload.flyerUrl).toBeUndefined();
@@ -468,7 +468,7 @@ describe("Flyer removal forms", () => {
     programService.getProgram.mockResolvedValue(mockProgramData3);
     programService.getById.mockResolvedValue(mockProgramData3);
     programService.updateProgram.mockResolvedValue({});
-    const EditProgram = (await import("../src/pages/EditProgram"))
+    const EditProgram = (await import("../../pages/EditProgram"))
       .default as React.ComponentType;
     render(
       <AuthProvider>

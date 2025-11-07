@@ -1,54 +1,8 @@
 import { Request, Response } from "express";
-// Shape accepted from client when creating/updating roles
-interface IncomingRoleData {
-  id?: string;
-  name: string;
-  description: string;
-  maxParticipants: number;
-  openToPublic?: unknown; // boolean | string | number from forms
-  startTime?: string;
-  endTime?: string;
-  agenda?: string;
-}
-import {
-  Event,
-  Registration,
-  User,
-  IEvent,
-  IEventRole,
-  Program,
-  Purchase,
-} from "../models";
-import { PERMISSIONS, hasPermission } from "../utils/roleUtils";
-import { EmailRecipientUtils } from "../utils/emailRecipientUtils";
-import { v4 as uuidv4 } from "uuid";
+import { Event, User, IEvent } from "../models";
 import mongoose, { FilterQuery, Types } from "mongoose";
-import { EmailService } from "../services/infrastructure/EmailServiceFacade";
-import { socketService } from "../services/infrastructure/SocketService";
-// import { RegistrationQueryService } from "../services/RegistrationQueryService";
-import { ResponseBuilderService } from "../services/ResponseBuilderService";
-import { RegistrationQueryService } from "../services/RegistrationQueryService";
-import { UnifiedMessageController } from "./unifiedMessageController";
-import { Logger } from "../services/LoggerService";
-import { CorrelatedLogger } from "../services/CorrelatedLogger";
-import { lockService } from "../services/LockService";
-import { CachePatterns, EventCascadeService } from "../services";
-import { TrioNotificationService } from "../services/notifications/TrioNotificationService";
-import { formatActorDisplay } from "../utils/systemMessageFormatUtils";
-import { createRoleAssignmentRejectionToken } from "../utils/roleAssignmentRejectionToken";
-import { generateUniquePublicSlug } from "../utils/publicSlug";
-import { serializePublicEvent } from "../utils/publicEventSerializer";
-import AuditLog from "../models/AuditLog";
-import {
-  getMaxRolesPerEvent,
-  getMaxRolesDescription,
-} from "../utils/roleRegistrationLimits";
-import {
-  toInstantFromWallClock,
-  instantToWallClock,
-} from "../utils/event/timezoneUtils";
-import { validateRoles } from "../utils/event/eventValidation";
-import { isEventOrganizer } from "../utils/event/eventPermissions";
+import { CachePatterns } from "../services";
+import { toInstantFromWallClock } from "../utils/event/timezoneUtils";
 
 /**
  * Capacity semantics (important):
@@ -57,72 +11,11 @@ import { isEventOrganizer } from "../utils/event/eventPermissions";
  *   for sign-up/move/assign flows. Historical behavior and tests depend on this
  *   exact semantics and on specific error precedence under application locks.
  * - Guest flows use CapacityService (with includeGuests=true by default) inside
- *   the guest controller and in read-model helpers like RegistrationQueryService
- *   where safe, without changing EventController behavior.
+ *   the guest controller and in read-model helpers where safe, without changing
+ *   EventController behavior.
  * - Do not migrate EventController to include guest counts unless explicitly
  *   requested and the corresponding unit/integration tests are updated in lockstep.
  */
-
-// Interface for creating events (matches frontend EventData structure)
-interface CreateEventRequest {
-  title: string;
-  type: string;
-  date: string; // YYYY-MM-DD
-  endDate?: string; // YYYY-MM-DD (defaults to date)
-  time: string; // HH:MM
-  endTime: string; // HH:MM
-  location: string;
-  organizer: string;
-  organizerDetails?: Array<{
-    name: string;
-    role: string;
-    email: string;
-    phone: string;
-    avatar?: string;
-    gender?: "male" | "female";
-  }>;
-  hostedBy?: string;
-  purpose: string;
-  agenda?: string;
-  format: string;
-  disclaimer?: string;
-  roles: Array<{
-    name: string;
-    description: string;
-    maxParticipants: number;
-  }>;
-  isHybrid?: boolean;
-  zoomLink?: string;
-  meetingId?: string;
-  passcode?: string;
-  requirements?: string;
-  materials?: string;
-  timeZone?: string; // IANA timezone of the event times
-  flyerUrl?: string; // Optional event flyer image URL
-  secondaryFlyerUrl?: string; // Optional secondary event flyer image URL
-  workshopGroupTopics?: {
-    A?: string;
-    B?: string;
-    C?: string;
-    D?: string;
-    E?: string;
-    F?: string;
-  };
-  // Programs integration
-  programLabels?: string[]; // Array of program IDs this event is labeled with
-  // Internal/testing: when true, suppress email notifications and (in test env) bypass time conflict check
-  suppressNotifications?: boolean;
-}
-
-// Interface for event signup
-interface EventSignupRequest {
-  roleId: string;
-  notes?: string;
-  specialRequirements?: string;
-}
-
-// Structured logger for this controller
-const logger = Logger.getInstance().child("EventController");
 
 export class EventController {
   // Narrow guard to check organizerDetails array

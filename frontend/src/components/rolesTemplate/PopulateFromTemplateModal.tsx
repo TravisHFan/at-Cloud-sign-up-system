@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { rolesTemplateService } from "../../services/api";
+import { roleTemplateService } from "../../services/api";
 import type { RolesTemplate } from "../../types/rolesTemplate";
 import Icon from "../common/Icon";
 
@@ -31,7 +31,7 @@ export default function PopulateFromTemplateModal({
     setError(null);
     try {
       // Get templates filtered by event type
-      const response = await rolesTemplateService.getTemplatesByEventType(
+      const response = await roleTemplateService.getRolesTemplatesByEventType(
         eventType
       );
 

@@ -106,7 +106,7 @@ export default function ProgramDetail({
         let evts: unknown[] = [];
         if (!serverPaginationEnabled) {
           // Client-side mode: fetch all events once here
-          evts = (await (programService as any).listEvents(id)) as unknown[];
+          evts = (await programService.listProgramEvents(id)) as unknown[];
         }
         if (cancelled) return;
         setProgram(p as Program);
@@ -232,7 +232,7 @@ export default function ProgramDetail({
     (async () => {
       try {
         setIsListLoading(true);
-        const res = await (programService as any).listEventsPaged(id, {
+        const res = await programService.listProgramEventsPaged(id, {
           page,
           limit,
           sort: sortDir === "asc" ? "date:asc" : "date:desc",
@@ -331,7 +331,7 @@ export default function ProgramDetail({
     if (!id) return;
     try {
       setIsDeleting(true);
-      const result = await (programService as any).remove(id, {
+      const result = await programService.deleteProgram(id, {
         deleteLinkedEvents: !!deleteCascade,
       });
 

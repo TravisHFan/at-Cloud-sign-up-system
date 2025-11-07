@@ -1,29 +1,10 @@
-import { Request, Response } from "express";
-import { User } from "../models";
-import AuditLog from "../models/AuditLog";
-import Program from "../models/Program";
-import Message from "../models/Message";
-import {
-  RoleUtils,
-  ROLES,
-  hasPermission,
-  PERMISSIONS,
-} from "../utils/roleUtils";
-// import bcrypt from "bcryptjs"; // Not used here
-import { getFileUrl } from "../middleware/upload";
-// import path from "path"; // Not used here
-import { cleanupOldAvatar } from "../utils/avatarCleanup";
-import { socketService } from "../services/infrastructure/SocketService";
-import { AutoEmailNotificationService } from "../services/infrastructure/autoEmailNotificationService";
-import { UnifiedMessageController } from "./unifiedMessageController";
-import { CachePatterns } from "../services";
-import { EmailService } from "../services/infrastructure/EmailServiceFacade";
-import { formatActorDisplay } from "../utils/systemMessageFormatUtils";
+import { Response } from "express";
 import { createLogger } from "../services/LoggerService";
 
 const log = createLogger("UserController");
 
 // Response helper utilities
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 class ResponseHelper {
   static success(
     res: Response,
@@ -80,23 +61,6 @@ class ResponseHelper {
   static serverError(res: Response, error?: unknown): void {
     ResponseHelper.error(res, "Internal server error.", 500, error);
   }
-}
-
-// Interface for updating profile (matches frontend profileSchema exactly)
-interface UpdateProfileRequest {
-  username?: string;
-  firstName?: string;
-  lastName?: string;
-  gender?: "male" | "female";
-  email?: string;
-  phone?: string;
-  isAtCloudLeader?: boolean;
-  roleInAtCloud?: string;
-  homeAddress?: string;
-  occupation?: string;
-  company?: string;
-  weeklyChurch?: string;
-  churchAddress?: string;
 }
 
 /**

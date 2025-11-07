@@ -39,8 +39,7 @@ vi.mock("../../services/api", async (importOriginal) => {
   return {
     ...actual,
     // override only what this spec needs
-    rolesTemplateService: mockedRolesTemplateService,
-    roleTemplateService: mockedRolesTemplateService, // Also mock the singular form used by CreateEvent
+    roleTemplateService: mockedRolesTemplateService,
     eventService: mockedEventService,
     fileService: {
       uploadImage: mockUploadImage,

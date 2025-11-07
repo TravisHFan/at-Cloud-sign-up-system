@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { apiUrl, apiFetch } from "../src/lib/apiClient";
+import { apiUrl, apiFetch } from "../../lib/apiClient";
 
 describe("apiClient - Production URL Handling", () => {
   beforeEach(() => {

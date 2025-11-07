@@ -65,10 +65,9 @@ export interface UseDragDropHandlersParams {
   >;
   setEvent: React.Dispatch<React.SetStateAction<EventData | null>>;
   notification: {
-    error: (
-      message: string,
-      options?: { title?: string; autoCloseDelay?: number }
-    ) => void;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    error: (message: string, options?: any) => void;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     success: (message: string, options?: any) => void;
   };
 }

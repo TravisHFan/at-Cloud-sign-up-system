@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { RoleEditor } from "../components/RoleEditor";
-import { rolesTemplateService } from "../services/api";
+import { roleTemplateService } from "../services/api";
 import type { TemplateRole, RolesTemplate } from "../types/rolesTemplate";
 
 export default function ViewRolesTemplate() {
@@ -23,7 +23,7 @@ export default function ViewRolesTemplate() {
 
     const loadTemplate = async () => {
       try {
-        const data = (await rolesTemplateService.getTemplateById(
+        const data = (await roleTemplateService.getRolesTemplateById(
           id
         )) as RolesTemplate;
         setTemplate(data);

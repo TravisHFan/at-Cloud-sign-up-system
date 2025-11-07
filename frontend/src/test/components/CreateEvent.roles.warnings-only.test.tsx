@@ -10,35 +10,8 @@ const mockedEventService = vi.hoisted(() => ({
   createEvent: vi.fn().mockResolvedValue({ success: true }),
 }));
 
-const mockedRolesTemplateService = vi.hoisted(() => ({
-  getAllRolesTemplates: vi.fn().mockResolvedValue({
-    Conference: [
-      {
-        _id: "tpl1",
-        name: "Conference Template",
-        roles: [
-          {
-            name: "Attendee",
-            description: "Participant",
-            maxParticipants: 100,
-            openToPublic: true,
-          },
-          {
-            name: "Host",
-            description: "Event host",
-            maxParticipants: 1,
-            openToPublic: false,
-          },
-        ],
-      },
-    ],
-  }),
-}));
-
 vi.mock("../../services/api", () => ({
   eventService: mockedEventService,
-  roleTemplateService: mockedRolesTemplateService, // Add to fix template loading
-  rolesTemplateService: mockedRolesTemplateService, // Keep for backwards compatibility
   fileService: { uploadImage: vi.fn() },
   authService: {
     getProfile: vi.fn().mockResolvedValue({

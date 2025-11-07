@@ -59,8 +59,7 @@ const mockedProgramService = vi.hoisted(() => ({
 
 vi.mock("../../services/api", () => ({
   eventService: mockedEventService,
-  rolesTemplateService: mockedRolesTemplateService,
-  roleTemplateService: mockedRolesTemplateService, // Also mock the singular form used by CreateEvent
+  roleTemplateService: mockedRolesTemplateService,
   programService: mockedProgramService,
   // Provide a minimal userService to satisfy any imports from hooks/components
   userService: {

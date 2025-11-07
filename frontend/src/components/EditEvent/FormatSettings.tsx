@@ -9,8 +9,11 @@ import type { EventValidationState } from "../../utils/eventValidationUtils";
 import { PUBLISH_FIELD_LABELS } from "../../types/event";
 
 interface FormatSettingsProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   register: UseFormRegister<any>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   errors: FieldErrors<any>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   watch: UseFormWatch<any>;
   validations: EventValidationState;
   eventData: {

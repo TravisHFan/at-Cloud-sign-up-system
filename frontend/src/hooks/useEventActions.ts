@@ -14,7 +14,14 @@ export interface UseEventActionsParams {
   event: EventData | null;
   setEvent: React.Dispatch<React.SetStateAction<EventData | null>>;
   setManagementMode: (mode: boolean) => void;
-  notification: any;
+  notification: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    error: (message: string, options?: any) => void;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    success: (message: string, options?: any) => void;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    warning: (message: string, options?: any) => void;
+  };
   navigate: (path: string) => void;
 }
 
