@@ -92,7 +92,7 @@ describe("Public Events API - publish/unpublish lifecycle", () => {
       .post(`/api/events/${eventId}/publish`)
       .set("Authorization", `Bearer ${adminToken}`)
       .send();
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(422); // 422 Unprocessable Entity for validation errors
   });
 
   it("publishes when at least one role openToPublic and generates slug once", async () => {

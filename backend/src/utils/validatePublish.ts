@@ -24,6 +24,8 @@ export function getMissingNecessaryFieldsForPublish(event: IEvent): string[] {
   const format = event.format;
   const needed = NECESSARY_PUBLISH_FIELDS_BY_FORMAT[format] || [];
   const missing: string[] = [];
+
+  // Check format-specific required fields
   for (const f of needed) {
     const value = (event as unknown as Record<string, unknown>)[f];
     if (
@@ -34,6 +36,15 @@ export function getMissingNecessaryFieldsForPublish(event: IEvent): string[] {
       missing.push(f);
     }
   }
+
+  // Check if at least one role is open to public
+  const openRoles = (event.roles || []).filter(
+    (r) => (r as { openToPublic?: boolean }).openToPublic
+  );
+  if (openRoles.length === 0) {
+    missing.push("roles");
+  }
+
   return missing;
 }
 

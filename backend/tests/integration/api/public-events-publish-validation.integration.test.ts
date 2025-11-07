@@ -82,8 +82,8 @@ describe("Public Events API - publish validation", () => {
       .post(`/api/events/${baseEventId}/publish`)
       .set("Authorization", `Bearer ${adminToken}`)
       .send();
-    // Helper populated zoomLink; missing fields now: timeZone + no open role + short purpose -> 400 (no aggregate missing virtual fields set).
-    expect(res.status).toBe(400);
+    // Helper populated zoomLink; missing fields now: timeZone + no open role + short purpose -> 422 (validation error).
+    expect(res.status).toBe(422); // 422 Unprocessable Entity for validation errors
     const errors = res.body.errors || [];
     const codes = errors.map((e: any) => e.code).sort();
     expect(codes).toContain("NO_PUBLIC_ROLE");
