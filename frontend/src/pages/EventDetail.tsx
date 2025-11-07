@@ -268,7 +268,7 @@ export default function EventDetail() {
         setShowDeletionModal={setShowDeletionModal}
         handleDownloadCalendar={handleDownloadCalendar}
       />
-      <div className="bg-white rounded-lg shadow-sm p-6">
+      <div className="bg-white rounded-lg shadow-sm p-6 space-y-6">
         {/* Event Details */}
         <EventBasicDetails event={event} />
         <EventHostAndPurpose event={event} />

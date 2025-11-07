@@ -34,11 +34,12 @@ export default function FlyerCarousel({
   // If only one flyer, display it directly without carousel controls
   if (flyers.length === 1) {
     return (
-      <div className={`relative ${className}`}>
+      <div className={`${className}`}>
         <img
           src={flyers[0]}
           alt="Event flyer"
-          className="w-full max-h-full rounded-lg border border-gray-200 object-contain"
+          className="w-full max-h-[600px] rounded-lg border border-gray-200 object-contain bg-white"
+          style={{ display: "block" }}
         />
       </div>
     );
@@ -56,11 +57,12 @@ export default function FlyerCarousel({
   return (
     <div className={`relative group ${className}`}>
       {/* Main Image */}
-      <div className="relative overflow-hidden rounded-lg border border-gray-200">
+      <div className="relative rounded-lg border border-gray-200 bg-white">
         <img
           src={flyers[currentIndex]}
           alt={`Event flyer ${currentIndex + 1}`}
-          className="w-full max-h-full object-contain transition-opacity duration-300"
+          className="w-full max-h-[600px] object-contain transition-opacity duration-300"
+          style={{ display: "block" }}
         />
 
         {/* Navigation Buttons - visible on hover */}

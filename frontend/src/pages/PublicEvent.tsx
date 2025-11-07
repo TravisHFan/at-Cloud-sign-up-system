@@ -283,13 +283,16 @@ export default function PublicEvent() {
       </header>
 
       {(data.flyerUrl || data.secondaryFlyerUrl) && (
-        <div className="mb-6">
+        <section className="mb-6" data-testid="public-event-flyers">
+          <h2 className="text-xl font-semibold mb-4">
+            Event Flyer{data.flyerUrl && data.secondaryFlyerUrl ? "s" : ""}
+          </h2>
           <FlyerCarousel
             flyerUrl={data.flyerUrl}
             secondaryFlyerUrl={data.secondaryFlyerUrl}
-            className="max-h-96"
+            className="max-w-2xl mx-auto"
           />
-        </div>
+        </section>
       )}
 
       {data.purpose && (

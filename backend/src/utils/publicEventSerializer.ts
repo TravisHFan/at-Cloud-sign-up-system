@@ -28,6 +28,7 @@ export interface PublicEventPayload {
   timeZone?: string; // IANA zone used when constructing instants
   location: string;
   flyerUrl?: string;
+  secondaryFlyerUrl?: string;
   roles: PublicEventRole[];
   slug: string;
   format?: string; // Online | In-person | Hybrid Participation
@@ -155,6 +156,7 @@ export async function serializePublicEvent(
     timeZone: event.timeZone,
     location: ValidationUtils.sanitizeString(event.location || "Online"),
     flyerUrl: event.flyerUrl,
+    secondaryFlyerUrl: event.secondaryFlyerUrl,
     roles,
     slug: event.publicSlug || "",
     format: event.format,

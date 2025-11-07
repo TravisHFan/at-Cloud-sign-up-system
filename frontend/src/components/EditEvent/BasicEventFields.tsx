@@ -132,6 +132,21 @@ export default function BasicEventFields({
         )}
       </div>
 
+      {/* Program Labels (optional) - Modal-based selection */}
+      <ProgramSelection
+        programs={programs}
+        selectedProgramIds={
+          (watch("programLabels") as string[] | undefined) || []
+        }
+        onProgramsChange={(programIds) => {
+          setValue("programLabels", programIds, {
+            shouldDirty: true,
+            shouldValidate: true,
+          });
+        }}
+        loading={programLoading}
+      />
+
       {/* Event Type - Dropdown selection */}
       <div>
         <label
@@ -188,21 +203,6 @@ export default function BasicEventFields({
           time.
         </p>
       </div>
-
-      {/* Program Labels (optional) - Modal-based selection */}
-      <ProgramSelection
-        programs={programs}
-        selectedProgramIds={
-          (watch("programLabels") as string[] | undefined) || []
-        }
-        onProgramsChange={(programIds) => {
-          setValue("programLabels", programIds, {
-            shouldDirty: true,
-            shouldValidate: true,
-          });
-        }}
-        loading={programLoading}
-      />
 
       {/* Dates and Times (responsive grid) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

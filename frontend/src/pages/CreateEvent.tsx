@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useLocation, useSearchParams } from "react-router-dom";
 import { useEventForm } from "../hooks/useEventForm";
 import { useEventValidation } from "../hooks/useEventValidation";
@@ -105,9 +105,6 @@ export default function NewEvent() {
       userId: organizer.id,
     }));
   }, [selectedOrganizers]);
-
-  // Create refs for all form fields to enable navigation to first invalid field
-  const fieldRefs = useRef<Record<string, HTMLElement | null>>({});
 
   // Normalize recurrence frequency to allowed union
   type Frequency = "every-two-weeks" | "monthly" | "every-two-months" | null;
@@ -340,7 +337,36 @@ export default function NewEvent() {
     if (!overallStatus.firstInvalidField) return;
 
     const fieldName = overallStatus.firstInvalidField;
-    const element = fieldRefs.current[fieldName];
+
+    // Try to find the element by ID or name
+    let element = document.getElementById(fieldName);
+
+    // If not found by ID, try finding by name attribute
+    if (!element) {
+      element = document.querySelector(`[name="${fieldName}"]`) as HTMLElement;
+    }
+
+    // If still not found, try common field mappings
+    if (!element) {
+      const fieldMappings: Record<string, string> = {
+        title: "title",
+        type: "type",
+        date: "date",
+        time: "time",
+        endDate: "endDate",
+        endTime: "endTime",
+        timeZone: "timeZone",
+        format: "format",
+        location: "location",
+        zoomLink: "zoomLink",
+        agenda: "agenda",
+      };
+
+      const mappedId = fieldMappings[fieldName];
+      if (mappedId) {
+        element = document.getElementById(mappedId);
+      }
+    }
 
     if (element) {
       element.scrollIntoView({
@@ -349,13 +375,15 @@ export default function NewEvent() {
       });
 
       // Try to focus the input if possible
-      if (
-        element instanceof HTMLInputElement ||
-        element instanceof HTMLSelectElement ||
-        element instanceof HTMLTextAreaElement
-      ) {
-        element.focus();
-      }
+      setTimeout(() => {
+        if (
+          element instanceof HTMLInputElement ||
+          element instanceof HTMLSelectElement ||
+          element instanceof HTMLTextAreaElement
+        ) {
+          element.focus();
+        }
+      }, 300); // Wait for scroll animation
     }
   }, [overallStatus.firstInvalidField]);
 
