@@ -134,7 +134,64 @@ const RoleManagement: React.FC<RoleManagementProps> = ({
               ))}
             </select>
           </div>
-          <div className="flex gap-2">
+
+          {/* Template Preview - shows roles when a template is selected */}
+          {selectedTemplateId &&
+            (() => {
+              const selectedTemplate = (
+                dbTemplates[selectedEventType] || []
+              ).find((t) => t._id === selectedTemplateId);
+              if (!selectedTemplate) return null;
+
+              return (
+                <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-md">
+                  <h5 className="text-sm font-semibold text-gray-900 mb-3">
+                    Template Preview: {selectedTemplate.name}
+                  </h5>
+                  <div className="space-y-3">
+                    {selectedTemplate.roles.map((role, index) => (
+                      <div
+                        key={index}
+                        className="p-3 bg-white border border-gray-200 rounded-md"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <h6 className="font-medium text-gray-900">
+                            {role.name}
+                          </h6>
+                          <span className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                            Max: {role.maxParticipants}
+                          </span>
+                        </div>
+                        {role.description && (
+                          <p className="text-sm text-gray-600 mb-2">
+                            {role.description}
+                          </p>
+                        )}
+                        <div className="flex flex-wrap gap-2 text-xs">
+                          {role.openToPublic && (
+                            <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
+                              Public
+                            </span>
+                          )}
+                          {role.agenda && (
+                            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                              Has Agenda
+                            </span>
+                          )}
+                          {role.startTime && role.endTime && (
+                            <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">
+                              {role.startTime} - {role.endTime}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+          <div className="flex gap-2 mt-4">
             <button
               type="button"
               onClick={() => {
