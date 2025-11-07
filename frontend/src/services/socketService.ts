@@ -252,7 +252,7 @@ class SocketServiceFrontend {
   async joinEventRoom(eventId: string): Promise<void> {
     // Don't join if already in this room
     if (this.joinedRooms.has(eventId)) {
-      console.log(`📡 Already in event room: ${eventId}`);
+      // Silently skip if already joined (common in React StrictMode)
       return;
     }
 
@@ -285,7 +285,7 @@ class SocketServiceFrontend {
   leaveEventRoom(eventId: string): void {
     // Only attempt to leave if we were actually in the room
     if (!this.joinedRooms.has(eventId)) {
-      console.log(`📡 Not in event room ${eventId}, skipping leave`);
+      // Silently skip if not in room (common in React StrictMode cleanup)
       return;
     }
 
