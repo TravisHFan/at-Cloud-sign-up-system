@@ -9,21 +9,6 @@ import {
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { NotificationProvider } from "../../contexts/NotificationModalContext";
 import ProgramDetail from "../../pages/ProgramDetail";
-// Mock Auth context to avoid requiring an AuthProvider in tests
-vi.mock("../../contexts/AuthContext", () => ({
-  useAuth: () => ({
-    currentUser: { id: "u-admin", role: "Administrator" },
-    isAuthenticated: true,
-    isLoading: false,
-    // Grant all roles to keep UI paths available during tests
-    hasRole: () => true,
-    canCreateEvents: true,
-    canManageUsers: true,
-    login: vi.fn(),
-    logout: vi.fn(),
-    updateUser: vi.fn(),
-  }),
-}));
 
 const genEvents = (count: number) =>
   Array.from({ length: count }).map((_, i) => {
@@ -47,19 +32,46 @@ const genEvents = (count: number) =>
     };
   });
 
-const mockedProgramService = vi.hoisted(() => ({
-  getById: vi.fn(async () => ({
-    id: "p1",
-    title: "EMBA 2025",
-    programType: "EMBA Mentor Circles" as const,
-    introduction: "Mentor circles for EMBA cohort.",
-  })),
-  listEvents: vi.fn(async () => genEvents(21)),
-  listEventsPaged: vi.fn(),
-}));
+vi.mock("../../services/api", async () => {
+  const { createMockApiServices } = await import("../helpers/mockServices");
+  return createMockApiServices({
+    programService: {
+      getById: vi.fn(async () => ({
+        id: "p1",
+        title: "EMBA 2025",
+        programType: "EMBA Mentor Circles" as const,
+        introduction: "Mentor circles for EMBA cohort.",
+      })),
+      listEvents: vi.fn(async () => genEvents(21)),
+      listProgramEvents: vi.fn(async () => genEvents(21)),
+      listProgramEventsPaged: vi.fn(async () => ({
+        items: genEvents(20),
+        page: 1,
+        limit: 20,
+        total: 21,
+        totalPages: 2,
+      })),
+    },
+  });
+});
 
-vi.mock("../../services/api", () => ({
-  programService: mockedProgramService,
+// Import after mocking
+const { programService } = await import("../../services/api");
+
+// Mock Auth context to avoid requiring an AuthProvider in tests
+vi.mock("../../contexts/AuthContext", () => ({
+  useAuth: () => ({
+    currentUser: { id: "u-admin", role: "Administrator" },
+    isAuthenticated: true,
+    isLoading: false,
+    // Grant all roles to keep UI paths available during tests
+    hasRole: () => true,
+    canCreateEvents: true,
+    canManageUsers: true,
+    login: vi.fn(),
+    logout: vi.fn(),
+    updateUser: vi.fn(),
+  }),
 }));
 
 vi.mock("react-router-dom", async () => {
@@ -145,7 +157,9 @@ describe("ProgramDetail Events Pagination", () => {
 
   it("reads initial page and sort from URL (deep link)", async () => {
     // Ensure enough events for 3 pages (limit=20 by default)
-    mockedProgramService.listEvents.mockResolvedValueOnce(genEvents(45));
+    (
+      programService.listProgramEvents as ReturnType<typeof vi.fn>
+    ).mockResolvedValueOnce(genEvents(45));
 
     render(
       <NotificationProvider>
@@ -178,13 +192,14 @@ describe("ProgramDetail Events Pagination", () => {
     // We'll enable server pagination for this render via component prop
 
     // First call (initial load): quick resolve with page 1
-    mockedProgramService.listEventsPaged.mockResolvedValueOnce({
+    (
+      programService.listProgramEventsPaged as ReturnType<typeof vi.fn>
+    ).mockResolvedValueOnce({
       items: genEvents(20),
       page: 1,
       limit: 20,
       total: 21,
       totalPages: 2,
-      sort: "date:asc",
     });
 
     // Second call (after clicking Next): manual resolve control for deterministic spinner check
@@ -197,9 +212,10 @@ describe("ProgramDetail Events Pagination", () => {
       limit: 20,
       total: 21,
       totalPages: 2,
-      sort: "date:asc",
     };
-    mockedProgramService.listEventsPaged.mockImplementationOnce(
+    (
+      programService.listProgramEventsPaged as ReturnType<typeof vi.fn>
+    ).mockImplementationOnce(
       () =>
         new Promise((resolve: (v: any) => void) => {
           deferredSecondPage.resolve = resolve;

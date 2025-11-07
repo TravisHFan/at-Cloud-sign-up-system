@@ -67,12 +67,15 @@ export default function EnrollProgram() {
     // Work in cents throughout - formatCurrency expects cents
     let priceInCents = program.fullPriceTicket;
 
+    // Class Rep and Early Bird are mutually exclusive
+    // If enrolling as Class Rep, do not apply Early Bird discount
     if (isClassRep && program.classRepDiscount) {
       priceInCents -= program.classRepDiscount;
-    }
-    if (isEarlyBird && program.earlyBirdDiscount) {
+    } else if (isEarlyBird && program.earlyBirdDiscount) {
+      // Only apply Early Bird if NOT enrolling as Class Rep
       priceInCents -= program.earlyBirdDiscount;
     }
+
     // Apply promo code discount (already in cents)
     if (promoDiscountAmountInCents > 0) {
       priceInCents -= promoDiscountAmountInCents;
@@ -198,16 +201,29 @@ export default function EnrollProgram() {
           ? error.message
           : "Failed to start checkout process. Please try again.";
 
+      // Check for Early Bird expiration error
+      const isEarlyBirdExpired = message.includes(
+        "Early Bird discount period has expired"
+      );
+
       // Determine modal type based on error message
       const isClassRepFull = message.includes("Class Rep slots are full");
 
       setAlertModal({
         isOpen: true,
-        title: isClassRepFull ? "Class Rep Slots Full" : "Checkout Error",
+        title: isEarlyBirdExpired
+          ? "Early Bird Period Expired"
+          : isClassRepFull
+          ? "Class Rep Slots Full"
+          : "Checkout Error",
         message: message,
-        type: isClassRepFull ? "warning" : "error",
+        type: isEarlyBirdExpired || isClassRepFull ? "warning" : "error",
         onClose: () => {
           setAlertModal((prev) => ({ ...prev, isOpen: false }));
+          // If Early Bird expired, reload the page to refresh pricing
+          if (isEarlyBirdExpired) {
+            window.location.reload();
+          }
         },
       });
       setIsProcessing(false);
@@ -275,7 +291,8 @@ export default function EnrollProgram() {
       {/* Early Bird Notice */}
       {isEarlyBird &&
         program.earlyBirdDiscount &&
-        program.earlyBirdDiscount > 0 && (
+        program.earlyBirdDiscount > 0 &&
+        !isClassRep && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-4">
             <div className="flex items-center">
               <svg
@@ -297,6 +314,36 @@ export default function EnrollProgram() {
             <p className="text-sm text-green-700 mt-1 ml-7">
               Deadline:{" "}
               {new Date(program.earlyBirdDeadline!).toLocaleDateString()}
+            </p>
+          </div>
+        )}
+
+      {/* Class Rep Mutually Exclusive Notice */}
+      {isClassRep &&
+        isEarlyBird &&
+        program.earlyBirdDiscount &&
+        program.earlyBirdDiscount > 0 && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <div className="flex items-center">
+              <svg
+                className="w-5 h-5 text-amber-600 mr-2"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <span className="text-amber-800 font-medium">
+                Early Bird discount not applicable when enrolling as Class
+                Representative
+              </span>
+            </div>
+            <p className="text-sm text-amber-700 mt-1 ml-7">
+              You'll receive the Class Rep discount of{" "}
+              {formatCurrency(program.classRepDiscount || 0)} instead.
             </p>
           </div>
         )}
@@ -352,8 +399,7 @@ export default function EnrollProgram() {
                 ? program.fullPriceTicket -
                   (isClassRep && program.classRepDiscount
                     ? program.classRepDiscount
-                    : 0) -
-                  (isEarlyBird && program.earlyBirdDiscount
+                    : !isClassRep && isEarlyBird && program.earlyBirdDiscount
                     ? program.earlyBirdDiscount
                     : 0)
                 : 0
@@ -385,7 +431,8 @@ export default function EnrollProgram() {
                   <span>- {formatCurrency(program.classRepDiscount)}</span>
                 </div>
               )}
-            {isEarlyBird &&
+            {!isClassRep &&
+              isEarlyBird &&
               program.earlyBirdDiscount &&
               program.earlyBirdDiscount > 0 && (
                 <div className="flex justify-between text-green-600">

@@ -9,20 +9,6 @@ import {
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { NotificationProvider } from "../../contexts/NotificationModalContext";
 import ProgramDetail from "../../pages/ProgramDetail";
-// Mock Auth context for these tests
-vi.mock("../../contexts/AuthContext", () => ({
-  useAuth: () => ({
-    currentUser: { id: "u-admin", role: "Administrator" },
-    isAuthenticated: true,
-    isLoading: false,
-    hasRole: () => true,
-    canCreateEvents: true,
-    canManageUsers: true,
-    login: vi.fn(),
-    logout: vi.fn(),
-    updateUser: vi.fn(),
-  }),
-}));
 
 const genEvents = (count: number) =>
   Array.from({ length: count }).map((_, i) => ({
@@ -42,19 +28,34 @@ const genEvents = (count: number) =>
     createdAt: new Date().toISOString(),
   }));
 
-const mockedProgramService = vi.hoisted(() => ({
-  getById: vi.fn(async () => ({
-    id: "p1",
-    title: "EMBA 2025",
-    programType: "EMBA Mentor Circles" as const,
-    introduction: "Mentor circles for EMBA cohort.",
-  })),
-  listEvents: vi.fn(async () => genEvents(45)),
-  listEventsPaged: vi.fn(),
-}));
+vi.mock("../../services/api", async () => {
+  const { createMockApiServices } = await import("../helpers/mockServices");
+  return createMockApiServices({
+    programService: {
+      getById: vi.fn(async () => ({
+        id: "p1",
+        title: "EMBA 2025",
+        programType: "EMBA Mentor Circles" as const,
+        introduction: "Mentor circles for EMBA cohort.",
+      })),
+      listProgramEvents: vi.fn(async () => genEvents(45)),
+    },
+  });
+});
 
-vi.mock("../../services/api", () => ({
-  programService: mockedProgramService,
+// Mock Auth context for these tests
+vi.mock("../../contexts/AuthContext", () => ({
+  useAuth: () => ({
+    currentUser: { id: "u-admin", role: "Administrator" },
+    isAuthenticated: true,
+    isLoading: false,
+    hasRole: () => true,
+    canCreateEvents: true,
+    canManageUsers: true,
+    login: vi.fn(),
+    logout: vi.fn(),
+    updateUser: vi.fn(),
+  }),
 }));
 
 vi.mock("react-router-dom", async () => {

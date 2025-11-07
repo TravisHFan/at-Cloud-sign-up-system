@@ -136,7 +136,7 @@ describe("EnrollProgram Component", () => {
     expect(prices.length).toBeGreaterThan(0);
   });
 
-  it("applies class rep discount when checkbox is checked", async () => {
+  it("applies class rep discount when checkbox is checked (mutually exclusive with early bird)", async () => {
     const { default: EnrollProgram } = await import(
       "../../pages/EnrollProgram"
     );
@@ -170,13 +170,14 @@ describe("EnrollProgram Component", () => {
     await user.click(checkbox);
 
     await waitFor(() => {
-      // Should show full price minus both discounts: 19 - 5 - 4 = 10
-      const prices = screen.getAllByText(/\$10\.00/);
+      // Should show full price minus Class Rep discount only: 19 - 5 = 14
+      // (Early Bird does not stack with Class Rep)
+      const prices = screen.getAllByText(/\$14\.00/);
       expect(prices.length).toBeGreaterThan(0);
     });
   });
 
-  it("shows discount breakdown with both discounts", async () => {
+  it("shows discounts are mutually exclusive (Class Rep overrides Early Bird)", async () => {
     const { default: EnrollProgram } = await import(
       "../../pages/EnrollProgram"
     );
@@ -205,17 +206,37 @@ describe("EnrollProgram Component", () => {
       ).toBeInTheDocument();
     });
 
+    // Initially should show Early Bird discount in Pricing Summary (no Class Rep selected)
+    await waitFor(() => {
+      // Should show $15 (19 - 4 Early Bird)
+      const prices = screen.getAllByText(/\$15\.00/);
+      expect(prices.length).toBeGreaterThan(0);
+
+      // Should see Early Bird in pricing summary
+      const pricingSummary = screen.getByText(/Pricing Summary/i).parentElement;
+      expect(pricingSummary?.textContent).toMatch(/Early Bird Discount/);
+    });
+
+    // Click Class Rep checkbox
     const checkbox = screen.getByLabelText(/class representative/i);
     await user.click(checkbox);
 
+    // Now should show ONLY Class Rep discount, NOT Early Bird in pricing summary
     await waitFor(() => {
-      expect(screen.getByText(/Class Rep Discount/i)).toBeInTheDocument();
-      const earlyBirdTexts = screen.getAllByText(/Early Bird Discount/i);
-      expect(earlyBirdTexts.length).toBeGreaterThan(0);
-      const classRepPrices = screen.getAllByText(/\$5\.00/);
-      expect(classRepPrices.length).toBeGreaterThan(0); // Class rep discount
-      const earlyBirdPrices = screen.getAllByText(/\$4\.00/);
-      expect(earlyBirdPrices.length).toBeGreaterThan(0); // Early bird discount
+      // Should show $14 (19 - 5 Class Rep)
+      const prices = screen.getAllByText(/\$14\.00/);
+      expect(prices.length).toBeGreaterThan(0);
+
+      // Should see Class Rep in pricing summary
+      const pricingSummary = screen.getByText(/Pricing Summary/i).parentElement;
+      expect(pricingSummary?.textContent).toMatch(/Class Rep Discount/);
+
+      // Should NOT see Early Bird discount line in pricing summary
+      // (Note: Early Bird notice may still appear above, but not in the pricing breakdown)
+      const earlyBirdInSummary = pricingSummary?.textContent?.match(
+        /Early Bird Discount.*-.*\$4\.00/
+      );
+      expect(earlyBirdInSummary).toBeNull();
     });
   });
 

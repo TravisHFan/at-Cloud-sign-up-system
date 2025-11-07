@@ -237,19 +237,38 @@ class PurchaseCheckoutController {
           let earlyBirdDiscount = 0;
           let isEarlyBird = false;
 
+          // Check if Early Bird period is active
+          const now = new Date();
+          const earlyBirdActive =
+            program.earlyBirdDeadline &&
+            program.earlyBirdDiscount &&
+            now <= new Date(program.earlyBirdDeadline);
+
           // Apply Class Rep discount if selected
           if (isClassRep && program.classRepDiscount) {
             classRepDiscount = program.classRepDiscount;
           }
-
-          // Apply Early Bird discount if applicable
-          if (program.earlyBirdDeadline && program.earlyBirdDiscount) {
-            const now = new Date();
-            const deadline = new Date(program.earlyBirdDeadline);
-            if (now <= deadline) {
-              earlyBirdDiscount = program.earlyBirdDiscount;
-              isEarlyBird = true;
-            }
+          // Apply Early Bird discount ONLY if NOT enrolling as Class Rep (mutually exclusive)
+          else if (earlyBirdActive) {
+            earlyBirdDiscount = program.earlyBirdDiscount!;
+            isEarlyBird = true;
+          }
+          // If user opened the page with Early Bird active but it expired during checkout
+          else if (
+            !isClassRep &&
+            program.earlyBirdDeadline &&
+            program.earlyBirdDiscount &&
+            now > new Date(program.earlyBirdDeadline)
+          ) {
+            // Early Bird period has expired - return specific error
+            throw new Error(
+              JSON.stringify({
+                earlyBirdExpired: true,
+                message:
+                  "Early Bird discount period has expired. The regular price will be applied.",
+                newPrice: fullPrice,
+              })
+            );
           }
 
           // Calculate promo discount
@@ -540,6 +559,27 @@ class PurchaseCheckoutController {
           message: error.message,
         });
         return;
+      }
+
+      // Check if it's an Early Bird expiration error (contains JSON)
+      if (
+        error instanceof Error &&
+        error.message.includes("earlyBirdExpired")
+      ) {
+        try {
+          const errorData = JSON.parse(error.message);
+          res.status(400).json({
+            success: false,
+            message: errorData.message,
+            data: {
+              earlyBirdExpired: true,
+              newPrice: errorData.newPrice,
+            },
+          });
+          return;
+        } catch (parseError) {
+          // If JSON parsing fails, fall through to generic error
+        }
       }
 
       res.status(500).json({

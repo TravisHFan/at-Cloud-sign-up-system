@@ -9,53 +9,62 @@ import {
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { NotificationProvider } from "../../contexts/NotificationModalContext";
 
-const mockedProgramService = vi.hoisted(() => ({
-  getById: vi.fn(async () => ({
-    id: "p1",
-    title: "EMBA 2025",
-    programType: "EMBA Mentor Circles",
-  })),
-  listEvents: vi.fn(async () => [
-    {
-      id: "e1",
-      title: "A",
-      type: "Mentor Circle",
-      date: "2025-01-01",
-      time: "10:00",
-      endTime: "11:00",
-      roles: [],
-      signedUp: 0,
-      totalSlots: 0,
-      format: "Online",
-      createdBy: "u1",
-      createdAt: new Date().toISOString(),
+vi.mock("../../services/api", async () => {
+  const { createMockApiServices } = await import("../helpers/mockServices");
+  return createMockApiServices({
+    programService: {
+      getById: vi.fn(async () => ({
+        id: "p1",
+        title: "EMBA 2025",
+        programType: "EMBA Mentor Circles",
+      })),
+      listEvents: vi.fn(async () => [
+        {
+          id: "e1",
+          title: "A",
+          type: "Mentor Circle",
+          date: "2025-01-01",
+          time: "10:00",
+          endTime: "11:00",
+          roles: [],
+          signedUp: 0,
+          totalSlots: 0,
+          format: "Online",
+          createdBy: "u1",
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: "e2",
+          title: "B",
+          type: "Mentor Circle",
+          date: "2025-01-02",
+          time: "10:00",
+          endTime: "11:00",
+          roles: [],
+          signedUp: 0,
+          totalSlots: 0,
+          format: "Online",
+          createdBy: "u1",
+          createdAt: new Date().toISOString(),
+        },
+      ]),
+      listProgramEvents: vi.fn(async () => []),
+      listProgramEventsPaged: vi.fn(async () => ({
+        events: [],
+        pagination: { total: 0, page: 1, limit: 20, totalPages: 0 },
+      })),
+      getParticipants: vi.fn(async () => ({
+        mentees: [],
+        mentors: [],
+        classReps: [],
+      })),
+      deleteProgram: vi.fn(async () => ({ success: true })),
     },
-    {
-      id: "e2",
-      title: "B",
-      type: "Mentor Circle",
-      date: "2025-01-02",
-      time: "10:00",
-      endTime: "11:00",
-      roles: [],
-      signedUp: 0,
-      totalSlots: 0,
-      format: "Online",
-      createdBy: "u1",
-      createdAt: new Date().toISOString(),
-    },
-  ]),
-  listEventsPaged: vi.fn(async () => ({
-    items: [],
-    page: 1,
-    limit: 20,
-    total: 2,
-    totalPages: 1,
-  })),
-  remove: vi.fn(async () => ({ success: true })),
-}));
+  });
+});
 
-vi.mock("../../services/api", () => ({ programService: mockedProgramService }));
+// Import after mocking
+const { programService } = await import("../../services/api");
 
 // Mock Auth context so ProgramDetail doesn't require a real AuthProvider
 vi.mock("../../contexts/AuthContext", () => ({
@@ -104,9 +113,7 @@ describe("ProgramDetail delete modal", () => {
       </NotificationProvider>
     );
 
-    await waitFor(() =>
-      expect(mockedProgramService.getById).toHaveBeenCalled()
-    );
+    await waitFor(() => expect(programService.getById).toHaveBeenCalled());
     const delBtn = await screen.findByRole("button", {
       name: /delete program/i,
     });
@@ -151,7 +158,7 @@ describe("ProgramDetail delete modal", () => {
     fireEvent.click(confirmBtn);
 
     await waitFor(() =>
-      expect(mockedProgramService.remove).toHaveBeenCalledWith("p1", {
+      expect(programService.deleteProgram).toHaveBeenCalledWith("p1", {
         deleteLinkedEvents: false,
       })
     );
@@ -194,7 +201,7 @@ describe("ProgramDetail delete modal", () => {
     fireEvent.click(confirmBtn);
 
     await waitFor(() =>
-      expect(mockedProgramService.remove).toHaveBeenCalledWith("p1", {
+      expect(programService.deleteProgram).toHaveBeenCalledWith("p1", {
         deleteLinkedEvents: true,
       })
     );

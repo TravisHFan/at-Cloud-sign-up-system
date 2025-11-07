@@ -83,23 +83,28 @@ const mockSuperAdminTemplate: RolesTemplate = {
   updatedAt: new Date("2025-01-02").toISOString(),
 };
 
-// Mock API service
+// Mock API service functions
 const mockGetAllTemplates = vi.fn();
 const mockGetTemplateById = vi.fn();
 const mockDeleteTemplate = vi.fn();
 
-vi.mock("../../services/api", () => ({
-  authService: {
-    getProfile: vi.fn(),
-    login: vi.fn(),
-    logout: vi.fn(),
-  },
-  roleTemplateService: {
-    getAllTemplates: () => mockGetAllTemplates(),
-    getTemplateById: (id: string) => mockGetTemplateById(id),
-    deleteTemplate: (id: string) => mockDeleteTemplate(id),
-  },
-}));
+vi.mock("../../services/api", async () => {
+  const { createMockApiServices } = await import("../helpers/mockServices");
+  return createMockApiServices({
+    authService: {
+      getProfile: vi.fn(),
+      login: vi.fn(),
+      logout: vi.fn(),
+    },
+    roleTemplateService: {
+      getAllRolesTemplates: () => mockGetAllTemplates(),
+      getAllTemplates: () => mockGetAllTemplates(),
+      getRolesTemplateById: (id: string) => mockGetTemplateById(id),
+      getTemplateById: (id: string) => mockGetTemplateById(id),
+      deleteTemplate: (id: string) => mockDeleteTemplate(id),
+    },
+  });
+});
 
 describe("ConfigureRolesTemplates - Button Logic Based on Ownership", () => {
   beforeEach(() => {

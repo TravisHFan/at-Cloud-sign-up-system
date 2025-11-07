@@ -238,7 +238,32 @@ describe("Purchase API Integration Tests", () => {
       });
       expect(purchase?.isClassRep).toBe(true);
       expect(purchase?.classRepDiscount).toBe(500);
-      expect(purchase?.finalPrice).toBe(1000); // 1900 - 500 - 400
+      // Class Rep and Early Bird are mutually exclusive
+      // When isClassRep=true, only Class Rep discount is applied
+      expect(purchase?.earlyBirdDiscount).toBe(0);
+      expect(purchase?.isEarlyBird).toBe(false);
+      expect(purchase?.finalPrice).toBe(1400); // 1900 - 500 (Class Rep only)
+    });
+
+    it("should apply early bird discount when isClassRep is false (mutual exclusivity)", async () => {
+      // Create a purchase without class rep (standard enrollment)
+      const response = await request(app)
+        .post("/api/purchases/create-checkout-session")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({ programId: paidProgramId, isClassRep: false });
+
+      expect(response.status).toBe(200);
+
+      const purchase = await Purchase.findOne({
+        userId: userId,
+        programId: paidProgramId,
+      });
+      expect(purchase?.isClassRep).toBe(false);
+      expect(purchase?.classRepDiscount).toBe(0);
+      // Early Bird should be applied when NOT enrolling as Class Rep
+      expect(purchase?.isEarlyBird).toBe(true);
+      expect(purchase?.earlyBirdDiscount).toBe(400);
+      expect(purchase?.finalPrice).toBe(1500); // 1900 - 400 (Early Bird only)
     });
 
     it("should allow class rep enrollment when classRepCount field is missing (legacy programs)", async () => {

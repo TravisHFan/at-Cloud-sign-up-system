@@ -296,13 +296,14 @@ export default function PricingSection({
             </div>
           </div>
           {(() => {
-            const full = Number(fullPrice || 0);
-            const rep = Number(watch("classRepDiscount") || 0);
-            const early = Number(earlyBirdDiscountValue || 0);
-            const combinedTooLarge = full - rep - early < 0;
-            return combinedTooLarge ? (
+            const full = Number(fullPrice || 0) * 100;
+            const rep = Number(watch("classRepDiscount") || 0) * 100;
+            const early = Number(earlyBirdDiscountValue || 0) * 100;
+            const singleDiscountTooLarge = rep > full || early > full;
+            return singleDiscountTooLarge ? (
               <p className="mt-2 text-sm text-red-500">
-                Combined discounts cannot exceed the full price.
+                Individual discounts cannot exceed the full price. (Class Rep
+                and Early Bird are mutually exclusive)
               </p>
             ) : null;
           })()}
@@ -318,10 +319,6 @@ export default function PricingSection({
                 { label: "Standard", value: clamp(full) },
                 { label: "Class Rep", value: clamp(full - rep) },
                 { label: "Early Bird", value: clamp(full - early) },
-                {
-                  label: "Rep + Early Bird",
-                  value: clamp(full - rep - early),
-                },
               ];
               return (
                 <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -340,6 +337,7 @@ export default function PricingSection({
               );
             })()}
             <p className="text-xs text-gray-500 mt-2" aria-live="polite">
+              Class Rep and Early Bird discounts are mutually exclusive.
               Examples are illustrative. Final pricing is validated on the
               server.
             </p>

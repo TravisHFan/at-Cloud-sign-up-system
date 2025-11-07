@@ -5,36 +5,73 @@ import { AuthProvider } from "../../contexts/AuthContext";
 import { NotificationProvider } from "../../contexts/NotificationModalContext";
 import NewEvent from "../../pages/CreateEvent";
 
-// Mock services
+// Mock services - use vi.hoisted to ensure they're available in the mock factory
 const mockedEventService = vi.hoisted(() => ({
   createEvent: vi.fn().mockResolvedValue({ success: true }),
 }));
 
-vi.mock("../../services/api", () => ({
-  eventService: mockedEventService,
-  fileService: { uploadImage: vi.fn() },
-  authService: {
-    getProfile: vi.fn().mockResolvedValue({
-      id: "u1",
-      username: "testuser",
-      firstName: "Test",
-      lastName: "User",
-      email: "test@example.com",
-      phone: "1234567890",
-      role: "Leader",
-      isAtCloudLeader: true,
-      roleInAtCloud: "Leader",
-      gender: "male",
-    }),
-  },
-  programService: {
-    list: vi.fn().mockResolvedValue([]),
-    getById: vi.fn().mockResolvedValue({}),
-  },
-  userService: {
-    getUsers: vi.fn().mockResolvedValue({ users: [] }),
-  },
-}));
+vi.mock("../../services/api", async () => {
+  const { createMockApiServices } = await import("../helpers/mockServices");
+  return createMockApiServices({
+    eventService: mockedEventService,
+    authService: {
+      getProfile: vi.fn().mockResolvedValue({
+        id: "u1",
+        username: "testuser",
+        firstName: "Test",
+        lastName: "User",
+        email: "test@example.com",
+        phone: "1234567890",
+        role: "Leader",
+        isAtCloudLeader: true,
+        roleInAtCloud: "Leader",
+        gender: "male",
+      }),
+    },
+    programService: {
+      list: vi.fn().mockResolvedValue([]),
+      listPrograms: vi.fn().mockResolvedValue([]),
+      getById: vi.fn().mockResolvedValue({}),
+    },
+    userService: {
+      getUsers: vi.fn().mockResolvedValue({ users: [] }),
+    },
+    roleTemplateService: {
+      getAllRolesTemplates: vi.fn().mockResolvedValue({
+        Conference: [
+          {
+            _id: "tpl1",
+            name: "Conference Template",
+            eventType: "Conference",
+            roles: [
+              {
+                name: "Host",
+                description: "Event host",
+                maxParticipants: 1,
+                openToPublic: false,
+              },
+            ],
+          },
+        ],
+      }),
+      getRolesTemplatesByEventType: vi.fn().mockResolvedValue([
+        {
+          _id: "tpl1",
+          name: "Conference Template",
+          eventType: "Conference",
+          roles: [
+            {
+              name: "Host",
+              description: "Event host",
+              maxParticipants: 1,
+              openToPublic: false,
+            },
+          ],
+        },
+      ]),
+    },
+  });
+});
 
 const Wrapper = ({ children }: { children: React.ReactNode }) => (
   <BrowserRouter>

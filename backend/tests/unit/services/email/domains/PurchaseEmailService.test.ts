@@ -188,21 +188,21 @@ describe("PurchaseEmailService - Purchase Email Operations", () => {
       expect(emailCall.html).toContain("Early Bird"); // Badge or label
     });
 
-    it("should apply both Class Rep and Early Bird discounts when applicable", async () => {
+    it("should apply Class Rep discount (mutually exclusive with Early Bird)", async () => {
       // Arrange
       const params = {
-        email: "both@example.com",
-        name: "Alice Saver",
+        email: "classrep@example.com",
+        name: "Alice Rep",
         orderNumber: "ORD-2025-004",
         programTitle: "Premium Package",
         programType: "Bundle",
         purchaseDate: new Date("2025-01-05"),
         fullPrice: 50000, // $500.00
-        finalPrice: 40000, // $400.00 after both discounts
+        finalPrice: 45000, // $450.00 after Class Rep discount
         classRepDiscount: 5000, // $50.00
-        earlyBirdDiscount: 5000, // $50.00
+        earlyBirdDiscount: 0, // Not applied when Class Rep selected
         isClassRep: true,
-        isEarlyBird: true,
+        isEarlyBird: false, // Mutually exclusive
         receiptUrl: "https://example.com/receipt/jkl012",
       };
 
@@ -215,10 +215,11 @@ describe("PurchaseEmailService - Purchase Email Operations", () => {
       expect(result).toBe(true);
       const emailCall = mockTransporter.sendMail.mock.calls[0][0];
       expect(emailCall.html).toContain("$500.00"); // Full price
-      expect(emailCall.html).toContain("$400.00"); // Final price
-      expect(emailCall.html).toContain("$100.00"); // Total savings
+      expect(emailCall.html).toContain("$450.00"); // Final price
+      expect(emailCall.html).toContain("$50.00"); // Discount amount
       expect(emailCall.html).toContain("Class Rep");
-      expect(emailCall.html).toContain("Early Bird");
+      // Early Bird should NOT appear since they're mutually exclusive
+      expect(emailCall.html).not.toContain("Early Bird");
     });
 
     it("should include receipt URL link", async () => {

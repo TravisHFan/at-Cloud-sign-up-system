@@ -3,13 +3,15 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import PopulateFromTemplateModal from "../../../../src/components/rolesTemplate/PopulateFromTemplateModal";
 import type { RolesTemplate } from "../../../../src/types/rolesTemplate";
-import { roleTemplateService } from "../../../../src/services/api";
 
-vi.mock("../../../../src/services/api", () => ({
-  roleTemplateService: {
-    getTemplatesByEventType: vi.fn(),
-  },
-}));
+// Mock API services using factory function to avoid hoisting issues
+vi.mock("../../../../src/services/api", async () => {
+  const { createMockApiServices } = await import("../../helpers/mockServices");
+  return createMockApiServices();
+});
+
+// Import after mocking to get the mocked version
+import { roleTemplateService } from "../../../../src/services/api";
 
 const mockTemplates: RolesTemplate[] = [
   {
@@ -107,7 +109,9 @@ describe("PopulateFromTemplateModal", () => {
   });
 
   it("renders modal when isOpen is true", async () => {
-    vi.mocked(roleTemplateService.getRolesTemplatesByEventType).mockResolvedValue(
+    vi.mocked(
+      roleTemplateService.getRolesTemplatesByEventType
+    ).mockResolvedValue(
       mockTemplates.filter((t) => t.eventType === "Conference")
     );
 
@@ -129,9 +133,9 @@ describe("PopulateFromTemplateModal", () => {
     const conferenceTemplates = mockTemplates.filter(
       (t) => t.eventType === "Conference"
     );
-    vi.mocked(roleTemplateService.getRolesTemplatesByEventType).mockResolvedValue(
-      conferenceTemplates
-    );
+    vi.mocked(
+      roleTemplateService.getRolesTemplatesByEventType
+    ).mockResolvedValue(conferenceTemplates);
 
     render(
       <PopulateFromTemplateModal
@@ -155,7 +159,9 @@ describe("PopulateFromTemplateModal", () => {
   });
 
   it("filters templates by eventType", async () => {
-    vi.mocked(roleTemplateService.getRolesTemplatesByEventType).mockResolvedValue(
+    vi.mocked(
+      roleTemplateService.getRolesTemplatesByEventType
+    ).mockResolvedValue(
       mockTemplates.filter((t) => t.eventType === "Conference")
     );
 
@@ -169,9 +175,9 @@ describe("PopulateFromTemplateModal", () => {
     );
 
     await waitFor(() => {
-      expect(roleTemplateService.getRolesTemplatesByEventType).toHaveBeenCalledWith(
-        "Conference"
-      );
+      expect(
+        roleTemplateService.getRolesTemplatesByEventType
+      ).toHaveBeenCalledWith("Conference");
     });
 
     // Should not show Workshop template
@@ -182,9 +188,9 @@ describe("PopulateFromTemplateModal", () => {
     const conferenceTemplates = mockTemplates.filter(
       (t) => t.eventType === "Conference"
     );
-    vi.mocked(roleTemplateService.getRolesTemplatesByEventType).mockResolvedValue(
-      conferenceTemplates
-    );
+    vi.mocked(
+      roleTemplateService.getRolesTemplatesByEventType
+    ).mockResolvedValue(conferenceTemplates);
 
     render(
       <PopulateFromTemplateModal
@@ -214,9 +220,9 @@ describe("PopulateFromTemplateModal", () => {
   });
 
   it("displays empty state when no templates found", async () => {
-    vi.mocked(roleTemplateService.getRolesTemplatesByEventType).mockResolvedValue(
-      []
-    );
+    vi.mocked(
+      roleTemplateService.getRolesTemplatesByEventType
+    ).mockResolvedValue([]);
 
     render(
       <PopulateFromTemplateModal
@@ -235,9 +241,9 @@ describe("PopulateFromTemplateModal", () => {
   });
 
   it("displays error state when loading fails", async () => {
-    vi.mocked(roleTemplateService.getRolesTemplatesByEventType).mockRejectedValue(
-      new Error("Network error")
-    );
+    vi.mocked(
+      roleTemplateService.getRolesTemplatesByEventType
+    ).mockRejectedValue(new Error("Network error"));
 
     render(
       <PopulateFromTemplateModal
@@ -257,9 +263,9 @@ describe("PopulateFromTemplateModal", () => {
     const conferenceTemplates = mockTemplates.filter(
       (t) => t.eventType === "Conference"
     );
-    vi.mocked(roleTemplateService.getRolesTemplatesByEventType).mockResolvedValue(
-      conferenceTemplates
-    );
+    vi.mocked(
+      roleTemplateService.getRolesTemplatesByEventType
+    ).mockResolvedValue(conferenceTemplates);
 
     render(
       <PopulateFromTemplateModal
@@ -286,9 +292,9 @@ describe("PopulateFromTemplateModal", () => {
   });
 
   it("calls onClose when Cancel button is clicked", async () => {
-    vi.mocked(roleTemplateService.getRolesTemplatesByEventType).mockResolvedValue(
-      []
-    );
+    vi.mocked(
+      roleTemplateService.getRolesTemplatesByEventType
+    ).mockResolvedValue([]);
 
     render(
       <PopulateFromTemplateModal
@@ -308,9 +314,9 @@ describe("PopulateFromTemplateModal", () => {
   });
 
   it("calls onClose when close button (X) is clicked", async () => {
-    vi.mocked(roleTemplateService.getRolesTemplatesByEventType).mockResolvedValue(
-      []
-    );
+    vi.mocked(
+      roleTemplateService.getRolesTemplatesByEventType
+    ).mockResolvedValue([]);
 
     render(
       <PopulateFromTemplateModal
@@ -347,9 +353,9 @@ describe("PopulateFromTemplateModal", () => {
       })
     );
 
-    vi.mocked(roleTemplateService.getRolesTemplatesByEventType).mockResolvedValue(
-      manyTemplates
-    );
+    vi.mocked(
+      roleTemplateService.getRolesTemplatesByEventType
+    ).mockResolvedValue(manyTemplates);
 
     render(
       <PopulateFromTemplateModal
@@ -386,7 +392,9 @@ describe("PopulateFromTemplateModal", () => {
   });
 
   it("displays loading state while fetching templates", async () => {
-    vi.mocked(roleTemplateService.getRolesTemplatesByEventType).mockImplementation(
+    vi.mocked(
+      roleTemplateService.getRolesTemplatesByEventType
+    ).mockImplementation(
       () => new Promise((resolve) => setTimeout(() => resolve([]), 100))
     );
 
@@ -410,9 +418,9 @@ describe("PopulateFromTemplateModal", () => {
     const conferenceTemplates = mockTemplates.filter(
       (t) => t.eventType === "Conference"
     );
-    vi.mocked(roleTemplateService.getRolesTemplatesByEventType).mockResolvedValue(
-      conferenceTemplates
-    );
+    vi.mocked(
+      roleTemplateService.getRolesTemplatesByEventType
+    ).mockResolvedValue(conferenceTemplates);
 
     const { rerender } = render(
       <PopulateFromTemplateModal
@@ -458,9 +466,9 @@ describe("PopulateFromTemplateModal", () => {
 
   it("displays template information with proper formatting", async () => {
     const conferenceTemplates = [mockTemplates[0]];
-    vi.mocked(roleTemplateService.getRolesTemplatesByEventType).mockResolvedValue(
-      conferenceTemplates
-    );
+    vi.mocked(
+      roleTemplateService.getRolesTemplatesByEventType
+    ).mockResolvedValue(conferenceTemplates);
 
     render(
       <PopulateFromTemplateModal
@@ -500,9 +508,9 @@ describe("PopulateFromTemplateModal", () => {
       },
     };
 
-    vi.mocked(roleTemplateService.getRolesTemplatesByEventType).mockResolvedValue([
-      templateWithoutFirstName,
-    ]);
+    vi.mocked(
+      roleTemplateService.getRolesTemplatesByEventType
+    ).mockResolvedValue([templateWithoutFirstName]);
 
     render(
       <PopulateFromTemplateModal

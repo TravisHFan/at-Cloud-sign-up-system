@@ -3,6 +3,67 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { NotificationProvider } from "../../contexts/NotificationModalContext";
 import ProgramDetail from "../../pages/ProgramDetail";
+
+vi.mock("../../services/api", async () => {
+  const { createMockApiServices } = await import("../helpers/mockServices");
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  const todayStr = `${yyyy}-${mm}-${dd}`;
+
+  return createMockApiServices({
+    programService: {
+      getById: vi.fn(async () => ({
+        id: "p1",
+        title: "EMBA 2025",
+        programType: "EMBA Mentor Circles",
+        introduction: "Mentor circles for EMBA cohort.",
+        period: {
+          startMonth: "Jan",
+          startYear: "2025",
+          endMonth: "Jun",
+          endYear: "2025",
+        },
+      })),
+      listProgramEvents: vi.fn(async () => [
+        {
+          id: "e1",
+          title: "Kickoff",
+          type: "Mentor Circle",
+          date: todayStr,
+          time: "23:59",
+          endTime: "23:59",
+          location: "",
+          organizer: "",
+          roles: [],
+          signedUp: 0,
+          totalSlots: 0,
+          format: "Online",
+          createdBy: "u1",
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: "e0",
+          title: "Orientation (Past)",
+          type: "Mentor Circle",
+          date: "2020-01-10",
+          time: "10:00",
+          endTime: "11:00",
+          location: "",
+          organizer: "",
+          roles: [],
+          signedUp: 0,
+          totalSlots: 0,
+          format: "Online",
+          createdBy: "u1",
+          createdAt: new Date().toISOString(),
+        },
+      ]),
+    },
+  });
+});
+
 // Mock Auth context for these tests
 vi.mock("../../contexts/AuthContext", () => ({
   useAuth: () => ({
@@ -16,67 +77,6 @@ vi.mock("../../contexts/AuthContext", () => ({
     logout: vi.fn(),
     updateUser: vi.fn(),
   }),
-}));
-
-const mockedProgramService = vi.hoisted(() => ({
-  getById: vi.fn(async () => ({
-    id: "p1",
-    title: "EMBA 2025",
-    programType: "EMBA Mentor Circles",
-    introduction: "Mentor circles for EMBA cohort.",
-    period: {
-      startMonth: "Jan",
-      startYear: "2025",
-      endMonth: "Jun",
-      endYear: "2025",
-    },
-  })),
-  listEvents: vi.fn(async () => {
-    // Include both upcoming and past to ensure all are shown
-    const now = new Date();
-    const yyyy = now.getFullYear();
-    const mm = String(now.getMonth() + 1).padStart(2, "0");
-    const dd = String(now.getDate()).padStart(2, "0");
-    const todayStr = `${yyyy}-${mm}-${dd}`;
-    return [
-      {
-        id: "e1",
-        title: "Kickoff",
-        type: "Mentor Circle",
-        date: todayStr,
-        time: "23:59",
-        endTime: "23:59",
-        location: "",
-        organizer: "",
-        roles: [],
-        signedUp: 0,
-        totalSlots: 0,
-        format: "Online",
-        createdBy: "u1",
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: "e0",
-        title: "Orientation (Past)",
-        type: "Mentor Circle",
-        date: "2020-01-10",
-        time: "10:00",
-        endTime: "11:00",
-        location: "",
-        organizer: "",
-        roles: [],
-        signedUp: 0,
-        totalSlots: 0,
-        format: "Online",
-        createdBy: "u1",
-        createdAt: new Date().toISOString(),
-      },
-    ];
-  }),
-}));
-
-vi.mock("../../services/api", () => ({
-  programService: mockedProgramService,
 }));
 
 vi.mock("react-router-dom", async () => {

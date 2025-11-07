@@ -144,12 +144,11 @@ export default function ProgramPricing({
                   const clamp = (n: number) => Math.max(0, n);
                   const examples = [
                     { label: "Standard", value: clamp(f) },
-                    { label: "Class Rep", value: clamp(f - r) },
                     { label: "Early Bird", value: clamp(f - e) },
-                    { label: "Rep + Early Bird", value: clamp(f - r - e) },
+                    { label: "Class Rep", value: clamp(f - r) },
                   ];
                   return (
-                    <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <ul className="grid grid-cols-1 gap-2">
                       {examples.map((ex) => (
                         <li
                           key={ex.label}
@@ -165,8 +164,8 @@ export default function ProgramPricing({
                   );
                 })()}
                 <p className="text-xs text-gray-500 mt-2" aria-live="polite">
-                  Discounts are illustrative. Final tuition is validated at
-                  checkout.
+                  Class Rep and Early Bird discounts are mutually exclusive.
+                  Final tuition is validated at checkout.
                 </p>
               </div>
 
