@@ -166,27 +166,47 @@ class GuestDeclineController {
       await doc.save();
 
       // Attempt organizer notification (non-critical)
+      // Only notify organizers if guest was NOT invited by an authenticated user
+      // (if invitedBy exists, we'll notify that specific user instead)
       try {
         const event = (await Event.findById(doc.eventId)) as EventLike | null;
-        const organizerEmails: string[] = (
-          ((event as EventLike | null)?.organizerDetails || []) as Array<
-            Record<string, unknown>
-          >
-        )
-          .map((o) => String(o["email"] || ""))
-          .filter((e) => !!e);
-        if (organizerEmails.length > 0) {
-          await EmailService.sendGuestDeclineNotification({
-            event: {
-              title:
-                (event?.title as string) || doc.eventSnapshot?.title || "Event",
-              date: (event?.date as Date) || (doc.eventSnapshot?.date as Date),
-            },
-            roleName: doc.eventSnapshot?.roleName,
-            guest: { name: doc.fullName, email: doc.email },
-            reason: doc.declineReason,
-            organizerEmails,
-          });
+
+        // Skip organizer notification if this guest was invited by a specific user
+        if (!doc.invitedBy) {
+          const organizerEmails: string[] = (
+            ((event as EventLike | null)?.organizerDetails || []) as Array<
+              Record<string, unknown>
+            >
+          )
+            .map((o) => String(o["email"] || ""))
+            .filter((e) => !!e);
+          if (organizerEmails.length > 0) {
+            GuestDeclineController.log.debug(
+              "Sending decline notification to organizers (self-registered guest)",
+              undefined,
+              { organizerCount: organizerEmails.length }
+            );
+            await EmailService.sendGuestDeclineNotification({
+              event: {
+                title:
+                  (event?.title as string) ||
+                  doc.eventSnapshot?.title ||
+                  "Event",
+                date:
+                  (event?.date as Date) || (doc.eventSnapshot?.date as Date),
+              },
+              roleName: doc.eventSnapshot?.roleName,
+              guest: { name: doc.fullName, email: doc.email },
+              reason: doc.declineReason,
+              organizerEmails,
+            });
+          }
+        } else {
+          GuestDeclineController.log.debug(
+            "Skipping organizer notification - guest was invited by authenticated user",
+            undefined,
+            { invitedBy: String(doc.invitedBy) }
+          );
         }
 
         // Emit real-time guest_declined event so UI updates without refresh
@@ -200,21 +220,41 @@ class GuestDeclineController {
           console.error("Failed to emit guest_declined event", rtErr);
         }
 
-        // Create a system message / notification for assigner-like actor (fallback to event creator)
+        // Create a system message / notification for the person responsible
+        // Priority order:
+        // 1. invitedBy (authenticated user who invited this guest)
+        // 2. event.createdBy (event creator - fallback for old records or self-registrations)
         try {
-          // Derive assigner candidate: registration snapshot may not store assigner; fallback to event.createdBy
           let assignerUserId: string | undefined;
-          const createdBy = (event as unknown as { createdBy?: unknown })
-            ?.createdBy;
-          if (
-            createdBy &&
-            typeof createdBy === "object" &&
-            (createdBy as { _id?: unknown })._id
-          ) {
-            assignerUserId = String((createdBy as { _id: unknown })._id);
-          } else if (typeof createdBy === "string") {
-            assignerUserId = createdBy;
+
+          // First priority: Check if guest was invited by an authenticated user
+          if (doc.invitedBy) {
+            assignerUserId = String(doc.invitedBy);
+            GuestDeclineController.log.debug(
+              "Using invitedBy for decline notification",
+              undefined,
+              { invitedBy: assignerUserId }
+            );
+          } else {
+            // Fallback: Use event creator for self-registered guests or old records
+            const createdBy = (event as unknown as { createdBy?: unknown })
+              ?.createdBy;
+            if (
+              createdBy &&
+              typeof createdBy === "object" &&
+              (createdBy as { _id?: unknown })._id
+            ) {
+              assignerUserId = String((createdBy as { _id: unknown })._id);
+            } else if (typeof createdBy === "string") {
+              assignerUserId = createdBy;
+            }
+            GuestDeclineController.log.debug(
+              "Using event.createdBy for decline notification (fallback)",
+              undefined,
+              { createdBy: assignerUserId }
+            );
           }
+
           // Avoid self-notification if guest email matches assigner user (edge case extremely rare)
           if (assignerUserId) {
             // Fetch assigner minimal user doc

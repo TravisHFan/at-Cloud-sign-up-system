@@ -417,6 +417,11 @@ export class GuestRegistrationController {
             registrationDate: new Date(),
             status: "active",
             migrationStatus: "pending",
+            // Track who invited this guest (if authenticated user)
+            // For public self-registration, req.user is undefined, so invitedBy remains undefined
+            invitedBy: req.user?.id
+              ? new mongoose.Types.ObjectId(req.user.id)
+              : undefined,
           });
 
           try {

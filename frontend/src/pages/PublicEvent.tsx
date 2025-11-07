@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import apiClient from "../services/api";
 import { Icon } from "../components/common";
 import { ShareModal } from "../components/share/ShareModal";
+import AlertModal from "../components/common/AlertModal";
 import Multiline, { normalizeMultiline } from "../components/common/Multiline";
 import FlyerCarousel from "../components/events/FlyerCarousel";
 import type {
@@ -25,6 +26,8 @@ export default function PublicEvent() {
   const [resultMsg, setResultMsg] = useState<string | null>(null);
   const [duplicate, setDuplicate] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorModalMessage, setErrorModalMessage] = useState("");
   // Ref to the registration section so we can scroll/focus after role selection
   const registerSectionRef = useRef<HTMLElement | null>(null);
   // Use shared singleton client (avoids duplicate configuration)
@@ -574,11 +577,24 @@ export default function PublicEvent() {
                 const e = err as Error;
                 const errorMsg = e.message || "Registration failed";
 
-                // Provide user-friendly messages for specific errors
-                if (
+                // Check if this is a validation error - show in modal
+                const isValidationError =
+                  errorMsg.toLowerCase().includes("phone") ||
+                  errorMsg.toLowerCase().includes("email") ||
+                  errorMsg.toLowerCase().includes("name") ||
+                  errorMsg.toLowerCase().includes("must be at least") ||
+                  errorMsg.toLowerCase().includes("is required") ||
+                  errorMsg.toLowerCase().includes("invalid");
+
+                if (isValidationError) {
+                  // Show validation errors in a modal
+                  setErrorModalMessage(errorMsg);
+                  setShowErrorModal(true);
+                } else if (
                   errorMsg.includes("-role limit") ||
                   errorMsg.includes("reached the")
                 ) {
+                  // Handle role limit errors inline (complex message with formatting)
                   const lc = errorMsg.toLowerCase();
                   const backendIndicatesUser = lc.includes("you have reached");
                   // Extract the limit number from error message (e.g., "1-role", "3-role", "5-role")
@@ -605,6 +621,7 @@ export default function PublicEvent() {
                     );
                   }
                 } else {
+                  // Other errors - show inline
                   setResultMsg(errorMsg);
                 }
               } finally {
@@ -775,6 +792,19 @@ export default function PublicEvent() {
           onClose={() => setShowShareModal(false)}
         />
       )}
+
+      {/* Validation Error Modal */}
+      <AlertModal
+        isOpen={showErrorModal}
+        onClose={() => {
+          setShowErrorModal(false);
+          setErrorModalMessage("");
+        }}
+        title="Registration Failed"
+        message={errorModalMessage}
+        type="error"
+        buttonText="Cancel"
+      />
     </div>
   );
 }

@@ -157,10 +157,9 @@ export function useSignupHandlers({
     if (!event || !currentUser) return;
 
     try {
-      // Call backend API to cancel event signup
-      const updatedEvent = await eventService.removeUserFromRole(
+      // Call backend API to cancel event signup (user self-cancellation)
+      const updatedEvent = await eventService.cancelEventSignup(
         event.id,
-        currentUser.id,
         roleId
       );
 

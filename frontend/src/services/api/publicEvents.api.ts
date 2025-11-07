@@ -84,9 +84,28 @@ class PublicEventsApiClient extends BaseApiClient {
     });
     if (!res.ok) {
       const text = await res.text();
-      throw new Error(
-        `Public registration failed (${res.status})${text ? `: ${text}` : ""}`
-      );
+      // Try to parse JSON error response and extract clean message
+      try {
+        const errorData = JSON.parse(text);
+        // Extract just the message field from the error response
+        if (
+          errorData &&
+          typeof errorData === "object" &&
+          "message" in errorData
+        ) {
+          throw new Error(errorData.message);
+        }
+        // Fallback if no message field
+        throw new Error(text || `Registration failed (${res.status})`);
+      } catch (error) {
+        // If JSON.parse failed or re-throwing our custom error
+        if (error instanceof Error && error.message !== text) {
+          // This is our custom error with clean message, re-throw it
+          throw error;
+        }
+        // JSON parse failed, throw raw text
+        throw new Error(text || `Registration failed (${res.status})`);
+      }
     }
     const json = (await res.json()) as { success?: boolean; data?: unknown };
     if (!json.success || !json.data)

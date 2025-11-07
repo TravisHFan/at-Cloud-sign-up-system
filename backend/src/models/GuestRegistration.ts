@@ -39,6 +39,11 @@ export interface IGuestRegistration extends Document {
   migrationDate?: Date;
   migrationStatus: "pending" | "completed" | "declined";
 
+  // Invitation Tracking
+  // When an authenticated user (Leader, Admin, etc.) invites a guest, we track who invited them.
+  // For guest self-registrations (public event page), this remains undefined.
+  invitedBy?: mongoose.Types.ObjectId;
+
   // Self-service manage token
   manageToken?: string; // hashed token stored
   manageTokenExpires?: Date;
@@ -183,6 +188,16 @@ const GuestRegistrationSchema: Schema = new Schema(
       type: String,
       enum: ["pending", "completed", "declined"],
       default: "pending",
+    },
+
+    // Invitation Tracking
+    // Stores the user ID of the authenticated user who invited this guest.
+    // Remains undefined for guest self-registrations (public event page).
+    invitedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: undefined,
+      index: true,
     },
 
     // Self-service manage token (hashed) and expiry

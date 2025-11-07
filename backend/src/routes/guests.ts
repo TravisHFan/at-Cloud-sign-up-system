@@ -24,8 +24,12 @@ const router = Router();
 
 // Register a guest for an event role
 // POST /api/events/:eventId/guest-signup
+// Uses authenticateOptional to support both:
+// 1. Authenticated users (Leaders, Admins) inviting guests → tracks invitedBy
+// 2. Public guest self-registration → no invitedBy tracking
 router.post(
   "/:eventId/guest-signup",
+  authenticateOptional,
   sanitizeGuestBody,
   guestRegistrationValidation,
   handleValidationErrors,

@@ -80,10 +80,10 @@ export function useProgramAccess({
     }
 
     let cancelled = false;
+    setCheckingAccess(true); // Set loading state immediately
+
     (async () => {
       try {
-        setCheckingAccess(true);
-
         // Check access for all programs this event belongs to
         const programLabels = event.programLabels || [];
         let hasAccessToAny = false; // Track if user has access to at least one program
@@ -154,6 +154,7 @@ export function useProgramAccess({
 
     return () => {
       cancelled = true;
+      setCheckingAccess(false); // Always reset loading state on cleanup
     };
   }, [event, event?.programLabels, currentUser]);
 

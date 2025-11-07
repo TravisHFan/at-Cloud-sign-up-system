@@ -206,6 +206,71 @@ export class PublicEventController {
       // 8. Success response
       res.status(200).json({ success: true, data: responsePayload });
     } catch (err) {
+      // Handle Mongoose validation errors with specific field messages
+      interface MongooseValidationError extends Error {
+        name: "ValidationError";
+        errors: Record<
+          string,
+          {
+            path?: string;
+            kind?: string;
+            message?: string;
+          }
+        >;
+      }
+
+      if (
+        err &&
+        typeof err === "object" &&
+        "name" in err &&
+        err.name === "ValidationError" &&
+        "errors" in err
+      ) {
+        const validationError = err as MongooseValidationError;
+        const errors = validationError.errors || {};
+
+        // Extract the first validation error message
+        const firstErrorKey = Object.keys(errors)[0];
+        const firstError = errors[firstErrorKey];
+
+        let userMessage = "Validation failed";
+
+        if (firstError) {
+          // Handle common validation errors with user-friendly messages
+          if (firstError.path === "phone") {
+            if (firstError.kind === "minlength") {
+              userMessage = "Phone number must be at least 10 digits";
+            } else if (firstError.kind === "required") {
+              userMessage = "Phone number is required";
+            } else {
+              userMessage = firstError.message || "Invalid phone number";
+            }
+          } else if (firstError.path === "email") {
+            userMessage = firstError.message || "Invalid email address";
+          } else if (firstError.path === "fullName") {
+            userMessage = firstError.message || "Invalid name";
+          } else {
+            // Generic validation message
+            userMessage = firstError.message || "Validation failed";
+          }
+        }
+
+        log.warn("Validation error during registration", undefined, {
+          error: userMessage,
+          field: firstErrorKey,
+        });
+
+        res.status(400).json({
+          success: false,
+          message: userMessage,
+          field: firstErrorKey, // Include field name for potential client-side field highlighting
+        });
+        try {
+          registrationFailureCounter.inc({ reason: "validation_error" });
+        } catch {}
+        return;
+      }
+
       if (
         err instanceof Error &&
         err.message.includes("Role at full capacity")
