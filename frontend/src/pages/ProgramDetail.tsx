@@ -435,7 +435,13 @@ export default function ProgramDetail({
         title={program.title}
         programType={program.programType}
         period={program.period}
-        canEdit={hasRole(["Administrator", "Super Admin"])}
+        canEdit={
+          hasRole(["Administrator", "Super Admin"]) ||
+          (program.mentors?.some(
+            (mentor: { userId: string }) => mentor.userId === currentUser?.id
+          ) ??
+            false)
+        }
         canDelete={hasRole(["Administrator", "Super Admin"])}
         onDelete={openDelete}
       />

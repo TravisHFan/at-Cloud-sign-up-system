@@ -8,8 +8,8 @@ import { createAndLoginTestUser } from "../../test-utils/createTestUser";
 /**
  * Integration tests for PUT /api/programs/:id authorization
  *
- * Tests verify that only Super Admin and Administrator can update programs.
- * Leader, Guest Expert, and Participant should be denied access.
+ * Tests verify that Super Admin, Administrator, and assigned mentors can update programs.
+ * Leader, Guest Expert, Participant, and non-assigned mentors should be denied access.
  */
 
 describe("PUT /api/programs/:id - Authorization Tests", () => {
@@ -83,9 +83,101 @@ describe("PUT /api/programs/:id - Authorization Tests", () => {
       expect(response.body.data.title).toBe("Updated by Administrator");
       expect(response.body.data.fullPriceTicket).toBe(1500);
     });
+
+    it("should allow assigned mentor to update their program", async () => {
+      // Create mentor user
+      const { userId, token } = await createAndLoginTestUser({
+        role: "Leader",
+      });
+
+      // Create program with this mentor assigned
+      const programWithMentor = await ProgramModel.create({
+        title: "Mentor's Program",
+        programType: "EMBA Mentor Circles",
+        fullPriceTicket: 800,
+        isFree: false,
+        createdBy: new mongoose.Types.ObjectId(),
+        mentors: [
+          {
+            userId,
+            firstName: "Test",
+            lastName: "User",
+            email: "test@example.com",
+            gender: "male",
+            avatar: "",
+            roleInAtCloud: "Leader",
+          },
+        ],
+      });
+
+      const updatedData = {
+        title: "Updated by Assigned Mentor",
+        programType: "EMBA Mentor Circles",
+        fullPriceTicket: 900,
+      };
+
+      const response = await request(app)
+        .put(`/api/programs/${programWithMentor._id}`)
+        .set("Authorization", `Bearer ${token}`)
+        .send(updatedData);
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.title).toBe("Updated by Assigned Mentor");
+      expect(response.body.data.fullPriceTicket).toBe(900);
+    });
   });
 
   describe("Unauthorized Roles", () => {
+    it("should deny mentor from updating program they are NOT assigned to", async () => {
+      // Create mentor user
+      const { userId: mentorId, token } = await createAndLoginTestUser({
+        role: "Leader",
+      });
+
+      // Create program WITHOUT this mentor
+      const programWithoutMentor = await ProgramModel.create({
+        title: "Someone Else's Program",
+        programType: "EMBA Mentor Circles",
+        fullPriceTicket: 800,
+        isFree: false,
+        createdBy: new mongoose.Types.ObjectId(),
+        mentors: [
+          {
+            userId: new mongoose.Types.ObjectId().toString(), // Different mentor
+            firstName: "Other",
+            lastName: "Mentor",
+            email: "other@example.com",
+            gender: "male",
+            avatar: "",
+            roleInAtCloud: "Leader",
+          },
+        ],
+      });
+
+      const updatedData = {
+        title: "Attempted Update by Non-Assigned Mentor",
+        programType: "EMBA Mentor Circles",
+        fullPriceTicket: 2000,
+      };
+
+      const response = await request(app)
+        .put(`/api/programs/${programWithoutMentor._id}`)
+        .set("Authorization", `Bearer ${token}`)
+        .send(updatedData);
+
+      expect(response.status).toBe(403);
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe(
+        "You do not have permission to edit this program. Only Administrators and assigned mentors can edit programs."
+      );
+
+      // Verify program was not updated
+      const program = await ProgramModel.findById(programWithoutMentor._id);
+      expect(program?.title).toBe("Someone Else's Program");
+      expect(program?.fullPriceTicket).toBe(800);
+    });
+
     it("should deny Leader from updating a program", async () => {
       const { token } = await createAndLoginTestUser({ role: "Leader" });
 
@@ -103,7 +195,7 @@ describe("PUT /api/programs/:id - Authorization Tests", () => {
       expect(response.status).toBe(403);
       expect(response.body.success).toBe(false);
       expect(response.body.message).toBe(
-        "Only Administrators can update programs."
+        "You do not have permission to edit this program. Only Administrators and assigned mentors can edit programs."
       );
 
       // Verify program was not updated
@@ -129,7 +221,7 @@ describe("PUT /api/programs/:id - Authorization Tests", () => {
       expect(response.status).toBe(403);
       expect(response.body.success).toBe(false);
       expect(response.body.message).toBe(
-        "Only Administrators can update programs."
+        "You do not have permission to edit this program. Only Administrators and assigned mentors can edit programs."
       );
 
       // Verify program was not updated
@@ -155,7 +247,7 @@ describe("PUT /api/programs/:id - Authorization Tests", () => {
       expect(response.status).toBe(403);
       expect(response.body.success).toBe(false);
       expect(response.body.message).toBe(
-        "Only Administrators can update programs."
+        "You do not have permission to edit this program. Only Administrators and assigned mentors can edit programs."
       );
 
       // Verify program was not updated

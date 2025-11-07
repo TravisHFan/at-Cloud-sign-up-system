@@ -124,6 +124,8 @@ export default function EditProgram() {
   const [mentors, setMentors] = useState<Mentor[]>([]);
   // Store original mentor array to detect changes
   const [originalMentors, setOriginalMentors] = useState<Mentor[]>([]);
+  // Store original program data including mentors to check permissions
+  const [programMentorIds, setProgramMentorIds] = useState<string[]>([]);
 
   const {
     register,
@@ -428,6 +430,10 @@ export default function EditProgram() {
           );
           setMentors(transformedMentors);
           setOriginalMentors(transformedMentors);
+          // Store mentor user IDs for permission checking
+          setProgramMentorIds(
+            program.mentors.map((m: { userId: string }) => m.userId)
+          );
         }
       } catch (error) {
         console.error("Error loading program:", error);
@@ -539,10 +545,13 @@ export default function EditProgram() {
     navigate(`/dashboard/programs/${id}`);
   };
 
-  // Check if user needs the restricted access overlay (Participant or Guest Expert)
-  const shouldShowRestrictedOverlay =
-    currentUser?.role !== "Super Admin" &&
-    currentUser?.role !== "Administrator";
+  // Check if user needs the restricted access overlay
+  // Allow Super Admin, Administrator, and program mentors to edit
+  const isAdmin =
+    currentUser?.role === "Super Admin" ||
+    currentUser?.role === "Administrator";
+  const isMentor = currentUser?.id && programMentorIds.includes(currentUser.id);
+  const shouldShowRestrictedOverlay = !isAdmin && !isMentor;
 
   if (loading) {
     return (
@@ -578,12 +587,12 @@ export default function EditProgram() {
                 </svg>
               </div>
               <h2 className="text-lg font-semibold text-gray-900 mb-2">
-                Edit Program access requires Administrator authorization
+                Edit Program access requires authorization
               </h2>
               <p className="text-sm text-gray-600">
-                To edit programs, you need Administrator or Super Admin
-                privileges. Please contact your system administrators to request
-                access.
+                To edit programs, you need Administrator, Super Admin
+                privileges, or be assigned as a mentor for this program. Please
+                contact your system administrators to request access.
               </p>
             </div>
           </div>

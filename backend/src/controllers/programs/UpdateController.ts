@@ -12,13 +12,7 @@ export default class UpdateController {
           .json({ success: false, message: "Authentication required." });
         return;
       }
-      if (!RoleUtils.isAdmin(req.user.role)) {
-        res.status(403).json({
-          success: false,
-          message: "Only Administrators can update programs.",
-        });
-        return;
-      }
+
       const { id } = req.params;
       if (!mongoose.Types.ObjectId.isValid(id)) {
         res
@@ -26,6 +20,33 @@ export default class UpdateController {
           .json({ success: false, message: "Invalid program ID." });
         return;
       }
+
+      // Fetch the program to check permissions
+      const program = await Program.findById(id);
+      if (!program) {
+        res.status(404).json({ success: false, message: "Program not found." });
+        return;
+      }
+
+      // Authorization logic:
+      // 1. Super Admin and Administrator can edit any program
+      // 2. Mentors assigned to this program can edit it
+      const isAdmin = RoleUtils.isAdmin(req.user.role);
+      const isMentor =
+        program.mentors?.some(
+          (mentor: { userId: unknown }) =>
+            String(mentor.userId) === String(req.user!._id)
+        ) ?? false;
+
+      if (!isAdmin && !isMentor) {
+        res.status(403).json({
+          success: false,
+          message:
+            "You do not have permission to edit this program. Only Administrators and assigned mentors can edit programs.",
+        });
+        return;
+      }
+
       const updated = await Program.findByIdAndUpdate(id, req.body, {
         new: true,
         runValidators: true,
