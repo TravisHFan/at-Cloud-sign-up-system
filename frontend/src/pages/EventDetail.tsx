@@ -120,7 +120,6 @@ export default function EventDetail() {
   const {
     canNavigateToProfiles,
     isCurrentUserRegistered: _isCurrentUserRegistered,
-    canViewZoomInfo,
     getProfileLink: _getProfileLink,
     handleNameCardClick,
     isCurrentUserOrganizer,
@@ -494,11 +493,10 @@ export default function EventDetail() {
             })()}
           </div>
 
-          {/* Online Meeting Link - Only visible to registered users */}
+          {/* Online Meeting Link - Always visible to authenticated dashboard users */}
           {(event.format === "Online" ||
             event.format === "Hybrid Participation") &&
-            event.zoomLink &&
-            canViewZoomInfo() && (
+            event.zoomLink && (
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
                   Online Meeting Link
@@ -511,6 +509,31 @@ export default function EventDetail() {
                 >
                   {event.zoomLink}
                 </a>
+              </div>
+            )}
+
+          {/* Meeting Details - Always visible to authenticated dashboard users */}
+          {(event.format === "Online" ||
+            event.format === "Hybrid Participation") &&
+            (event.meetingId || event.passcode) && (
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Meeting Details
+                </h3>
+                <div className="space-y-1 text-gray-700">
+                  {event.meetingId && (
+                    <div className="flex items-center">
+                      <span className="font-medium w-24">Meeting ID:</span>
+                      <span className="font-mono">{event.meetingId}</span>
+                    </div>
+                  )}
+                  {event.passcode && (
+                    <div className="flex items-center">
+                      <span className="font-medium w-24">Passcode:</span>
+                      <span className="font-mono">{event.passcode}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -546,48 +569,6 @@ export default function EventDetail() {
               </div>
             </div>
           )}
-
-          {/* Zoom Info Access Notice for Non-Registered Users */}
-          {(event.format === "Online" ||
-            event.format === "Hybrid Participation") &&
-            event.zoomLink &&
-            !canViewZoomInfo() && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-blue-900 mb-2">
-                  Online Meeting Information
-                </h3>
-                <p className="text-blue-800">
-                  Upon registration, the meeting link and event details will be
-                  sent to you via email.
-                </p>
-              </div>
-            )}
-
-          {/* Meeting Details - Only visible to registered users */}
-          {(event.format === "Online" ||
-            event.format === "Hybrid Participation") &&
-            (event.meetingId || event.passcode) &&
-            canViewZoomInfo() && (
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Meeting Details
-                </h3>
-                <div className="space-y-1 text-gray-700">
-                  {event.meetingId && (
-                    <div className="flex items-center">
-                      <span className="font-medium w-24">Meeting ID:</span>
-                      <span className="font-mono">{event.meetingId}</span>
-                    </div>
-                  )}
-                  {event.passcode && (
-                    <div className="flex items-center">
-                      <span className="font-medium w-24">Passcode:</span>
-                      <span className="font-mono">{event.passcode}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
 
           {/* Requirements */}
           {event.requirements && (
