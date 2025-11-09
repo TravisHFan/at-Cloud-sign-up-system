@@ -38,8 +38,8 @@ export default function EnrollProgram() {
     []
   );
   const [appliedPromoCode, setAppliedPromoCode] = useState<string>("");
-  const [promoDiscountAmountInCents, setPromoDiscountAmountInCents] =
-    useState<number>(0);
+  const [validatedPromoCode, setValidatedPromoCode] =
+    useState<PromoCode | null>(null);
 
   // Alert modal state
   const [alertModal, setAlertModal] = useState<{
@@ -67,8 +67,7 @@ export default function EnrollProgram() {
     // Work in cents throughout - formatCurrency expects cents
     let priceInCents = program.fullPriceTicket;
 
-    // Class Rep and Early Bird are mutually exclusive
-    // If enrolling as Class Rep, do not apply Early Bird discount
+    // Step 1: Apply fixed discounts (Class Rep and Early Bird are mutually exclusive)
     if (isClassRep && program.classRepDiscount) {
       priceInCents -= program.classRepDiscount;
     } else if (isEarlyBird && program.earlyBirdDiscount) {
@@ -76,13 +75,64 @@ export default function EnrollProgram() {
       priceInCents -= program.earlyBirdDiscount;
     }
 
-    // Apply promo code discount (already in cents)
-    if (promoDiscountAmountInCents > 0) {
-      priceInCents -= promoDiscountAmountInCents;
+    // Step 2: Apply bundle discount (fixed amount) if promo code is bundle type
+    if (
+      validatedPromoCode &&
+      validatedPromoCode.type === "bundle_discount" &&
+      validatedPromoCode.discountAmount
+    ) {
+      priceInCents -= validatedPromoCode.discountAmount;
+    }
+
+    // Step 3: Apply percentage discount (staff_access or reward) AFTER fixed discounts
+    // This matches backend logic: percentage applies to price after Class Rep/Early Bird
+    if (
+      validatedPromoCode &&
+      (validatedPromoCode.type === "staff_access" ||
+        validatedPromoCode.type === "reward") &&
+      validatedPromoCode.discountPercent !== undefined
+    ) {
+      priceInCents = Math.round(
+        priceInCents * (1 - validatedPromoCode.discountPercent / 100)
+      );
     }
 
     // Return in cents (formatCurrency will handle conversion to dollars)
     return Math.max(0, priceInCents);
+  };
+
+  // Calculate promo discount amount for display (shows the actual discount applied)
+  const calculatePromoDiscountAmount = () => {
+    if (!program || !validatedPromoCode) return 0;
+
+    // Calculate base price after Class Rep/Early Bird (same as Step 1 in calculatePrice)
+    let basePriceInCents = program.fullPriceTicket;
+    if (isClassRep && program.classRepDiscount) {
+      basePriceInCents -= program.classRepDiscount;
+    } else if (isEarlyBird && program.earlyBirdDiscount) {
+      basePriceInCents -= program.earlyBirdDiscount;
+    }
+
+    // Bundle discount: fixed amount
+    if (
+      validatedPromoCode.type === "bundle_discount" &&
+      validatedPromoCode.discountAmount
+    ) {
+      return validatedPromoCode.discountAmount;
+    }
+
+    // Percentage discount: calculate on base price
+    if (
+      (validatedPromoCode.type === "staff_access" ||
+        validatedPromoCode.type === "reward") &&
+      validatedPromoCode.discountPercent !== undefined
+    ) {
+      return Math.round(
+        (basePriceInCents * validatedPromoCode.discountPercent) / 100
+      );
+    }
+
+    return 0;
   };
 
   useEffect(() => {
@@ -147,14 +197,14 @@ export default function EnrollProgram() {
     loadProgram();
   }, [id, navigate]);
 
-  const handlePromoApply = (code: string, discountAmountInCents: number) => {
+  const handlePromoApply = (code: string, validatedCode: PromoCode) => {
     setAppliedPromoCode(code);
-    setPromoDiscountAmountInCents(discountAmountInCents);
+    setValidatedPromoCode(validatedCode);
   };
 
   const handlePromoRemove = () => {
     setAppliedPromoCode("");
-    setPromoDiscountAmountInCents(0);
+    setValidatedPromoCode(null);
   };
 
   const handleEnroll = async () => {
@@ -249,7 +299,7 @@ export default function EnrollProgram() {
   const finalPrice = calculatePrice();
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6" data-testid="enrollment-page">
       {/* Program Header */}
       <div className="bg-white rounded-lg shadow-sm p-6">
         <div className="flex items-start justify-between mb-4">
@@ -394,21 +444,11 @@ export default function EnrollProgram() {
         <div className="mb-6">
           <PromoCodeInput
             programId={id || ""}
-            programPrice={
-              program
-                ? program.fullPriceTicket -
-                  (isClassRep && program.classRepDiscount
-                    ? program.classRepDiscount
-                    : !isClassRep && isEarlyBird && program.earlyBirdDiscount
-                    ? program.earlyBirdDiscount
-                    : 0)
-                : 0
-            }
             availableCodes={availablePromoCodes}
             onApply={handlePromoApply}
             onRemove={handlePromoRemove}
             appliedCode={appliedPromoCode}
-            appliedDiscount={promoDiscountAmountInCents}
+            appliedDiscount={calculatePromoDiscountAmount()}
             isLoading={isProcessing}
           />
         </div>
@@ -440,7 +480,7 @@ export default function EnrollProgram() {
                   <span>- {formatCurrency(program.earlyBirdDiscount)}</span>
                 </div>
               )}
-            {promoDiscountAmountInCents > 0 && (
+            {validatedPromoCode && calculatePromoDiscountAmount() > 0 && (
               <div className="flex justify-between text-blue-600 font-medium">
                 <span>
                   Promo Code Discount
@@ -448,7 +488,7 @@ export default function EnrollProgram() {
                     <span className="text-sm ml-2">({appliedPromoCode})</span>
                   )}
                 </span>
-                <span>- {formatCurrency(promoDiscountAmountInCents)}</span>
+                <span>- {formatCurrency(calculatePromoDiscountAmount())}</span>
               </div>
             )}
             <div className="border-t border-gray-200 pt-2 mt-2">

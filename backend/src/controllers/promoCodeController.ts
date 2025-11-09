@@ -77,6 +77,18 @@ export class PromoCodeController {
   }
 
   /**
+   * Create reward promo code (Admin only)
+   * POST /api/promo-codes/reward
+   * Body: { userId: string, discountPercent: number (10-100), allowedProgramIds?: string[], expiresAt?: Date }
+   */
+  static async createRewardCode(req: Request, res: Response): Promise<void> {
+    const { default: RewardCodeCreationController } = await import(
+      "./promoCodes/RewardCodeCreationController"
+    );
+    return RewardCodeCreationController.createRewardCode(req, res);
+  }
+
+  /**
    * Get bundle discount configuration (Admin only)
    * GET /api/promo-codes/config
    */

@@ -443,6 +443,12 @@ export default function ProgramDetail({
             false)
         }
         canDelete={hasRole(["Administrator", "Super Admin"])}
+        canCreateEvent={
+          // Admin and Super Admin can always create events
+          hasRole(["Administrator", "Super Admin"]) ||
+          // Leaders can only create events in programs they have access to
+          (hasRole(["Leader"]) && hasAccess === true)
+        }
         onDelete={openDelete}
       />
 

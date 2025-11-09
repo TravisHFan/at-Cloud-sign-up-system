@@ -8,7 +8,7 @@ import { promoCodeService } from "../../services/promoCodeService";
 
 export interface PromoCode {
   code: string;
-  type: "bundle_discount" | "staff_access";
+  type: "bundle_discount" | "staff_access" | "reward";
   discountAmount?: number;
   discountPercent?: number;
   expiresAt?: string;
@@ -17,9 +17,8 @@ export interface PromoCode {
 
 export interface PromoCodeInputProps {
   programId?: string; // Optional, for backend validation
-  programPrice: number; // Current price in cents (after other discounts), needed to calculate percentage discounts
   availableCodes: PromoCode[];
-  onApply: (code: string, discountAmountInCents: number) => void;
+  onApply: (code: string, validatedCode: PromoCode) => void;
   onRemove: () => void;
   appliedCode?: string;
   appliedDiscount?: number;
@@ -28,7 +27,6 @@ export interface PromoCodeInputProps {
 
 export default function PromoCodeInput({
   programId,
-  programPrice,
   availableCodes,
   onApply,
   onRemove,
@@ -83,22 +81,7 @@ export default function PromoCodeInput({
 
       if (foundCode) {
         // Code is in user's available codes - apply directly
-        let discountAmountInCents = 0;
-
-        if (foundCode.type === "bundle_discount" && foundCode.discountAmount) {
-          // Bundle discount: use fixed dollar amount
-          discountAmountInCents = foundCode.discountAmount;
-        } else if (
-          foundCode.type === "staff_access" &&
-          foundCode.discountPercent !== undefined
-        ) {
-          // Staff access: calculate from percentage
-          discountAmountInCents = Math.round(
-            (programPrice * foundCode.discountPercent) / 100
-          );
-        }
-
-        onApply(codeToApply, discountAmountInCents);
+        onApply(codeToApply, foundCode);
       } else if (programId) {
         // Code not in available codes - validate with service
         const result = await promoCodeService.validatePromoCode(
@@ -106,20 +89,8 @@ export default function PromoCodeInput({
           programId
         );
 
-        if (result.valid && result.discount) {
-          let discountAmountInCents = 0;
-
-          if (result.discount.type === "amount") {
-            // Fixed dollar amount (e.g., bundle discount)
-            discountAmountInCents = result.discount.value;
-          } else if (result.discount.type === "percent") {
-            // Percentage discount (e.g., staff access)
-            discountAmountInCents = Math.round(
-              (programPrice * result.discount.value) / 100
-            );
-          }
-
-          onApply(codeToApply, discountAmountInCents);
+        if (result.valid && result.promoCode) {
+          onApply(codeToApply, result.promoCode);
         } else {
           setError(result.message || "Invalid promo code");
         }
@@ -231,7 +202,8 @@ export default function PromoCodeInput({
                       {code.code}
                     </span>
                     <span className="text-blue-700 font-semibold">
-                      {code.type === "staff_access" &&
+                      {(code.type === "staff_access" ||
+                        code.type === "reward") &&
                       code.discountPercent !== undefined
                         ? `(${code.discountPercent}% OFF)`
                         : `($${((code.discountAmount || 0) / 100).toFixed(
@@ -243,6 +215,8 @@ export default function PromoCodeInput({
                     <span>
                       {code.type === "bundle_discount"
                         ? "🎁 Bundle Discount"
+                        : code.type === "reward"
+                        ? "🎁 Reward"
                         : "🎟️ Staff Access"}
                     </span>
                     <span>•</span>

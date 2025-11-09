@@ -5,14 +5,19 @@ import PromoCodeFilters from "../components/admin/promo-codes/PromoCodeFilters";
 import PromoCodeList from "../components/admin/promo-codes/PromoCodeList";
 import { usePromoCodeOperations } from "../hooks/usePromoCodeOperations";
 import StaffCodeCreator from "../components/admin/promo-codes/StaffCodeCreator";
+import RewardCodeCreator from "../components/admin/promo-codes/RewardCodeCreator";
 import BundleConfigManager from "../components/admin/promo-codes/BundleConfigManager";
 
 // ============================================================================
 // Type Definitions
 // ============================================================================
 
-type AdminTabType = "all" | "create-staff" | "bundle-config";
-type PromoCodeTypeFilter = "all" | "bundle_discount" | "staff_access";
+type AdminTabType = "all" | "create-staff" | "create-reward" | "bundle-config";
+type PromoCodeTypeFilter =
+  | "all"
+  | "bundle_discount"
+  | "staff_access"
+  | "reward";
 type PromoCodeStatusFilter = "all" | "active" | "used" | "expired";
 
 // ============================================================================
@@ -55,6 +60,17 @@ export default function AdminPromoCodes() {
               Create Staff Code
             </button>
             <button
+              onClick={() => setActiveTab("create-reward")}
+              className={`px-6 py-4 text-base font-medium border-b-2 transition-colors flex items-center gap-2 ${
+                activeTab === "create-reward"
+                  ? "border-purple-600 text-purple-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              <PlusIcon className="w-4 h-4" />
+              Create Reward Code
+            </button>
+            <button
               onClick={() => setActiveTab("bundle-config")}
               className={`px-6 py-4 text-base font-medium border-b-2 transition-colors ${
                 activeTab === "bundle-config"
@@ -71,6 +87,7 @@ export default function AdminPromoCodes() {
         <div className="p-6">
           {activeTab === "all" && <AllCodesTab />}
           {activeTab === "create-staff" && <StaffCodeCreator />}
+          {activeTab === "create-reward" && <RewardCodeCreator />}
           {activeTab === "bundle-config" && <BundleConfigManager />}
         </div>
       </div>

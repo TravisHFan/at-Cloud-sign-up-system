@@ -16,6 +16,7 @@ interface ProgramHeaderProps {
   };
   canEdit: boolean;
   canDelete: boolean;
+  canCreateEvent: boolean;
   onDelete: () => void;
 }
 
@@ -37,6 +38,7 @@ export default function ProgramHeader({
   period,
   canEdit,
   canDelete,
+  canCreateEvent,
   onDelete,
 }: ProgramHeaderProps) {
   const navigate = useNavigate();
@@ -92,15 +94,17 @@ export default function ProgramHeader({
             Delete Program
           </button>
         )}
-        <button
-          onClick={() =>
-            navigate(`/dashboard/event-config?programId=${programId}`)
-          }
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        >
-          <PlusIcon className="h-4 w-4 mr-1.5" />
-          Create New Event
-        </button>
+        {canCreateEvent && (
+          <button
+            onClick={() =>
+              navigate(`/dashboard/event-config?programId=${programId}`)
+            }
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <PlusIcon className="h-4 w-4 mr-1.5" />
+            Create New Event
+          </button>
+        )}
       </div>
 
       {/* Program Details with Icons */}

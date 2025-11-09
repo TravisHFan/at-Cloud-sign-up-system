@@ -282,6 +282,9 @@ class PurchaseCheckoutController {
             } else if (validatedPromoCode.type === "staff_access") {
               // Staff codes provide percentage discount
               promoDiscountPercent = validatedPromoCode.discountPercent || 0;
+            } else if (validatedPromoCode.type === "reward") {
+              // Reward codes provide percentage discount (10-100%)
+              promoDiscountPercent = validatedPromoCode.discountPercent || 0;
             }
           }
 

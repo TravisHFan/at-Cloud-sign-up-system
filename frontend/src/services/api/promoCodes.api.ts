@@ -11,7 +11,7 @@ class PromoCodesApiClient extends BaseApiClient {
     codes: Array<{
       _id: string;
       code: string;
-      type: "bundle_discount" | "staff_access";
+      type: "bundle_discount" | "staff_access" | "reward";
       discountAmount?: number;
       discountPercent?: number;
       ownerId: string;
@@ -30,7 +30,7 @@ class PromoCodesApiClient extends BaseApiClient {
       codes: Array<{
         _id: string;
         code: string;
-        type: "bundle_discount" | "staff_access";
+        type: "bundle_discount" | "staff_access" | "reward";
         discountAmount?: number;
         discountPercent?: number;
         ownerId: string;
@@ -179,7 +179,7 @@ class PromoCodesApiClient extends BaseApiClient {
    * @returns All promo codes with pagination
    */
   async getAllPromoCodes(filters?: {
-    type?: "bundle_discount" | "staff_access";
+    type?: "bundle_discount" | "staff_access" | "reward";
     status?: "active" | "used" | "expired";
     search?: string;
     page?: number;
@@ -188,7 +188,7 @@ class PromoCodesApiClient extends BaseApiClient {
     codes: Array<{
       _id: string;
       code: string;
-      type: "bundle_discount" | "staff_access";
+      type: "bundle_discount" | "staff_access" | "reward";
       discountAmount?: number;
       discountPercent?: number;
       ownerId: string;
@@ -428,6 +428,60 @@ class PromoCodesApiClient extends BaseApiClient {
   }
 
   /**
+   * Create a reward promo code (Admin only)
+   * POST /api/promo-codes/reward
+   */
+  async createRewardPromoCode(payload: {
+    userId: string;
+    discountPercent: number;
+    allowedProgramIds?: string[];
+    expiresAt?: string;
+  }): Promise<{
+    code: {
+      _id: string;
+      code: string;
+      type: "reward";
+      discountPercent: number;
+      ownerId: string;
+      ownerEmail?: string;
+      ownerName?: string;
+      allowedProgramIds?: string[];
+      isActive: boolean;
+      isUsed: boolean;
+      expiresAt?: string;
+      createdAt: string;
+      createdBy: string;
+    };
+  }> {
+    const res = await this.request<{
+      code: {
+        _id: string;
+        code: string;
+        type: "reward";
+        discountPercent: number;
+        ownerId: string;
+        ownerEmail?: string;
+        ownerName?: string;
+        allowedProgramIds?: string[];
+        isActive: boolean;
+        isUsed: boolean;
+        expiresAt?: string;
+        createdAt: string;
+        createdBy: string;
+      };
+    }>(`/promo-codes/reward`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.data) {
+      throw new Error(res.message || "Failed to create reward promo code");
+    }
+
+    return res.data;
+  }
+
+  /**
    * Get usage history for a promo code (Admin only)
    * GET /api/promo-codes/:id/usage-history
    */
@@ -563,6 +617,9 @@ export const promoCodesService = {
       typeof promoCodesApiClient.createGeneralStaffPromoCode
     >[0]
   ) => promoCodesApiClient.createGeneralStaffPromoCode(payload),
+  createRewardPromoCode: (
+    payload: Parameters<typeof promoCodesApiClient.createRewardPromoCode>[0]
+  ) => promoCodesApiClient.createRewardPromoCode(payload),
   getPromoCodeUsageHistory: (codeId: string) =>
     promoCodesApiClient.getPromoCodeUsageHistory(codeId),
   getBundleDiscountConfig: () => promoCodesApiClient.getBundleDiscountConfig(),

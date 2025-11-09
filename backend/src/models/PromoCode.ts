@@ -30,11 +30,11 @@ interface IPromoCodeModel extends Model<IPromoCode, {}, IPromoCodeMethods> {
 export interface IPromoCode extends Document, IPromoCodeMethods {
   // Core identification
   code: string; // "X8K9P2L4" - 8 character unique code
-  type: "bundle_discount" | "staff_access";
+  type: "bundle_discount" | "staff_access" | "reward";
 
   // Discount configuration
   discountAmount?: number; // For bundle_discount: dollar amount (e.g., 50 for $50 off)
-  discountPercent?: number; // For staff_access: typically 100 (100% off)
+  discountPercent?: number; // For staff_access/reward: typically 100 for staff, 10-100 for reward
 
   // General code fields (for staff codes not tied to a specific user)
   isGeneral?: boolean; // True for general staff codes (no owner, all programs, unlimited uses)
@@ -96,8 +96,8 @@ const promoCodeSchema = new Schema<
       type: String,
       required: [true, "Promo code type is required"],
       enum: {
-        values: ["bundle_discount", "staff_access"],
-        message: "Type must be either bundle_discount or staff_access",
+        values: ["bundle_discount", "staff_access", "reward"],
+        message: "Type must be bundle_discount, staff_access, or reward",
       },
       index: true,
     },
@@ -122,13 +122,13 @@ const promoCodeSchema = new Schema<
       max: [100, "Discount percent must be between 0 and 100"],
       validate: {
         validator: function (this: IPromoCode, value: number | undefined) {
-          // For staff_access, discountPercent is required
-          if (this.type === "staff_access") {
+          // For staff_access and reward, discountPercent is required
+          if (this.type === "staff_access" || this.type === "reward") {
             return value !== undefined && value >= 0 && value <= 100;
           }
           return true;
         },
-        message: "Staff access codes must have a discountPercent",
+        message: "Staff access and reward codes must have a discountPercent",
       },
     },
     isGeneral: {
@@ -169,13 +169,14 @@ const promoCodeSchema = new Schema<
           this: IPromoCode,
           value: mongoose.Types.ObjectId[] | undefined
         ) {
-          // Only staff_access codes can have allowedProgramIds
+          // Only staff_access and reward codes can have allowedProgramIds
           if (value !== undefined && value.length > 0) {
-            return this.type === "staff_access";
+            return this.type === "staff_access" || this.type === "reward";
           }
           return true;
         },
-        message: "Only staff_access codes can specify allowedProgramIds",
+        message:
+          "Only staff_access and reward codes can specify allowedProgramIds",
       },
     },
     excludedProgramId: {

@@ -11,9 +11,9 @@ import {
 
 export interface PromoCodeCardProps {
   code: string;
-  type: "bundle_discount" | "staff_access";
+  type: "bundle_discount" | "staff_access" | "reward";
   discountAmount?: number; // For bundle: dollar amount (e.g., 50 for $50 off)
-  discountPercent?: number; // For staff: 100 (100% off)
+  discountPercent?: number; // For staff: 100 (100% off) | For reward: 10-100%
   expiresAt?: string; // ISO date string
   isUsed: boolean;
   usedForProgramTitle?: string;
@@ -82,7 +82,11 @@ export default function PromoCodeCard({
 
   // Get type display
   const typeDisplay =
-    type === "bundle_discount" ? "Bundle Discount" : "Staff Access";
+    type === "bundle_discount"
+      ? "Bundle Discount"
+      : type === "reward"
+      ? "Reward"
+      : "Staff Access";
 
   // Get theme colors
   const getThemeColors = () => {
@@ -91,6 +95,14 @@ export default function PromoCodeCard({
         gradient: "from-blue-50 to-purple-50",
         border: status === "expired" ? "border-red-500" : "border-blue-500",
         text: "text-blue-700",
+        icon: "🎁",
+      };
+    }
+    if (type === "reward") {
+      return {
+        gradient: "from-yellow-50 to-orange-50",
+        border: status === "expired" ? "border-red-500" : "border-yellow-500",
+        text: "text-yellow-700",
         icon: "🎁",
       };
     }
@@ -203,6 +215,8 @@ export default function PromoCodeCard({
                 // No restrictions - valid for all
                 if (type === "bundle_discount") {
                   return "Valid for any program";
+                } else if (type === "reward") {
+                  return "Valid for all paid programs";
                 } else {
                   return "Valid for all paid programs";
                 }
@@ -264,6 +278,8 @@ export default function PromoCodeCard({
               ${
                 type === "bundle_discount"
                   ? "bg-blue-600 text-white hover:bg-blue-700"
+                  : type === "reward"
+                  ? "bg-yellow-600 text-white hover:bg-yellow-700"
                   : "bg-green-600 text-white hover:bg-green-700"
               }
             `}

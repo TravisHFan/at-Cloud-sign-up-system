@@ -14,9 +14,9 @@ import { apiClient } from "./api";
 export interface PromoCode {
   _id: string;
   code: string;
-  type: "bundle_discount" | "staff_access";
+  type: "bundle_discount" | "staff_access" | "reward";
   discountAmount?: number; // Dollar amount (e.g., 50 = $50 off)
-  discountPercent?: number; // Percentage (e.g., 100 = 100% off)
+  discountPercent?: number; // Percentage (e.g., 100 = 100% off for staff, 10-100% for reward)
   ownerId: string;
   allowedProgramIds?: string[];
   allowedProgramTitles?: string[];

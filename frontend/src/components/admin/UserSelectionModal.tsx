@@ -1,7 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { XMarkIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
-import { useUserData } from "../../hooks/useUserData";
+import {
+  XMarkIcon,
+  MagnifyingGlassIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+} from "@heroicons/react/24/outline";
 import { useAvatarUpdates } from "../../hooks/useAvatarUpdates";
 import {
   getAvatarUrlWithCacheBust,
@@ -68,17 +72,28 @@ export default function UserSelectionModal({
   excludeUserIds = [],
 }: UserSelectionModalProps) {
   useAvatarUpdates(); // Listen for avatar updates
-  const { users } = useUserData();
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<User[]>([]);
-  const [page, setPage] = useState(1);
-  const [hasNext, setHasNext] = useState(false);
+  const [searchPage, setSearchPage] = useState(1);
+  const [searchHasNext, setSearchHasNext] = useState(false);
+  const [searchTotalPages, setSearchTotalPages] = useState(0);
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const [allUsers, setAllUsers] = useState<User[]>([]);
-  const [loadingAll, setLoadingAll] = useState(false);
-  const [allLoaded, setAllLoaded] = useState(false);
-  const fetchingRef = useRef(false);
+
+  // Paginated user browsing (when no search query)
+  const [browsePage, setBrowsePage] = useState(1);
+  const [browseUsers, setBrowseUsers] = useState<User[]>([]);
+  const [browseTotalPages, setBrowseTotalPages] = useState(0);
+  const [browseTotalUsers, setBrowseTotalUsers] = useState(0);
+  const [loadingBrowse, setLoadingBrowse] = useState(false);
+
+  // Admin selection warning modal
+  const [showAdminWarning, setShowAdminWarning] = useState(false);
+  const [attemptedAdminUser, setAttemptedAdminUser] = useState<User | null>(
+    null
+  );
+
+  const USERS_PER_PAGE = 20;
 
   // Convert User to SelectedUser format
   const convertUserToSelectedUser = (user: User): SelectedUser => ({
@@ -93,39 +108,35 @@ export default function UserSelectionModal({
     phone: user.phone,
   });
 
-  // Base filter for allowed users
-  const baseFilter = useCallback(
-    (user: User) => {
-      // Exclude specified user IDs
-      if (excludeUserIds.includes(user.id)) return false;
-
-      // Filter by allowed roles if specified
-      if (allowedRoles && allowedRoles.length > 0) {
-        return allowedRoles.includes(user.role);
-      }
-
-      return true;
-    },
-    [excludeUserIds, allowedRoles]
-  );
-
-  const availableUsers = users.filter(baseFilter);
-
   const handleSelectUser = (user: User) => {
+    // Check if user is Administrator or Super Admin
+    if (user.role === "Administrator" || user.role === "Super Admin") {
+      setAttemptedAdminUser(user);
+      setShowAdminWarning(true);
+      return;
+    }
+
     const selectedUser = convertUserToSelectedUser(user);
     onSelect(selectedUser);
     handleClose();
   };
 
+  const handleCloseAdminWarning = () => {
+    setShowAdminWarning(false);
+    setAttemptedAdminUser(null);
+  };
+
   const handleClose = () => {
     setQuery("");
     setSearchResults([]);
-    setPage(1);
-    setHasNext(false);
-    setAllUsers([]);
-    setLoadingAll(false);
-    setAllLoaded(false);
-    fetchingRef.current = false;
+    setSearchPage(1);
+    setSearchHasNext(false);
+    setSearchTotalPages(0);
+    setBrowsePage(1);
+    setBrowseUsers([]);
+    setBrowseTotalPages(0);
+    setBrowseTotalUsers(0);
+    setLoadingBrowse(false);
     onClose();
   };
 
@@ -161,98 +172,78 @@ export default function UserSelectionModal({
     }
   }, [isOpen]);
 
-  // When opening with empty query, load all users
+  // Fetch paginated users when modal opens or page changes (when no search)
   useEffect(() => {
+    if (!isOpen || query.trim()) return;
+
     let cancelled = false;
-    const fetchAllUsers = async () => {
-      // Only fetch if modal is open and no search query
-      if (!isOpen || query.trim()) return;
-
-      // Prevent duplicate fetches using ref
-      if (fetchingRef.current) {
-        console.log("UserSelectionModal: Already fetching, skipping");
-        return;
-      }
-
-      // Check if already loaded
-      if (allLoaded) {
-        console.log("UserSelectionModal: Already loaded, skipping");
-        return;
-      }
-
-      console.log("UserSelectionModal: Starting to fetch all users");
-      fetchingRef.current = true;
-      setLoadingAll(true);
-
+    const fetchBrowseUsers = async () => {
+      setLoadingBrowse(true);
       try {
-        const rolesToFetch =
-          allowedRoles && allowedRoles.length > 0
-            ? allowedRoles
-            : ["Super Admin", "Administrator", "Leader", "Participant"];
+        const params: Record<string, unknown> = {
+          page: browsePage,
+          limit: USERS_PER_PAGE,
+          isActive: true,
+          sortBy: "firstName",
+          sortOrder: "asc",
+        };
 
-        console.log("UserSelectionModal: Fetching roles:", rolesToFetch);
-        const acc: Record<string, User> = {};
-
-        for (const role of rolesToFetch) {
-          let p = 1;
-          for (;;) {
-            console.log(`UserSelectionModal: Fetching role ${role}, page ${p}`);
-            const resp = await userService.getUsers({
-              page: p,
-              limit: 100,
-              role,
-              isActive: true,
-              sortBy: "firstName",
-              sortOrder: "asc",
-            });
-            console.log(
-              `UserSelectionModal: Got ${
-                resp.users?.length || 0
-              } users for role ${role}, page ${p}`
-            );
-
-            const mapped = (resp.users as unknown as RawUser[])
-              .map((u) => mapAppUserToMgmtUser(u))
-              .filter(baseFilter);
-            for (const u of mapped) acc[u.id] = u;
-            if (!resp.pagination?.hasNext) break;
-            p += 1;
-          }
+        // Add role filter if specified
+        if (allowedRoles && allowedRoles.length > 0) {
+          // Fetch users for all allowed roles - backend supports single role param
+          // We'll fetch the first allowed role, then filter client-side for now
+          params.role = allowedRoles[0];
         }
 
+        const response = await userService.getUsers(params);
+
+        type UsersResponse = {
+          users?: RawUser[];
+          pagination?: {
+            totalPages?: number;
+            totalUsers?: number;
+          };
+        };
+
+        const resp = response as unknown as UsersResponse;
+        const usersRaw: RawUser[] = resp.users || [];
+        const converted: User[] = usersRaw
+          .map(mapAppUserToMgmtUser)
+          .filter((user) => {
+            // Exclude specified user IDs
+            if (excludeUserIds.includes(user.id)) return false;
+            // Filter by allowed roles if specified
+            if (allowedRoles && allowedRoles.length > 0) {
+              return allowedRoles.includes(user.role);
+            }
+            return true;
+          });
+
         if (!cancelled) {
-          const combined = Object.values(acc).sort((a, b) =>
-            `${a.firstName} ${a.lastName}`.localeCompare(
-              `${b.firstName} ${b.lastName}`
-            )
-          );
-          console.log(
-            "UserSelectionModal: Total users loaded:",
-            combined.length
-          );
-          setAllUsers(combined);
-          setAllLoaded(true);
+          setBrowseUsers(converted);
+          setBrowseTotalPages(resp.pagination?.totalPages || 1);
+          setBrowseTotalUsers(resp.pagination?.totalUsers || converted.length);
         }
-      } catch (e) {
-        console.error("UserSelectionModal: Failed to load all users:", e);
+      } catch (err) {
+        console.error("Failed to fetch browse users:", err);
         if (!cancelled) {
-          setAllUsers([]);
-          setAllLoaded(false);
+          setBrowseUsers([]);
+          setBrowseTotalPages(0);
+          setBrowseTotalUsers(0);
         }
       } finally {
         if (!cancelled) {
-          console.log("UserSelectionModal: Finished loading");
-          fetchingRef.current = false;
-          setLoadingAll(false);
+          setLoadingBrowse(false);
         }
       }
     };
-    fetchAllUsers();
+
+    fetchBrowseUsers();
     return () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, query]);
+  }, [isOpen, browsePage, query]);
 
   // Debounced search effect
   useEffect(() => {
@@ -260,38 +251,45 @@ export default function UserSelectionModal({
     const doSearch = async () => {
       if (!query.trim()) {
         setSearchResults([]);
-        setHasNext(false);
+        setSearchHasNext(false);
+        setSearchTotalPages(0);
         return;
       }
       setSearching(true);
       try {
         const result = await searchService.searchUsers(query.trim(), {
-          page,
-          limit: 100,
+          page: searchPage,
+          limit: USERS_PER_PAGE,
           isActive: true,
         });
 
         type SearchUsersResponse = {
           results?: RawUser[];
           users?: RawUser[];
-          pagination?: { hasNext?: boolean };
+          pagination?: {
+            hasNext?: boolean;
+            totalPages?: number;
+          };
         };
         const r = result as unknown as SearchUsersResponse;
         const resultsRaw: RawUser[] = r.results || r.users || [];
         const converted: User[] = resultsRaw
           .map(mapAppUserToMgmtUser)
-          .filter(baseFilter);
+          .filter((user) => {
+            // Exclude specified user IDs
+            if (excludeUserIds.includes(user.id)) return false;
+            // Filter by allowed roles if specified
+            if (allowedRoles && allowedRoles.length > 0) {
+              return allowedRoles.includes(user.role);
+            }
+            return true;
+          });
 
-        setSearchResults((prev) => {
-          if (page === 1) return converted;
-          const seen = new Set(prev.map((u) => u.id));
-          const merged = [...prev];
-          for (const u of converted) if (!seen.has(u.id)) merged.push(u);
-          return merged;
-        });
+        setSearchResults(converted);
 
-        const pg = (result as unknown as SearchUsersResponse).pagination;
-        setHasNext(Boolean(pg?.hasNext));
+        const pg = r.pagination;
+        setSearchHasNext(Boolean(pg?.hasNext));
+        setSearchTotalPages(pg?.totalPages || 1);
       } catch (err) {
         console.error("Search users failed:", err);
       } finally {
@@ -304,7 +302,8 @@ export default function UserSelectionModal({
       cancelled = true;
       clearTimeout(t);
     };
-  }, [query, page, baseFilter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, searchPage]);
 
   if (!isOpen) return null;
 
@@ -342,7 +341,7 @@ export default function UserSelectionModal({
                 type="text"
                 value={query}
                 onChange={(e) => {
-                  setPage(1);
+                  setSearchPage(1);
                   setQuery(e.target.value);
                 }}
                 placeholder="Search by name or email..."
@@ -360,12 +359,12 @@ export default function UserSelectionModal({
                 </p>
               </div>
             ) : !query ? (
-              loadingAll ? (
+              loadingBrowse ? (
                 <div className="text-center py-12">
                   <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-purple-600 border-r-transparent"></div>
                   <p className="text-gray-500 mt-4">Loading users...</p>
                 </div>
-              ) : allUsers.length === 0 && availableUsers.length === 0 ? (
+              ) : browseUsers.length === 0 ? (
                 <div className="text-center py-12">
                   <p className="text-gray-500">No users available</p>
                   {allowedRoles && allowedRoles.length > 0 && (
@@ -376,45 +375,41 @@ export default function UserSelectionModal({
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {(allUsers.length > 0 ? allUsers : availableUsers).map(
-                    (user) => (
-                      <button
-                        key={user.id}
-                        type="button"
-                        onClick={() => handleSelectUser(user)}
-                        className="w-full flex items-center space-x-4 p-4 hover:bg-gray-50 rounded-lg transition-colors border border-transparent hover:border-gray-200"
-                      >
-                        <img
-                          src={getAvatarUrlWithCacheBust(
-                            user.avatar || null,
-                            user.gender
-                          )}
-                          alt={getAvatarAlt(
-                            user.firstName,
-                            user.lastName,
-                            !!user.avatar
-                          )}
-                          className="h-12 w-12 rounded-full object-cover"
-                        />
-                        <div className="flex-1 text-left">
-                          <div className="font-medium text-gray-900">
-                            {user.firstName} {user.lastName}
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            {user.email}
-                          </div>
-                          <div className="text-sm text-gray-500 mt-1">
-                            {user.role}
-                            {user.roleInAtCloud && (
-                              <span className="ml-2">
-                                • {user.roleInAtCloud}
-                              </span>
-                            )}
-                          </div>
+                  {browseUsers.map((user: User) => (
+                    <button
+                      key={user.id}
+                      type="button"
+                      onClick={() => handleSelectUser(user)}
+                      className="w-full flex items-center space-x-4 p-4 hover:bg-gray-50 rounded-lg transition-colors border border-transparent hover:border-gray-200"
+                    >
+                      <img
+                        src={getAvatarUrlWithCacheBust(
+                          user.avatar || null,
+                          user.gender
+                        )}
+                        alt={getAvatarAlt(
+                          user.firstName,
+                          user.lastName,
+                          !!user.avatar
+                        )}
+                        className="h-12 w-12 rounded-full object-cover"
+                      />
+                      <div className="flex-1 text-left">
+                        <div className="font-medium text-gray-900">
+                          {user.firstName} {user.lastName}
                         </div>
-                      </button>
-                    )
-                  )}
+                        <div className="text-sm text-gray-600">
+                          {user.email}
+                        </div>
+                        <div className="text-sm text-gray-500 mt-1">
+                          {user.role}
+                          {user.roleInAtCloud && (
+                            <span className="ml-2">• {user.roleInAtCloud}</span>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
                 </div>
               )
             ) : (
@@ -452,33 +447,156 @@ export default function UserSelectionModal({
                     </div>
                   </button>
                 ))}
-                {hasNext && (
-                  <div className="pt-4">
+              </div>
+            )}
+          </div>
+
+          {/* Footer with Pagination */}
+          <div className="p-4 border-t border-gray-200">
+            {!query && browseTotalUsers > 0 && (
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-sm text-gray-600">
+                  Showing{" "}
+                  {Math.min(
+                    (browsePage - 1) * USERS_PER_PAGE + 1,
+                    browseTotalUsers
+                  )}{" "}
+                  - {Math.min(browsePage * USERS_PER_PAGE, browseTotalUsers)} of{" "}
+                  {browseTotalUsers} users
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setBrowsePage((p) => Math.max(1, p - 1))}
+                    disabled={browsePage === 1}
+                    className="p-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Previous page"
+                  >
+                    <ChevronLeftIcon className="h-5 w-5" />
+                  </button>
+                  <span className="text-sm text-gray-700 px-2">
+                    Page {browsePage} of {browseTotalPages}
+                  </span>
+                  <button
+                    onClick={() =>
+                      setBrowsePage((p) => Math.min(browseTotalPages, p + 1))
+                    }
+                    disabled={browsePage >= browseTotalPages}
+                    className="p-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Next page"
+                  >
+                    <ChevronRightIcon className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+            )}
+            {query && searchResults.length > 0 && (
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-sm text-gray-600">
+                  {searchResults.length} search result
+                  {searchResults.length !== 1 ? "s" : ""}
+                </div>
+                {searchTotalPages > 1 && (
+                  <div className="flex items-center gap-2">
                     <button
-                      type="button"
-                      className="w-full px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                      onClick={() => setPage((p) => p + 1)}
-                      disabled={searching}
+                      onClick={() => setSearchPage((p) => Math.max(1, p - 1))}
+                      disabled={searchPage === 1}
+                      className="p-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Previous page"
                     >
-                      {searching ? "Loading..." : "Load more"}
+                      <ChevronLeftIcon className="h-5 w-5" />
+                    </button>
+                    <span className="text-sm text-gray-700 px-2">
+                      Page {searchPage} of {searchTotalPages}
+                    </span>
+                    <button
+                      onClick={() =>
+                        setSearchPage((p) => Math.min(searchTotalPages, p + 1))
+                      }
+                      disabled={
+                        searchPage >= searchTotalPages || !searchHasNext
+                      }
+                      className="p-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Next page"
+                    >
+                      <ChevronRightIcon className="h-5 w-5" />
                     </button>
                   </div>
                 )}
               </div>
             )}
-          </div>
-
-          {/* Footer */}
-          <div className="p-4 border-t border-gray-200 flex justify-end">
-            <button
-              onClick={handleClose}
-              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              Cancel
-            </button>
+            <div className="flex justify-end">
+              <button
+                onClick={handleClose}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Admin Warning Modal */}
+      {showAdminWarning && attemptedAdminUser && (
+        <>
+          {/* Backdrop for warning modal */}
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-[60]"
+            onClick={handleCloseAdminWarning}
+          />
+
+          {/* Warning Modal */}
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+              {/* Icon */}
+              <div className="flex items-center justify-center w-12 h-12 mx-auto bg-yellow-100 rounded-full mb-4">
+                <svg
+                  className="h-6 w-6 text-yellow-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+              </div>
+
+              {/* Title */}
+              <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">
+                Admin User Selected
+              </h3>
+
+              {/* Message */}
+              <div className="text-sm text-gray-600 text-center mb-6">
+                <p className="mb-3">
+                  <strong>
+                    {attemptedAdminUser.firstName} {attemptedAdminUser.lastName}
+                  </strong>{" "}
+                  is a <strong>{attemptedAdminUser.role}</strong>.
+                </p>
+                <p>
+                  Admin users already have full access to all programs. Promo
+                  codes are not needed for Administrator or Super Admin users.
+                </p>
+              </div>
+
+              {/* Action Button */}
+              <div className="flex justify-center">
+                <button
+                  onClick={handleCloseAdminWarning}
+                  className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                >
+                  OK, Choose Another User
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </>,
     document.body
   );

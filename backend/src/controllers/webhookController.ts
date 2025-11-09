@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import Stripe from "stripe";
 import mongoose from "mongoose";
-import { Purchase, SystemConfig } from "../models";
+import { Purchase, SystemConfig, PromoCode, User, Program } from "../models";
 import type { IUser } from "../models/User";
 import type { IProgram } from "../models/Program";
 import {
@@ -200,7 +200,6 @@ export class WebhookController {
         // 8. Mark promo code as used if one was applied
         if (purchase.promoCode) {
           try {
-            const { PromoCode, User, Program } = await import("../models");
             const promoCode = await PromoCode.findOne({
               code: purchase.promoCode,
             });

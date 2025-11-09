@@ -84,6 +84,18 @@ router.post(
 );
 
 /**
+ * Create a reward promo code (admin only)
+ * Body: {
+ *   userId: string,
+ *   discountPercent: number (10-100, required),
+ *   allowedProgramIds?: string[] (empty = all programs),
+ *   expiresAt?: Date (optional expiration)
+ * }
+ * Note: Reward codes are similar to staff codes but require 10-100% discount
+ */
+router.post("/reward", requireAdmin, PromoCodeController.createRewardCode);
+
+/**
  * Get bundle discount configuration (admin only)
  * Returns: { enabled: boolean, discountAmount: number, expiryDays: number }
  * Reads from SystemConfig database model

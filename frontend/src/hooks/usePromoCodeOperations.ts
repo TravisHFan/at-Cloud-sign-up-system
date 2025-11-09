@@ -2,7 +2,11 @@ import { useState, useEffect, useCallback } from "react";
 import { apiClient } from "../services/api";
 import type { PromoCodeResponse } from "../components/admin/promo-codes/PromoCodeList";
 
-export type PromoCodeTypeFilter = "all" | "bundle_discount" | "staff_access";
+export type PromoCodeTypeFilter =
+  | "all"
+  | "bundle_discount"
+  | "staff_access"
+  | "reward";
 export type PromoCodeStatusFilter = "all" | "active" | "used" | "expired";
 
 export interface UsePromoCodeOperationsReturn {
@@ -72,7 +76,7 @@ export function usePromoCodeOperations(
       const filters: {
         page: number;
         limit: number;
-        type?: "bundle_discount" | "staff_access";
+        type?: "bundle_discount" | "staff_access" | "reward";
         status?: "active" | "used" | "expired";
         search?: string;
       } = {

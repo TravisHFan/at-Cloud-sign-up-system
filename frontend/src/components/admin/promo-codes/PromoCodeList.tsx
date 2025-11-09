@@ -12,7 +12,7 @@ import { useNavigate } from "react-router-dom";
 export interface PromoCodeResponse {
   _id: string;
   code: string;
-  type: "bundle_discount" | "staff_access";
+  type: "bundle_discount" | "staff_access" | "reward";
   discountAmount?: number;
   discountPercent?: number;
   ownerId?: string;
@@ -75,6 +75,8 @@ function getTypeBadge(promoCode: PromoCodeResponse) {
     } else {
       return <Badge variant="info">Personal Staff</Badge>;
     }
+  } else if (promoCode.type === "reward") {
+    return <Badge variant="warning">Reward</Badge>;
   }
   return <Badge variant="neutral">Unknown</Badge>;
 }

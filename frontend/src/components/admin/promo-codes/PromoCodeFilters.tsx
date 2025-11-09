@@ -1,6 +1,10 @@
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 
-export type PromoCodeTypeFilter = "all" | "bundle_discount" | "staff_access";
+export type PromoCodeTypeFilter =
+  | "all"
+  | "bundle_discount"
+  | "staff_access"
+  | "reward";
 export type PromoCodeStatusFilter = "all" | "active" | "used" | "expired";
 
 export interface PromoCodeFiltersProps {
@@ -87,6 +91,7 @@ export default function PromoCodeFilters({
             <option value="all">All Types</option>
             <option value="bundle_discount">Bundle Discount</option>
             <option value="staff_access">Staff Access</option>
+            <option value="reward">Reward</option>
           </select>
         </div>
 

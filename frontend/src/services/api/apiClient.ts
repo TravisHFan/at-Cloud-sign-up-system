@@ -52,6 +52,7 @@ export class ApiClient extends BaseApiClient {
   reactivatePromoCode = promoCodesService.reactivatePromoCode;
   createStaffPromoCode = promoCodesService.createStaffPromoCode;
   createGeneralStaffPromoCode = promoCodesService.createGeneralStaffPromoCode;
+  createRewardPromoCode = promoCodesService.createRewardPromoCode;
   getPromoCodeUsageHistory = promoCodesService.getPromoCodeUsageHistory;
   getBundleDiscountConfig = promoCodesService.getBundleDiscountConfig;
   updateBundleDiscountConfig = promoCodesService.updateBundleDiscountConfig;
