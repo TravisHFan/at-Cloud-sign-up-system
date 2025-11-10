@@ -135,7 +135,7 @@ export default class RewardCodeCreationController {
                 .join(", ")
             : undefined;
 
-        // Send email notification (reuse staff email template with "Reward Code" branding)
+        // Send email notification with Reward Code branding
         await EmailService.sendStaffPromoCodeEmail({
           recipientEmail: owner.email,
           recipientName,
@@ -144,6 +144,7 @@ export default class RewardCodeCreationController {
           allowedPrograms,
           expiresAt: promoCode.expiresAt?.toISOString(),
           createdBy: req.user.username || req.user.email,
+          codeType: "reward", // Specify this is a reward code
         });
 
         // Create system message/notification using UnifiedMessageController pattern

@@ -103,7 +103,7 @@ describe("PromoCodeEmailService - Promo Code Email Operations", () => {
 
       const emailCall = mockTransporter.sendMail.mock.calls[0][0];
       expect(emailCall.to).toBe("staff@example.com");
-      expect(emailCall.subject).toContain("Discount Code");
+      expect(emailCall.subject).toContain("Staff Access Code");
       expect(emailCall.html).toContain("Staff Member");
       expect(emailCall.html).toContain("STAFF20");
       expect(emailCall.html).toContain("20");
@@ -205,6 +205,37 @@ describe("PromoCodeEmailService - Promo Code Email Operations", () => {
 
       // Assert
       expect(result).toBe(false);
+    });
+
+    it("should send reward promo code with correct branding", async () => {
+      // Arrange
+      const params = {
+        recipientEmail: "reward@example.com",
+        recipientName: "Reward Recipient",
+        promoCode: "REWARD10",
+        discountPercent: 10,
+        allowedPrograms: "All Programs",
+        expiresAt: "2025-12-31",
+        createdBy: "Admin User",
+        codeType: "reward" as const,
+      };
+
+      // Act
+      const result = await PromoCodeEmailService.sendStaffPromoCodeEmail(
+        params
+      );
+
+      // Assert
+      expect(result).toBe(true);
+      expect(mockTransporter.sendMail).toHaveBeenCalledOnce();
+
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.to).toBe("reward@example.com");
+      expect(emailCall.subject).toContain("Reward Discount Code");
+      expect(emailCall.html).toContain("Reward Discount Code");
+      expect(emailCall.html).toContain("Reward Recipient");
+      expect(emailCall.html).toContain("REWARD10");
+      expect(emailCall.html).toContain("10");
     });
   });
 

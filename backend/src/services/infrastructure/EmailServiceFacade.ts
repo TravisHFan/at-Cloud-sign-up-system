@@ -879,6 +879,7 @@ export class EmailService {
     allowedPrograms?: string;
     expiresAt?: string;
     createdBy: string;
+    codeType?: "staff" | "reward";
   }): Promise<boolean> {
     return PromoCodeEmailService.sendStaffPromoCodeEmail(params);
   }

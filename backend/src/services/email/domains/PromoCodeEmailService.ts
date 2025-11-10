@@ -25,6 +25,7 @@ export class PromoCodeEmailService {
     allowedPrograms?: string;
     expiresAt?: string;
     createdBy: string;
+    codeType?: "staff" | "reward"; // Add type parameter to distinguish code types
   }): Promise<boolean> {
     const {
       recipientEmail,
@@ -34,6 +35,7 @@ export class PromoCodeEmailService {
       allowedPrograms,
       expiresAt,
       createdBy,
+      codeType = "staff", // Default to "staff" for backward compatibility
     } = params;
 
     const escapeHtml = (s: string) =>
@@ -62,13 +64,18 @@ export class PromoCodeEmailService {
       ? `for ${allowedPrograms}`
       : "for all programs";
 
+    // Dynamic text based on code type
+    const codeLabel =
+      codeType === "reward" ? "Reward Discount Code" : "Staff Access Code";
+    const emailTitle = `You've Received a ${codeLabel}`;
+
     const html = `
 <!DOCTYPE html>
 <html>
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>You've Received a Staff Access Code - @Cloud Ministry</title>
+    <title>${emailTitle} - @Cloud Ministry</title>
     <style>
       body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6; }
       .container { max-width: 600px; margin: 0 auto; background: white; }
@@ -90,7 +97,7 @@ export class PromoCodeEmailService {
     <div class="container">
       <div class="header">
         <div class="emoji">🎁</div>
-        <h1>You've Received a Staff Access Code!</h1>
+        <h1>${emailTitle}!</h1>
       </div>
       
       <div class="content">
@@ -139,7 +146,7 @@ export class PromoCodeEmailService {
     `.trim();
 
     const text = `
-You've Received a Staff Access Code!
+${emailTitle}!
 
 Hi ${recipientName},
 
@@ -161,12 +168,12 @@ The @Cloud Ministry Team
     `.trim();
 
     log.info(
-      `Sending staff promo code email to ${recipientEmail} with code ${promoCode}`
+      `Sending ${codeType} promo code email to ${recipientEmail} with code ${promoCode}`
     );
 
     return EmailService.sendEmail({
       to: recipientEmail,
-      subject: `🎁 You've Received a ${discountPercent}% Discount Code!`,
+      subject: `🎁 ${emailTitle}!`,
       html,
       text,
     });
