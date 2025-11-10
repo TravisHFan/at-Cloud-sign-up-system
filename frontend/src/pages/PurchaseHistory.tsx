@@ -23,8 +23,26 @@ interface Purchase {
   promoDiscountAmount?: number;
   promoDiscountPercent?: number;
   purchaseDate: string;
-  status: "pending" | "completed" | "failed" | "refunded";
+  status:
+    | "pending"
+    | "completed"
+    | "failed"
+    | "refunded"
+    | "refund_processing"
+    | "refund_failed";
+  refundedAt?: string;
+  refundInitiatedAt?: string;
+  refundFailureReason?: string;
+  stripeRefundId?: string;
   createdAt?: string;
+}
+
+interface RefundEligibility {
+  isEligible: boolean;
+  reason?: string;
+  daysRemaining?: number;
+  purchaseDate: string;
+  refundDeadline: string;
 }
 
 export default function PurchaseHistory() {
@@ -43,6 +61,12 @@ export default function PurchaseHistory() {
     title: string;
     message: string;
   } | null>(null);
+  const [refundConfirm, setRefundConfirm] = useState<{
+    purchase: Purchase;
+    eligibility: RefundEligibility;
+  } | null>(null);
+  const [refundingId, setRefundingId] = useState<string | null>(null);
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
   const loadPurchases = async () => {
     try {
@@ -65,6 +89,27 @@ export default function PurchaseHistory() {
   useEffect(() => {
     loadPurchases();
   }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (openDropdownId) {
+        const target = event.target as HTMLElement;
+        const dropdown = document.getElementById(`dropdown-${openDropdownId}`);
+        const button = document.getElementById(`actions-btn-${openDropdownId}`);
+
+        // Don't close if clicking inside the dropdown or on the button
+        if (dropdown?.contains(target) || button?.contains(target)) {
+          return;
+        }
+
+        setOpenDropdownId(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [openDropdownId]);
 
   const handleRetryPurchase = async (purchaseId: string) => {
     try {
@@ -103,6 +148,94 @@ export default function PurchaseHistory() {
     } finally {
       setCancelingId(null);
     }
+  };
+
+  const handleRequestRefund = async (purchase: Purchase) => {
+    try {
+      // Check eligibility first
+      const eligibility = await purchaseService.checkRefundEligibility(
+        purchase.id
+      );
+
+      if (!eligibility.isEligible) {
+        setErrorModal({
+          title: "Refund Not Available",
+          message:
+            eligibility.reason || "This purchase is not eligible for a refund.",
+        });
+        return;
+      }
+
+      // Show confirmation modal
+      setRefundConfirm({ purchase, eligibility });
+    } catch (err) {
+      console.error("Error checking refund eligibility:", err);
+      setErrorModal({
+        title: "Error",
+        message: "Failed to check refund eligibility. Please try again.",
+      });
+    }
+  };
+
+  const handleConfirmRefund = async () => {
+    if (!refundConfirm) return;
+
+    try {
+      setRefundingId(refundConfirm.purchase.id);
+      await purchaseService.initiateRefund(refundConfirm.purchase.id);
+
+      // Reload purchases to show updated status
+      await loadPurchases();
+      setRefundConfirm(null);
+
+      // Show success message
+      setErrorModal({
+        title: "Refund Initiated",
+        message:
+          "Your refund request has been submitted. You'll receive a confirmation email shortly, and the refund should appear in your account within 5-10 business days.",
+      });
+    } catch (err) {
+      console.error("Error initiating refund:", err);
+      const errorMessage =
+        err && typeof err === "object" && "message" in err
+          ? String(err.message)
+          : "Failed to initiate refund. Please try again or contact support.";
+      setErrorModal({
+        title: "Refund Failed",
+        message: errorMessage,
+      });
+      setRefundConfirm(null);
+    } finally {
+      setRefundingId(null);
+    }
+  };
+
+  const getStatusBadge = (status: Purchase["status"]) => {
+    const badges = {
+      completed: "bg-green-100 text-green-800",
+      pending: "bg-yellow-100 text-yellow-800",
+      failed: "bg-red-100 text-red-800",
+      refunded: "bg-blue-100 text-blue-800",
+      refund_processing: "bg-purple-100 text-purple-800",
+      refund_failed: "bg-red-100 text-red-800",
+    };
+
+    const labels = {
+      completed: "Completed",
+      pending: "Pending",
+      failed: "Failed",
+      refunded: "Refunded",
+      refund_processing: "Refund Processing",
+      refund_failed: "Refund Failed",
+    };
+
+    return (
+      <span
+        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${badges[status]}`}
+      >
+        {labels[status]}
+      </span>
+    );
   };
 
   if (loading) {
@@ -330,7 +463,7 @@ export default function PurchaseHistory() {
                       Total Enrollments
                     </p>
                     <p className="text-2xl font-bold text-gray-900">
-                      {purchases.length}
+                      {purchases.filter((p) => p.status === "completed").length}
                     </p>
                   </div>
                 </div>
@@ -359,10 +492,9 @@ export default function PurchaseHistory() {
                     </p>
                     <p className="text-2xl font-bold text-gray-900">
                       {formatCurrency(
-                        purchases.reduce(
-                          (sum, p) => sum + (p.finalPrice || 0),
-                          0
-                        )
+                        purchases
+                          .filter((p) => p.status === "completed")
+                          .reduce((sum, p) => sum + (p.finalPrice || 0), 0)
                       )}
                     </p>
                   </div>
@@ -392,23 +524,25 @@ export default function PurchaseHistory() {
                     </p>
                     <p className="text-2xl font-bold text-gray-900">
                       {formatCurrency(
-                        purchases.reduce(
-                          (sum, p) =>
-                            sum +
-                            (p.classRepDiscount || 0) +
-                            (p.earlyBirdDiscount || 0) +
-                            (p.promoDiscountAmount ||
-                              (p.promoDiscountPercent
-                                ? Math.round(
-                                    ((p.fullPrice -
-                                      (p.classRepDiscount || 0) -
-                                      (p.earlyBirdDiscount || 0)) *
-                                      p.promoDiscountPercent) /
-                                      100
-                                  )
-                                : 0)),
-                          0
-                        )
+                        purchases
+                          .filter((p) => p.status === "completed")
+                          .reduce(
+                            (sum, p) =>
+                              sum +
+                              (p.classRepDiscount || 0) +
+                              (p.earlyBirdDiscount || 0) +
+                              (p.promoDiscountAmount ||
+                                (p.promoDiscountPercent
+                                  ? Math.round(
+                                      ((p.fullPrice -
+                                        (p.classRepDiscount || 0) -
+                                        (p.earlyBirdDiscount || 0)) *
+                                        p.promoDiscountPercent) /
+                                        100
+                                    )
+                                  : 0)),
+                            0
+                          )
                       )}
                     </p>
                   </div>
@@ -417,8 +551,14 @@ export default function PurchaseHistory() {
             </div>
 
             {/* Purchase Table */}
-            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-              <div className="overflow-x-auto">
+            <div
+              className="bg-white rounded-lg shadow-sm"
+              style={{ overflow: "visible" }}
+            >
+              <div
+                className="relative"
+                style={{ overflowX: "auto", overflowY: "visible" }}
+              >
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
@@ -559,32 +699,38 @@ export default function PurchaseHistory() {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              purchase.status === "completed"
-                                ? "bg-green-100 text-green-800"
-                                : purchase.status === "pending"
-                                ? "bg-yellow-100 text-yellow-800"
-                                : purchase.status === "failed"
-                                ? "bg-red-100 text-red-800"
-                                : "bg-gray-100 text-gray-800"
-                            }`}
-                          >
-                            {purchase.status.charAt(0).toUpperCase() +
-                              purchase.status.slice(1)}
-                          </span>
+                          {getStatusBadge(purchase.status)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button
-                            onClick={() =>
-                              navigate(
-                                `/dashboard/purchase-receipt/${purchase.id}`
-                              )
-                            }
-                            className="text-purple-600 hover:text-purple-900 font-medium"
-                          >
-                            View Receipt
-                          </button>
+                          <div className="relative inline-block text-left">
+                            <button
+                              id={`actions-btn-${purchase.id}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenDropdownId(
+                                  openDropdownId === purchase.id
+                                    ? null
+                                    : purchase.id
+                                );
+                              }}
+                              className="text-purple-600 hover:text-purple-900 font-medium inline-flex items-center gap-1"
+                            >
+                              Actions
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M19 9l-7 7-7-7"
+                                />
+                              </svg>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -631,6 +777,169 @@ export default function PurchaseHistory() {
             </div>
           </div>
         )}
+
+        {/* Refund Confirmation Modal */}
+        {refundConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-lg w-full p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Request Refund
+              </h3>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <div className="flex items-start">
+                  <svg
+                    className="h-5 w-5 text-blue-600 mt-0.5 mr-3"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-blue-900">
+                      Refund Eligibility
+                    </p>
+                    <p className="text-sm text-blue-800 mt-1">
+                      This purchase is eligible for a full refund. You have{" "}
+                      <strong>
+                        {refundConfirm.eligibility.daysRemaining} days
+                      </strong>{" "}
+                      remaining.
+                    </p>
+                    <p className="text-xs text-blue-700 mt-1">
+                      Refund deadline:{" "}
+                      {new Date(
+                        refundConfirm.eligibility.refundDeadline
+                      ).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3 mb-6">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Order Number:</span>
+                  <span className="font-medium text-gray-900">
+                    {refundConfirm.purchase.orderNumber}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Program:</span>
+                  <span className="font-medium text-gray-900">
+                    {typeof refundConfirm.purchase.programId === "object"
+                      ? refundConfirm.purchase.programId.title
+                      : "Program"}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Refund Amount:</span>
+                  <span className="font-medium text-gray-900">
+                    {formatCurrency(refundConfirm.purchase.finalPrice || 0)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                <p className="text-sm text-yellow-900">
+                  <strong>Please Note:</strong> The refund will be processed
+                  within 5-10 business days and will be credited to your
+                  original payment method. You'll lose access to the program
+                  immediately upon confirmation.
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setRefundConfirm(null)}
+                  disabled={refundingId === refundConfirm.purchase.id}
+                  className="px-4 py-2 text-sm border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmRefund}
+                  disabled={refundingId === refundConfirm.purchase.id}
+                  className="px-4 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
+                >
+                  {refundingId === refundConfirm.purchase.id
+                    ? "Processing..."
+                    : "Confirm Refund"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Dropdown Menus - Rendered outside table to avoid clipping */}
+        {openDropdownId &&
+          purchases.map((purchase) => {
+            if (purchase.id !== openDropdownId) return null;
+
+            const buttonEl = document.getElementById(
+              `actions-btn-${purchase.id}`
+            );
+            if (!buttonEl) return null;
+
+            const rect = buttonEl.getBoundingClientRect();
+
+            return (
+              <div
+                key={`dropdown-${purchase.id}`}
+                id={`dropdown-${purchase.id}`}
+                className="fixed w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50"
+                style={{
+                  top: `${rect.bottom + 8}px`,
+                  left: `${rect.right - 192}px`, // 192px = w-48
+                }}
+              >
+                <div className="py-1">
+                  <button
+                    onClick={() => {
+                      navigate(`/dashboard/purchase-receipt/${purchase.id}`);
+                      setOpenDropdownId(null);
+                    }}
+                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    View Receipt
+                  </button>
+
+                  {purchase.status === "completed" && (
+                    <button
+                      onClick={() => {
+                        handleRequestRefund(purchase);
+                        setOpenDropdownId(null);
+                      }}
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Request Refund
+                    </button>
+                  )}
+
+                  {purchase.status === "refund_failed" && (
+                    <button
+                      onClick={() => {
+                        handleRequestRefund(purchase);
+                        setOpenDropdownId(null);
+                      }}
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Retry Refund
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
 
         {/* Error Modal */}
         {errorModal && (

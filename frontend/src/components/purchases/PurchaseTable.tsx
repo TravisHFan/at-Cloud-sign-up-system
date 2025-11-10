@@ -22,7 +22,13 @@ export interface PurchaseTableRow {
   isClassRep: boolean;
   isEarlyBird: boolean;
   promoCode?: string;
-  status: "pending" | "completed" | "failed" | "refunded";
+  status:
+    | "pending"
+    | "completed"
+    | "failed"
+    | "refunded"
+    | "refund_processing"
+    | "refund_failed";
   purchaseDate: string;
   createdAt?: string;
   paymentMethod?: {
@@ -75,7 +81,18 @@ export default function PurchaseTable({
       completed: "bg-green-100 text-green-800",
       pending: "bg-yellow-100 text-yellow-800",
       failed: "bg-red-100 text-red-800",
-      refunded: "bg-gray-100 text-gray-800",
+      refunded: "bg-blue-100 text-blue-800",
+      refund_processing: "bg-purple-100 text-purple-800",
+      refund_failed: "bg-red-100 text-red-800",
+    };
+
+    const statusLabels = {
+      completed: "Completed",
+      pending: "Pending",
+      failed: "Failed",
+      refunded: "Refunded",
+      refund_processing: "Refund Processing",
+      refund_failed: "Refund Failed",
     };
 
     return (
@@ -85,7 +102,8 @@ export default function PurchaseTable({
           "bg-gray-100 text-gray-800"
         }`}
       >
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+        {statusLabels[status as keyof typeof statusLabels] ||
+          status.charAt(0).toUpperCase() + status.slice(1)}
       </span>
     );
   };

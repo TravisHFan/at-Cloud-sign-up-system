@@ -21,7 +21,9 @@ class PurchaseHistoryController {
 
       const purchases = await Purchase.find({
         userId: req.user._id,
-        status: "completed",
+        status: {
+          $in: ["completed", "refund_processing", "refund_failed", "refunded"],
+        },
       })
         .populate("programId", "title programType")
         .sort({ purchaseDate: -1 });

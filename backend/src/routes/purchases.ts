@@ -28,6 +28,15 @@ router.post("/retry/:id", PurchaseController.retryPendingPurchase);
 // Check if user has access to a program
 router.get("/check-access/:programId", PurchaseController.checkProgramAccess);
 
+// Check refund eligibility for a purchase
+router.get(
+  "/refund-eligibility/:purchaseId",
+  PurchaseController.checkRefundEligibility
+);
+
+// Initiate a refund for a completed purchase
+router.post("/refund", PurchaseController.initiateRefund);
+
 // Get specific purchase details
 router.get("/:id", PurchaseController.getPurchaseById);
 

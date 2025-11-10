@@ -56,7 +56,9 @@ vi.mock("mongoose", async (importOriginal) => {
         },
       },
       Schema: actual.Schema,
+      connection: actual.default?.connection || {},
     },
+    connection: actual.connection || {},
   };
 });
 

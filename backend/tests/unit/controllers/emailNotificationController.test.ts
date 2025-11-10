@@ -36,9 +36,11 @@ vi.mock("mongoose", async (importOriginal) => {
       ...actual.default,
       model: vi.fn(),
       models: {},
+      connection: actual.default?.connection || {},
     },
     model: vi.fn(),
     models: {},
+    connection: actual.connection || {},
     Schema: class MockSchema {
       static Types = {
         ObjectId: "ObjectId",

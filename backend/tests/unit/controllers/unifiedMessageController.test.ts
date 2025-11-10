@@ -129,7 +129,7 @@ vi.mock("../../../src/models/Message", () => ({
             },
           ]),
           // Make it thenable so it can be awaited directly too - return iterable array
-          then: function (resolve, reject) {
+          then: function (resolve: any, reject: any) {
             const messages = [
               {
                 _id: "msg1",
@@ -329,7 +329,9 @@ vi.mock("mongoose", async (importOriginal) => {
         },
       },
       Schema: actual.Schema,
+      connection: actual.default?.connection || {},
     },
+    connection: actual.connection || {},
   };
 });
 
@@ -516,7 +518,7 @@ describe("UnifiedMessageController", () => {
       global.shouldThrowDatabaseError = true;
 
       // Force the mock to re-evaluate the global flag
-      (MessageModel.find as any).mockImplementation((query) => {
+      (MessageModel.find as any).mockImplementation((query: any) => {
         if (global.shouldThrowDatabaseError) {
           throw new Error("Database error");
         }

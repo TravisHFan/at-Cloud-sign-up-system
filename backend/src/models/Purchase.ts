@@ -52,7 +52,19 @@ export interface IPurchase extends Document {
   stripePaymentIntentId?: string; // Stripe Payment Intent ID
 
   // Status
-  status: "pending" | "completed" | "failed" | "refunded";
+  status:
+    | "pending"
+    | "completed"
+    | "failed"
+    | "refunded"
+    | "refund_processing"
+    | "refund_failed";
+
+  // Refund tracking
+  refundedAt?: Date; // When the refund was completed
+  refundInitiatedAt?: Date; // When the refund was initiated
+  refundFailureReason?: string; // Reason if refund failed
+  stripeRefundId?: string; // Stripe Refund ID
 
   // Timestamps
   purchaseDate: Date; // When the purchase was completed
@@ -204,8 +216,31 @@ const purchaseSchema = new Schema<IPurchase>(
     status: {
       type: String,
       required: true,
-      enum: ["pending", "completed", "failed", "refunded"],
+      enum: [
+        "pending",
+        "completed",
+        "failed",
+        "refunded",
+        "refund_processing",
+        "refund_failed",
+      ],
       default: "pending",
+    },
+    refundedAt: {
+      type: Date,
+    },
+    refundInitiatedAt: {
+      type: Date,
+    },
+    refundFailureReason: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+    },
+    stripeRefundId: {
+      type: String,
+      trim: true,
+      maxlength: 255,
     },
     purchaseDate: {
       type: Date,

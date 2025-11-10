@@ -66,6 +66,13 @@ export class WebhookController {
           );
           break;
 
+        case "charge.refund.updated":
+          console.log("Processing charge.refund.updated...");
+          await WebhookController.handleRefundUpdated(
+            event.data.object as Stripe.Refund
+          );
+          break;
+
         default:
           console.log(`Unhandled event type: ${event.type}`);
       }
@@ -462,5 +469,223 @@ export class WebhookController {
 
     // TODO: Send failure notification email to user
     // await sendPaymentFailureEmail(purchase);
+  }
+
+  /**
+   * Handle refund status updates from Stripe
+   */
+  private static async handleRefundUpdated(
+    refund: Stripe.Refund
+  ): Promise<void> {
+    console.log("Refund updated:", refund.id, "Status:", refund.status);
+
+    // Extract purchase info from refund metadata
+    const purchaseId = refund.metadata?.purchaseId;
+    const orderNumber = refund.metadata?.orderNumber;
+
+    if (!purchaseId) {
+      console.log(
+        "No purchaseId in refund metadata, cannot process refund:",
+        refund.id
+      );
+      return;
+    }
+
+    // Find the purchase
+    const purchase = await Purchase.findById(purchaseId).populate(
+      "programId",
+      "title"
+    );
+
+    if (!purchase) {
+      console.log("No purchase found for refund:", refund.id);
+      return;
+    }
+
+    // Import PurchaseEmailService dynamically
+    const { PurchaseEmailService } = await import(
+      "../services/email/domains/PurchaseEmailService"
+    );
+
+    // Handle refund status
+    switch (refund.status) {
+      case "succeeded":
+        console.log(
+          `Refund succeeded for purchase ${orderNumber}, updating status to refunded`
+        );
+
+        // Update purchase status
+        purchase.status = "refunded";
+        purchase.refundedAt = new Date();
+        await purchase.save();
+
+        // Recover promo code if one was used
+        if (purchase.promoCode) {
+          try {
+            const promoCode = await PromoCode.findOne({
+              code: purchase.promoCode,
+            });
+
+            if (promoCode && promoCode.isUsed) {
+              // Mark the promo code as not used and active again
+              promoCode.isUsed = false;
+              promoCode.isActive = true;
+              promoCode.usedAt = undefined;
+              promoCode.usedForProgramId = undefined;
+              await promoCode.save();
+
+              console.log(
+                `✅ Recovered promo code ${purchase.promoCode} for refunded order ${orderNumber}`
+              );
+            }
+          } catch (promoError) {
+            console.error(
+              `Failed to recover promo code ${purchase.promoCode}:`,
+              promoError
+            );
+            // Don't fail the refund if promo code recovery fails
+          }
+        }
+
+        // Send refund completed email to user
+        try {
+          await PurchaseEmailService.sendRefundCompletedEmail({
+            userEmail: purchase.billingInfo.email,
+            userName: purchase.billingInfo.fullName,
+            orderNumber: purchase.orderNumber,
+            programTitle:
+              typeof purchase.programId === "object"
+                ? purchase.programId.title
+                : "Program",
+            refundAmount: purchase.finalPrice,
+            refundDate: new Date(),
+          });
+          console.log(`Sent refund completed email for order ${orderNumber}`);
+        } catch (emailError) {
+          console.error("Failed to send refund completed email:", emailError);
+        }
+
+        // Send admin notification
+        try {
+          const user = await User.findById(purchase.userId);
+          if (user) {
+            await PurchaseEmailService.sendAdminRefundNotification({
+              userName: `${user.firstName} ${user.lastName}`,
+              userEmail: user.email,
+              orderNumber: purchase.orderNumber,
+              programTitle:
+                typeof purchase.programId === "object"
+                  ? purchase.programId.title
+                  : "Program",
+              refundAmount: purchase.finalPrice,
+              purchaseDate: purchase.purchaseDate,
+              refundInitiatedAt: purchase.refundInitiatedAt || new Date(),
+            });
+            console.log(
+              `Sent admin refund notification for order ${orderNumber}`
+            );
+
+            // Send system message to all admins
+            const admins = await User.find({
+              role: { $in: ["Super Admin", "Administrator"] },
+            }).select("_id");
+
+            if (admins.length > 0) {
+              const adminIds = admins.map((admin) => admin._id.toString());
+              const formatCurrency = (amount: number) =>
+                `$${(amount / 100).toFixed(2)}`;
+
+              await TrioNotificationService.createTrio({
+                systemMessage: {
+                  title: "Refund Completed",
+                  content: `Refund completed for ${user.firstName} ${
+                    user.lastName
+                  } (${user.email}). Order ${purchase.orderNumber} - ${
+                    typeof purchase.programId === "object"
+                      ? purchase.programId.title
+                      : "Program"
+                  }. Amount: ${formatCurrency(purchase.finalPrice)}.`,
+                  type: "announcement",
+                  priority: "high",
+                  hideCreator: true,
+                  metadata: {
+                    purchaseId: purchase._id.toString(),
+                    userId: purchase.userId.toString(),
+                    orderNumber: purchase.orderNumber,
+                    refundAmount: purchase.finalPrice,
+                  },
+                },
+                recipients: adminIds,
+              });
+              console.log(
+                `Sent system message to ${adminIds.length} admins for refund ${orderNumber}`
+              );
+            }
+          }
+        } catch (emailError) {
+          console.error(
+            "Failed to send admin refund notification:",
+            emailError
+          );
+        }
+
+        console.log(
+          `✅ Refund completed successfully for purchase ${orderNumber}`
+        );
+        break;
+
+      case "failed":
+        console.log(
+          `Refund failed for purchase ${orderNumber}, updating status`
+        );
+
+        // Update purchase status
+        purchase.status = "refund_failed";
+        purchase.refundFailureReason = refund.failure_reason || "Refund failed";
+        await purchase.save();
+
+        // Send refund failed email to user
+        try {
+          await PurchaseEmailService.sendRefundFailedEmail({
+            userEmail: purchase.billingInfo.email,
+            userName: purchase.billingInfo.fullName,
+            orderNumber: purchase.orderNumber,
+            programTitle:
+              typeof purchase.programId === "object"
+                ? purchase.programId.title
+                : "Program",
+            failureReason: purchase.refundFailureReason || "Unknown error",
+          });
+          console.log(`Sent refund failed email for order ${orderNumber}`);
+        } catch (emailError) {
+          console.error("Failed to send refund failed email:", emailError);
+        }
+
+        console.log(
+          `❌ Refund failed for purchase ${orderNumber}: ${refund.failure_reason}`
+        );
+        break;
+
+      case "pending":
+        console.log(
+          `Refund is pending for purchase ${orderNumber}, no action needed`
+        );
+        break;
+
+      case "canceled":
+        console.log(
+          `Refund was canceled for purchase ${orderNumber}, reverting to completed status`
+        );
+        // Revert to completed status if refund is canceled
+        purchase.status = "completed";
+        purchase.refundFailureReason = "Refund was canceled";
+        await purchase.save();
+        break;
+
+      default:
+        console.log(
+          `Unhandled refund status: ${refund.status} for purchase ${orderNumber}`
+        );
+    }
   }
 }

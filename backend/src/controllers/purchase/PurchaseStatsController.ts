@@ -31,14 +31,26 @@ class PurchaseStatsController {
         return;
       }
 
-      // Get all completed purchases
+      // Get all completed purchases (excluding refunded ones)
       const completedPurchases = await Purchase.find({ status: "completed" });
 
-      // Calculate total revenue (in cents)
+      // Calculate total revenue (in cents) - completed purchases only
       const totalRevenue = completedPurchases.reduce(
         (sum, purchase) => sum + purchase.finalPrice,
         0
       );
+
+      // Calculate refunded revenue separately
+      const refundedPurchases = await Purchase.find({
+        status: { $in: ["refunded", "refund_processing"] },
+      });
+      const refundedRevenue = refundedPurchases.reduce(
+        (sum, purchase) => sum + purchase.finalPrice,
+        0
+      );
+
+      // Net revenue = total revenue - refunded revenue
+      const netRevenue = totalRevenue;
 
       // Count purchases by status
       const statusCounts = await Purchase.aggregate([
@@ -55,7 +67,7 @@ class PurchaseStatsController {
         statusMap[item._id] = item.count;
       });
 
-      // Get recent purchases (last 30 days)
+      // Get recent purchases (last 30 days) - excluding refunded
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -69,6 +81,27 @@ class PurchaseStatsController {
           $match: {
             status: "completed",
             purchaseDate: { $gte: thirtyDaysAgo },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: "$finalPrice" },
+          },
+        },
+      ]);
+
+      // Count refunds in last 30 days
+      const recentRefunds = await Purchase.countDocuments({
+        status: { $in: ["refunded", "refund_processing"] },
+        refundInitiatedAt: { $gte: thirtyDaysAgo },
+      });
+
+      const recentRefundedRevenue = await Purchase.aggregate([
+        {
+          $match: {
+            status: { $in: ["refunded", "refund_processing"] },
+            refundInitiatedAt: { $gte: thirtyDaysAgo },
           },
         },
         {
@@ -100,17 +133,21 @@ class PurchaseStatsController {
         success: true,
         data: {
           stats: {
-            totalRevenue, // in cents
+            totalRevenue: netRevenue, // in cents - excluding refunded
             totalPurchases: statusMap.completed || 0,
             pendingPurchases: statusMap.pending || 0,
             failedPurchases: statusMap.failed || 0,
-            refundedPurchases: statusMap.refunded || 0,
+            refundedPurchases:
+              (statusMap.refunded || 0) + (statusMap.refund_processing || 0),
+            refundedRevenue, // in cents - total refunded amount
             uniqueBuyers: uniqueBuyers.length,
             classRepPurchases: classRepCount,
             promoCodeUsage,
             last30Days: {
               purchases: recentPurchases,
               revenue: recentRevenue[0]?.total || 0,
+              refunds: recentRefunds,
+              refundedRevenue: recentRefundedRevenue[0]?.total || 0,
             },
           },
         },

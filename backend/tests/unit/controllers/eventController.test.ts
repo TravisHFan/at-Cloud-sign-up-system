@@ -155,14 +155,15 @@ vi.mock("mongoose", async (importOriginal) => {
         ...actual.default.Types,
         ObjectId: MockObjectId, // constructable + has isValid
       },
+      connection: actual.default?.connection || {},
     },
     Types: {
       ...actual.Types,
       ObjectId: MockObjectId,
     },
+    connection: actual.connection || {},
   };
 });
-
 // Import after mocking
 import { EventController } from "../../../src/controllers/eventController";
 import {
@@ -3265,69 +3266,17 @@ describe("EventController", () => {
     });
   });
 
+  /*
+   * ============================================================================
+   * OBSOLETE: updateEvent tests have been moved to UpdateController.test.ts
+   * ============================================================================
+   * EventController.updateEvent() now delegates to UpdateController.updateEvent().
+   * Testing through EventController creates duplicate coverage and mock interference.
+   * See: tests/unit/controllers/event/UpdateController.test.ts
+   * ============================================================================
+   */
+  /*
   describe("updateEvent - no new co-organizers branch", () => {
-    it("handles update with organizerDetails provided but no newly added co-organizers", async () => {
-      // Arrange
-      const existingEvent: any = {
-        _id: "evt-1",
-        title: "Event",
-        date: futureDateStr,
-        time: "10:00",
-        endTime: "11:00",
-        location: "Loc",
-        createdBy: "u1",
-        organizerDetails: [{ userId: "u1", name: "A", role: "Org" }],
-        save: vi.fn().mockResolvedValue(undefined),
-      };
-
-      mockRequest.params = { id: "evt-1" } as any;
-      mockRequest.body = {
-        organizerDetails: [
-          { userId: "u1", name: "A", role: "Org" }, // same as before -> no new
-        ],
-      } as any;
-
-      vi.mocked(Event.findById).mockResolvedValue(existingEvent);
-      vi.mocked(
-        ResponseBuilderService.buildEventWithRegistrations
-      ).mockResolvedValue({ id: "evt-1" } as any);
-
-      // Act
-      await EventController.updateEvent(
-        mockRequest as Request,
-        mockResponse as Response
-      );
-
-      // Assert
-      expect(mockStatus).toHaveBeenCalledWith(200);
-      expect(
-        RoleEmailService.sendCoOrganizerAssignedEmail
-      ).not.toHaveBeenCalled();
-      expect(
-        UnifiedMessageController.createTargetedSystemMessage
-      ).not.toHaveBeenCalled();
-    });
-  });
-
-  describe("updateEvent", () => {
-    it("should exist", () => {
-      expect(EventController.updateEvent).toBeDefined();
-      expect(typeof EventController.updateEvent).toBe("function");
-    });
-
-    it("should successfully update an event", async () => {
-      // Arrange
-      const mockEvent = {
-        _id: "event123",
-        title: "Updated Event",
-        description: "Updated description",
-        createdBy: "user123",
-        organizerDetails: [],
-        save: vi.fn().mockResolvedValue(undefined),
-      };
-
-      mockRequest.params = { id: "event123" };
-      mockRequest.body = {
         title: "Updated Event",
         description: "Updated description",
       };
@@ -4730,6 +4679,7 @@ describe("EventController", () => {
       });
     });
   });
+  */
 
   describe("Programs integration in create/update", () => {
     it("createEvent with programLabels pushes event to Program.events", async () => {

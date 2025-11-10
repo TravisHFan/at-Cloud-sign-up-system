@@ -94,6 +94,57 @@ class PurchasesApiClient extends BaseApiClient {
     return res.data || { hasAccess: false, reason: "not_purchased" };
   }
 
+  // ========== Refund Operations ==========
+
+  async checkRefundEligibility(purchaseId: string): Promise<{
+    isEligible: boolean;
+    reason?: string;
+    daysRemaining?: number;
+    purchaseDate: string;
+    refundDeadline: string;
+  }> {
+    const res = await this.request<{
+      isEligible: boolean;
+      reason?: string;
+      daysRemaining?: number;
+      purchaseDate: string;
+      refundDeadline: string;
+    }>(`/purchases/refund-eligibility/${purchaseId}`);
+    return (
+      res.data || {
+        isEligible: false,
+        reason: "Unknown error",
+        purchaseDate: "",
+        refundDeadline: "",
+      }
+    );
+  }
+
+  async initiateRefund(purchaseId: string): Promise<{
+    purchaseId: string;
+    orderNumber: string;
+    refundId: string;
+    status: string;
+  }> {
+    const res = await this.request<{
+      purchaseId: string;
+      orderNumber: string;
+      refundId: string;
+      status: string;
+    }>(`/purchases/refund`, {
+      method: "POST",
+      body: JSON.stringify({ purchaseId }),
+    });
+    return (
+      res.data || {
+        purchaseId: "",
+        orderNumber: "",
+        refundId: "",
+        status: "",
+      }
+    );
+  }
+
   // ========== Admin Purchase Management ==========
 
   /**
@@ -147,12 +198,15 @@ class PurchasesApiClient extends BaseApiClient {
       pendingPurchases: number;
       failedPurchases: number;
       refundedPurchases: number;
+      refundedRevenue: number;
       uniqueBuyers: number;
       classRepPurchases: number;
       promoCodeUsage: number;
       last30Days: {
         purchases: number;
         revenue: number;
+        refunds: number;
+        refundedRevenue: number;
       };
     };
   }> {
@@ -163,12 +217,15 @@ class PurchasesApiClient extends BaseApiClient {
         pendingPurchases: number;
         failedPurchases: number;
         refundedPurchases: number;
+        refundedRevenue: number;
         uniqueBuyers: number;
         classRepPurchases: number;
         promoCodeUsage: number;
         last30Days: {
           purchases: number;
           revenue: number;
+          refunds: number;
+          refundedRevenue: number;
         };
       };
     }>(`/admin/purchases/stats`);
@@ -180,10 +237,16 @@ class PurchasesApiClient extends BaseApiClient {
           pendingPurchases: 0,
           failedPurchases: 0,
           refundedPurchases: 0,
+          refundedRevenue: 0,
           uniqueBuyers: 0,
           classRepPurchases: 0,
           promoCodeUsage: 0,
-          last30Days: { purchases: 0, revenue: 0 },
+          last30Days: {
+            purchases: 0,
+            revenue: 0,
+            refunds: 0,
+            refundedRevenue: 0,
+          },
         },
       }
     );
@@ -211,6 +274,12 @@ export const purchasesService = {
   getPurchaseReceipt: (id: string) => purchasesApiClient.getPurchaseReceipt(id),
   checkProgramAccess: (programId: string) =>
     purchasesApiClient.checkProgramAccess(programId),
+
+  // Refund operations
+  checkRefundEligibility: (purchaseId: string) =>
+    purchasesApiClient.checkRefundEligibility(purchaseId),
+  initiateRefund: (purchaseId: string) =>
+    purchasesApiClient.initiateRefund(purchaseId),
 
   // Admin operations
   getAllPurchasesAdmin: (

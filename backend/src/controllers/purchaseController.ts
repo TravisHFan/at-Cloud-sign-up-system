@@ -139,6 +139,31 @@ export class PurchaseController {
     );
     return PurchaseStatsController.getPaymentStats(req, res);
   }
+
+  /**
+   * Check refund eligibility for a purchase
+   * GET /api/purchases/refund-eligibility/:purchaseId
+   */
+  static async checkRefundEligibility(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    const { default: PurchaseRefundController } = await import(
+      "./purchase/PurchaseRefundController"
+    );
+    return PurchaseRefundController.checkRefundEligibility(req, res);
+  }
+
+  /**
+   * Initiate a refund for a completed purchase
+   * POST /api/purchases/refund
+   */
+  static async initiateRefund(req: Request, res: Response): Promise<void> {
+    const { default: PurchaseRefundController } = await import(
+      "./purchase/PurchaseRefundController"
+    );
+    return PurchaseRefundController.initiateRefund(req, res);
+  }
 }
 
 export default PurchaseController;

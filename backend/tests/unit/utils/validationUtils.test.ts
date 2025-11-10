@@ -26,6 +26,7 @@ vi.mock("mongoose", async (importOriginal) => {
           isValid: vi.fn(),
         },
       },
+      connection: actual.default?.connection || {},
     },
     Types: {
       ...actual.Types,
@@ -34,6 +35,7 @@ vi.mock("mongoose", async (importOriginal) => {
         isValid: vi.fn(),
       },
     },
+    connection: actual.connection || {},
   };
 });
 

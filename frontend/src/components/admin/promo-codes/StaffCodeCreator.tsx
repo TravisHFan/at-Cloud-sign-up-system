@@ -469,7 +469,7 @@ export default function StaffCodeCreator({ onSuccess }: StaffCodeCreatorProps) {
                   <div className="border border-gray-200 rounded-lg p-4 max-h-60 overflow-y-auto">
                     {loadingPrograms ? (
                       <div className="flex justify-center py-4">
-                        <LoadingSpinner size="sm" />
+                        <LoadingSpinner size="sm" inline />
                       </div>
                     ) : programs.length === 0 ? (
                       <p className="text-sm text-gray-500 text-center py-4">
@@ -565,7 +565,7 @@ export default function StaffCodeCreator({ onSuccess }: StaffCodeCreatorProps) {
               >
                 {loading ? (
                   <span className="flex items-center gap-2">
-                    <LoadingSpinner size="sm" />
+                    <LoadingSpinner size="sm" inline />
                     Creating Code...
                   </span>
                 ) : (

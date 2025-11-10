@@ -61,6 +61,20 @@ class PurchaseReceiptController {
 
       // Only show receipt for completed purchases
       if (purchase.status !== "completed") {
+        // Provide specific message for refunded purchases
+        if (
+          purchase.status === "refunded" ||
+          purchase.status === "refund_processing"
+        ) {
+          res.status(400).json({
+            success: false,
+            message:
+              "This purchase has been refunded. Receipts are not available for refunded purchases.",
+          });
+          return;
+        }
+
+        // Generic message for other statuses
         res.status(400).json({
           success: false,
           message: "Receipt is only available for completed purchases.",

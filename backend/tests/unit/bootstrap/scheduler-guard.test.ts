@@ -55,6 +55,16 @@ vi.mock("mongoose", async (importOriginal) => {
         on: vi.fn(),
       },
     },
+    connection: {
+      db: {
+        admin: () => ({
+          serverStatus: vi.fn().mockResolvedValue({ version: "6.0" }),
+        }),
+      },
+      close: vi.fn().mockResolvedValue(void 0),
+      readyState: 1,
+      on: vi.fn(),
+    },
   };
 });
 

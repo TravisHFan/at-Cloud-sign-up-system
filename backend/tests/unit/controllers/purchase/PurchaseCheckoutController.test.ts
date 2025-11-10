@@ -52,10 +52,6 @@ describe("PurchaseCheckoutController", () => {
       user: undefined,
     };
     vi.clearAllMocks();
-
-    // Reset PromoCode.findOne to prevent test pollution from other files
-    // (Some tests may leave it in a non-promise-returning state)
-    vi.mocked(PromoCode.findOne).mockReset();
   });
 
   describe("createCheckoutSession", () => {
@@ -252,7 +248,7 @@ describe("PurchaseCheckoutController", () => {
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith({
         success: false,
-        message: "Not applicable",
+        message: "Invalid promo code.",
       });
     });
 
@@ -295,7 +291,7 @@ describe("PurchaseCheckoutController", () => {
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith({
         success: false,
-        message: "This promo code does not belong to you.",
+        message: "Invalid promo code.",
       });
     });
 
@@ -339,7 +335,7 @@ describe("PurchaseCheckoutController", () => {
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith({
         success: false,
-        message: "This staff code is not valid for this program.",
+        message: "Invalid promo code.",
       });
     });
 

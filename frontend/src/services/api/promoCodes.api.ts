@@ -437,7 +437,7 @@ class PromoCodesApiClient extends BaseApiClient {
     allowedProgramIds?: string[];
     expiresAt?: string;
   }): Promise<{
-    code: {
+    promoCode: {
       _id: string;
       code: string;
       type: "reward";
@@ -454,7 +454,7 @@ class PromoCodesApiClient extends BaseApiClient {
     };
   }> {
     const res = await this.request<{
-      code: {
+      promoCode: {
         _id: string;
         code: string;
         type: "reward";

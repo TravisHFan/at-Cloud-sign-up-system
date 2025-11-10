@@ -253,23 +253,7 @@ class PurchaseCheckoutController {
             earlyBirdDiscount = program.earlyBirdDiscount!;
             isEarlyBird = true;
           }
-          // If user opened the page with Early Bird active but it expired during checkout
-          else if (
-            !isClassRep &&
-            program.earlyBirdDeadline &&
-            program.earlyBirdDiscount &&
-            now > new Date(program.earlyBirdDeadline)
-          ) {
-            // Early Bird period has expired - return specific error
-            throw new Error(
-              JSON.stringify({
-                earlyBirdExpired: true,
-                message:
-                  "Early Bird discount period has expired. The regular price will be applied.",
-                newPrice: fullPrice,
-              })
-            );
-          }
+          // No need to throw error if Early Bird expired - just don't apply the discount
 
           // Calculate promo discount
           let promoDiscountAmount = 0;

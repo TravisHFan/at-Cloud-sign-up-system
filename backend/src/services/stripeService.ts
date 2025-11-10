@@ -216,4 +216,41 @@ export function constructWebhookEvent(
   );
 }
 
+/**
+ * Process a refund for a purchase
+ * @param paymentIntentId - The Stripe Payment Intent ID to refund
+ * @param amount - The amount to refund in cents (should be full amount for now)
+ * @param reason - Optional reason for the refund
+ * @returns The Stripe Refund object
+ */
+export async function processRefund(params: {
+  paymentIntentId: string;
+  amount: number;
+  reason?: string;
+  metadata?: Record<string, string>;
+}): Promise<Stripe.Refund> {
+  const { paymentIntentId, amount, reason, metadata } = params;
+
+  try {
+    const refund = await stripe.refunds.create({
+      payment_intent: paymentIntentId,
+      amount: Math.round(amount), // Ensure integer cents
+      reason: reason as Stripe.RefundCreateParams.Reason | undefined,
+      metadata: metadata || {},
+    });
+
+    return refund;
+  } catch (error) {
+    console.error("Stripe refund error:", error);
+    throw error;
+  }
+}
+
+/**
+ * Retrieve a Stripe Refund
+ */
+export async function getRefund(refundId: string): Promise<Stripe.Refund> {
+  return await stripe.refunds.retrieve(refundId);
+}
+
 export default stripe;
