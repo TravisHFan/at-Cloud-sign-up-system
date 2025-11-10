@@ -74,7 +74,7 @@ describe("PurchaseHistoryController", () => {
 
       expect(Purchase.find).toHaveBeenCalledWith({
         userId: userId,
-        status: "completed",
+        status: { $in: ["completed", "refund_processing", "refund_failed", "refunded"] },
       });
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith({
@@ -100,7 +100,7 @@ describe("PurchaseHistoryController", () => {
             title: "Program B",
             programType: "Webinar",
           },
-          status: "completed",
+          status: { $in: ["completed", "refund_processing", "refund_failed", "refunded"] },
           purchaseDate: purchaseDate2,
           finalPrice: 150,
         },
@@ -112,7 +112,7 @@ describe("PurchaseHistoryController", () => {
             title: "Program A",
             programType: "Workshop",
           },
-          status: "completed",
+          status: { $in: ["completed", "refund_processing", "refund_failed", "refunded"] },
           purchaseDate: purchaseDate1,
           finalPrice: 100,
         },
@@ -156,7 +156,7 @@ describe("PurchaseHistoryController", () => {
 
       expect(findMock).toHaveBeenCalledWith({
         userId: userId,
-        status: "completed",
+        status: { $in: ["completed", "refund_processing", "refund_failed", "refunded"] },
       });
     });
 
@@ -222,7 +222,7 @@ describe("PurchaseHistoryController", () => {
             programType: "Webinar",
           },
           purchaseDate: newDate,
-          status: "completed",
+          status: { $in: ["completed", "refund_processing", "refund_failed", "refunded"] },
         },
         {
           _id: new mongoose.Types.ObjectId(),
@@ -232,7 +232,7 @@ describe("PurchaseHistoryController", () => {
             programType: "Workshop",
           },
           purchaseDate: oldDate,
-          status: "completed",
+          status: { $in: ["completed", "refund_processing", "refund_failed", "refunded"] },
         },
       ];
 
@@ -262,7 +262,7 @@ describe("PurchaseHistoryController", () => {
           _id: new mongoose.Types.ObjectId(),
           userId,
           programId: null,
-          status: "completed",
+          status: { $in: ["completed", "refund_processing", "refund_failed", "refunded"] },
           purchaseDate: new Date(),
         },
       ];
@@ -363,7 +363,9 @@ describe("PurchaseHistoryController", () => {
 
       expect(findMock).toHaveBeenCalledWith({
         userId: objectIdUserId,
-        status: "completed",
+        status: {
+          $in: ["completed", "refund_processing", "refund_failed", "refunded"],
+        },
       });
       expect(statusMock).toHaveBeenCalledWith(200);
     });

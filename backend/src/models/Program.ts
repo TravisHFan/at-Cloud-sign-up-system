@@ -242,7 +242,7 @@ const programSchema = new Schema<IProgram>(
   }
 );
 
-// Composite validator: combined discounts cannot exceed full price
+// Composite validator: individual discounts cannot exceed full price
 programSchema.pre("validate", function (next) {
   const p = this as unknown as IProgram;
   const classRep = p.classRepDiscount ?? 0;
@@ -253,13 +253,13 @@ programSchema.pre("validate", function (next) {
     return next(new Error("Full price must be greater than 0"));
   }
 
-  // Check combined discounts don't exceed full price
-  if (p.fullPriceTicket - classRep - early < 0) {
-    return next(
-      new Error(
-        "Combined discounts (classRepDiscount + earlyBirdDiscount) cannot exceed fullPriceTicket"
-      )
-    );
+  // Check each discount individually doesn't exceed full price (discounts don't stack)
+  if (classRep > p.fullPriceTicket) {
+    return next(new Error("Class Rep Discount cannot exceed fullPriceTicket"));
+  }
+
+  if (early > p.fullPriceTicket) {
+    return next(new Error("Early Bird Discount cannot exceed fullPriceTicket"));
   }
 
   // Check if Early Bird Deadline is required when Early Bird Discount > 0
