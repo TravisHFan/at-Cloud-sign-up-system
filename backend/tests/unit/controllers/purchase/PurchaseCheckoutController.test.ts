@@ -248,7 +248,7 @@ describe("PurchaseCheckoutController", () => {
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith({
         success: false,
-        message: "Invalid promo code.",
+        message: "Not applicable",
       });
     });
 
@@ -291,7 +291,7 @@ describe("PurchaseCheckoutController", () => {
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith({
         success: false,
-        message: "Invalid promo code.",
+        message: "This promo code does not belong to you.",
       });
     });
 
@@ -335,7 +335,7 @@ describe("PurchaseCheckoutController", () => {
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith({
         success: false,
-        message: "Invalid promo code.",
+        message: "This staff code is not valid for this program.",
       });
     });
 
@@ -466,7 +466,7 @@ describe("PurchaseCheckoutController", () => {
     // ===================
     // Early Bird Expiration Tests
     // ===================
-    it("should return 400 if Early Bird expired during checkout", async () => {
+    it("should proceed without early bird discount if expired during checkout", async () => {
       mockReq.user = {
         _id: userId,
         email: "test@test.com",
@@ -490,26 +490,51 @@ describe("PurchaseCheckoutController", () => {
         earlyBirdDiscount: 1000,
       };
 
+      const mockPurchase = {
+        _id: new mongoose.Types.ObjectId(),
+        userId,
+        programId,
+        fullPrice: 10000,
+        classRepDiscount: 0,
+        earlyBirdDiscount: 0, // No early bird discount applied
+        finalPrice: 10000,
+        isClassRep: false,
+        isEarlyBird: false,
+        status: "pending",
+        orderNumber: "ORD-TEST-001",
+        save: vi.fn().mockResolvedValue(true),
+      };
+
       vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
       vi.mocked(Purchase.findOne).mockResolvedValue(null);
       vi.mocked(lockService.withLock).mockImplementation(async (key, fn) => {
         return fn();
       });
-      vi.mocked(Purchase.findOne).mockResolvedValue(null); // No pending
+      vi.mocked(Purchase.create).mockResolvedValue(mockPurchase as any);
+      vi.mocked(stripeCreateCheckoutSession).mockResolvedValue({
+        id: "cs_test123",
+        url: "https://checkout.stripe.com/test",
+      } as any);
 
       await PurchaseCheckoutController.createCheckoutSession(
         mockReq as Request,
         mockRes as Response
       );
 
-      expect(statusMock).toHaveBeenCalledWith(400);
+      // Should succeed with full price (no early bird discount)
+      expect(statusMock).toHaveBeenCalledWith(200);
       const response = jsonMock.mock.calls[0][0];
-      expect(response.success).toBe(false);
-      expect(response.message).toContain(
-        "Early Bird discount period has expired"
+      expect(response.success).toBe(true);
+      expect(response.data.sessionUrl).toBe("https://checkout.stripe.com/test");
+
+      // Verify purchase was created without early bird discount
+      expect(Purchase.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          earlyBirdDiscount: 0,
+          isEarlyBird: false,
+          finalPrice: 10000,
+        })
       );
-      expect(response.data.earlyBirdExpired).toBe(true);
-      expect(response.data.newPrice).toBe(10000);
     });
 
     // ===================
