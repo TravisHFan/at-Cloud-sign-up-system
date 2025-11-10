@@ -676,10 +676,85 @@ export class WebhookController {
         console.log(
           `Refund was canceled for purchase ${orderNumber}, reverting to completed status`
         );
+
         // Revert to completed status if refund is canceled
         purchase.status = "completed";
-        purchase.refundFailureReason = "Refund was canceled";
+        purchase.refundFailureReason =
+          "Refund was canceled by payment processor";
         await purchase.save();
+
+        // Notify user about cancellation
+        try {
+          await PurchaseEmailService.sendRefundFailedEmail({
+            userEmail: purchase.billingInfo.email,
+            userName: purchase.billingInfo.fullName,
+            orderNumber: purchase.orderNumber,
+            programTitle:
+              typeof purchase.programId === "object"
+                ? purchase.programId.title
+                : "Program",
+            failureReason:
+              "The refund was canceled by the payment processor. This is rare and may indicate an issue with the original payment. Please contact support for assistance.",
+          });
+          console.log(
+            `Sent refund cancellation notification for order ${orderNumber}`
+          );
+        } catch (emailError) {
+          console.error("Failed to send refund canceled email:", emailError);
+        }
+
+        // Notify admins about the unusual cancellation
+        try {
+          const user = await User.findById(purchase.userId);
+          if (user) {
+            const admins = await User.find({
+              role: { $in: ["Super Admin", "Administrator"] },
+            }).select("_id");
+
+            if (admins.length > 0) {
+              const adminIds = admins.map((admin) => admin._id.toString());
+              const formatCurrency = (amount: number) =>
+                `$${(amount / 100).toFixed(2)}`;
+
+              await TrioNotificationService.createTrio({
+                systemMessage: {
+                  title: "⚠️ Refund Canceled (Unusual)",
+                  content: `Refund was CANCELED by payment processor for ${
+                    user.firstName
+                  } ${user.email}. Order ${purchase.orderNumber} - ${
+                    typeof purchase.programId === "object"
+                      ? purchase.programId.title
+                      : "Program"
+                  }. Amount: ${formatCurrency(
+                    purchase.finalPrice
+                  )}. This is unusual and may require investigation.`,
+                  type: "alert",
+                  priority: "high",
+                  hideCreator: true,
+                  metadata: {
+                    purchaseId: purchase._id.toString(),
+                    userId: purchase.userId.toString(),
+                    orderNumber: purchase.orderNumber,
+                    refundId: refund.id,
+                  },
+                },
+                recipients: adminIds,
+              });
+              console.log(
+                `Sent cancellation alert to ${adminIds.length} admins for order ${orderNumber}`
+              );
+            }
+          }
+        } catch (notifError) {
+          console.error(
+            "Failed to send admin notification for canceled refund:",
+            notifError
+          );
+        }
+
+        console.log(
+          `⚠️ Refund canceled for purchase ${orderNumber}, reverted to completed status`
+        );
         break;
 
       default:
