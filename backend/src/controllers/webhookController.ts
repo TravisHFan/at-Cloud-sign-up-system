@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import Stripe from "stripe";
 import mongoose from "mongoose";
 import { Purchase, SystemConfig, PromoCode, User, Program } from "../models";
+import Donation from "../models/Donation";
+import DonationTransaction from "../models/DonationTransaction";
 import type { IUser } from "../models/User";
 import type { IProgram } from "../models/Program";
 import {
@@ -11,6 +13,7 @@ import {
 import { EmailService } from "../services/infrastructure/EmailServiceFacade";
 import { lockService } from "../services/LockService";
 import { TrioNotificationService } from "../services/notifications/TrioNotificationService";
+import DonationService from "../services/DonationService";
 
 export class WebhookController {
   /**
@@ -73,6 +76,35 @@ export class WebhookController {
           );
           break;
 
+        // Donation-related events
+        case "invoice.payment_succeeded":
+          console.log("Processing invoice.payment_succeeded...");
+          await WebhookController.handleInvoicePaymentSucceeded(
+            event.data.object as Stripe.Invoice
+          );
+          break;
+
+        case "invoice.payment_failed":
+          console.log("Processing invoice.payment_failed...");
+          await WebhookController.handleInvoicePaymentFailed(
+            event.data.object as Stripe.Invoice
+          );
+          break;
+
+        case "customer.subscription.updated":
+          console.log("Processing customer.subscription.updated...");
+          await WebhookController.handleSubscriptionUpdated(
+            event.data.object as Stripe.Subscription
+          );
+          break;
+
+        case "customer.subscription.deleted":
+          console.log("Processing customer.subscription.deleted...");
+          await WebhookController.handleSubscriptionDeleted(
+            event.data.object as Stripe.Subscription
+          );
+          break;
+
         default:
           console.log(`Unhandled event type: ${event.type}`);
       }
@@ -95,6 +127,15 @@ export class WebhookController {
     session: Stripe.Checkout.Session
   ): Promise<void> {
     console.log("Checkout session completed:", session.id);
+
+    // Check if this is a donation checkout
+    const isDonation =
+      session.metadata?.type === "donation" || session.metadata?.donationId;
+
+    if (isDonation) {
+      await WebhookController.handleDonationCheckout(session);
+      return;
+    }
 
     // UNIFIED LOCK: Use purchaseId from metadata if available (new behavior)
     // Fall back to session ID for backward compatibility (old sessions)
@@ -762,5 +803,372 @@ export class WebhookController {
           `Unhandled refund status: ${refund.status} for purchase ${orderNumber}`
         );
     }
+  }
+
+  /**
+   * Handle donation checkout completion (one-time or recurring setup)
+   */
+  private static async handleDonationCheckout(
+    session: Stripe.Checkout.Session
+  ): Promise<void> {
+    const donationId = session.metadata?.donationId;
+    const userId = session.metadata?.userId;
+
+    if (!donationId || !userId) {
+      console.error(
+        "Missing donationId or userId in checkout session metadata"
+      );
+      return;
+    }
+
+    console.log(`Processing donation checkout for donation ${donationId}`);
+
+    const donation = await Donation.findById(donationId);
+    if (!donation) {
+      console.error(`Donation ${donationId} not found`);
+      return;
+    }
+
+    // Update Stripe customer ID
+    if (session.customer) {
+      donation.stripeCustomerId = session.customer as string;
+    }
+
+    // For subscription mode, get subscription ID
+    if (session.mode === "subscription" && session.subscription) {
+      donation.stripeSubscriptionId = session.subscription as string;
+      donation.status = "active"; // Activate recurring donation after subscription created
+      donation.lastGiftDate = new Date(); // Set first gift date
+      console.log(`Subscription created: ${donation.stripeSubscriptionId}`);
+
+      // Get payment method details from the subscription
+      let paymentMethod: { cardBrand?: string; last4?: string } = {};
+      try {
+        const { stripe } = await import("../services/stripeService");
+        const subscription = await stripe.subscriptions.retrieve(
+          donation.stripeSubscriptionId as string,
+          { expand: ["default_payment_method"] }
+        );
+
+        const defaultPaymentMethod = subscription.default_payment_method;
+        if (
+          defaultPaymentMethod &&
+          typeof defaultPaymentMethod === "object" &&
+          "card" in defaultPaymentMethod
+        ) {
+          const card = (
+            defaultPaymentMethod as {
+              card?: { brand?: string; last4?: string };
+            }
+          ).card;
+          if (card) {
+            paymentMethod = {
+              cardBrand: card.brand || undefined,
+              last4: card.last4 || undefined,
+            };
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching subscription payment method:", error);
+      }
+
+      // Record the first transaction for the subscription
+      // Note: For subscriptions created via checkout, we might not have a payment_intent yet
+      // The payment_intent will come through invoice.payment_succeeded webhook
+      // So we'll use an empty string as placeholder or skip recording here
+      try {
+        await DonationService.recordTransaction({
+          donationId,
+          userId,
+          amount: donation.amount,
+          type: donation.type,
+          stripePaymentIntentId:
+            (session.payment_intent as string) || `checkout_${session.id}`,
+          paymentMethod,
+        });
+        console.log(
+          `First transaction recorded for subscription donation ${donationId}`
+        );
+      } catch (error) {
+        console.error("Error recording first transaction:", error);
+        // Continue anyway - the invoice.payment_succeeded webhook will record it
+      }
+
+      // If there's an end date, schedule the subscription to cancel at that time
+      if (donation.endDate) {
+        try {
+          const cancelAt = Math.floor(
+            new Date(donation.endDate).getTime() / 1000
+          );
+
+          const { stripe } = await import("../services/stripeService");
+          await stripe.subscriptions.update(
+            donation.stripeSubscriptionId as string,
+            {
+              cancel_at: cancelAt,
+            }
+          );
+          console.log(
+            `Subscription ${donation.stripeSubscriptionId} scheduled to cancel at ${donation.endDate}`
+          );
+        } catch (error) {
+          console.error("Error scheduling subscription cancellation:", error);
+        }
+      }
+    }
+
+    // For payment mode (one-time), record the transaction immediately
+    if (session.mode === "payment" && session.payment_intent) {
+      const paymentIntentId = session.payment_intent as string;
+
+      // Get payment method details
+      let paymentMethod: { cardBrand?: string; last4?: string } = {};
+      try {
+        const paymentIntent = await getPaymentIntent(paymentIntentId);
+        if (paymentIntent.latest_charge) {
+          const chargeId =
+            typeof paymentIntent.latest_charge === "string"
+              ? paymentIntent.latest_charge
+              : paymentIntent.latest_charge.id;
+
+          const { stripe } = await import("../services/stripeService");
+          const charge = await stripe.charges.retrieve(chargeId);
+          const paymentMethodDetails = charge.payment_method_details;
+
+          if (paymentMethodDetails?.card) {
+            paymentMethod = {
+              cardBrand: paymentMethodDetails.card.brand || undefined,
+              last4: paymentMethodDetails.card.last4 || undefined,
+            };
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching payment intent:", error);
+      }
+
+      // Record the transaction
+      await DonationService.recordTransaction({
+        donationId,
+        userId,
+        amount: donation.amount,
+        type: donation.type,
+        stripePaymentIntentId: paymentIntentId,
+        paymentMethod,
+      });
+
+      donation.status = "completed"; // Complete one-time donation after payment
+      console.log(`One-time donation transaction recorded for ${donationId}`);
+    }
+
+    await donation.save();
+    console.log(`Donation ${donationId} updated with Stripe details`);
+  }
+
+  /**
+   * Handle successful invoice payment (recurring donation)
+   */
+  private static async handleInvoicePaymentSucceeded(
+    invoice: Stripe.Invoice
+  ): Promise<void> {
+    // Get subscription ID from invoice
+    const subscriptionId =
+      typeof (invoice as unknown as { subscription?: string | { id?: string } })
+        .subscription === "string"
+        ? (invoice as unknown as { subscription: string }).subscription
+        : (invoice as unknown as { subscription?: { id?: string } })
+            .subscription?.id;
+
+    if (!subscriptionId) {
+      console.log("No subscription ID in invoice, skipping");
+      return;
+    }
+
+    // Find donation by subscription ID
+    const donation = await Donation.findOne({
+      stripeSubscriptionId: subscriptionId,
+    });
+    if (!donation) {
+      console.log(`No donation found for subscription ${subscriptionId}`);
+      return;
+    }
+
+    console.log(`Recording payment for donation ${donation._id}`);
+
+    // Get payment intent ID
+    const paymentIntentId =
+      typeof (
+        invoice as unknown as {
+          payment_intent?: string | { id?: string };
+        }
+      ).payment_intent === "string"
+        ? (invoice as unknown as { payment_intent: string }).payment_intent
+        : (invoice as unknown as { payment_intent?: { id?: string } })
+            .payment_intent?.id || "";
+
+    // Check if this transaction was already recorded (prevent duplicates)
+    if (paymentIntentId) {
+      const existingTransaction = await DonationTransaction.findOne({
+        stripePaymentIntentId: paymentIntentId,
+      });
+      if (existingTransaction) {
+        console.log(
+          `Transaction already recorded for payment intent ${paymentIntentId}, skipping`
+        );
+        return;
+      }
+    }
+
+    // Get payment method details
+    let paymentMethod: { cardBrand?: string; last4?: string } = {};
+    const invoiceCharge =
+      typeof (invoice as unknown as { charge?: string | { id?: string } })
+        .charge === "string"
+        ? (invoice as unknown as { charge: string }).charge
+        : (invoice as unknown as { charge?: { id?: string } }).charge?.id;
+
+    if (invoiceCharge) {
+      try {
+        const chargeId = invoiceCharge;
+
+        const { stripe } = await import("../services/stripeService");
+        const charge = await stripe.charges.retrieve(chargeId);
+        const paymentMethodDetails = charge.payment_method_details;
+
+        if (paymentMethodDetails?.card) {
+          paymentMethod = {
+            cardBrand: paymentMethodDetails.card.brand || undefined,
+            last4: paymentMethodDetails.card.last4 || undefined,
+          };
+        }
+      } catch (error) {
+        console.error("Error fetching charge details:", error);
+      }
+    }
+
+    // Record the transaction
+    await DonationService.recordTransaction({
+      donationId: (donation._id as mongoose.Types.ObjectId).toString(),
+      userId: (donation.userId as mongoose.Types.ObjectId).toString(),
+      amount: donation.amount,
+      type: donation.type,
+      stripePaymentIntentId:
+        typeof (
+          invoice as unknown as {
+            payment_intent?: string | { id?: string };
+          }
+        ).payment_intent === "string"
+          ? (invoice as unknown as { payment_intent: string }).payment_intent
+          : (invoice as unknown as { payment_intent?: { id?: string } })
+              .payment_intent?.id || "",
+      paymentMethod,
+    });
+
+    // Update last gift date
+    donation.lastGiftDate = new Date();
+    await donation.save();
+
+    console.log(`Recurring donation payment recorded for ${donation._id}`);
+  }
+
+  /**
+   * Handle failed invoice payment (recurring donation)
+   */
+  private static async handleInvoicePaymentFailed(
+    invoice: Stripe.Invoice
+  ): Promise<void> {
+    const subscriptionId =
+      typeof (invoice as unknown as { subscription?: string | { id?: string } })
+        .subscription === "string"
+        ? (invoice as unknown as { subscription: string }).subscription
+        : (invoice as unknown as { subscription?: { id?: string } })
+            .subscription?.id;
+
+    if (!subscriptionId) {
+      console.log("No subscription ID in invoice, skipping");
+      return;
+    }
+
+    // Find donation by subscription ID
+    const donation = await Donation.findOne({
+      stripeSubscriptionId: subscriptionId,
+    });
+    if (!donation) {
+      console.log(`No donation found for subscription ${subscriptionId}`);
+      return;
+    }
+
+    console.log(`Payment failed for donation ${donation._id}`);
+
+    // Update donation status to failed
+    donation.status = "failed";
+    await donation.save();
+
+    // TODO: Send notification to user about failed payment
+    console.log(`Donation ${donation._id} marked as failed`);
+  }
+
+  /**
+   * Handle subscription updates (pause, resume, etc.)
+   */
+  private static async handleSubscriptionUpdated(
+    subscription: Stripe.Subscription
+  ): Promise<void> {
+    const donation = await Donation.findOne({
+      stripeSubscriptionId: subscription.id,
+    });
+
+    if (!donation) {
+      console.log(`No donation found for subscription ${subscription.id}`);
+      return;
+    }
+
+    console.log(`Subscription updated for donation ${donation._id}`);
+
+    // Check if subscription is paused
+    if (subscription.pause_collection) {
+      if (donation.status !== "on_hold") {
+        donation.status = "on_hold";
+        console.log(`Donation ${donation._id} paused`);
+      }
+    } else if (subscription.status === "active") {
+      if (donation.status === "on_hold") {
+        donation.status = "active";
+        console.log(`Donation ${donation._id} resumed`);
+      }
+    }
+
+    // Update next payment date if available
+    const currentPeriodEnd = (
+      subscription as unknown as { current_period_end?: number }
+    ).current_period_end;
+    if (currentPeriodEnd) {
+      donation.nextPaymentDate = new Date(currentPeriodEnd * 1000);
+    }
+
+    await donation.save();
+  }
+
+  /**
+   * Handle subscription deletion/cancellation
+   */
+  private static async handleSubscriptionDeleted(
+    subscription: Stripe.Subscription
+  ): Promise<void> {
+    const donation = await Donation.findOne({
+      stripeSubscriptionId: subscription.id,
+    });
+
+    if (!donation) {
+      console.log(`No donation found for subscription ${subscription.id}`);
+      return;
+    }
+
+    console.log(`Subscription deleted for donation ${donation._id}`);
+
+    // Mark donation as cancelled
+    donation.status = "cancelled";
+    await donation.save();
+
+    console.log(`Donation ${donation._id} marked as cancelled`);
   }
 }

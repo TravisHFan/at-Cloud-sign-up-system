@@ -22,6 +22,7 @@ import purchaseRoutes from "./purchases"; // Program purchases and checkout
 import webhookRoutes from "./webhooks"; // Stripe webhooks
 import promoCodeRoutes from "./promoCodes"; // Promo code system
 import adminPurchaseRoutes from "./admin/purchases"; // Admin payment records
+import donationRoutes from "./donations"; // Donation system
 
 const router = Router();
 
@@ -50,6 +51,7 @@ router.use("/purchases", purchaseRoutes);
 router.use("/webhooks", webhookRoutes);
 router.use("/promo-codes", promoCodeRoutes);
 router.use("/admin/purchases", adminPurchaseRoutes);
+router.use("/donations", donationRoutes);
 
 // Health check endpoint
 router.get("/health", (req, res) => {

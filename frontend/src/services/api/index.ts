@@ -28,6 +28,7 @@ export * from "./messages.api";
 export * from "./analytics.api";
 export * from "./search.api";
 export * from "./assignments.api";
+export * from "./donations.api";
 
 // Import services for backward compatibility exports
 import { authService } from "./auth.api";

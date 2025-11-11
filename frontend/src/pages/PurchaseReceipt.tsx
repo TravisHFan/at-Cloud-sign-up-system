@@ -77,12 +77,16 @@ export default function PurchaseReceipt() {
         setError(null);
         const data = await purchaseService.getPurchaseReceipt(id);
         setReceipt(data as PurchaseReceipt);
-      } catch (err: any) {
+      } catch (err) {
         console.error("Error loading receipt:", err);
         // Extract the error message from the API response if available
+        const error = err as {
+          response?: { data?: { message?: string } };
+          message?: string;
+        };
         const errorMessage =
-          err?.response?.data?.message ||
-          err?.message ||
+          error?.response?.data?.message ||
+          error?.message ||
           "Failed to load receipt. Please try again.";
         setError(errorMessage);
       } finally {

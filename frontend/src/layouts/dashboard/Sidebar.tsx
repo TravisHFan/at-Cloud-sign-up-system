@@ -19,6 +19,7 @@ import {
   DocumentDuplicateIcon,
   TicketIcon,
   CreditCardIcon,
+  HeartIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -196,6 +197,13 @@ export default function Sidebar({
       name: "Feedback",
       href: "/dashboard/feedback",
       icon: ChatBubbleLeftRightIcon,
+    });
+
+    // Add Donate for all users (between Feedback and Log Out)
+    baseItems.push({
+      name: "Donate",
+      href: "/dashboard/donate",
+      icon: HeartIcon,
     });
 
     baseItems.push({
