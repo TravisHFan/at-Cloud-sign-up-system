@@ -427,7 +427,10 @@ describe("PurchaseReceipt Component", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/failed to load receipt/i)).toBeInTheDocument();
+      // Check for the error heading
+      expect(screen.getByText("Error Loading Receipt")).toBeInTheDocument();
+      // Check for the error message
+      expect(screen.getByText("Receipt not found")).toBeInTheDocument();
     });
   });
 });

@@ -323,13 +323,20 @@ describe("Role-based registration limits per event", () => {
 
     it("allows unlimited role registrations (tests 10 roles)", async () => {
       // Register for all 10 roles (should all succeed)
+      // Small delay between requests to avoid connection pool issues
       for (let i = 0; i < 10; i++) {
         const res = await request(app)
           .post(`/api/events/${eventId}/register`)
           .set("Authorization", `Bearer ${token}`)
+          .set("Connection", "close") // Force new connection each time
           .send({ roleId: roleIds[i] })
           .expect(200);
         expect(res.body.success).toBe(true);
+
+        // Small delay to prevent overwhelming the server
+        if (i < 9) {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
       }
     });
   });
@@ -375,13 +382,20 @@ describe("Role-based registration limits per event", () => {
 
     it("allows unlimited role registrations (tests 10 roles)", async () => {
       // Register for all 10 roles (should all succeed)
+      // Small delay between requests to avoid connection pool issues
       for (let i = 0; i < 10; i++) {
         const res = await request(app)
           .post(`/api/events/${eventId}/register`)
           .set("Authorization", `Bearer ${token}`)
+          .set("Connection", "close") // Force new connection each time
           .send({ roleId: roleIds[i] })
           .expect(200);
         expect(res.body.success).toBe(true);
+
+        // Small delay to prevent overwhelming the server
+        if (i < 9) {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
       }
     });
   });

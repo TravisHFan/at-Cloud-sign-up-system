@@ -196,8 +196,8 @@ describe("IncomeHistory Component", () => {
       );
 
       await waitFor(() => {
-        // Total Revenue
-        expect(screen.getByText("Total Revenue")).toBeInTheDocument();
+        // Net Revenue (changed from Total Revenue)
+        expect(screen.getByText("Net Revenue")).toBeInTheDocument();
         expect(screen.getByText("$1,250.00")).toBeInTheDocument();
 
         // Unique Buyers
