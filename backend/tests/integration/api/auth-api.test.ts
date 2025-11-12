@@ -563,7 +563,7 @@ describe("Authentication API Integration Tests", () => {
   describe("Rate Limiting", () => {
     // Skip this test as it's flaky and causes HTTP parse errors
     // Rate limiting is tested manually in production and staging environments
-    it.skip("should enforce rate limits on login attempts", async () => {
+    it("should enforce rate limits on login attempts", async () => {
       // Set environment to force rate limiting
       const originalEnv = process.env.NODE_ENV;
       const originalRateLimit = process.env.ENABLE_RATE_LIMITING;
@@ -607,7 +607,7 @@ describe("Authentication API Integration Tests", () => {
       }
     });
 
-    it.skip("should enforce rate limits on registration attempts", async () => {
+    it("should enforce rate limits on registration attempts", async () => {
       const promises = Array.from({ length: 10 }, (_, i) =>
         request(app)
           .post("/api/auth/register")
@@ -633,4 +633,4 @@ describe("Authentication API Integration Tests", () => {
       expect(successfulResponses.length + rateLimitedResponses.length).toBe(10);
     });
   });
-}, 30000); // 30 second timeout for all auth tests (bcrypt password hashing is slow)
+});

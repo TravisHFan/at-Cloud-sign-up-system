@@ -6,11 +6,14 @@ const disableCoverageThresholds =
 
 export default defineConfig({
   test: {
+    // 30 seconds timeout for integration tests with bcrypt operations
+    // Bcrypt hashing is intentionally slow (~20s) for security
+    testTimeout: 30000,
     environment: "node",
     globals: true,
     setupFiles: [
       "./tests/config/setup.ts",
-      "./vitest.setup.ts", // optional eager hooks
+      "./vitest.setup.ts",
       "./tests/config/integrationDBSetup.ts",
     ],
     include: [
@@ -45,7 +48,6 @@ export default defineConfig({
         "**/*.d.ts",
       ],
     },
-    testTimeout: 30000,
     globalSetup: "./tests/config/globalSetup.ts",
     // Run tests sequentially to avoid database conflicts
     // NOTE: Some unit tests may experience mock pollution when run in full suite
