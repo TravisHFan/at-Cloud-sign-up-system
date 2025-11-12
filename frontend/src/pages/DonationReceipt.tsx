@@ -60,6 +60,10 @@ export default function DonationReceipt() {
           setSelectedYears([currentYear]);
         } else if (years.length > 0) {
           setSelectedYears([years[0]]);
+        } else {
+          // No years available - stop loading and show appropriate message
+          setLoading(false);
+          setError("No donation history available");
         }
       } catch (err) {
         console.error("Failed to fetch available years:", err);
@@ -73,7 +77,8 @@ export default function DonationReceipt() {
   // Fetch receipt data when selected years change
   useEffect(() => {
     if (selectedYears.length === 0) {
-      setLoading(false);
+      // Keep loading=true during initial mount while years are being fetched
+      // Don't change loading state here
       return;
     }
 
