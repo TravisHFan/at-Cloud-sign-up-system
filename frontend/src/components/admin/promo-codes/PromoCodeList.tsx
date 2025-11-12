@@ -3,10 +3,13 @@ import {
   ClipboardDocumentIcon,
   XMarkIcon,
   CheckIcon,
+  EllipsisVerticalIcon,
+  TrashIcon,
 } from "@heroicons/react/24/outline";
 import { CheckIcon as CheckIconSolid } from "@heroicons/react/24/solid";
 import { formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
+import { useState, useRef } from "react";
 
 // Type definition for PromoCodeResponse (should match AdminPromoCodes.tsx)
 export interface PromoCodeResponse {
@@ -42,6 +45,7 @@ export interface PromoCodeListProps {
   onCopyCode: (code: string) => void;
   onDeactivate: (id: string, code: string) => void;
   onReactivate: (id: string, code: string) => void;
+  onDelete: (id: string, code: string) => void;
   copiedCode: string | null;
   searchQuery?: string;
   typeFilter?: string;
@@ -115,12 +119,19 @@ export default function PromoCodeList({
   onCopyCode,
   onDeactivate,
   onReactivate,
+  onDelete,
   copiedCode,
   searchQuery,
   typeFilter,
   statusFilter,
 }: PromoCodeListProps) {
   const navigate = useNavigate();
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [dropdownPosition, setDropdownPosition] = useState({
+    top: 0,
+    right: 0,
+  });
+  const buttonRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
 
   // Loading State
   if (loading) {
@@ -230,57 +241,118 @@ export default function PromoCodeList({
                   {formatExpiry(code.expiresAt)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <div className="flex items-center justify-end gap-2">
-                    {/* Copy Button */}
+                  <div className="flex items-center justify-end">
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation(); // Prevent row click
-                        onCopyCode(code.code);
+                      ref={(el) => {
+                        buttonRefs.current[code._id] = el;
                       }}
-                      className="inline-flex items-center gap-1 px-3 py-1 text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded transition-colors"
-                      title="Copy code"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (openDropdownId === code._id) {
+                          setOpenDropdownId(null);
+                        } else {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          setDropdownPosition({
+                            top: rect.bottom + window.scrollY + 4,
+                            right:
+                              window.innerWidth - rect.right + window.scrollX,
+                          });
+                          setOpenDropdownId(code._id);
+                        }
+                      }}
+                      className="inline-flex items-center px-3 py-1 text-gray-600 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                      title="Actions"
                     >
-                      {copiedCode === code.code ? (
-                        <>
-                          <CheckIconSolid className="w-4 h-4" />
-                          Copied
-                        </>
-                      ) : (
-                        <>
-                          <ClipboardDocumentIcon className="w-4 h-4" />
-                          Copy
-                        </>
-                      )}
+                      <EllipsisVerticalIcon className="w-5 h-5" />
                     </button>
 
-                    {/* Deactivate Button - only show for active, unused codes */}
-                    {code.isActive && !code.isUsed && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation(); // Prevent row click
-                          onDeactivate(code._id, code.code);
-                        }}
-                        className="inline-flex items-center gap-1 px-3 py-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
-                        title="Deactivate code"
-                      >
-                        <XMarkIcon className="w-4 h-4" />
-                        Deactivate
-                      </button>
-                    )}
+                    {/* Dropdown Menu */}
+                    {openDropdownId === code._id && (
+                      <>
+                        {/* Backdrop to close dropdown */}
+                        <div
+                          className="fixed inset-0 z-30"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenDropdownId(null);
+                          }}
+                        />
 
-                    {/* Reactivate Button - only show for inactive, unused codes */}
-                    {!code.isActive && !code.isUsed && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation(); // Prevent row click
-                          onReactivate(code._id, code.code);
-                        }}
-                        className="inline-flex items-center gap-1 px-3 py-1 text-green-600 hover:text-green-700 hover:bg-green-50 rounded transition-colors"
-                        title="Reactivate code"
-                      >
-                        <CheckIcon className="w-4 h-4" />
-                        Reactivate
-                      </button>
+                        {/* Dropdown Content */}
+                        <div
+                          className="fixed w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-40"
+                          style={{
+                            top: `${dropdownPosition.top}px`,
+                            right: `${dropdownPosition.right}px`,
+                          }}
+                        >
+                          {/* Copy */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onCopyCode(code.code);
+                              setOpenDropdownId(null);
+                            }}
+                            className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                          >
+                            {copiedCode === code.code ? (
+                              <>
+                                <CheckIconSolid className="w-4 h-4 text-green-600" />
+                                <span className="text-green-600">Copied!</span>
+                              </>
+                            ) : (
+                              <>
+                                <ClipboardDocumentIcon className="w-4 h-4" />
+                                <span>Copy Code</span>
+                              </>
+                            )}
+                          </button>
+
+                          {/* Deactivate/Reactivate */}
+                          {!code.isUsed && (
+                            <>
+                              {code.isActive ? (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onDeactivate(code._id, code.code);
+                                    setOpenDropdownId(null);
+                                  }}
+                                  className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                >
+                                  <XMarkIcon className="w-4 h-4" />
+                                  <span>Deactivate</span>
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onReactivate(code._id, code.code);
+                                    setOpenDropdownId(null);
+                                  }}
+                                  className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-green-600 hover:bg-green-50 transition-colors"
+                                >
+                                  <CheckIcon className="w-4 h-4" />
+                                  <span>Reactivate</span>
+                                </button>
+                              )}
+                            </>
+                          )}
+
+                          {/* Delete */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDelete(code._id, code.code);
+                              setOpenDropdownId(null);
+                            }}
+                            className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors border-t border-gray-100"
+                          >
+                            <TrashIcon className="w-4 h-4" />
+                            <span>Delete</span>
+                          </button>
+                        </div>
+                      </>
                     )}
                   </div>
                 </td>

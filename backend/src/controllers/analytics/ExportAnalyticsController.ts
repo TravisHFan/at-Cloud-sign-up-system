@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
 import { User, Event, Registration, GuestRegistration } from "../../models";
+import Purchase from "../../models/Purchase";
+import DonationTransaction from "../../models/DonationTransaction";
 import { hasPermission, PERMISSIONS } from "../../utils/roleUtils";
 import { CorrelatedLogger } from "../../services/CorrelatedLogger";
 import * as XLSX from "xlsx";
@@ -329,6 +331,44 @@ export default class ExportAnalyticsController {
           };
           notes?: string;
         }>,
+        // Programs (Purchases)
+        programs: (await safeFetch(
+          Purchase as unknown,
+          {},
+          {
+            sort: { purchaseDate: -1 },
+            limit: maxRows,
+            strict: false,
+          }
+        )) as Array<{
+          userId?: unknown;
+          programId?: unknown;
+          finalPrice?: number;
+          status?: string;
+          purchaseDate?: string | Date;
+          isClassRep?: boolean;
+          isEarlyBird?: boolean;
+          promoCode?: string;
+          stripePaymentIntentId?: string;
+        }>,
+        // Donations (Transactions)
+        donations: (await safeFetch(
+          DonationTransaction as unknown,
+          {},
+          {
+            sort: { giftDate: -1 },
+            limit: maxRows,
+            strict: false,
+          }
+        )) as Array<{
+          userId?: unknown;
+          donationId?: unknown;
+          amount?: number;
+          type?: string;
+          status?: string;
+          giftDate?: string | Date;
+          stripePaymentIntentId?: string;
+        }>,
         timestamp: new Date().toISOString(),
         meta: {
           filteredFrom: fromDate.toISOString(),
@@ -412,6 +452,8 @@ export default class ExportAnalyticsController {
         if (data.guestRegistrations && data.guestRegistrations.length > 0) {
           csv += `GuestRegistrations,${data.guestRegistrations.length}\n`;
         }
+        csv += `Programs,${data.programs.length}\n`;
+        csv += `Donations,${data.donations.length}\n`;
         res.send(csv);
       } else if (format === "xlsx") {
         // XLSX export
@@ -428,6 +470,8 @@ export default class ExportAnalyticsController {
             data.guestRegistrations.length,
             data.timestamp,
           ],
+          ["Total Programs", data.programs.length, data.timestamp],
+          ["Total Donations", data.donations.length, data.timestamp],
         ];
         const overviewWS = XLSX.utils.aoa_to_sheet(overviewData);
         XLSX.utils.book_append_sheet(workbook, overviewWS, "Overview");
@@ -551,6 +595,62 @@ export default class ExportAnalyticsController {
             guestRegsWS,
             "Guest Registrations"
           );
+        }
+
+        // Programs sheet (Purchases)
+        if (data.programs && data.programs.length > 0) {
+          const programsData = [
+            [
+              "User ID",
+              "Program ID",
+              "Final Price (cents)",
+              "Status",
+              "Purchase Date",
+              "Class Rep",
+              "Early Bird",
+              "Promo Code",
+              "Stripe Payment Intent",
+            ],
+            ...data.programs.map((p) => [
+              p.userId ? String(p.userId) : "",
+              p.programId ? String(p.programId) : "",
+              p.finalPrice ?? 0,
+              p.status ?? "",
+              p.purchaseDate ? new Date(p.purchaseDate).toLocaleString() : "",
+              p.isClassRep ? "Yes" : "No",
+              p.isEarlyBird ? "Yes" : "No",
+              p.promoCode ?? "",
+              p.stripePaymentIntentId ?? "",
+            ]),
+          ];
+          const programsWS = XLSX.utils.aoa_to_sheet(programsData);
+          XLSX.utils.book_append_sheet(workbook, programsWS, "Programs");
+        }
+
+        // Donations sheet (Transactions)
+        if (data.donations && data.donations.length > 0) {
+          const donationsData = [
+            [
+              "User ID",
+              "Donation ID",
+              "Amount (cents)",
+              "Type",
+              "Status",
+              "Gift Date",
+              "Stripe Payment Intent",
+            ],
+            ...data.donations.map((d) => [
+              d.userId ? String(d.userId) : "",
+              d.donationId ? String(d.donationId) : "",
+              d.amount ?? 0,
+              d.type ?? "",
+              d.status ?? "",
+              d.giftDate ? new Date(d.giftDate).toLocaleString() : "",
+              d.stripePaymentIntentId ?? "",
+            ]),
+          ];
+          const donationsWS = XLSX.utils.aoa_to_sheet(donationsData);
+          XLSX.utils.book_append_sheet(workbook, donationsWS, "Donations");
         }
 
         // Generate buffer

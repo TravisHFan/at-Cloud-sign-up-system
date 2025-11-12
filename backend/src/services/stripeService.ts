@@ -435,9 +435,9 @@ export async function createDonationSubscription(params: {
   const startTimestamp = Math.floor(new Date(startDate).getTime() / 1000);
   const now = Math.floor(Date.now() / 1000);
 
-  // Check if start date is today or in the past
-  // If so, don't use billing_cycle_anchor (let it start immediately after payment)
+  // Check if start date is in the future (at least 1 hour from now)
   // Stripe requires billing_cycle_anchor to be in the future
+  // If start date is today or in the past, don't use anchor - Stripe will bill immediately
   const useAnchor = startTimestamp > now + 3600; // At least 1 hour in the future
 
   const sessionParams: Stripe.Checkout.SessionCreateParams = {
@@ -463,6 +463,8 @@ export async function createDonationSubscription(params: {
       donationType: "recurring",
     },
     subscription_data: {
+      // Only set billing_cycle_anchor if start date is in the future
+      // Otherwise, Stripe will start the subscription immediately after checkout
       ...(useAnchor ? { billing_cycle_anchor: startTimestamp } : {}),
       metadata: {
         donationId,

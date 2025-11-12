@@ -190,6 +190,15 @@ app.use("/uploads", express.static(staticUploadPath));
 // Routes
 app.use("/api", routes);
 
+// Root endpoint - simple health check for infrastructure probes
+app.get("/", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    service: "atcloud-backend",
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // Root short redirect: /s/:key -> 302 to public event slug page
 app.get("/s/:key", async (req, res) => {
   try {

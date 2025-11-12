@@ -1,12 +1,20 @@
 import { useState, useEffect } from "react";
-import { PlusIcon } from "@heroicons/react/24/outline";
+import { useNavigate } from "react-router-dom";
+import {
+  PlusIcon,
+  DocumentTextIcon,
+  ArrowRightOnRectangleIcon,
+} from "@heroicons/react/24/outline";
 import GivingTab from "../components/donations/GivingTab";
 import ScheduledTab from "../components/donations/ScheduledTab";
 import GiveModal from "../components/donations/GiveModal";
+import { useAuth } from "../hooks/useAuth";
 
 type TabType = "giving" | "scheduled";
 
 export default function DonationPage() {
+  const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>("giving");
   const [isGiveModalOpen, setIsGiveModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -39,7 +47,7 @@ export default function DonationPage() {
       </div>
 
       {/* Give Button */}
-      <div>
+      <div className="flex gap-3">
         <button
           onClick={() => setIsGiveModalOpen(true)}
           className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm hover:shadow-md"
@@ -47,6 +55,29 @@ export default function DonationPage() {
           <PlusIcon className="w-5 h-5" />
           <span>Give</span>
         </button>
+
+        <button
+          onClick={() => navigate("/dashboard/donation-receipt")}
+          className="bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm hover:shadow-md"
+        >
+          <DocumentTextIcon className="w-5 h-5" />
+          <span>Get Receipt</span>
+        </button>
+
+        {/* Login Button - Only show if user is not logged in */}
+        {!currentUser && (
+          <button
+            onClick={() => {
+              // Store return URL in sessionStorage
+              sessionStorage.setItem("returnUrl", "/dashboard/donate");
+              navigate("/login");
+            }}
+            className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm hover:shadow-md ml-auto"
+          >
+            <ArrowRightOnRectangleIcon className="w-5 h-5" />
+            <span>Login for History</span>
+          </button>
+        )}
       </div>
 
       {/* Tabs */}

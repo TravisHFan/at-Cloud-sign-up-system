@@ -51,7 +51,13 @@ export default function BundleConfigManager({
     try {
       setLoading(true);
       setError("");
-      const data = await apiClient.getBundleDiscountConfig();
+
+      // Ensure minimum loading time for better UX
+      const [data] = await Promise.all([
+        apiClient.getBundleDiscountConfig(),
+        new Promise((resolve) => setTimeout(resolve, 300)), // Minimum 300ms display
+      ]);
+
       setConfig(data.config);
       setFormEnabled(data.config.enabled);
       setFormAmount(data.config.discountAmount);
@@ -107,7 +113,7 @@ export default function BundleConfigManager({
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <LoadingSpinner size="lg" />
+        <LoadingSpinner size="lg" inline />
       </div>
     );
   }

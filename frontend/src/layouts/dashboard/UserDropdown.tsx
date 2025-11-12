@@ -90,6 +90,13 @@ export default function UserDropdown({ user }: UserDropdownProps) {
               Profile
             </Link>
             <Link
+              to="/dashboard/change-password"
+              className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              onClick={() => setDropdownOpen(false)}
+            >
+              Change Password
+            </Link>
+            <Link
               to="/dashboard/promo-codes"
               className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
               onClick={() => setDropdownOpen(false)}
@@ -104,11 +111,11 @@ export default function UserDropdown({ user }: UserDropdownProps) {
               Purchase History
             </Link>
             <Link
-              to="/dashboard/change-password"
+              to="/dashboard/donate"
               className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
               onClick={() => setDropdownOpen(false)}
             >
-              Change Password
+              Donate
             </Link>
             <button
               className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"

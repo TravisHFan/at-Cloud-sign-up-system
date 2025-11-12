@@ -59,6 +59,18 @@ export function useLogin() {
       const result = await login(data);
 
       if (result.success) {
+        // Check for return URL in sessionStorage (set by pages like DonationPage)
+        const returnUrl = sessionStorage.getItem("returnUrl");
+        if (returnUrl) {
+          sessionStorage.removeItem("returnUrl"); // Clean up
+          notification.success("Welcome back! Redirecting you...", {
+            title: "Login Successful",
+            autoCloseDelay: 2000,
+          });
+          navigate(returnUrl, { replace: true });
+          return;
+        }
+
         type From = { pathname?: string; search?: string };
         type StateWithFrom = { from?: From };
         const stateUnknown: unknown = location.state;

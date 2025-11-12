@@ -1,7 +1,7 @@
 {
   "name": "frontend",
   "private": true,
-  "version": "2.25.0",
+  "version": "2.26.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -25,10 +25,12 @@
     "@hookform/resolvers": "^5.1.1",
     "@stripe/stripe-js": "^8.0.0",
     "date-fns": "^2.30.0",
+    "html2pdf.js": "^0.12.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-hook-form": "^7.60.0",
     "react-router-dom": "^7.6.3",
+    "recharts": "^3.4.1",
     "socket.io-client": "^4.8.1",
     "xlsx": "^0.18.5",
     "yup": "^1.6.1"
@@ -38,6 +40,7 @@
     "@testing-library/jest-dom": "^6.6.4",
     "@testing-library/react": "^16.0.0",
     "@testing-library/user-event": "^14.6.1",
+    "@types/html2pdf.js": "^0.10.0",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@types/react-router-dom": "^5.3.3",

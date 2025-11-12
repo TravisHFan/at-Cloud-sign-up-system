@@ -49,6 +49,19 @@ class PurchaseStatsController {
         0
       );
 
+      // Calculate pending and failed revenue
+      const pendingPurchases = await Purchase.find({ status: "pending" });
+      const pendingRevenue = pendingPurchases.reduce(
+        (sum, purchase) => sum + purchase.finalPrice,
+        0
+      );
+
+      const failedPurchases = await Purchase.find({ status: "failed" });
+      const failedRevenue = failedPurchases.reduce(
+        (sum, purchase) => sum + purchase.finalPrice,
+        0
+      );
+
       // Net revenue = total revenue - refunded revenue
       const netRevenue = totalRevenue;
 
@@ -136,7 +149,9 @@ class PurchaseStatsController {
             totalRevenue: netRevenue, // in cents - excluding refunded
             totalPurchases: statusMap.completed || 0,
             pendingPurchases: statusMap.pending || 0,
+            pendingRevenue, // in cents - pending amount
             failedPurchases: statusMap.failed || 0,
+            failedRevenue, // in cents - failed amount
             refundedPurchases:
               (statusMap.refunded || 0) + (statusMap.refund_processing || 0),
             refundedRevenue, // in cents - total refunded amount

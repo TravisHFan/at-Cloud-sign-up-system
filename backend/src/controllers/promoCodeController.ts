@@ -132,4 +132,15 @@ export class PromoCodeController {
     );
     return ReactivationController.reactivatePromoCode(req, res);
   }
+
+  /**
+   * Delete a promo code (Admin only)
+   * DELETE /api/promo-codes/:id
+   */
+  static async deletePromoCode(req: Request, res: Response): Promise<void> {
+    const { default: DeletionController } = await import(
+      "./promoCodes/DeletionController"
+    );
+    return DeletionController.deletePromoCode(req, res);
+  }
 }

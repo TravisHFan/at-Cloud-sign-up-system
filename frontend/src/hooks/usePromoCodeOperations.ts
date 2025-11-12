@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { apiClient } from "../services/api";
+import { promoCodesService } from "../services/api/promoCodes.api";
 import type { PromoCodeResponse } from "../components/admin/promo-codes/PromoCodeList";
 
 export type PromoCodeTypeFilter =
@@ -25,10 +25,12 @@ export interface UsePromoCodeOperationsReturn {
   fetchCodes: () => Promise<void>;
   deactivateCode: (id: string) => Promise<void>;
   reactivateCode: (id: string) => Promise<void>;
+  deleteCode: (id: string) => Promise<void>;
 
   // Loading states for operations
   isDeactivating: boolean;
   isReactivating: boolean;
+  isDeleting: boolean;
 
   // Copy functionality
   copiedCode: string | null;
@@ -63,6 +65,7 @@ export function usePromoCodeOperations(
   // Operation loading states
   const [isDeactivating, setIsDeactivating] = useState(false);
   const [isReactivating, setIsReactivating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Copy feedback state
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
@@ -88,7 +91,7 @@ export function usePromoCodeOperations(
       if (statusFilter !== "all") filters.status = statusFilter;
       if (searchQuery.trim()) filters.search = searchQuery.trim();
 
-      const response = await apiClient.getAllPromoCodes(filters);
+      const response = await promoCodesService.getAllPromoCodes(filters);
 
       setCodes(response.codes);
       setTotalPages(response.pagination.totalPages);
@@ -113,7 +116,7 @@ export function usePromoCodeOperations(
     async (id: string) => {
       try {
         setIsDeactivating(true);
-        await apiClient.deactivatePromoCode(id);
+        await promoCodesService.deactivatePromoCode(id);
         await fetchCodes(); // Refresh list
       } catch (err) {
         const errorMessage =
@@ -131,7 +134,7 @@ export function usePromoCodeOperations(
     async (id: string) => {
       try {
         setIsReactivating(true);
-        await apiClient.reactivatePromoCode(id);
+        await promoCodesService.reactivatePromoCode(id);
         await fetchCodes(); // Refresh list
       } catch (err) {
         const errorMessage =
@@ -139,6 +142,24 @@ export function usePromoCodeOperations(
         throw new Error(errorMessage);
       } finally {
         setIsReactivating(false);
+      }
+    },
+    [fetchCodes]
+  );
+
+  // Delete code
+  const deleteCode = useCallback(
+    async (id: string) => {
+      try {
+        setIsDeleting(true);
+        await promoCodesService.deletePromoCode(id);
+        await fetchCodes(); // Refresh list
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to delete code";
+        throw new Error(errorMessage);
+      } finally {
+        setIsDeleting(false);
       }
     },
     [fetchCodes]
@@ -172,10 +193,12 @@ export function usePromoCodeOperations(
     fetchCodes,
     deactivateCode,
     reactivateCode,
+    deleteCode,
 
     // Loading states
     isDeactivating,
     isReactivating,
+    isDeleting,
 
     // Copy functionality
     copiedCode,

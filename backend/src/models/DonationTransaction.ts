@@ -90,6 +90,7 @@ DonationTransactionSchema.index({ userId: 1, status: 1 });
 DonationTransactionSchema.index({ donationId: 1, createdAt: -1 });
 
 const DonationTransaction: Model<IDonationTransaction> =
+  mongoose.models.DonationTransaction ||
   mongoose.model<IDonationTransaction>(
     "DonationTransaction",
     DonationTransactionSchema

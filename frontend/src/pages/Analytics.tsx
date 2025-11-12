@@ -1,5 +1,5 @@
 // Analytics Dashboard with robust loading skeletons to avoid misleading zero values
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { useUserData } from "../hooks/useUserData";
 import { useRoleStats } from "../hooks/useRoleStats";
@@ -17,10 +17,20 @@ import {
   calculateOccupationAnalytics,
 } from "../utils/analyticsCalculations";
 import { AnalyticsOverviewCards } from "../components/analytics/AnalyticsOverviewCards";
+import { FinancialHealthCards } from "../components/analytics/FinancialHealthCards";
+import { FinancialTrendsChart } from "../components/analytics/FinancialTrendsChart";
 import { EventStatisticsCards } from "../components/analytics/EventStatisticsCards";
 import { RoleFormatDistribution } from "../components/analytics/RoleFormatDistribution";
 import { UserEngagementSection } from "../components/analytics/UserEngagementSection";
 import { ParticipantDemographics } from "../components/analytics/ParticipantDemographics";
+import { ProgramAnalyticsSection } from "../components/analytics/ProgramAnalyticsSection";
+import { DonationAnalyticsSection } from "../components/analytics/DonationAnalyticsSection";
+import {
+  analyticsService,
+  type ProgramAnalytics,
+  type DonationAnalytics,
+  type FinancialSummary,
+} from "../services/api/analytics.api";
 
 export default function Analytics() {
   const { currentUser } = useAuth();
@@ -36,6 +46,10 @@ export default function Analytics() {
   const roleStats = useRoleStats(users);
 
   const hasAnalyticsAccess = hasAnalyticsAccessPre;
+  // Financial data visibility: Only Super Admin and Administrator
+  const hasFinancialAccess =
+    !!currentUser &&
+    ["Super Admin", "Administrator"].includes(currentUser.role);
   const {
     eventAnalytics: backendEventAnalytics,
     loading: backendLoading,
@@ -44,6 +58,63 @@ export default function Analytics() {
     enabled: hasAnalyticsAccess,
     suppressAuthErrors: !hasAnalyticsAccess,
   });
+
+  // Financial analytics state
+  const [financialSummary, setFinancialSummary] =
+    useState<FinancialSummary | null>(null);
+  const [programAnalytics, setProgramAnalytics] =
+    useState<ProgramAnalytics | null>(null);
+  const [donationAnalytics, setDonationAnalytics] =
+    useState<DonationAnalytics | null>(null);
+  const [financialLoading, setFinancialLoading] = useState(true);
+  const [financialError, setFinancialError] = useState<string | null>(null);
+
+  // Export dropdown state
+  const [showExportMenu, setShowExportMenu] = useState(false);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (showExportMenu) setShowExportMenu(false);
+    };
+
+    if (showExportMenu) {
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
+    }
+  }, [showExportMenu]);
+
+  // Fetch financial analytics data
+  useEffect(() => {
+    if (!hasFinancialAccess) {
+      setFinancialLoading(false);
+      return;
+    }
+
+    const fetchFinancialData = async () => {
+      try {
+        setFinancialLoading(true);
+        setFinancialError(null);
+
+        const [summary, programs, donations] = await Promise.all([
+          analyticsService.getFinancialSummary(),
+          analyticsService.getProgramAnalytics(),
+          analyticsService.getDonationAnalytics(),
+        ]);
+
+        setFinancialSummary(summary);
+        setProgramAnalytics(programs);
+        setDonationAnalytics(donations);
+      } catch (err) {
+        console.error("Error fetching financial analytics:", err);
+        setFinancialError("Failed to load financial analytics");
+      } finally {
+        setFinancialLoading(false);
+      }
+    };
+
+    fetchFinancialData();
+  }, [hasFinancialAccess]);
 
   const isEventData = (item: unknown): item is EventData => {
     if (!item || typeof item !== "object") return false;
@@ -134,8 +205,11 @@ export default function Analytics() {
   }
 
   const canExport = hasAnalyticsAccess;
-  const handleExport = () => {
-    if (canExport) exportData("xlsx");
+  const handleExport = (format: "xlsx" | "csv" | "json" = "xlsx") => {
+    if (canExport) {
+      exportData(format);
+      setShowExportMenu(false);
+    }
   };
 
   // Only gate skeletons on backend analytics loading. Even if users array is empty (e.g. in tests
@@ -151,25 +225,74 @@ export default function Analytics() {
             Analytics Dashboard
           </h1>
           {canExport && (
-            <button
-              onClick={handleExport}
-              className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors"
-            >
-              <svg
-                className="w-4 h-4 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+            <div className="relative">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowExportMenu(!showExportMenu);
+                }}
+                className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-              Export Data
-            </button>
+                <svg
+                  className="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                Export Data
+                <svg
+                  className="w-4 h-4 ml-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </button>
+
+              {/* Dropdown Menu */}
+              {showExportMenu && (
+                <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+                  <div className="py-1">
+                    <button
+                      onClick={() => handleExport("xlsx")}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      <div className="font-medium">Export All (Excel)</div>
+                      <div className="text-xs text-gray-500">
+                        Users, Events, Programs, Donations
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => handleExport("csv")}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      <div className="font-medium">Export Summary (CSV)</div>
+                      <div className="text-xs text-gray-500">Counts only</div>
+                    </button>
+                    <button
+                      onClick={() => handleExport("json")}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      <div className="font-medium">Export All (JSON)</div>
+                      <div className="text-xs text-gray-500">Complete data</div>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         </div>
 
@@ -183,6 +306,53 @@ export default function Analytics() {
             activeParticipants={engagementMetrics.uniqueParticipants}
             averageSignupRate={eventAnalytics.averageSignupRate}
           />
+        )}
+
+        {/* Financial Health Overview - Super Admin & Administrator only */}
+        {hasFinancialAccess && (
+          <>
+            {financialLoading ? (
+              <AnalyticsOverviewLoadingState />
+            ) : financialError ? (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-8">
+                <p className="text-sm text-red-600">{financialError}</p>
+              </div>
+            ) : (
+              financialSummary && (
+                <FinancialHealthCards
+                  totalRevenue={financialSummary.totalRevenue}
+                  programRevenue={financialSummary.programs.revenue}
+                  programPurchases={financialSummary.programs.purchases}
+                  donationRevenue={financialSummary.donations.revenue}
+                  donationGifts={financialSummary.donations.gifts}
+                  last30DaysRevenue={financialSummary.last30Days.revenue}
+                  last30DaysPercentage={financialSummary.last30Days.percentage}
+                  growthRate={financialSummary.growthRate}
+                />
+              )
+            )}
+
+            {/* Financial Trends Chart */}
+            <FinancialTrendsChart />
+          </>
+        )}
+
+        {/* Program Analytics */}
+        {financialLoading ? (
+          <AnalyticsCardSectionLoadingState cardCount={2} itemCount={5} />
+        ) : (
+          programAnalytics && (
+            <ProgramAnalyticsSection analytics={programAnalytics} />
+          )
+        )}
+
+        {/* Donation Analytics */}
+        {financialLoading ? (
+          <AnalyticsCardSectionLoadingState cardCount={2} itemCount={5} />
+        ) : (
+          donationAnalytics && (
+            <DonationAnalyticsSection analytics={donationAnalytics} />
+          )
         )}
 
         {/* Event Statistics */}

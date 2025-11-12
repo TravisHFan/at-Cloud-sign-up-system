@@ -33,11 +33,17 @@ vi.mock("react-router-dom", async () => {
 // Mock API services
 const mockGetAllPurchases = vi.fn();
 const mockGetPaymentStats = vi.fn();
+const mockGetAllDonationsAdmin = vi.fn();
+const mockGetAdminDonationStats = vi.fn();
 
 vi.mock("../../services/api", () => ({
   adminPurchaseService: {
     getAllPurchases: mockGetAllPurchases,
     getPaymentStats: mockGetPaymentStats,
+  },
+  donationsService: {
+    getAllDonationsAdmin: mockGetAllDonationsAdmin,
+    getAdminDonationStats: mockGetAdminDonationStats,
   },
 }));
 
@@ -131,6 +137,22 @@ describe("IncomeHistory Component", () => {
     mockGetPaymentStats.mockResolvedValue({
       stats: mockStats,
     });
+
+    // Mock donations service defaults
+    mockGetAllDonationsAdmin.mockResolvedValue({
+      donations: [],
+      pagination: { page: 1, totalPages: 1, total: 0 },
+    });
+    mockGetAdminDonationStats.mockResolvedValue({
+      totalRevenue: 0,
+      totalDonations: 0,
+      uniqueDonors: 0,
+      activeRecurringRevenue: 0,
+      last30Days: {
+        donations: 0,
+        revenue: 0,
+      },
+    });
   });
 
   // ============================================================================
@@ -195,31 +217,44 @@ describe("IncomeHistory Component", () => {
         </MemoryRouter>
       );
 
-      await waitFor(() => {
-        // Net Revenue (changed from Total Revenue)
-        expect(screen.getByText("Net Revenue")).toBeInTheDocument();
-        expect(screen.getByText("$1,250.00")).toBeInTheDocument();
+      // Wait for stats to load by finding a unique element that appears after loading
+      // Use findByText which automatically waits for the element to appear
+      await screen.findByText("Total Revenue");
 
-        // Unique Buyers
-        expect(screen.getByText("Unique Buyers")).toBeInTheDocument();
-        expect(screen.getByText("30")).toBeInTheDocument();
+      // Verify page-level summary cards are displayed
+      expect(screen.getByText("Total Revenue")).toBeInTheDocument();
+      expect(screen.getByText("Programs + Donations")).toBeInTheDocument();
 
-        // Last 30 Days
-        expect(screen.getByText("Last 30 Days")).toBeInTheDocument();
-        expect(screen.getByText("$450.00")).toBeInTheDocument();
-        expect(screen.getByText("15 purchases")).toBeInTheDocument();
-      });
+      // Verify unique people card
+      expect(screen.getByText("Unique People")).toBeInTheDocument();
+      expect(screen.getByText("Buyers + Donors")).toBeInTheDocument();
 
-      // Check for completed purchases stat card (use getAllByText since "Completed" appears in table too)
-      const completedElements = screen.getAllByText("Completed");
-      expect(completedElements.length).toBeGreaterThan(0);
+      // Verify revenue amounts are displayed (they appear multiple times)
+      const revenueAmounts = screen.getAllByText("$1,250.00");
+      expect(revenueAmounts.length).toBeGreaterThan(0);
 
-      // Verify the stats value 45 is present
-      expect(screen.getByText("45")).toBeInTheDocument();
+      const last30DaysAmounts = screen.getAllByText("$450.00");
+      expect(last30DaysAmounts.length).toBeGreaterThan(0);
+
+      // Verify the purchase count in the "Last 30 Days" summary (appears in multiple places)
+      const purchaseCounts = screen.getAllByText(/15.*purchases/);
+      expect(purchaseCounts.length).toBeGreaterThan(0);
+
+      // Check that both tabs are present
+      expect(screen.getByText("Program Purchases")).toBeInTheDocument();
+      expect(screen.getByText("Donations")).toBeInTheDocument();
     });
 
     it("handles missing stats gracefully", async () => {
+      // Spy on console.error to suppress error output and catch the rejection
+      const consoleErrorSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+
       mockGetPaymentStats.mockRejectedValue(new Error("Stats unavailable"));
+      mockGetAdminDonationStats.mockRejectedValue(
+        new Error("Stats unavailable")
+      );
 
       const { default: IncomeHistory } = await import(
         "../../pages/IncomeHistory"
@@ -236,8 +271,15 @@ describe("IncomeHistory Component", () => {
         expect(screen.getByText("Income History")).toBeInTheDocument();
       });
 
+      // Wait for the errors to be caught and logged (both tabs load stats)
+      await waitFor(() => {
+        expect(consoleErrorSpy).toHaveBeenCalled();
+      });
+
       // Stats should not be visible
       expect(screen.queryByText("Total Revenue")).not.toBeInTheDocument();
+
+      consoleErrorSpy.mockRestore();
     });
   });
 

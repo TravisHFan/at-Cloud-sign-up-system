@@ -1,46 +1,53 @@
 import express from "express";
 import DonationController from "../controllers/DonationController";
-import { authenticate } from "../middleware/auth";
+import ReceiptController from "../controllers/donations/ReceiptController";
+import { authenticate, requireAdmin } from "../middleware/auth";
 
 const router = express.Router();
 
 /**
  * All donation routes require authentication
  */
+router.use(authenticate);
+
+// Admin routes
+router.get("/admin/all", requireAdmin, DonationController.getAllDonations);
+router.get("/admin/stats", requireAdmin, DonationController.getAdminStats);
 
 // Create a new donation
-router.post("/create", authenticate, DonationController.createDonation);
+router.post("/create", DonationController.createDonation);
 
 // Retry checkout for a pending donation
 router.post(
   "/:donationId/retry-checkout",
-  authenticate,
   DonationController.retryDonationCheckout
 );
 
 // Get user's donation history
-router.get("/my-donations", authenticate, DonationController.getMyDonations);
+router.get("/my-donations", DonationController.getMyDonations);
 
 // Get user's scheduled donations
-router.get(
-  "/my-scheduled",
-  authenticate,
-  DonationController.getMyScheduledDonations
-);
+router.get("/my-scheduled", DonationController.getMyScheduledDonations);
 
 // Get user's donation stats
-router.get("/stats", authenticate, DonationController.getStats);
+router.get("/stats", DonationController.getStats);
+
+// Get donation receipt data
+router.get("/receipt", ReceiptController.getReceipt);
+
+// Get available years for receipts
+router.get("/receipt/years", ReceiptController.getAvailableYears);
 
 // Edit a scheduled donation
-router.put("/:id/edit", authenticate, DonationController.editDonation);
+router.put("/:id/edit", DonationController.editDonation);
 
 // Place donation on hold
-router.put("/:id/hold", authenticate, DonationController.holdDonation);
+router.put("/:id/hold", DonationController.holdDonation);
 
 // Resume donation from hold
-router.put("/:id/resume", authenticate, DonationController.resumeDonation);
+router.put("/:id/resume", DonationController.resumeDonation);
 
 // Cancel donation
-router.delete("/:id/cancel", authenticate, DonationController.cancelDonation);
+router.delete("/:id/cancel", DonationController.cancelDonation);
 
 export default router;

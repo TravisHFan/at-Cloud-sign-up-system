@@ -180,9 +180,8 @@ DonationSchema.virtual("calculatedRemainingOccurrences").get(function (
   return this.remainingOccurrences;
 });
 
-const Donation: Model<IDonation> = mongoose.model<IDonation>(
-  "Donation",
-  DonationSchema
-);
+const Donation: Model<IDonation> =
+  mongoose.models.Donation ||
+  mongoose.model<IDonation>("Donation", DonationSchema);
 
 export default Donation;

@@ -129,4 +129,11 @@ router.put(
   PromoCodeController.reactivatePromoCode
 );
 
+/**
+ * Delete a promo code (admin only)
+ * Permanently removes a promo code from the database
+ * Use with caution - this action cannot be undone
+ */
+router.delete("/:id", requireAdmin, PromoCodeController.deletePromoCode);
+
 export default router;

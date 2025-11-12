@@ -258,6 +258,147 @@ describe("Refund Webhook Integration Tests", () => {
       expect(promoAfterRefund?.usedForProgramId).toBeUndefined();
     });
 
+    it("should delete bundle promo code generated from purchase when refund succeeds", async () => {
+      // Create a bundle promo code for this purchase
+      const bundleCode = await PromoCode.create({
+        code: "BUNDLE99",
+        type: "bundle_discount",
+        discountAmount: 50,
+        ownerId: regularUser._id,
+        excludedProgramId: program._id,
+        isActive: true,
+        isUsed: false,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+        createdBy: "system",
+      });
+
+      // Update purchase with bundle code reference
+      completedPurchase.bundlePromoCode = bundleCode.code;
+      completedPurchase.bundleDiscountAmount = 50;
+      completedPurchase.bundleExpiresAt = bundleCode.expiresAt;
+      await completedPurchase.save();
+
+      // Verify bundle code exists before refund
+      const codeBeforeRefund = await PromoCode.findOne({
+        code: "BUNDLE99",
+      });
+      expect(codeBeforeRefund).toBeDefined();
+
+      const refundEvent: Stripe.Event = {
+        id: "evt_refund_bundle_001",
+        object: "event",
+        type: "charge.refund.updated",
+        data: {
+          object: {
+            id: "re_test_refund_456",
+            status: "succeeded",
+            amount: 5000,
+            metadata: {
+              purchaseId: completedPurchase._id.toString(),
+              orderNumber: "ORD-REFUND-001",
+            },
+          } as unknown as Stripe.Refund,
+        },
+      } as Stripe.Event;
+
+      const response = await request(app)
+        .post("/api/webhooks/stripe")
+        .set("stripe-signature", "test_signature")
+        .send(refundEvent);
+
+      expect(response.status).toBe(200);
+
+      // Verify bundle code was deleted
+      const codeAfterRefund = await PromoCode.findOne({ code: "BUNDLE99" });
+      expect(codeAfterRefund).toBeNull();
+    });
+
+    it("should delete used bundle promo code when refund succeeds", async () => {
+      // Create a bundle promo code that has been used
+      const bundleCode = await PromoCode.create({
+        code: "USEDBNL1",
+        type: "bundle_discount",
+        discountAmount: 50,
+        ownerId: regularUser._id,
+        excludedProgramId: program._id,
+        isActive: true,
+        isUsed: true, // Already used
+        usedAt: new Date(),
+        usedForProgramId: program._id,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        createdBy: "system",
+      });
+
+      // Update purchase with bundle code reference
+      completedPurchase.bundlePromoCode = bundleCode.code;
+      completedPurchase.bundleDiscountAmount = 50;
+      completedPurchase.bundleExpiresAt = bundleCode.expiresAt;
+      await completedPurchase.save();
+
+      const refundEvent: Stripe.Event = {
+        id: "evt_refund_bundle_used_001",
+        object: "event",
+        type: "charge.refund.updated",
+        data: {
+          object: {
+            id: "re_test_refund_456",
+            status: "succeeded",
+            amount: 5000,
+            metadata: {
+              purchaseId: completedPurchase._id.toString(),
+              orderNumber: "ORD-REFUND-001",
+            },
+          } as unknown as Stripe.Refund,
+        },
+      } as Stripe.Event;
+
+      const response = await request(app)
+        .post("/api/webhooks/stripe")
+        .set("stripe-signature", "test_signature")
+        .send(refundEvent);
+
+      expect(response.status).toBe(200);
+
+      // Verify bundle code was deleted even though it was used
+      const codeAfterRefund = await PromoCode.findOne({ code: "USEDBNL1" });
+      expect(codeAfterRefund).toBeNull();
+    });
+
+    it("should handle refund gracefully when bundle code does not exist", async () => {
+      // Update purchase with non-existent bundle code reference
+      completedPurchase.bundlePromoCode = "NOEXIST8";
+      completedPurchase.bundleDiscountAmount = 50;
+      await completedPurchase.save();
+
+      const refundEvent: Stripe.Event = {
+        id: "evt_refund_no_bundle",
+        object: "event",
+        type: "charge.refund.updated",
+        data: {
+          object: {
+            id: "re_test_refund_456",
+            status: "succeeded",
+            amount: 5000,
+            metadata: {
+              purchaseId: completedPurchase._id.toString(),
+              orderNumber: "ORD-REFUND-001",
+            },
+          } as unknown as Stripe.Refund,
+        },
+      } as Stripe.Event;
+
+      const response = await request(app)
+        .post("/api/webhooks/stripe")
+        .set("stripe-signature", "test_signature")
+        .send(refundEvent);
+
+      // Should succeed even though bundle code doesn't exist
+      expect(response.status).toBe(200);
+
+      const updatedPurchase = await Purchase.findById(completedPurchase._id);
+      expect(updatedPurchase?.status).toBe("refunded");
+    });
+
     it("should send refund completed email to user", async () => {
       const refundEvent: Stripe.Event = {
         id: "evt_refund_succeeded_003",

@@ -9,6 +9,7 @@ import DonationTransaction, {
 import User from "../models/User";
 import { addWeeks, addMonths, addYears } from "date-fns";
 import mongoose from "mongoose";
+import { ValidationError, NotFoundError } from "../utils/errors";
 
 interface CreateDonationParams {
   userId: string;
@@ -221,17 +222,19 @@ class DonationService {
     });
 
     if (!donation) {
-      throw new Error("Donation not found");
+      throw new NotFoundError("Donation not found");
     }
 
     if (donation.status === "completed" || donation.status === "cancelled") {
-      throw new Error("Cannot edit completed or cancelled donation");
+      throw new ValidationError("Cannot edit completed or cancelled donation");
     }
 
     // Update allowed fields
     if (updates.amount !== undefined) {
       if (updates.amount < 100 || updates.amount > 99999900) {
-        throw new Error("Amount must be between $1.00 and $999,999.00");
+        throw new ValidationError(
+          "Amount must be between $1.00 and $999,999.00"
+        );
       }
       donation.amount = updates.amount;
     }
@@ -272,15 +275,15 @@ class DonationService {
     });
 
     if (!donation) {
-      throw new Error("Donation not found");
+      throw new NotFoundError("Donation not found");
     }
 
     if (donation.type === "one-time") {
-      throw new Error("Cannot hold one-time donations");
+      throw new ValidationError("Cannot hold one-time donations");
     }
 
     if (donation.status !== "active") {
-      throw new Error("Can only hold active donations");
+      throw new ValidationError("Can only hold active donations");
     }
 
     donation.status = "on_hold";
@@ -299,11 +302,11 @@ class DonationService {
     });
 
     if (!donation) {
-      throw new Error("Donation not found");
+      throw new NotFoundError("Donation not found");
     }
 
     if (donation.status !== "on_hold") {
-      throw new Error("Can only resume donations that are on hold");
+      throw new ValidationError("Can only resume donations that are on hold");
     }
 
     donation.status = "active";
@@ -322,15 +325,15 @@ class DonationService {
     });
 
     if (!donation) {
-      throw new Error("Donation not found");
+      throw new NotFoundError("Donation not found");
     }
 
     if (donation.status === "completed") {
-      throw new Error("Cannot cancel completed donation");
+      throw new ValidationError("Cannot cancel completed donation");
     }
 
     if (donation.status === "cancelled") {
-      throw new Error("Donation is already cancelled");
+      throw new ValidationError("Donation is already cancelled");
     }
 
     donation.status = "cancelled";
@@ -532,6 +535,189 @@ class DonationService {
       default:
         return 0;
     }
+  }
+
+  /**
+   * Get all donations for admin (with pagination and filters)
+   * ADMIN ONLY
+   */
+  async getAllDonations(
+    page: number = 1,
+    limit: number = 20,
+    search: string = "",
+    statusFilter: string = "all"
+  ): Promise<{
+    donations: Array<{
+      _id: string;
+      giftDate: Date;
+      user: {
+        firstName: string;
+        lastName: string;
+        email: string;
+      };
+      type: DonationType;
+      status: string;
+      amount: number;
+    }>;
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  }> {
+    const skip = (page - 1) * limit;
+
+    // Build filter query
+    const filterQuery: Record<string, unknown> = {};
+
+    if (statusFilter !== "all") {
+      filterQuery.status = statusFilter;
+    }
+
+    // Build search query - search both donations and transactions
+    let searchQuery: Record<string, unknown> = {};
+    if (search) {
+      const searchRegex = { $regex: search, $options: "i" };
+
+      // Get user IDs that match search
+      const matchingUsers = await User.find({
+        $or: [
+          { firstName: searchRegex },
+          { lastName: searchRegex },
+          { email: searchRegex },
+        ],
+      }).select("_id");
+
+      const userIds = matchingUsers.map((u) => u._id);
+
+      searchQuery = {
+        userId: { $in: userIds },
+      };
+    }
+
+    // Combine filters
+    const query = { ...filterQuery, ...searchQuery };
+
+    // Get donations from DonationTransaction (completed gifts)
+    const [transactions, totalTransactions] = await Promise.all([
+      DonationTransaction.find(query)
+        .populate("userId", "firstName lastName email")
+        .sort({ giftDate: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      DonationTransaction.countDocuments(query),
+    ]);
+
+    // Map transactions to unified format
+    const donations = transactions.map((txn: any) => ({
+      _id: txn._id.toString(),
+      giftDate: txn.giftDate,
+      user: {
+        firstName: txn.userId?.firstName || "Unknown",
+        lastName: txn.userId?.lastName || "User",
+        email: txn.userId?.email || "N/A",
+      },
+      type: txn.type,
+      status: txn.status,
+      amount: txn.amount,
+    }));
+
+    return {
+      donations,
+      pagination: {
+        page,
+        limit,
+        total: totalTransactions,
+        totalPages: Math.ceil(totalTransactions / limit),
+      },
+    };
+  }
+
+  /**
+   * Get donation stats for admin
+   * ADMIN ONLY
+   */
+  async getAdminDonationStats(): Promise<{
+    totalRevenue: number;
+    totalDonations: number;
+    uniqueDonors: number;
+    activeRecurringRevenue: number;
+    last30Days: {
+      donations: number;
+      revenue: number;
+    };
+  }> {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const [allStats, last30Stats, uniqueDonors] = await Promise.all([
+      // All time stats
+      DonationTransaction.aggregate([
+        {
+          $match: {
+            status: "completed",
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            totalRevenue: { $sum: "$amount" },
+            totalDonations: { $sum: 1 },
+          },
+        },
+      ]),
+      // Last 30 days stats
+      DonationTransaction.aggregate([
+        {
+          $match: {
+            status: "completed",
+            giftDate: { $gte: thirtyDaysAgo },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            revenue: { $sum: "$amount" },
+            donations: { $sum: 1 },
+          },
+        },
+      ]),
+      // Unique donors count
+      DonationTransaction.distinct("userId", { status: "completed" }),
+    ]);
+
+    // Calculate active recurring monthly revenue
+    const activeDonations = await Donation.find({
+      type: "recurring",
+      status: "active",
+    }).lean();
+
+    const frequencyMultipliers: Record<string, number> = {
+      weekly: 52 / 12, // ~4.33 weeks per month
+      biweekly: 26 / 12, // ~2.17 bi-weeks per month
+      monthly: 1,
+      quarterly: 1 / 3, // ~0.33 months per quarter
+      annually: 1 / 12, // ~0.08 months per year
+    };
+
+    const activeRecurringRevenue = activeDonations.reduce((sum, donation) => {
+      const frequency = donation.frequency || "monthly";
+      const multiplier = frequencyMultipliers[frequency] || 1;
+      return sum + donation.amount * multiplier;
+    }, 0);
+
+    return {
+      totalRevenue: allStats[0]?.totalRevenue || 0,
+      totalDonations: allStats[0]?.totalDonations || 0,
+      uniqueDonors: uniqueDonors.length,
+      activeRecurringRevenue, // in cents - monthly equivalent
+      last30Days: {
+        donations: last30Stats[0]?.donations || 0,
+        revenue: last30Stats[0]?.revenue || 0,
+      },
+    };
   }
 }
 

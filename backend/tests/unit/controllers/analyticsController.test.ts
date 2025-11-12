@@ -2,7 +2,14 @@ import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { silenceConsole } from "../../test-utils/silenceConsole";
 import { Request, Response } from "express";
 import { AnalyticsController } from "../../../src/controllers/analyticsController";
-import { User, Event, Registration } from "../../../src/models";
+import {
+  User,
+  Event,
+  Registration,
+  GuestRegistration,
+} from "../../../src/models";
+import Purchase from "../../../src/models/Purchase";
+import DonationTransaction from "../../../src/models/DonationTransaction";
 import { hasPermission, PERMISSIONS } from "../../../src/utils/roleUtils";
 import { ResponseBuilderService } from "../../../src/services/ResponseBuilderService";
 import { CachePatterns } from "../../../src/services";
@@ -23,6 +30,21 @@ vi.mock("../../../src/models", () => ({
   Registration: {
     countDocuments: vi.fn(),
     aggregate: vi.fn(),
+    find: vi.fn(),
+  },
+  GuestRegistration: {
+    find: vi.fn(),
+  },
+}));
+
+vi.mock("../../../src/models/Purchase", () => ({
+  default: {
+    find: vi.fn(),
+  },
+}));
+
+vi.mock("../../../src/models/DonationTransaction", () => ({
+  default: {
     find: vi.fn(),
   },
 }));
@@ -738,6 +760,37 @@ describe("AnalyticsController", () => {
 
       vi.mocked(Registration.find).mockReturnValue(
         mockRegistrationQuery as any
+      );
+
+      // Mock GuestRegistration.find to return empty array
+      const mockGuestRegistrationQuery = {
+        sort: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        lean: vi.fn().mockResolvedValue([]),
+      };
+
+      vi.mocked(GuestRegistration.find).mockReturnValue(
+        mockGuestRegistrationQuery as any
+      );
+
+      // Mock Purchase.find to return empty array (no programs data)
+      const mockPurchaseQuery = {
+        sort: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        lean: vi.fn().mockResolvedValue([]),
+      };
+
+      vi.mocked(Purchase.find).mockReturnValue(mockPurchaseQuery as any);
+
+      // Mock DonationTransaction.find to return empty array (no donations data)
+      const mockDonationQuery = {
+        sort: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        lean: vi.fn().mockResolvedValue([]),
+      };
+
+      vi.mocked(DonationTransaction.find).mockReturnValue(
+        mockDonationQuery as any
       );
     });
 

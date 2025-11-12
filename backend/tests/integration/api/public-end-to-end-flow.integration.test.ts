@@ -115,15 +115,19 @@ describe("Public end-to-end publish→redirect→register flow", () => {
       "short_link_created_total"
     );
 
-    // 2. Create event
+    // 2. Create event with future date to ensure short link doesn't expire
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 7); // 7 days from now
+    const futureDateStr = futureDate.toISOString().split("T")[0]; // YYYY-MM-DD
+
     const create = await request(app)
       .post("/api/events")
       .set("Authorization", `Bearer ${token}`)
       .send({
         title: "E2E Flow Event",
         type: "Webinar",
-        date: "2025-11-11",
-        endDate: "2025-11-11",
+        date: futureDateStr,
+        endDate: futureDateStr,
         time: "09:00",
         endTime: "10:00",
         location: "Online",

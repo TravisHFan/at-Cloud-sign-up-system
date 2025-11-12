@@ -127,3 +127,72 @@ button:focus-visible {
   content: attr(data-placeholder);
   color: #9ca3af; /* gray-400 */
 }
+
+/* Print Styles for Donation Receipt */
+@media print {
+  /* Hide elements with .no-print class */
+  .no-print {
+    display: none !important;
+  }
+
+  /* Reset page layout for printing */
+  body {
+    background: white;
+  }
+
+  /* Make receipt full width when printing */
+  .print-full-width {
+    max-width: 100% !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+  }
+
+  /* Ensure clean page breaks */
+  table {
+    page-break-inside: auto;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tfoot {
+    display: table-footer-group;
+  }
+
+  /* Remove rounded corners for cleaner print */
+  * {
+    border-radius: 0 !important;
+  }
+
+  /* Optimize text for printing */
+  body,
+  p,
+  span,
+  td,
+  th {
+    color: black !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Keep background colors for stat cards */
+  .bg-blue-50,
+  .bg-green-50,
+  .bg-purple-50,
+  .bg-gray-50 {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Keep gradient header */
+  .bg-gradient-to-r {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

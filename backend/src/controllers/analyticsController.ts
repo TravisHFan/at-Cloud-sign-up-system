@@ -43,4 +43,39 @@ export class AnalyticsController {
     );
     return ExportAnalyticsController.exportAnalytics(req, res);
   }
+
+  // Get program analytics
+  static async getProgramAnalytics(req: Request, res: Response): Promise<void> {
+    const { default: ProgramAnalyticsController } = await import(
+      "./analytics/ProgramAnalyticsController"
+    );
+    return ProgramAnalyticsController.getProgramAnalytics(req, res);
+  }
+
+  // Get donation analytics
+  static async getDonationAnalytics(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    const { default: DonationAnalyticsController } = await import(
+      "./analytics/DonationAnalyticsController"
+    );
+    return DonationAnalyticsController.getDonationAnalytics(req, res);
+  }
+
+  // Get financial summary (programs + donations)
+  static async getFinancialSummary(req: Request, res: Response): Promise<void> {
+    const { default: FinancialAnalyticsController } = await import(
+      "./analytics/FinancialAnalyticsController"
+    );
+    return FinancialAnalyticsController.getFinancialSummary(req, res);
+  }
+
+  // Get financial trends
+  static async getTrends(req: Request, res: Response): Promise<void> {
+    const { default: TrendsAnalyticsController } = await import(
+      "./analytics/TrendsAnalyticsController"
+    );
+    return TrendsAnalyticsController.getTrends(req, res);
+  }
 }

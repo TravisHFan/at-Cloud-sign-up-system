@@ -197,6 +197,8 @@ class PurchasesApiClient extends BaseApiClient {
       totalPurchases: number;
       pendingPurchases: number;
       failedPurchases: number;
+      pendingRevenue: number;
+      failedRevenue: number;
       refundedPurchases: number;
       refundedRevenue: number;
       uniqueBuyers: number;
@@ -216,6 +218,8 @@ class PurchasesApiClient extends BaseApiClient {
         totalPurchases: number;
         pendingPurchases: number;
         failedPurchases: number;
+        pendingRevenue: number;
+        failedRevenue: number;
         refundedPurchases: number;
         refundedRevenue: number;
         uniqueBuyers: number;
@@ -236,6 +240,8 @@ class PurchasesApiClient extends BaseApiClient {
           totalPurchases: 0,
           pendingPurchases: 0,
           failedPurchases: 0,
+          pendingRevenue: 0,
+          failedRevenue: 0,
           refundedPurchases: 0,
           refundedRevenue: 0,
           uniqueBuyers: 0,

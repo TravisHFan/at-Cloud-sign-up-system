@@ -56,6 +56,7 @@ import MyPromoCodes from "./pages/MyPromoCodes";
 import AdminPromoCodes from "./pages/AdminPromoCodes";
 import PromoCodeDetail from "./pages/PromoCodeDetail";
 import DonationPage from "./pages/DonationPage";
+import DonationReceipt from "./pages/DonationReceipt";
 import SessionExpiredModal from "./components/common/SessionExpiredModal";
 
 function App() {
@@ -249,6 +250,8 @@ function App() {
               <Route path="feedback" element={<Feedback />} />
               {/* Donation Page - Available to all authenticated users */}
               <Route path="donate" element={<DonationPage />} />
+              {/* Donation Receipt - Available to all authenticated users */}
+              <Route path="donation-receipt" element={<DonationReceipt />} />
               {/* User: My Promo Codes - Available to all authenticated users */}
               <Route path="promo-codes" element={<MyPromoCodes />} />
               {/* Admin: Promo Codes Management - Super Admin & Administrator only */}

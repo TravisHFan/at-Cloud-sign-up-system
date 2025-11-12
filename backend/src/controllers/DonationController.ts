@@ -10,6 +10,7 @@ import {
   resumeDonationSubscription,
   cancelDonationSubscription,
 } from "../services/stripeService";
+import { ValidationError, NotFoundError } from "../utils/errors";
 
 class DonationController {
   /**
@@ -349,6 +350,23 @@ class DonationController {
       });
     } catch (error) {
       console.error("Error updating donation:", error);
+
+      if (error instanceof ValidationError) {
+        res.status(400).json({
+          success: false,
+          message: error.message,
+        });
+        return;
+      }
+
+      if (error instanceof NotFoundError) {
+        res.status(404).json({
+          success: false,
+          message: error.message,
+        });
+        return;
+      }
+
       res.status(500).json({
         success: false,
         message:
@@ -392,6 +410,23 @@ class DonationController {
       });
     } catch (error) {
       console.error("Error holding donation:", error);
+
+      if (error instanceof ValidationError) {
+        res.status(400).json({
+          success: false,
+          message: error.message,
+        });
+        return;
+      }
+
+      if (error instanceof NotFoundError) {
+        res.status(404).json({
+          success: false,
+          message: error.message,
+        });
+        return;
+      }
+
       res.status(500).json({
         success: false,
         message:
@@ -435,6 +470,23 @@ class DonationController {
       });
     } catch (error) {
       console.error("Error resuming donation:", error);
+
+      if (error instanceof ValidationError) {
+        res.status(400).json({
+          success: false,
+          message: error.message,
+        });
+        return;
+      }
+
+      if (error instanceof NotFoundError) {
+        res.status(404).json({
+          success: false,
+          message: error.message,
+        });
+        return;
+      }
+
       res.status(500).json({
         success: false,
         message:
@@ -478,10 +530,95 @@ class DonationController {
       });
     } catch (error) {
       console.error("Error cancelling donation:", error);
+
+      if (error instanceof ValidationError) {
+        res.status(400).json({
+          success: false,
+          message: error.message,
+        });
+        return;
+      }
+
+      if (error instanceof NotFoundError) {
+        res.status(404).json({
+          success: false,
+          message: error.message,
+        });
+        return;
+      }
+
       res.status(500).json({
         success: false,
         message:
           error instanceof Error ? error.message : "Failed to cancel donation.",
+      });
+    }
+  }
+
+  /**
+   * Get all donations (Admin only)
+   * GET /api/donations/admin/all
+   */
+  async getAllDonations(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          message: "Authentication required.",
+        });
+        return;
+      }
+
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const search = (req.query.search as string) || "";
+      const statusFilter = (req.query.status as string) || "all";
+
+      const result = await DonationService.getAllDonations(
+        page,
+        limit,
+        search,
+        statusFilter
+      );
+
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      console.error("Error fetching all donations:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch donations.",
+      });
+    }
+  }
+
+  /**
+   * Get donation statistics (Admin only)
+   * GET /api/donations/admin/stats
+   */
+  async getAdminStats(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          message: "Authentication required.",
+        });
+        return;
+      }
+
+      const stats = await DonationService.getAdminDonationStats();
+
+      res.status(200).json({
+        success: true,
+        data: stats,
+      });
+    } catch (error) {
+      console.error("Error fetching admin donation stats:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch donation statistics.",
       });
     }
   }

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { PageHeader } from "../components/ui";
+import { ConfirmationModal } from "../components/common";
 import { PlusIcon } from "@heroicons/react/24/outline";
 import PromoCodeFilters from "../components/admin/promo-codes/PromoCodeFilters";
 import PromoCodeList from "../components/admin/promo-codes/PromoCodeList";
@@ -106,6 +107,12 @@ function AllCodesTab() {
   const [statusFilter, setStatusFilter] =
     useState<PromoCodeStatusFilter>("all");
 
+  // Delete confirmation modal state
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    id: string;
+    code: string;
+  } | null>(null);
+
   const limit = 20;
 
   // Use the extracted hook for all operations
@@ -119,9 +126,32 @@ function AllCodesTab() {
     setCurrentPage,
     deactivateCode,
     reactivateCode,
+    deleteCode,
+    isDeleting,
     copyCode,
     copiedCode,
   } = usePromoCodeOperations(typeFilter, statusFilter, searchQuery, limit);
+
+  // Handle delete with confirmation
+  const handleDelete = async (id: string, code: string) => {
+    setDeleteConfirm({ id, code });
+  };
+
+  // Confirm delete action
+  const confirmDelete = async () => {
+    if (!deleteConfirm) return;
+
+    try {
+      await deleteCode(deleteConfirm.id);
+      setDeleteConfirm(null);
+    } catch (err) {
+      alert(
+        `Failed to delete code: ${
+          err instanceof Error ? err.message : "Unknown error"
+        }`
+      );
+    }
+  };
 
   // Reset to page 1 when filters change
   const handleSearchChange = (value: string) => {
@@ -164,7 +194,23 @@ function AllCodesTab() {
         onCopyCode={copyCode}
         onDeactivate={deactivateCode}
         onReactivate={reactivateCode}
+        onDelete={handleDelete}
       />
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <ConfirmationModal
+          isOpen={true}
+          onClose={() => setDeleteConfirm(null)}
+          onConfirm={confirmDelete}
+          title="Delete Promo Code?"
+          message={`Are you sure you want to permanently delete promo code "${deleteConfirm.code}"? This action cannot be undone.`}
+          confirmText="Yes, Delete Code"
+          cancelText="Cancel"
+          type="danger"
+          isLoading={isDeleting}
+        />
+      )}
     </div>
   );
 }

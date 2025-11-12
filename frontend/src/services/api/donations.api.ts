@@ -255,10 +255,156 @@ class DonationsApiClient extends BaseApiClient {
     );
     return response.data?.donation || null;
   }
+
+  /**
+   * Get all donations (Admin only)
+   */
+  async getAllDonationsAdmin(params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+  }): Promise<{
+    donations: Array<{
+      _id: string;
+      giftDate: string;
+      user: {
+        firstName: string;
+        lastName: string;
+        email: string;
+      };
+      type: DonationType;
+      status: string;
+      amount: number;
+    }>;
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  }> {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append("page", params.page.toString());
+    if (params.limit) queryParams.append("limit", params.limit.toString());
+    if (params.search) queryParams.append("search", params.search);
+    if (params.status) queryParams.append("status", params.status);
+
+    const response = await this.request<{
+      donations: Array<{
+        _id: string;
+        giftDate: string;
+        user: {
+          firstName: string;
+          lastName: string;
+          email: string;
+        };
+        type: DonationType;
+        status: string;
+        amount: number;
+      }>;
+      pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+      };
+    }>(`/donations/admin/all?${queryParams.toString()}`);
+
+    return (
+      response.data || {
+        donations: [],
+        pagination: {
+          page: 1,
+          limit: 20,
+          total: 0,
+          totalPages: 0,
+        },
+      }
+    );
+  }
+
+  /**
+   * Get donation statistics (Admin only)
+   */
+  async getAdminDonationStats(): Promise<{
+    totalRevenue: number;
+    totalDonations: number;
+    uniqueDonors: number;
+    activeRecurringRevenue: number;
+    last30Days: {
+      donations: number;
+      revenue: number;
+    };
+  }> {
+    const response = await this.request<{
+      totalRevenue: number;
+      totalDonations: number;
+      uniqueDonors: number;
+      activeRecurringRevenue: number;
+      last30Days: {
+        donations: number;
+        revenue: number;
+      };
+    }>("/donations/admin/stats");
+
+    return (
+      response.data || {
+        totalRevenue: 0,
+        totalDonations: 0,
+        uniqueDonors: 0,
+        activeRecurringRevenue: 0,
+        last30Days: {
+          donations: 0,
+          revenue: 0,
+        },
+      }
+    );
+  }
 }
 
 // Export singleton instance
 export const donationsService = new DonationsApiClient();
+
+/**
+ * Receipt API Client Class
+ */
+class ReceiptApiClient extends BaseApiClient {
+  /**
+   * Get receipt data for specified years
+   * GET /api/donations/receipt?years=2024,2023
+   */
+  async getReceipt(years: number[]): Promise<ReceiptData> {
+    const yearsParam = years.join(",");
+    const response = await this.request<ReceiptData>(
+      `/donations/receipt?years=${yearsParam}`,
+      {
+        method: "GET",
+      }
+    );
+    return response.data as ReceiptData;
+  }
+
+  /**
+   * Get available years for receipts
+   * GET /api/donations/receipt/years
+   */
+  async getAvailableYears(): Promise<number[]> {
+    const response = await this.request<{ years: number[] }>(
+      "/donations/receipt/years",
+      {
+        method: "GET",
+      }
+    );
+    return response.data?.years || [];
+  }
+}
+
+// Export singleton instance for receipts
+export const receiptService = new ReceiptApiClient();
+
+// Export as ReceiptAPI for backward compatibility
+export const ReceiptAPI = receiptService;
 
 /**
  * Helper Functions
@@ -342,3 +488,38 @@ export const donationHelpers = {
     return colorMap[status];
   },
 };
+
+/**
+ * Receipt Data Types
+ */
+export interface ReceiptUser {
+  name: string;
+  email: string;
+}
+
+export interface ReceiptTransaction {
+  id: string;
+  date: string;
+  amount: number; // in cents
+  type: string;
+  status: string;
+}
+
+export interface YearlyStats {
+  year: number;
+  totalAmount: number; // in cents
+  transactionCount: number;
+  transactions: ReceiptTransaction[];
+}
+
+export interface ReceiptData {
+  user: ReceiptUser;
+  selectedYears: number[];
+  summary: {
+    grandTotal: number; // in cents
+    totalTransactions: number;
+    yearsCount: number;
+  };
+  yearlyStats: YearlyStats[];
+  generatedAt: string;
+}

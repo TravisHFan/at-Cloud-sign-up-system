@@ -57,14 +57,18 @@ describe("Public Events API - publish/unpublish lifecycle", () => {
     adminToken = loginRes.body.data.accessToken;
 
     // Create base event via controller to ensure validations
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 10); // 10 days from now
+    const futureDateStr = futureDate.toISOString().split("T")[0]; // YYYY-MM-DD
+
     const createRes = await request(app)
       .post("/api/events")
       .set("Authorization", `Bearer ${adminToken}`)
       .send({
         title: "Lifecycle Event",
         type: "Webinar",
-        date: "2025-11-10",
-        endDate: "2025-11-10",
+        date: futureDateStr,
+        endDate: futureDateStr,
         time: "10:00",
         endTime: "11:00",
         ...publishFieldsForFormat("Online", "lifecycle"),

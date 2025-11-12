@@ -317,6 +317,16 @@ class PromoCodesApiClient extends BaseApiClient {
   }
 
   /**
+   * Delete a promo code (Admin only)
+   * @param codeId - ID of the promo code to delete
+   */
+  async deletePromoCode(codeId: string): Promise<void> {
+    await this.request(`/promo-codes/${codeId}`, {
+      method: "DELETE",
+    });
+  }
+
+  /**
    * Create a staff access promo code (Admin only)
    * @param payload - Staff code creation data
    * @returns Created promo code with generated code
@@ -609,6 +619,8 @@ export const promoCodesService = {
     promoCodesApiClient.deactivatePromoCode(codeId),
   reactivatePromoCode: (codeId: string) =>
     promoCodesApiClient.reactivatePromoCode(codeId),
+  deletePromoCode: (codeId: string) =>
+    promoCodesApiClient.deletePromoCode(codeId),
   createStaffPromoCode: (
     payload: Parameters<typeof promoCodesApiClient.createStaffPromoCode>[0]
   ) => promoCodesApiClient.createStaffPromoCode(payload),

@@ -19,6 +19,22 @@ router.get(
   analyticsLimiter,
   AnalyticsController.getEngagementAnalytics
 );
+router.get(
+  "/programs",
+  analyticsLimiter,
+  AnalyticsController.getProgramAnalytics
+);
+router.get(
+  "/donations",
+  analyticsLimiter,
+  AnalyticsController.getDonationAnalytics
+);
+router.get(
+  "/financial-summary",
+  analyticsLimiter,
+  AnalyticsController.getFinancialSummary
+);
+router.get("/trends", analyticsLimiter, AnalyticsController.getTrends);
 router.get("/export", exportLimiter, AnalyticsController.exportAnalytics);
 
 export default router;

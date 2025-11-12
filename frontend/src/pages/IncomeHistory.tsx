@@ -1,17 +1,18 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
-import PurchaseTable from "../components/purchases/PurchaseTable";
-import type { PurchaseTableRow } from "../components/purchases/PurchaseTable";
-import Pagination from "../components/common/Pagination";
 import { formatCurrency } from "../utils/currency";
-import { adminPurchaseService } from "../services/api";
+import { adminPurchaseService, donationsService } from "../services/api";
+import ProgramPurchasesTab from "../components/admin/income/ProgramPurchasesTab";
+import DonationsTab from "../components/admin/income/DonationsTab";
 
 interface PaymentStats {
   totalRevenue: number;
   totalPurchases: number;
   pendingPurchases: number;
+  pendingRevenue: number;
   failedPurchases: number;
+  failedRevenue: number;
   refundedPurchases: number;
   refundedRevenue: number;
   uniqueBuyers: number;
@@ -25,20 +26,28 @@ interface PaymentStats {
   };
 }
 
+interface DonationStats {
+  totalRevenue: number;
+  totalDonations: number;
+  uniqueDonors: number;
+  activeRecurringRevenue: number;
+  last30Days: {
+    donations: number;
+    revenue: number;
+  };
+}
+
+type TabType = "purchases" | "donations";
+
 export default function IncomeHistory() {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-  const [purchases, setPurchases] = useState<PurchaseTableRow[]>([]);
-  const [stats, setStats] = useState<PaymentStats | null>(null);
+  const [activeTab, setActiveTab] = useState<TabType>("purchases");
+  const [purchaseStats, setPurchaseStats] = useState<PaymentStats | null>(null);
+  const [donationStats, setDonationStats] = useState<DonationStats | null>(
+    null
+  );
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
-
-  const ITEMS_PER_PAGE = 20;
 
   // Check access: Only Super Admin and Administrator
   useEffect(() => {
@@ -51,34 +60,20 @@ export default function IncomeHistory() {
     }
   }, [currentUser, navigate]);
 
-  const loadStats = async () => {
-    try {
-      const response = await adminPurchaseService.getPaymentStats();
-      setStats(response.stats);
-    } catch (err) {
-      console.error("Error loading payment stats:", err);
-      // Don't set error state - stats are optional
-    }
-  };
-
-  const loadPurchases = async () => {
+  const loadAllStats = async () => {
     try {
       setLoading(true);
-      setError(null);
 
-      const response = await adminPurchaseService.getAllPurchases({
-        page: currentPage,
-        limit: ITEMS_PER_PAGE,
-        search: searchQuery,
-        status: statusFilter,
-      });
+      const [purchaseResponse, donationResponse] = await Promise.all([
+        adminPurchaseService.getPaymentStats(),
+        donationsService.getAdminDonationStats(),
+      ]);
 
-      setPurchases(response.purchases as PurchaseTableRow[]);
-      setTotalPages(response.pagination.totalPages);
-      setTotal(response.pagination.total);
+      setPurchaseStats(purchaseResponse.stats);
+      setDonationStats(donationResponse);
     } catch (err) {
-      console.error("Error loading purchases:", err);
-      setError("Failed to load income history. Please try again.");
+      console.error("Error loading stats:", err);
+      // Don't set error state - stats are optional
     } finally {
       setLoading(false);
     }
@@ -90,58 +85,19 @@ export default function IncomeHistory() {
       (currentUser.role === "Super Admin" ||
         currentUser.role === "Administrator")
     ) {
-      loadStats();
-      loadPurchases();
+      loadAllStats();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, searchQuery, statusFilter, currentUser]);
+  }, [currentUser]);
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    setCurrentPage(1); // Reset to first page on new search
-  };
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const handleRowClick = (purchase: PurchaseTableRow) => {
-    // Navigate to purchase receipt if available
-    if (purchase.id) {
-      navigate(`/dashboard/purchases/${purchase.id}/receipt`);
-    }
-  };
-
-  if (loading && !purchases.length) {
-    return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-7xl mx-auto">
-          <h1 className="text-3xl font-bold text-gray-900 mb-8">
-            Income History
-          </h1>
-          <div className="flex justify-center items-center min-h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error && !purchases.length) {
-    return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-7xl mx-auto">
-          <h1 className="text-3xl font-bold text-gray-900 mb-8">
-            Income History
-          </h1>
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-800">{error}</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Calculate combined totals
+  const combinedTotalRevenue =
+    (purchaseStats?.totalRevenue || 0) + (donationStats?.totalRevenue || 0);
+  const combinedLast30DaysRevenue =
+    (purchaseStats?.last30Days.revenue || 0) +
+    (donationStats?.last30Days.revenue || 0);
+  const combinedUniquePeople =
+    (purchaseStats?.uniqueBuyers || 0) + (donationStats?.uniqueDonors || 0);
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -150,19 +106,20 @@ export default function IncomeHistory() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Income History</h1>
           <p className="mt-2 text-gray-600">
-            View and manage all program purchases across the platform
+            View and manage all program purchases and donations across the
+            platform
           </p>
         </div>
 
-        {/* Stats Cards */}
-        {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {/* Total Revenue */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
+        {/* Combined Stats Cards */}
+        {!loading && (purchaseStats || donationStats) && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            {/* Total Revenue (Combined) */}
+            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg shadow-md p-6 border-2 border-green-200">
               <div className="flex items-center">
-                <div className="flex-shrink-0 bg-green-100 rounded-lg p-3">
+                <div className="flex-shrink-0 bg-green-600 rounded-lg p-3">
                   <svg
-                    className="h-6 w-6 text-green-600"
+                    className="h-6 w-6 text-white"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -176,83 +133,25 @@ export default function IncomeHistory() {
                   </svg>
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">
-                    Net Revenue
+                  <p className="text-sm font-medium text-green-800">
+                    Total Revenue
                   </p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {formatCurrency(stats.totalRevenue)}
+                  <p className="text-2xl font-bold text-green-900">
+                    {formatCurrency(combinedTotalRevenue)}
                   </p>
-                  {stats.refundedRevenue > 0 && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      {formatCurrency(stats.refundedRevenue)} refunded
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Total Purchases */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <div className="flex items-center">
-                <div className="flex-shrink-0 bg-blue-100 rounded-lg p-3">
-                  <svg
-                    className="h-6 w-6 text-blue-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Completed</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {stats.totalPurchases}
+                  <p className="text-xs text-green-700 mt-1">
+                    Programs + Donations
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Unique Buyers */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
+            {/* Last 30 Days (Combined) */}
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg shadow-md p-6 border-2 border-blue-200">
               <div className="flex items-center">
-                <div className="flex-shrink-0 bg-purple-100 rounded-lg p-3">
+                <div className="flex-shrink-0 bg-blue-600 rounded-lg p-3">
                   <svg
-                    className="h-6 w-6 text-purple-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-                    />
-                  </svg>
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">
-                    Unique Buyers
-                  </p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {stats.uniqueBuyers}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Last 30 Days */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <div className="flex items-center">
-                <div className="flex-shrink-0 bg-yellow-100 rounded-lg p-3">
-                  <svg
-                    className="h-6 w-6 text-yellow-600"
+                    className="h-6 w-6 text-white"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -266,72 +165,26 @@ export default function IncomeHistory() {
                   </svg>
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">
+                  <p className="text-sm font-medium text-blue-800">
                     Last 30 Days
                   </p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {formatCurrency(stats.last30Days.revenue)}
+                  <p className="text-2xl font-bold text-blue-900">
+                    {formatCurrency(combinedLast30DaysRevenue)}
                   </p>
-                  <p className="text-xs text-gray-500">
-                    {stats.last30Days.purchases} purchases
-                    {stats.last30Days.refunds > 0 &&
-                      ` · ${stats.last30Days.refunds} refunds`}
+                  <p className="text-xs text-blue-700 mt-1">
+                    {purchaseStats?.last30Days.purchases || 0} purchases ·{" "}
+                    {donationStats?.last30Days.donations || 0} donations
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Refunded Revenue (if any) */}
-            {stats.refundedPurchases > 0 && (
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0 bg-red-100 rounded-lg p-3">
-                    <svg
-                      className="h-6 w-6 text-red-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">
-                      Refunded
-                    </p>
-                    <p className="text-2xl font-bold text-red-600">
-                      {formatCurrency(stats.refundedRevenue)}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {stats.refundedPurchases} purchases
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Search and Filters */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <form
-            onSubmit={handleSearch}
-            className="flex flex-col sm:flex-row gap-4"
-          >
-            {/* Search Input */}
-            <div className="flex-1">
-              <label htmlFor="search" className="sr-only">
-                Search purchases
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            {/* Unique People (Combined) */}
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg shadow-md p-6 border-2 border-purple-200">
+              <div className="flex items-center">
+                <div className="flex-shrink-0 bg-purple-600 rounded-lg p-3">
                   <svg
-                    className="h-5 w-5 text-gray-400"
+                    className="h-6 w-6 text-white"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -340,82 +193,59 @@ export default function IncomeHistory() {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={2}
-                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                      d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
                     />
                   </svg>
                 </div>
-                <input
-                  id="search"
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search by user name, email, program, or order number..."
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-purple-800">
+                    Unique People
+                  </p>
+                  <p className="text-2xl font-bold text-purple-900">
+                    {combinedUniquePeople}
+                  </p>
+                  <p className="text-xs text-purple-700 mt-1">
+                    Buyers + Donors
+                  </p>
+                </div>
               </div>
             </div>
-
-            {/* Status Filter */}
-            <div className="sm:w-48">
-              <label htmlFor="status" className="sr-only">
-                Filter by status
-              </label>
-              <select
-                id="status"
-                value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="block w-full py-2 px-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              >
-                <option value="all">All Status</option>
-                <option value="completed">Completed</option>
-                <option value="pending">Pending</option>
-                <option value="failed">Failed</option>
-                <option value="refunded">Refunded</option>
-                <option value="refund_processing">Refund Processing</option>
-                <option value="refund_failed">Refund Failed</option>
-              </select>
-            </div>
-
-            {/* Search Button */}
-            <button
-              type="submit"
-              className="sm:w-auto px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors"
-            >
-              Search
-            </button>
-          </form>
-
-          {/* Results Count */}
-          <div className="mt-4 text-sm text-gray-600">
-            Showing {purchases.length} of {total} results
-          </div>
-        </div>
-
-        {/* Purchase Table */}
-        <PurchaseTable
-          purchases={purchases}
-          showUser={true}
-          onRowClick={handleRowClick}
-        />
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="mt-6">
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              hasNext={currentPage < totalPages}
-              hasPrev={currentPage > 1}
-              onPageChange={handlePageChange}
-              showPageNumbers={true}
-              size="md"
-              layout="center"
-            />
           </div>
         )}
+
+        {/* Tabbed Interface */}
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div className="bg-gray-50 p-1">
+            <nav className="flex gap-1">
+              <button
+                onClick={() => setActiveTab("purchases")}
+                className={`px-6 py-3 text-base font-medium rounded-md transition-all duration-200 focus:outline-none focus:ring-0 border-0 ${
+                  activeTab === "purchases"
+                    ? "bg-white text-purple-600 shadow-md transform translate-y-0"
+                    : "bg-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-100/50 shadow-none transform translate-y-0.5"
+                }`}
+              >
+                Program Purchases
+              </button>
+              <button
+                onClick={() => setActiveTab("donations")}
+                className={`px-6 py-3 text-base font-medium rounded-md transition-all duration-200 focus:outline-none focus:ring-0 border-0 ${
+                  activeTab === "donations"
+                    ? "bg-white text-purple-600 shadow-md transform translate-y-0"
+                    : "bg-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-100/50 shadow-none transform translate-y-0.5"
+                }`}
+              >
+                Donations
+              </button>
+            </nav>
+          </div>
+
+          {/* Tab Content */}
+          <div className="p-6">
+            {activeTab === "purchases" && <ProgramPurchasesTab />}
+            {activeTab === "donations" && <DonationsTab />}
+          </div>
+        </div>
       </div>
     </div>
   );

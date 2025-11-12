@@ -23,7 +23,7 @@ const shortLinkSchema = new Schema<IShortLink>(
     key: {
       type: String,
       required: true,
-      unique: true,
+      unique: true, // unique already creates an index
       minlength: 6,
       // Auto-generated keys remain 6-8 chars; increase max to 16 to accommodate custom keys (tests use 13)
       maxlength: 16,
@@ -33,7 +33,6 @@ const shortLinkSchema = new Schema<IShortLink>(
           message: "ShortLink key must be alphanumeric, hyphen or underscore",
         },
       ],
-      index: true,
     },
     eventId: {
       type: Schema.Types.ObjectId,

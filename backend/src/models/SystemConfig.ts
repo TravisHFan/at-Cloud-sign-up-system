@@ -46,8 +46,7 @@ const SystemConfigSchema = new Schema<ISystemConfig, ISystemConfigModel>(
     key: {
       type: String,
       required: true,
-      unique: true,
-      index: true,
+      unique: true, // unique already creates an index
       trim: true,
       lowercase: true,
     },
@@ -74,8 +73,8 @@ const SystemConfigSchema = new Schema<ISystemConfig, ISystemConfigModel>(
 // INDEXES
 // ============================================================================
 
-// Primary lookup index (unique key)
-SystemConfigSchema.index({ key: 1 }, { unique: true });
+// Note: The unique constraint on the 'key' field already creates an index,
+// so we don't need to add it again here.
 
 // ============================================================================
 // STATIC METHODS

@@ -1,0 +1,721 @@
+import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
+import { Types } from "mongoose";
+
+// Mock models
+const mockCreate = vi.fn();
+const mockFindById = vi.fn();
+const mockFindOne = vi.fn();
+const mockFind = vi.fn();
+const mockCountDocuments = vi.fn();
+const mockAggregate = vi.fn();
+const mockSave = vi.fn();
+
+vi.mock("../../../src/models/Donation", () => ({
+  default: {
+    create: (...args: any[]) => mockCreate(...args),
+    findById: (...args: any[]) => mockFindById(...args),
+    findOne: (...args: any[]) => mockFindOne(...args),
+    find: (...args: any[]) => {
+      const result = mockFind(...args);
+      // Allow chaining for find
+      return {
+        ...result,
+        sort: vi.fn().mockReturnThis(),
+        skip: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        lean: vi.fn().mockResolvedValue(result),
+      };
+    },
+  },
+}));
+
+vi.mock("../../../src/models/DonationTransaction", () => ({
+  default: {
+    create: (...args: any[]) => mockCreate(...args),
+    find: (...args: any[]) => {
+      const result = mockFind(...args);
+      return {
+        ...result,
+        sort: vi.fn().mockReturnThis(),
+        skip: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        lean: vi.fn().mockResolvedValue(result),
+      };
+    },
+    countDocuments: (...args: any[]) => mockCountDocuments(...args),
+    aggregate: (...args: any[]) => mockAggregate(...args),
+  },
+}));
+
+vi.mock("../../../src/models/User", () => ({
+  default: {
+    findById: (...args: any[]) => mockFindById(...args),
+  },
+}));
+
+import DonationService from "../../../src/services/DonationService";
+import { DonationType, DonationFrequency } from "../../../src/models/Donation";
+
+describe("DonationService", () => {
+  const mockUserId = new Types.ObjectId().toString();
+  const mockDonationId = new Types.ObjectId();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  describe("createDonation", () => {
+    it("should create a one-time donation successfully", async () => {
+      const mockUser = {
+        _id: mockUserId,
+        email: "test@example.com",
+        stripeCustomerId: "cus_test123",
+      };
+
+      const mockDonation = {
+        _id: mockDonationId,
+        userId: mockUserId,
+        amount: 5000,
+        type: "one-time",
+        status: "pending",
+        giftDate: new Date("2025-12-25"),
+        stripeCustomerId: "cus_test123",
+      };
+
+      mockFindById.mockResolvedValue(mockUser);
+      mockCreate.mockResolvedValue(mockDonation);
+
+      const result = await DonationService.createDonation({
+        userId: mockUserId,
+        amount: 5000,
+        type: "one-time" as DonationType,
+        giftDate: new Date("2025-12-25"),
+      });
+
+      expect(result).toEqual(mockDonation);
+      expect(mockFindById).toHaveBeenCalledWith(mockUserId);
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: mockUser._id,
+          amount: 5000,
+          type: "one-time",
+          status: "pending",
+          giftDate: new Date("2025-12-25"),
+        })
+      );
+    });
+
+    it("should create a recurring donation successfully", async () => {
+      const mockUser = {
+        _id: mockUserId,
+        email: "test@example.com",
+        stripeCustomerId: "cus_test123",
+      };
+
+      const mockDonation = {
+        _id: mockDonationId,
+        userId: mockUserId,
+        amount: 10000,
+        type: "recurring",
+        frequency: "monthly",
+        status: "pending",
+        startDate: new Date("2025-01-01"),
+        nextPaymentDate: new Date("2025-01-01"),
+        endAfterOccurrences: 12,
+        remainingOccurrences: 12,
+        currentOccurrence: 0,
+        stripeCustomerId: "cus_test123",
+      };
+
+      mockFindById.mockResolvedValue(mockUser);
+      mockCreate.mockResolvedValue(mockDonation);
+
+      const result = await DonationService.createDonation({
+        userId: mockUserId,
+        amount: 10000,
+        type: "recurring" as DonationType,
+        frequency: "monthly" as DonationFrequency,
+        startDate: new Date("2025-01-01"),
+        endAfterOccurrences: 12,
+      });
+
+      expect(result).toEqual(mockDonation);
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "recurring",
+          frequency: "monthly",
+          startDate: new Date("2025-01-01"),
+          remainingOccurrences: 12,
+          nextPaymentDate: new Date("2025-01-01"),
+        })
+      );
+    });
+
+    it("should throw error for invalid amount (too low)", async () => {
+      await expect(
+        DonationService.createDonation({
+          userId: mockUserId,
+          amount: 50, // Less than $1.00 (100 cents)
+          type: "one-time" as DonationType,
+          giftDate: new Date("2025-12-25"),
+        })
+      ).rejects.toThrow("Amount must be between $1.00 and $999,999.00");
+    });
+
+    it("should throw error for invalid amount (too high)", async () => {
+      await expect(
+        DonationService.createDonation({
+          userId: mockUserId,
+          amount: 100000000, // More than $999,999.00
+          type: "one-time" as DonationType,
+          giftDate: new Date("2025-12-25"),
+        })
+      ).rejects.toThrow("Amount must be between $1.00 and $999,999.00");
+    });
+
+    it("should throw error for one-time donation without gift date", async () => {
+      await expect(
+        DonationService.createDonation({
+          userId: mockUserId,
+          amount: 5000,
+          type: "one-time" as DonationType,
+        })
+      ).rejects.toThrow("Gift date is required for one-time donations");
+    });
+
+    it("should throw error for recurring donation without frequency", async () => {
+      await expect(
+        DonationService.createDonation({
+          userId: mockUserId,
+          amount: 10000,
+          type: "recurring" as DonationType,
+          startDate: new Date("2025-01-01"),
+        })
+      ).rejects.toThrow("Frequency is required for recurring donations");
+    });
+
+    it("should throw error for recurring donation without start date", async () => {
+      await expect(
+        DonationService.createDonation({
+          userId: mockUserId,
+          amount: 10000,
+          type: "recurring" as DonationType,
+          frequency: "monthly" as DonationFrequency,
+        })
+      ).rejects.toThrow("Start date is required for recurring donations");
+    });
+
+    it("should throw error if user not found", async () => {
+      mockFindById.mockResolvedValue(null);
+
+      await expect(
+        DonationService.createDonation({
+          userId: mockUserId,
+          amount: 5000,
+          type: "one-time" as DonationType,
+          giftDate: new Date("2025-12-25"),
+        })
+      ).rejects.toThrow("User not found");
+    });
+
+    it("should use pending as stripeCustomerId if user does not have one", async () => {
+      const mockUser = {
+        _id: mockUserId,
+        email: "test@example.com",
+        stripeCustomerId: null,
+      };
+
+      const mockDonation = {
+        _id: mockDonationId,
+        userId: mockUserId,
+        amount: 5000,
+        type: "one-time",
+        status: "pending",
+        giftDate: new Date("2025-12-25"),
+        stripeCustomerId: "pending",
+      };
+
+      mockFindById.mockResolvedValue(mockUser);
+      mockCreate.mockResolvedValue(mockDonation);
+
+      const result = await DonationService.createDonation({
+        userId: mockUserId,
+        amount: 5000,
+        type: "one-time" as DonationType,
+        giftDate: new Date("2025-12-25"),
+      });
+
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          stripeCustomerId: "pending",
+        })
+      );
+    });
+  });
+
+  describe("getUserDonationHistory", () => {
+    it("should return transactions and pagination info", async () => {
+      const mockTransactions = [
+        {
+          _id: new Types.ObjectId(),
+          donationId: mockDonationId,
+          userId: mockUserId,
+          amount: 5000,
+          type: "one-time",
+          status: "completed",
+          giftDate: new Date("2025-01-15"),
+        },
+      ];
+
+      mockFind.mockResolvedValue(mockTransactions);
+      mockCountDocuments.mockResolvedValue(1);
+
+      const result = await DonationService.getUserDonationHistory(
+        mockUserId,
+        1,
+        20,
+        "giftDate",
+        "desc"
+      );
+
+      expect(result).toEqual({
+        transactions: mockTransactions,
+        pending: mockTransactions, // mock returns same for both
+        pagination: {
+          page: 1,
+          limit: 20,
+          total: 1,
+          totalPages: 1,
+        },
+      });
+    });
+
+    it("should not include pending donations on pages after first", async () => {
+      const mockTransactions = [
+        {
+          _id: new Types.ObjectId(),
+          donationId: mockDonationId,
+          userId: mockUserId,
+          amount: 5000,
+          type: "one-time",
+          status: "completed",
+          giftDate: new Date("2025-01-15"),
+        },
+      ];
+
+      mockFind.mockResolvedValue(mockTransactions);
+      mockCountDocuments.mockResolvedValue(25);
+
+      const result = await DonationService.getUserDonationHistory(
+        mockUserId,
+        2,
+        20,
+        "giftDate",
+        "desc"
+      );
+
+      expect(result.pending).toEqual([]);
+      expect(result.pagination).toEqual({
+        page: 2,
+        limit: 20,
+        total: 25,
+        totalPages: 2,
+      });
+    });
+  });
+
+  describe("getUserScheduledDonations", () => {
+    it("should return scheduled and active donations", async () => {
+      const mockDonations = [
+        {
+          _id: mockDonationId,
+          userId: mockUserId,
+          amount: 10000,
+          type: "recurring",
+          frequency: "monthly",
+          status: "active",
+          nextPaymentDate: new Date("2025-02-01"),
+        },
+      ];
+
+      mockFind.mockResolvedValue(mockDonations);
+
+      const result = await DonationService.getUserScheduledDonations(
+        mockUserId
+      );
+
+      expect(result).toEqual(mockDonations);
+      expect(mockFind).toHaveBeenCalledWith({
+        userId: mockUserId,
+        status: { $in: ["scheduled", "active", "on_hold"] },
+      });
+    });
+  });
+
+  describe("getUserDonationStats", () => {
+    it("should return total amount and total gifts", async () => {
+      const mockAggregateResult = [
+        {
+          _id: null,
+          totalAmount: 50000,
+          totalGifts: 5,
+        },
+      ];
+
+      mockAggregate.mockResolvedValue(mockAggregateResult);
+
+      const result = await DonationService.getUserDonationStats(mockUserId);
+
+      expect(result).toEqual({
+        totalAmount: 50000,
+        totalGifts: 5,
+      });
+    });
+
+    it("should return zeros if no donations found", async () => {
+      mockAggregate.mockResolvedValue([]);
+
+      const result = await DonationService.getUserDonationStats(mockUserId);
+
+      expect(result).toEqual({
+        totalAmount: 0,
+        totalGifts: 0,
+      });
+    });
+  });
+
+  describe("updateDonation", () => {
+    it("should update donation amount", async () => {
+      const mockDonation = {
+        _id: mockDonationId,
+        userId: mockUserId,
+        amount: 5000,
+        type: "one-time",
+        status: "scheduled",
+        save: mockSave,
+      };
+
+      mockFindOne.mockResolvedValue(mockDonation);
+      mockSave.mockResolvedValue(mockDonation);
+
+      const result = await DonationService.updateDonation(
+        mockDonationId.toString(),
+        mockUserId,
+        { amount: 10000 }
+      );
+
+      expect(mockDonation.amount).toBe(10000);
+      expect(mockSave).toHaveBeenCalled();
+    });
+
+    it("should throw error if donation not found", async () => {
+      mockFindOne.mockResolvedValue(null);
+
+      await expect(
+        DonationService.updateDonation(mockDonationId.toString(), mockUserId, {
+          amount: 10000,
+        })
+      ).rejects.toThrow("Donation not found");
+    });
+
+    it("should throw error for completed donation", async () => {
+      const mockDonation = {
+        _id: mockDonationId,
+        userId: mockUserId,
+        status: "completed",
+      };
+
+      mockFindOne.mockResolvedValue(mockDonation);
+
+      await expect(
+        DonationService.updateDonation(mockDonationId.toString(), mockUserId, {
+          amount: 10000,
+        })
+      ).rejects.toThrow("Cannot edit completed or cancelled donation");
+    });
+
+    it("should throw error for invalid amount in update", async () => {
+      const mockDonation = {
+        _id: mockDonationId,
+        userId: mockUserId,
+        status: "scheduled",
+      };
+
+      mockFindOne.mockResolvedValue(mockDonation);
+
+      await expect(
+        DonationService.updateDonation(mockDonationId.toString(), mockUserId, {
+          amount: 50, // Too low
+        })
+      ).rejects.toThrow("Amount must be between $1.00 and $999,999.00");
+    });
+  });
+
+  describe("holdDonation", () => {
+    it("should place active recurring donation on hold", async () => {
+      const mockDonation = {
+        _id: mockDonationId,
+        userId: mockUserId,
+        type: "recurring",
+        status: "active",
+        save: mockSave,
+      };
+
+      mockFindOne.mockResolvedValue(mockDonation);
+      mockSave.mockResolvedValue(mockDonation);
+
+      await DonationService.holdDonation(mockDonationId.toString(), mockUserId);
+
+      expect(mockDonation.status).toBe("on_hold");
+      expect(mockSave).toHaveBeenCalled();
+    });
+
+    it("should throw error for one-time donations", async () => {
+      const mockDonation = {
+        _id: mockDonationId,
+        userId: mockUserId,
+        type: "one-time",
+        status: "scheduled",
+      };
+
+      mockFindOne.mockResolvedValue(mockDonation);
+
+      await expect(
+        DonationService.holdDonation(mockDonationId.toString(), mockUserId)
+      ).rejects.toThrow("Cannot hold one-time donations");
+    });
+
+    it("should throw error if donation not active", async () => {
+      const mockDonation = {
+        _id: mockDonationId,
+        userId: mockUserId,
+        type: "recurring",
+        status: "scheduled",
+      };
+
+      mockFindOne.mockResolvedValue(mockDonation);
+
+      await expect(
+        DonationService.holdDonation(mockDonationId.toString(), mockUserId)
+      ).rejects.toThrow("Can only hold active donations");
+    });
+  });
+
+  describe("resumeDonation", () => {
+    it("should resume donation from hold", async () => {
+      const mockDonation = {
+        _id: mockDonationId,
+        userId: mockUserId,
+        status: "on_hold",
+        save: mockSave,
+      };
+
+      mockFindOne.mockResolvedValue(mockDonation);
+      mockSave.mockResolvedValue(mockDonation);
+
+      await DonationService.resumeDonation(
+        mockDonationId.toString(),
+        mockUserId
+      );
+
+      expect(mockDonation.status).toBe("active");
+      expect(mockSave).toHaveBeenCalled();
+    });
+
+    it("should throw error if donation not on hold", async () => {
+      const mockDonation = {
+        _id: mockDonationId,
+        userId: mockUserId,
+        status: "active",
+      };
+
+      mockFindOne.mockResolvedValue(mockDonation);
+
+      await expect(
+        DonationService.resumeDonation(mockDonationId.toString(), mockUserId)
+      ).rejects.toThrow("Can only resume donations that are on hold");
+    });
+  });
+
+  describe("cancelDonation", () => {
+    it("should cancel a donation", async () => {
+      const mockDonation = {
+        _id: mockDonationId,
+        userId: mockUserId,
+        status: "scheduled",
+        save: mockSave,
+      };
+
+      mockFindOne.mockResolvedValue(mockDonation);
+      mockSave.mockResolvedValue(mockDonation);
+
+      await DonationService.cancelDonation(
+        mockDonationId.toString(),
+        mockUserId
+      );
+
+      expect(mockDonation.status).toBe("cancelled");
+      expect(mockSave).toHaveBeenCalled();
+    });
+
+    it("should throw error for completed donation", async () => {
+      const mockDonation = {
+        _id: mockDonationId,
+        userId: mockUserId,
+        status: "completed",
+      };
+
+      mockFindOne.mockResolvedValue(mockDonation);
+
+      await expect(
+        DonationService.cancelDonation(mockDonationId.toString(), mockUserId)
+      ).rejects.toThrow("Cannot cancel completed donation");
+    });
+
+    it("should throw error for already cancelled donation", async () => {
+      const mockDonation = {
+        _id: mockDonationId,
+        userId: mockUserId,
+        status: "cancelled",
+      };
+
+      mockFindOne.mockResolvedValue(mockDonation);
+
+      await expect(
+        DonationService.cancelDonation(mockDonationId.toString(), mockUserId)
+      ).rejects.toThrow("Donation is already cancelled");
+    });
+  });
+
+  describe("recordTransaction", () => {
+    it("should record transaction and update one-time donation", async () => {
+      const mockTransaction = {
+        _id: new Types.ObjectId(),
+        donationId: mockDonationId,
+        userId: mockUserId,
+        amount: 5000,
+        type: "one-time",
+        status: "completed",
+        stripePaymentIntentId: "pi_test123",
+      };
+
+      const mockDonation = {
+        _id: mockDonationId,
+        userId: mockUserId,
+        type: "one-time",
+        status: "pending",
+        save: mockSave,
+      };
+
+      mockCreate.mockResolvedValue(mockTransaction);
+      mockFindById.mockResolvedValue(mockDonation);
+      mockSave.mockResolvedValue(mockDonation);
+
+      await DonationService.recordTransaction({
+        donationId: mockDonationId.toString(),
+        userId: mockUserId,
+        amount: 5000,
+        type: "one-time" as DonationType,
+        stripePaymentIntentId: "pi_test123",
+      });
+
+      expect(mockCreate).toHaveBeenCalled();
+      expect(mockDonation.status).toBe("completed");
+      expect(mockSave).toHaveBeenCalled();
+    });
+
+    it("should record transaction and update recurring donation occurrence", async () => {
+      const nextDate = new Date("2025-02-01");
+      const mockDonation = {
+        _id: mockDonationId,
+        userId: mockUserId,
+        type: "recurring",
+        frequency: "monthly",
+        status: "active",
+        currentOccurrence: 0,
+        remainingOccurrences: 12,
+        nextPaymentDate: new Date("2025-01-01"),
+        save: mockSave,
+      };
+
+      mockCreate.mockResolvedValue({});
+      mockFindById.mockResolvedValue(mockDonation);
+      mockSave.mockResolvedValue(mockDonation);
+
+      await DonationService.recordTransaction({
+        donationId: mockDonationId.toString(),
+        userId: mockUserId,
+        amount: 10000,
+        type: "recurring" as DonationType,
+        stripePaymentIntentId: "pi_test456",
+      });
+
+      expect(mockDonation.currentOccurrence).toBe(1);
+      expect(mockDonation.remainingOccurrences).toBe(11);
+      expect(mockSave).toHaveBeenCalled();
+    });
+
+    it("should mark recurring donation as completed when all occurrences done", async () => {
+      const mockDonation = {
+        _id: mockDonationId,
+        userId: mockUserId,
+        type: "recurring",
+        frequency: "monthly",
+        status: "active",
+        currentOccurrence: 11,
+        endAfterOccurrences: 12,
+        remainingOccurrences: 1,
+        nextPaymentDate: new Date("2025-12-01"),
+        save: mockSave,
+      };
+
+      mockCreate.mockResolvedValue({});
+      mockFindById.mockResolvedValue(mockDonation);
+      mockSave.mockResolvedValue(mockDonation);
+
+      await DonationService.recordTransaction({
+        donationId: mockDonationId.toString(),
+        userId: mockUserId,
+        amount: 10000,
+        type: "recurring" as DonationType,
+        stripePaymentIntentId: "pi_test789",
+      });
+
+      expect(mockDonation.currentOccurrence).toBe(12);
+      expect(mockDonation.status).toBe("completed");
+      expect(mockSave).toHaveBeenCalled();
+    });
+  });
+
+  describe("calculateTotalAmount", () => {
+    it("should calculate total for occurrences-based recurring", () => {
+      const result = DonationService.calculateTotalAmount(
+        10000,
+        "monthly" as DonationFrequency,
+        new Date("2025-01-01"),
+        { type: "occurrences", count: 12 }
+      );
+
+      expect(result.totalGifts).toBe(12);
+      expect(result.totalAmount).toBe(120000);
+      expect(result.endDate).toBeInstanceOf(Date);
+    });
+
+    it("should calculate total for date-based recurring", () => {
+      const result = DonationService.calculateTotalAmount(
+        5000,
+        "weekly" as DonationFrequency,
+        new Date("2025-01-01"),
+        { type: "date", endDate: new Date("2025-03-01") }
+      );
+
+      expect(result.totalGifts).toBeGreaterThan(0);
+      expect(result.totalAmount).toBe(result.totalGifts * 5000);
+      expect(result.endDate).toEqual(new Date("2025-03-01"));
+    });
+  });
+});
