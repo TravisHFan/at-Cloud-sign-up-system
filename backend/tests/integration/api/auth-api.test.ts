@@ -49,10 +49,11 @@ import app from "../../../src/app";
 import User from "../../../src/models/User";
 
 describe("Authentication API Integration Tests", () => {
+  // Set a reasonable timeout for auth tests (password hashing is slow)
   beforeEach(async () => {
     // Clear users collection before each test
     await User.deleteMany({});
-  });
+  }, 30000); // 30 second timeout for setup
 
   afterEach(async () => {
     // Clean up after each test
@@ -98,7 +99,7 @@ describe("Authentication API Integration Tests", () => {
       const createdUser = await User.findOne({ email: "test@example.com" });
       expect(createdUser).toBeTruthy();
       expect(createdUser?.username).toBe("testuser");
-    });
+    }, 30000); // 30 second timeout for password hashing
 
     it("should reject registration with invalid email", async () => {
       const userData = {
