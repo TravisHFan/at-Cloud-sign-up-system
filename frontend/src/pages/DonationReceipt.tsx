@@ -128,6 +128,8 @@ export default function DonationReceipt() {
     navigate("/dashboard/donate");
   };
 
+  // Check loading state FIRST before checking error/data
+  // This prevents showing "No receipt data available" flash during loading
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
