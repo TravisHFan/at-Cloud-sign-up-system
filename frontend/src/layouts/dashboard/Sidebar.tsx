@@ -243,7 +243,7 @@ export default function Sidebar({
               const isActive = !!(
                 item.href &&
                 (location.pathname === item.href ||
-                  (item.href === "/dashboard/welcome" &&
+                  (item.href === "/dashboard/programs" &&
                     location.pathname === "/dashboard"))
               );
 
