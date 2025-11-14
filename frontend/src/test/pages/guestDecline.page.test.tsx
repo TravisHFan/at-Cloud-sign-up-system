@@ -35,6 +35,34 @@ describe("GuestDecline Page", () => {
     );
   }
 
+  it("shows loading state while fetching decline info", async () => {
+    mockedApi.getDeclineInfo.mockResolvedValueOnce(
+      new Promise((resolve) =>
+        setTimeout(
+          () =>
+            resolve({
+              success: true,
+              data: {
+                registrationId: "r1",
+                eventTitle: "Loading Event",
+                roleName: "Guest",
+                eventDate: "2025-10-02",
+              },
+            }),
+          50
+        )
+      ) as any
+    );
+
+    renderWithToken("loadingtoken");
+
+    expect(screen.getByText(/validating…/i)).toBeInTheDocument();
+
+    await waitFor(() =>
+      expect(screen.queryByText(/validating…/i)).not.toBeInTheDocument()
+    );
+  });
+
   it("shows validation error for invalid link", async () => {
     mockedApi.getDeclineInfo.mockResolvedValueOnce({
       success: false,
@@ -72,6 +100,37 @@ describe("GuestDecline Page", () => {
     expect(mockedApi.submitDecline).toHaveBeenCalledWith(
       "goodtoken",
       "Cannot attend"
+    );
+  });
+
+  it("shows error message when decline submission fails", async () => {
+    mockedApi.getDeclineInfo.mockResolvedValueOnce({
+      success: true,
+      data: {
+        registrationId: "r2",
+        eventTitle: "Launch Event",
+        roleName: "Guest",
+        eventDate: "2025-10-02",
+      },
+    });
+    mockedApi.submitDecline.mockResolvedValueOnce({
+      success: false,
+      message: "Unable to process decline",
+    });
+
+    renderWithToken("errortoken");
+
+    await waitFor(() =>
+      expect(screen.getByText(/Launch Event/)).toBeInTheDocument()
+    );
+
+    const button = screen.getByRole("button", { name: /Decline Invitation/i });
+    fireEvent.click(button);
+
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        /Unable to process decline/i
+      )
     );
   });
 });

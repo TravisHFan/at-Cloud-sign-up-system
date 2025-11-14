@@ -13,6 +13,7 @@ import ProgramIntroSection from "../components/ProgramDetail/ProgramIntroSection
 import ProgramMentors from "../components/ProgramDetail/ProgramMentors";
 import ProgramEventsList from "../components/ProgramDetail/ProgramEventsList";
 import ProgramPricing from "../components/ProgramDetail/ProgramPricing";
+import LoadingSpinner from "../components/common/LoadingSpinner";
 import type { ProgramType } from "../constants/programTypes";
 
 type Program = {
@@ -407,12 +408,10 @@ export default function ProgramDetail({
     setDeleteCascade(false);
   };
 
-  if (loading)
-    return (
-      <div className="flex justify-center items-center min-h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
+  if (loading) {
+    // Standardized dashboard loading: centered, fullscreen, larger spinner
+    return <LoadingSpinner size="lg" message="Loading program details..." />;
+  }
 
   if (!program) return <div className="text-center">Program not found.</div>;
 

@@ -93,4 +93,72 @@ describe("Analytics API integration", () => {
       .expect(200);
     expect(res.body.success).toBe(true);
   });
+
+  it("GET /api/analytics/donations -> 200 for admin and returns analytics shape", async () => {
+    const res = await request(app)
+      .get("/api/analytics/donations")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .expect(200);
+
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toEqual(
+      expect.objectContaining({
+        totalRevenue: expect.any(Number),
+        totalGifts: expect.any(Number),
+        uniqueDonors: expect.any(Number),
+        oneTime: expect.objectContaining({
+          gifts: expect.any(Number),
+          revenue: expect.any(Number),
+        }),
+        recurring: expect.objectContaining({
+          gifts: expect.any(Number),
+          revenue: expect.any(Number),
+          activeDonations: expect.any(Number),
+          onHoldDonations: expect.any(Number),
+          scheduledDonations: expect.any(Number),
+          frequencyBreakdown: expect.any(Array),
+        }),
+      })
+    );
+  });
+
+  it("GET /api/analytics/financial-summary -> 200 for admin and returns financial summary shape", async () => {
+    const res = await request(app)
+      .get("/api/analytics/financial-summary")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .expect(200);
+
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toEqual(
+      expect.objectContaining({
+        totalRevenue: expect.any(Number),
+        totalTransactions: expect.any(Number),
+        uniqueParticipants: expect.any(Number),
+        growthRate: expect.any(Number),
+        last30Days: expect.objectContaining({
+          revenue: expect.any(Number),
+          transactions: expect.any(Number),
+          percentage: expect.any(Number),
+        }),
+        programs: expect.objectContaining({
+          revenue: expect.any(Number),
+          purchases: expect.any(Number),
+          uniqueBuyers: expect.any(Number),
+          last30Days: expect.objectContaining({
+            revenue: expect.any(Number),
+            purchases: expect.any(Number),
+          }),
+        }),
+        donations: expect.objectContaining({
+          revenue: expect.any(Number),
+          gifts: expect.any(Number),
+          uniqueDonors: expect.any(Number),
+          last30Days: expect.objectContaining({
+            revenue: expect.any(Number),
+            donations: expect.any(Number),
+          }),
+        }),
+      })
+    );
+  });
 });
