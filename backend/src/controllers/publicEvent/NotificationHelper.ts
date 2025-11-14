@@ -118,11 +118,12 @@ export class NotificationHelper {
     capacityAfter: number | null,
     requestId: string | undefined,
     ipCidr: string,
-    log: CorrelatedLogger
+    log: CorrelatedLogger,
+    user?: { _id: unknown; role: string; email: string } | null
   ): Promise<void> {
-    // Persist audit log (actorless public action)
+    // Persist audit log with actor info if user is authenticated
     try {
-      await AuditLog.create({
+      const auditData: Record<string, unknown> = {
         action: "PublicRegistrationCreated",
         eventId: event._id,
         emailHash: attendee.email ? hashEmail(attendee.email) : null,
@@ -137,7 +138,18 @@ export class NotificationHelper {
           requestId,
           ipCidr,
         },
-      });
+      };
+
+      // Add actor information if user is authenticated
+      if (user) {
+        auditData.actor = {
+          id: user._id,
+          role: user.role,
+          email: user.email,
+        };
+      }
+
+      await AuditLog.create(auditData);
     } catch (auditErr) {
       log.warn(
         "Failed to persist audit log for public registration",

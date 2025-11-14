@@ -188,7 +188,8 @@ export class PublicEventController {
         result.capacityAfter,
         requestId,
         ipCidr || "",
-        log
+        log,
+        req.user || null
       ).catch(() => undefined);
 
       // 7. Emit real-time updates using CacheHelper (only on non-duplicate success)
