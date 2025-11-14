@@ -82,7 +82,7 @@ describe("RequestPasswordChange page", () => {
     );
 
     const submitButton = screen.getByRole("button", {
-      name: /requesting|sending/i,
+      name: /processing/i,
     });
     expect(submitButton).toBeInTheDocument();
   });
