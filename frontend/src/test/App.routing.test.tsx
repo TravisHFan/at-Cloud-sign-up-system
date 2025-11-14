@@ -1,8 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { MemoryRouter } from "react-router-dom";
-import { render, screen } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import App from "../App";
-import { AuthProvider } from "../contexts/AuthContext";
 
 // Lightweight harness mirroring main entry but using MemoryRouter
 const renderWithRouter = (initialEntries: string[]) => {
@@ -29,7 +28,7 @@ describe("App routing", () => {
   });
 
   it("wires dashboard nested route for programs", () => {
-    // AuthProvider in tests defaults to an authenticated user; we just verify tree renders
+    // We just verify the dashboard programs tree renders without crashing
     renderWithRouter(["/dashboard/programs"]);
     expect(document.body.innerHTML.length).toBeGreaterThan(0);
   });
