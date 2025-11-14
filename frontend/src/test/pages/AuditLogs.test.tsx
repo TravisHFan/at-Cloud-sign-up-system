@@ -45,7 +45,11 @@ describe("AuditLogs page", () => {
 
     renderWithRouter();
 
-    expect(screen.getByText(/loading audit logs/i)).toBeInTheDocument();
+    // Loading spinner is rendered without text; just assert spinner exists
+    const spinner = document.querySelector(
+      ".animate-spin.rounded-full.border-4.border-gray-200.border-t-blue-500"
+    );
+    expect(spinner).not.toBeNull();
   });
 
   it("renders logs table when data is loaded", async () => {

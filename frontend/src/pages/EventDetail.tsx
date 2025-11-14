@@ -28,6 +28,7 @@ import EventHostAndPurpose from "../components/EventDetail/EventHostAndPurpose";
 import EventCapacityAndAgenda from "../components/EventDetail/EventCapacityAndAgenda";
 import EventHeader from "../components/EventDetail/EventHeader";
 import ProgramAccessModal from "../components/EventDetail/ProgramAccessModal";
+import LoadingSpinner from "../components/common/LoadingSpinner";
 
 export default function EventDetail() {
   const { id } = useParams<{ id: string }>();
@@ -207,11 +208,7 @@ export default function EventDetail() {
   });
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <LoadingSpinner size="lg" />;
   }
 
   if (!event) {
@@ -239,7 +236,7 @@ export default function EventDetail() {
       {checkingAccess && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/20">
           <div className="bg-white rounded-lg shadow-xl p-6 flex items-center gap-3">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
+            <LoadingSpinner inline size="sm" />
             <span className="text-gray-700">Checking access...</span>
           </div>
         </div>

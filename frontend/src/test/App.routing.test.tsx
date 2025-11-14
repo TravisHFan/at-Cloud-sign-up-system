@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { MemoryRouter } from "react-router-dom";
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import App from "../App";
 
 // Lightweight harness mirroring main entry but using MemoryRouter
@@ -31,5 +31,17 @@ describe("App routing", () => {
     // We just verify the dashboard programs tree renders without crashing
     renderWithRouter(["/dashboard/programs"]);
     expect(document.body.innerHTML.length).toBeGreaterThan(0);
+  });
+
+  it("renders login page for /login route", () => {
+    renderWithRouter(["/login"]);
+    // Assert on the visible login heading text
+    expect(screen.getByText(/Login to @Cloud/i)).toBeInTheDocument();
+  });
+
+  it("renders dashboard layout shell for /dashboard route", () => {
+    renderWithRouter(["/dashboard"]);
+    // The dashboard route is protected; when unauthenticated it should render the login page
+    expect(screen.getByText(/Login to @Cloud/i)).toBeInTheDocument();
   });
 });

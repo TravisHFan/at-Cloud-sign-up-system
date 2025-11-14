@@ -5,6 +5,7 @@ import type { ReceiptData } from "../services/api/donations.api";
 import { formatCurrency } from "../utils/currency";
 import { formatDateToAmerican } from "../utils/eventStatsUtils";
 import html2pdf from "html2pdf.js";
+import LoadingSpinner from "../components/common/LoadingSpinner";
 
 // Icons as inline SVG components
 const ArrowLeftIcon = ({ className }: { className?: string }) => (
@@ -136,14 +137,7 @@ export default function DonationReceipt() {
   // Check loading state FIRST before checking error/data
   // This prevents showing "No receipt data available" flash during loading
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading receipt...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner size="lg" />;
   }
 
   if (error || !receiptData) {

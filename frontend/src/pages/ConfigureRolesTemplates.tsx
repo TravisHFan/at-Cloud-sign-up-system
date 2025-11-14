@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { roleTemplateService } from "../services/api";
 import type { GroupedTemplates, RolesTemplate } from "../types/rolesTemplate";
 import { useAuth } from "../hooks/useAuth";
+import LoadingSpinner from "../components/common/LoadingSpinner";
 
 const EVENT_TYPES = [
   "Conference",
@@ -101,14 +102,7 @@ export default function ConfigureRolesTemplates() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading role templates...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner size="lg" />;
   }
 
   return (

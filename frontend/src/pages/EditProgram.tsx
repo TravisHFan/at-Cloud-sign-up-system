@@ -556,7 +556,7 @@ export default function EditProgram() {
 
   if (loading) {
     // Standardized dashboard loading: centered, fullscreen, larger spinner
-    return <LoadingSpinner size="lg" message="Loading program details..." />;
+    return <LoadingSpinner size="lg" />;
   }
 
   return (

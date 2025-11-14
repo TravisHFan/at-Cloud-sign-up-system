@@ -410,7 +410,7 @@ export default function ProgramDetail({
 
   if (loading) {
     // Standardized dashboard loading: centered, fullscreen, larger spinner
-    return <LoadingSpinner size="lg" message="Loading program details..." />;
+    return <LoadingSpinner size="lg" />;
   }
 
   if (!program) return <div className="text-center">Program not found.</div>;

@@ -147,6 +147,72 @@ describe("Promo Code System - Integration Tests", () => {
   });
 
   // ============================================================================
+  // ADMIN ROUTES - GET /api/promo-codes (search + pagination)
+  // ============================================================================
+
+  describe("GET /api/promo-codes (admin listing with search & pagination)", () => {
+    test("supports search and pagination parameters", async () => {
+      const { token: adminToken, userId: adminId } =
+        await createAndLoginTestUser({ role: "Administrator" });
+
+      const { userId: ownerA } = await createAndLoginTestUser();
+      const { userId: ownerB } = await createAndLoginTestUser();
+
+      // Create multiple codes for two different owners so search and pagination have work to do
+      await PromoCode.insertMany([
+        {
+          code: "SEARCHC1", // valid 8-char code
+          type: "bundle_discount",
+          discountAmount: 50,
+          ownerId: ownerA,
+          isActive: true,
+          isUsed: false,
+          createdBy: adminId,
+        },
+        {
+          code: "SEARCHC2", // valid 8-char code
+          type: "bundle_discount",
+          discountAmount: 75,
+          ownerId: ownerA,
+          isActive: true,
+          isUsed: false,
+          createdBy: adminId,
+        },
+        {
+          code: "OTHERC01", // valid 8-char code
+          type: "staff_access",
+          discountPercent: 100,
+          ownerId: ownerB,
+          isActive: true,
+          isUsed: false,
+          createdBy: adminId,
+        },
+      ]);
+
+      // Page 1, limit 1, search by partial code
+      const res = await request(app)
+        .get("/api/promo-codes")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .query({ search: "SEARCHC", page: 1, limit: 1 })
+        .expect(200);
+
+      expect(res.body.success).toBe(true);
+      expect(res.body.codes).toHaveLength(1);
+      expect(res.body.codes[0].code).toMatch(/SEARCHC/);
+
+      // Pagination metadata should reflect total matches and page information
+      expect(res.body.pagination).toEqual(
+        expect.objectContaining({
+          page: 1,
+          limit: 1,
+          total: 2,
+          totalPages: 2,
+        })
+      );
+    });
+  });
+
+  // ============================================================================
   // USER ROUTES - POST /api/promo-codes/validate
   // ============================================================================
 

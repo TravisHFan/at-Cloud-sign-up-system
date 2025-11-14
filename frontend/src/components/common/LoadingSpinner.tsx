@@ -1,11 +1,9 @@
 interface LoadingSpinnerProps {
-  message?: string;
   size?: "sm" | "md" | "lg";
   inline?: boolean;
 }
 
 export function LoadingSpinner({
-  message = "Loading...",
   size = "md",
   inline = false,
 }: LoadingSpinnerProps) {
@@ -24,13 +22,15 @@ export function LoadingSpinner({
     );
   }
 
-  // Full-screen mode: with container and message
+  // Full-screen mode: clean, centered spinner without text
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center">
+    <div
+      className="min-h-screen bg-gray-50 flex items-center justify-center"
+      data-testid="loading-spinner-fullscreen"
+    >
       <div
         className={`animate-spin rounded-full border-4 border-gray-200 border-t-blue-500 ${sizeClasses[size]}`}
       ></div>
-      <p className="mt-4 text-gray-600 text-lg">{message}</p>
     </div>
   );
 }

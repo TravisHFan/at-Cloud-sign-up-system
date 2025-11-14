@@ -7,6 +7,7 @@ import PromoCodeInput, {
 } from "../components/promo/PromoCodeInput";
 import { promoCodeService } from "../services/promoCodeService";
 import AlertModal from "../components/common/AlertModal";
+import LoadingSpinner from "../components/common/LoadingSpinner";
 
 interface Program {
   id: string;
@@ -281,11 +282,7 @@ export default function EnrollProgram() {
   };
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
-      </div>
-    );
+    return <LoadingSpinner size="lg" />;
   }
 
   if (!program) {

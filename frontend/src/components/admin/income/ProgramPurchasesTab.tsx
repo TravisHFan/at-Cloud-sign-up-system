@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import LoadingSpinner from "../../common/LoadingSpinner";
 import PurchaseTable from "../../purchases/PurchaseTable";
 import type { PurchaseTableRow } from "../../purchases/PurchaseTable";
 import Pagination from "../../common/Pagination";
@@ -97,11 +98,7 @@ export default function ProgramPurchasesTab() {
   };
 
   if (loading && !purchases.length) {
-    return (
-      <div className="flex justify-center items-center min-h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
-      </div>
-    );
+    return <LoadingSpinner size="lg" />;
   }
 
   if (error && !purchases.length) {

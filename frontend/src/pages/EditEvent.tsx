@@ -10,6 +10,7 @@ import NotificationPreference from "../components/EditEvent/NotificationPreferen
 import EditEventModals from "../components/EditEvent/EditEventModals";
 import { useAuth } from "../hooks/useAuth";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
+import LoadingSpinner from "../components/common/LoadingSpinner";
 import { useEventValidation } from "../hooks/useEventValidation";
 import { eventSchema, type EventFormData } from "../schemas/eventSchema";
 import { eventService } from "../services/api";
@@ -528,11 +529,7 @@ export default function EditEvent() {
   };
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <LoadingSpinner size="lg" />;
   }
 
   if (!eventData) {
