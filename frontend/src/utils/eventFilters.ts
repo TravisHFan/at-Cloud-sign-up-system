@@ -51,12 +51,17 @@ export function getEventsInNextDays(
   events: EventData[],
   days: number
 ): EventData[] {
-  const now = new Date();
-  const futureDate = new Date();
-  futureDate.setDate(now.getDate() + days);
+  // Use UTC to avoid timezone issues with date-only strings
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+
+  const futureDate = new Date(today);
+  futureDate.setUTCDate(today.getUTCDate() + days);
+  futureDate.setUTCHours(23, 59, 59, 999);
 
   return events.filter((event) => {
     const eventDate = new Date(event.date);
-    return eventDate >= now && eventDate <= futureDate;
+    eventDate.setUTCHours(0, 0, 0, 0);
+    return eventDate >= today && eventDate <= futureDate;
   });
 }

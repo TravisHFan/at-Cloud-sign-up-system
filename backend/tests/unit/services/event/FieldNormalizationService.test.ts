@@ -1,0 +1,212 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+import { FieldNormalizationService } from "../../../../src/services/event/FieldNormalizationService";
+
+vi.mock("../../../../src/utils/event/timezoneUtils", () => ({
+  toInstantFromWallClock: (date: string, time: string) =>
+    new Date(`${date}T${time}:00.000Z`),
+}));
+
+vi.mock("../../../../src/controllers/eventController", () => ({
+  EventController: {
+    findConflictingEvents: vi.fn(),
+  },
+}));
+
+import { EventController } from "../../../../src/controllers/eventController";
+
+const makeRes = () => {
+  const res: any = {
+    status: vi.fn().mockReturnThis(),
+    json: vi.fn().mockReturnThis(),
+  };
+  return res;
+};
+
+const baseEvent = {
+  id: "e1",
+  date: "2024-01-01",
+  endDate: "2024-01-01",
+  time: "10:00",
+  endTime: "11:00",
+  timeZone: "UTC",
+  format: "Online",
+  zoomLink: "https://zoom.example.com/meeting",
+  location: "Online",
+} as any;
+
+describe("FieldNormalizationService.normalizeAndValidate", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (EventController.findConflictingEvents as any).mockResolvedValue([]);
+  });
+
+  it("returns undefined and 400 when end is before start (conflict block)", async () => {
+    const res = makeRes();
+    const updateData = {
+      date: "2024-01-01",
+      time: "12:00",
+      endDate: "2024-01-01",
+      endTime: "11:00",
+    };
+
+    const result = await FieldNormalizationService.normalizeAndValidate(
+      { ...updateData },
+      baseEvent,
+      "e1",
+      res as any
+    );
+
+    expect(result).toBeUndefined();
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+      })
+    );
+  });
+
+  it("returns undefined and 409 when conflicts are detected", async () => {
+    const res = makeRes();
+    (EventController.findConflictingEvents as any).mockResolvedValue([
+      { id: "conflict" },
+    ]);
+
+    const result = await FieldNormalizationService.normalizeAndValidate(
+      {
+        date: "2024-01-02",
+        time: "10:00",
+        endDate: "2024-01-02",
+        endTime: "11:00",
+      },
+      baseEvent,
+      "e1",
+      res as any
+    );
+
+    expect(result).toBeUndefined();
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        data: expect.objectContaining({ conflicts: expect.any(Array) }),
+      })
+    );
+  });
+
+  it("clears virtual fields when switching to In-person and normalizes location + flyer URLs", async () => {
+    const res = makeRes();
+    const updateData: any = {
+      format: "In-person",
+      zoomLink: " should-be-cleared ",
+      meetingId: " will-be-cleared ",
+      passcode: " will-be-cleared ",
+      location: "  New Venue  ",
+      flyerUrl: "  https://example.com/flyer  ",
+      secondaryFlyerUrl: "   ",
+      timeZone: "  America/New_York  ",
+    };
+
+    const result = await FieldNormalizationService.normalizeAndValidate(
+      updateData,
+      baseEvent,
+      "e1",
+      res as any
+    );
+
+    expect(result).toBeDefined();
+    expect(result?.zoomLink).toBeUndefined();
+    expect(result?.meetingId).toBeUndefined();
+    expect(result?.passcode).toBeUndefined();
+    expect(result?.location).toBe("New Venue");
+    expect(result?.flyerUrl).toBe("https://example.com/flyer");
+    // secondaryFlyerUrl with only spaces becomes undefined
+    expect(result?.secondaryFlyerUrl).toBeUndefined();
+    expect(result?.timeZone).toBe("America/New_York");
+  });
+
+  it("normalizes Online format location and trims virtual fields", async () => {
+    const res = makeRes();
+    const updateData: any = {
+      format: "Online",
+      zoomLink: "  https://zoom.example.com/abc  ",
+      meetingId: " 12345 ",
+      passcode: "  pass  ",
+      location: " should-be-overwritten ",
+    };
+
+    const result = await FieldNormalizationService.normalizeAndValidate(
+      updateData,
+      { ...baseEvent, format: "Hybrid" } as any,
+      "e1",
+      res as any
+    );
+
+    expect(result).toBeDefined();
+    expect(result?.zoomLink).toBe("https://zoom.example.com/abc");
+    expect(result?.meetingId).toBe("12345");
+    expect(result?.passcode).toBe("pass");
+    // Online format forces location to "Online"
+    expect(result?.location).toBe("Online");
+  });
+
+  it("treats explicit null flyer URLs as removal", async () => {
+    const res = makeRes();
+    const updateData: any = {
+      flyerUrl: null,
+      secondaryFlyerUrl: null,
+    };
+
+    const result = await FieldNormalizationService.normalizeAndValidate(
+      updateData,
+      baseEvent,
+      "e1",
+      res as any
+    );
+
+    expect(result).toBeDefined();
+    expect(result?.flyerUrl).toBeUndefined();
+    expect(result?.secondaryFlyerUrl).toBeUndefined();
+  });
+
+  it("applies final Date-based check and errors if effEnd < effStart", async () => {
+    const res = makeRes();
+    const updateData: any = {
+      date: "2024-01-02",
+      endDate: "2024-01-01",
+    };
+
+    const result = await FieldNormalizationService.normalizeAndValidate(
+      updateData,
+      baseEvent,
+      "e1",
+      res as any
+    );
+
+    expect(result).toBeUndefined();
+    expect(res.status).toHaveBeenCalledWith(400);
+  });
+});
+
+describe("FieldNormalizationService.extractSuppressionFlags", () => {
+  it("returns false by default", () => {
+    const result = FieldNormalizationService.extractSuppressionFlags({});
+    expect(result.suppressNotifications).toBe(false);
+  });
+
+  it("returns provided boolean value", () => {
+    const result = FieldNormalizationService.extractSuppressionFlags({
+      suppressNotifications: true,
+    });
+    expect(result.suppressNotifications).toBe(true);
+  });
+});
+
+describe("FieldNormalizationService.prepareUpdateData", () => {
+  it("removes suppressNotifications flag from update data", () => {
+    const body = { title: "Event", suppressNotifications: true };
+    const updateData = FieldNormalizationService.prepareUpdateData(body);
+
+    expect(updateData).toEqual({ title: "Event" });
+  });
+});

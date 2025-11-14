@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import EventList from "../components/common/EventList";
+import LoadingSpinner from "../components/common/LoadingSpinner";
 import { eventService } from "../services/api";
 import type { EventData } from "../types/event";
 
@@ -70,11 +71,7 @@ export default function PassedEvents() {
   };
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <LoadingSpinner size="lg" message="Loading past events..." />;
   }
 
   if (error) {

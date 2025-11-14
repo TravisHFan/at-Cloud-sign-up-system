@@ -200,16 +200,22 @@ describe("Guests Admin Resend Manage Link API", () => {
       .spyOn(EmailService, "sendGuestConfirmationEmail")
       .mockRejectedValue(new Error("SMTP failure"));
 
-    await request(app)
-      .post(`/api/guest-registrations/${regId}/resend-manage-link`)
-      .set("Authorization", `Bearer ${adminToken}`)
-      .expect(200)
-      .expect((r) => expect(r.body?.success).toBe(true));
+    try {
+      await request(app)
+        .post(`/api/guest-registrations/${regId}/resend-manage-link`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .expect(200)
+        .expect((r) => expect(r.body?.success).toBe(true));
 
-    // Token should still be regenerated even if email fails
-    const after = await GuestRegistration.findById(regId).lean();
-    expect(after?.manageToken).toBeTruthy();
+      // Token should still be regenerated even if email fails
+      const after = await GuestRegistration.findById(regId).lean();
+      expect(after?.manageToken).toBeTruthy();
+    } finally {
+      // Always restore spy, even if test fails
+      spy.mockRestore();
+    }
 
-    spy.mockRestore();
+    // Add a small delay to ensure any background operations complete
+    await new Promise((resolve) => setTimeout(resolve, 50));
   });
 });

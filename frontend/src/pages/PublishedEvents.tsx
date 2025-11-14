@@ -1,4 +1,5 @@
 import EventList from "../components/common/EventList";
+import LoadingSpinner from "../components/common/LoadingSpinner";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
@@ -92,11 +93,7 @@ export default function PublishedEvents() {
   };
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center h-48">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <LoadingSpinner size="lg" message="Loading published events..." />;
   }
 
   if (error) {

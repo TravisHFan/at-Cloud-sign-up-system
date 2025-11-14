@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { ClipboardDocumentCheckIcon } from "@heroicons/react/24/outline";
 import { apiFetch } from "../lib/apiClient";
+import LoadingSpinner from "../components/common/LoadingSpinner";
 
 interface AuditLog {
   id: string;
@@ -154,11 +155,7 @@ export default function AuditLogs() {
   };
 
   if (loading && (!auditLogs || auditLogs.length === 0)) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <LoadingSpinner size="lg" message="Loading audit logs..." />;
   }
 
   return (

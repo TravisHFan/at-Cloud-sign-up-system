@@ -34,10 +34,16 @@ describe("PurchaseRefundController - Unit Tests", () => {
       purchaseDate: Date;
       refundDeadline: Date;
     } {
+      // Normalize to start of day for consistent date comparisons
       const now = new Date();
+      now.setHours(0, 0, 0, 0);
+
       const purchaseDate = new Date(purchase.purchaseDate);
+      purchaseDate.setHours(0, 0, 0, 0);
+
       const refundDeadline = new Date(purchaseDate);
       refundDeadline.setDate(refundDeadline.getDate() + REFUND_WINDOW_DAYS);
+      refundDeadline.setHours(23, 59, 59, 999); // End of the deadline day
 
       const daysElapsed = Math.floor(
         (now.getTime() - purchaseDate.getTime()) / (1000 * 60 * 60 * 24)
@@ -284,13 +290,15 @@ describe("PurchaseRefundController - Unit Tests", () => {
 
         const result = calculateRefundEligibility(purchase);
 
-        const expectedDeadline = new Date("2025-01-31T12:00:00Z");
+        // Purchase date normalized to 2025-01-01 00:00:00.000
+        // Deadline is 30 days later at end of day: 2025-01-31 23:59:59.999
+        const expectedDeadline = new Date("2025-02-01T07:59:59.999Z"); // End of Jan 31 in UTC
         expect(result.refundDeadline.toISOString()).toBe(
           expectedDeadline.toISOString()
         );
       });
 
-      it("should preserve purchase date", () => {
+      it("should normalize purchase date to start of day", () => {
         const purchaseDate = new Date("2025-01-15T08:30:00Z");
         const purchase = {
           status: "completed",
@@ -299,8 +307,10 @@ describe("PurchaseRefundController - Unit Tests", () => {
 
         const result = calculateRefundEligibility(purchase);
 
+        // Purchase date should be normalized to start of day (00:00:00.000)
+        const expectedNormalizedDate = new Date("2025-01-15T08:00:00.000Z"); // Start of day in UTC-8
         expect(result.purchaseDate.toISOString()).toBe(
-          purchaseDate.toISOString()
+          expectedNormalizedDate.toISOString()
         );
       });
 
@@ -314,10 +324,14 @@ describe("PurchaseRefundController - Unit Tests", () => {
         const result = calculateRefundEligibility(purchase);
 
         // Check that 30 days are added correctly (Feb 15 + 30 days = Mar 16)
+        // With end-of-day normalization, deadline is Mar 16 23:59:59.999 local time
+        // which is Mar 17 06:59:59.999 UTC (8 hour offset)
         const deadline = result.refundDeadline;
         expect(deadline.getUTCFullYear()).toBe(2024);
         expect(deadline.getUTCMonth()).toBe(2); // March (0-indexed)
-        expect(deadline.getUTCDate()).toBe(16);
+        expect(deadline.getUTCDate()).toBe(17);
+        expect(deadline.getUTCHours()).toBe(6);
+        expect(deadline.getUTCMinutes()).toBe(59);
       });
     });
 
@@ -415,9 +429,9 @@ describe("PurchaseRefundController - Unit Tests", () => {
 
         const result = calculateRefundEligibility(purchase);
 
-        // Should calculate correctly based on UTC time
+        // Normalized to start of Jan 1, then 30 days to end of Jan 31
         expect(result.refundDeadline.toISOString()).toBe(
-          new Date("2025-01-31T23:00:00Z").toISOString()
+          new Date("2025-02-01T07:59:59.999Z").toISOString()
         );
       });
 
@@ -430,7 +444,8 @@ describe("PurchaseRefundController - Unit Tests", () => {
 
         const result = calculateRefundEligibility(purchase);
 
-        const expectedDeadline = new Date("2025-02-14T12:00:00Z");
+        // Normalized to start of Jan 15, then 30 days to end of Feb 14
+        const expectedDeadline = new Date("2025-02-15T07:59:59.999Z");
         expect(result.refundDeadline.toISOString()).toBe(
           expectedDeadline.toISOString()
         );

@@ -1,4 +1,5 @@
 import EventList from "../components/common/EventList";
+import LoadingSpinner from "../components/common/LoadingSpinner";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
@@ -100,11 +101,8 @@ export default function UpcomingEvents() {
   };
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    // Standardized dashboard loading: centered, fullscreen, larger spinner
+    return <LoadingSpinner size="lg" message="Loading upcoming events..." />;
   }
 
   if (error) {
