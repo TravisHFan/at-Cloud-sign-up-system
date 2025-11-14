@@ -110,6 +110,9 @@ const mockEventData: EventData[] = [
     format: "In-Person",
     roles: [],
     createdAt: "2025-11-01T00:00:00Z",
+    signedUp: 0,
+    totalSlots: 50,
+    createdBy: "org1",
   },
   {
     id: "evt2",
@@ -118,13 +121,16 @@ const mockEventData: EventData[] = [
     time: "14:00",
     endTime: "16:00",
     status: "ongoing",
-    organizer: "org1",
+    organizer: "org2",
     purpose: "Another event",
     location: "Another Location",
     type: "Workshop",
     format: "Hybrid",
     roles: [],
     createdAt: "2025-11-01T00:00:00Z",
+    signedUp: 0,
+    totalSlots: 50,
+    createdBy: "org2",
   },
 ];
 
