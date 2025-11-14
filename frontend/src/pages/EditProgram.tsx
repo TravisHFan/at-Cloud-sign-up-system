@@ -8,6 +8,7 @@ import ValidationIndicator from "../components/events/ValidationIndicator";
 import PricingSection from "../components/EditProgram/PricingSection";
 import PricingConfirmationModal from "../components/EditProgram/PricingConfirmationModal";
 import ProgramFormFields from "../components/EditProgram/ProgramFormFields";
+import LoadingSpinner from "../components/common/LoadingSpinner";
 import { programService } from "../services/api";
 import { type ProgramType } from "../constants/programTypes";
 
@@ -554,11 +555,8 @@ export default function EditProgram() {
   const shouldShowRestrictedOverlay = !isAdmin && !isMentor;
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    // Standardized dashboard loading: centered, fullscreen, larger spinner
+    return <LoadingSpinner size="lg" message="Loading program details..." />;
   }
 
   return (

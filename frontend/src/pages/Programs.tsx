@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { programService, purchaseService } from "../services/api";
 import { useAuth } from "../hooks/useAuth";
+import LoadingSpinner from "../components/common/LoadingSpinner";
 import type { ProgramType } from "../constants/programTypes";
 
 // Card model for UI
@@ -298,6 +299,11 @@ export default function Programs() {
     (currentUser.role === "Super Admin" ||
       currentUser.role === "Administrator");
 
+  if (loading && programs.length === 0) {
+    // Standardized dashboard loading: centered, fullscreen, larger spinner
+    return <LoadingSpinner size="lg" message="Loading programs..." />;
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
@@ -553,8 +559,8 @@ export default function Programs() {
             );
           })}
 
-          {/* Loading placeholder */}
-          {loading && (
+          {/* Loading placeholder (when some programs already rendered) */}
+          {loading && programs.length > 0 && (
             <div className="col-span-1 sm:col-span-2 lg:grid-cols-3 xl:col-span-4 flex justify-center items-center min-h-48">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
             </div>
