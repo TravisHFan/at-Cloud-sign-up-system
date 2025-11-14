@@ -419,6 +419,98 @@ describe("GET /api/audit-logs - Audit Logs API", () => {
       }
     });
 
+    it("should format actor info with name and role fields", async () => {
+      const response = await request(app)
+        .get("/api/audit-logs")
+        .set("Authorization", `Bearer ${adminToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.data.auditLogs.length).toBeGreaterThan(0);
+
+      // Find a log entry with actor info
+      const logWithActor = response.body.data.auditLogs.find(
+        (log: any) => log.actorInfo !== null
+      );
+
+      expect(logWithActor).toBeDefined();
+      expect(logWithActor.actorInfo).toHaveProperty("name");
+      expect(logWithActor.actorInfo).toHaveProperty("role");
+      expect(logWithActor.actorInfo).toHaveProperty("username");
+      expect(logWithActor.actorInfo).toHaveProperty("email");
+
+      // Verify name is not empty and role exists
+      expect(logWithActor.actorInfo.name).toBeTruthy();
+      expect(logWithActor.actorInfo.role).toBeTruthy();
+      expect(typeof logWithActor.actorInfo.name).toBe("string");
+      expect(typeof logWithActor.actorInfo.role).toBe("string");
+    });
+
+    it("should format actor info consistently for new format entries", async () => {
+      const response = await request(app)
+        .get("/api/audit-logs?action=user.create")
+        .set("Authorization", `Bearer ${adminToken}`);
+
+      expect(response.status).toBe(200);
+      if (response.body.data.auditLogs.length > 0) {
+        const log = response.body.data.auditLogs[0];
+
+        // New format entries should have actorInfo with name and role
+        expect(log.actorInfo).toBeDefined();
+        expect(log.actorInfo).toHaveProperty("name");
+        expect(log.actorInfo).toHaveProperty("role");
+
+        // Name should be the full name (or username fallback), not the role
+        expect(log.actorInfo.name).not.toBe(log.actorInfo.role);
+
+        // Role should be a valid system role
+        expect([
+          "Super Admin",
+          "Administrator",
+          "Leader",
+          "Member",
+          "Participant",
+          "Guest Expert",
+          "Admin",
+          "User",
+        ]).toContain(log.actorInfo.role);
+      }
+    });
+
+    it("should format actor info consistently for old format entries", async () => {
+      // Create an old-format audit log for testing
+      const oldFormatLog = await AuditLog.create({
+        action: "test.oldformat",
+        actorId: adminUserId,
+        eventId: null,
+        metadata: { test: true },
+      });
+
+      const response = await request(app)
+        .get(`/api/audit-logs?action=test.oldformat`)
+        .set("Authorization", `Bearer ${adminToken}`);
+
+      expect(response.status).toBe(200);
+      if (response.body.data.auditLogs.length > 0) {
+        const log = response.body.data.auditLogs[0];
+
+        // Old format entries should also have actorInfo with name and role
+        expect(log.actorInfo).toBeDefined();
+        expect(log.actorInfo).toHaveProperty("name");
+        expect(log.actorInfo).toHaveProperty("role");
+
+        // Name should be populated from firstName/lastName or username
+        expect(log.actorInfo.name).toBeTruthy();
+        expect(typeof log.actorInfo.name).toBe("string");
+
+        // Role should be populated from user's role field
+        expect(log.actorInfo.role).toBeTruthy();
+        expect(typeof log.actorInfo.role).toBe("string");
+      }
+
+      // Clean up
+      await AuditLog.deleteOne({ _id: oldFormatLog._id });
+    });
+
     it("should include details field", async () => {
       const response = await request(app)
         .get("/api/audit-logs?action=user.create")
