@@ -20,7 +20,7 @@ export function ProtectedRoute({
 
   // Show loading spinner while checking authentication
   if (isLoading) {
-    return <LoadingSpinner message="Checking authentication..." />;
+    return <LoadingSpinner />;
   }
 
   // Redirect to login if user is not authenticated

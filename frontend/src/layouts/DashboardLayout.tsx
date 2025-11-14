@@ -12,7 +12,7 @@ export default function DashboardLayout() {
 
   // Show loading spinner while checking authentication
   if (isLoading) {
-    return <LoadingSpinner message="Loading dashboard..." />;
+    return <LoadingSpinner />;
   }
 
   // Redirect to login if user is not authenticated

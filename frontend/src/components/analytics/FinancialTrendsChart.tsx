@@ -51,12 +51,24 @@ export function FinancialTrendsChart() {
       combined: trendsData.combinedRevenue[index] / 100,
     })) || [];
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  type TooltipPayloadEntry = {
+    color: string;
+    name: string;
+    value: number;
+  };
+
+  interface CustomTooltipProps {
+    active?: boolean;
+    label?: string;
+    payload?: TooltipPayloadEntry[];
+  }
+
+  const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3">
           <p className="text-sm font-semibold text-gray-900 mb-2">{label}</p>
-          {payload.map((entry: any, index: number) => (
+          {payload.map((entry, index) => (
             <p key={index} className="text-sm" style={{ color: entry.color }}>
               <span className="font-medium">{entry.name}:</span>{" "}
               {formatCurrency(entry.value * 100)}

@@ -71,7 +71,7 @@ export default function PassedEvents() {
   };
 
   if (loading) {
-    return <LoadingSpinner size="lg" message="Loading past events..." />;
+    return <LoadingSpinner size="lg" />;
   }
 
   if (error) {

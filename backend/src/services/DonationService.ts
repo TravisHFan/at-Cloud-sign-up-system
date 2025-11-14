@@ -611,18 +611,26 @@ class DonationService {
     ]);
 
     // Map transactions to unified format
-    const donations = transactions.map((txn: any) => ({
-      _id: txn._id.toString(),
-      giftDate: txn.giftDate,
-      user: {
-        firstName: txn.userId?.firstName || "Unknown",
-        lastName: txn.userId?.lastName || "User",
-        email: txn.userId?.email || "N/A",
-      },
-      type: txn.type,
-      status: txn.status,
-      amount: txn.amount,
-    }));
+    const donations = transactions.map((txn) => {
+      const user = txn.userId as unknown as {
+        firstName?: string;
+        lastName?: string;
+        email?: string;
+      };
+
+      return {
+        _id: txn._id.toString(),
+        giftDate: txn.giftDate,
+        user: {
+          firstName: user.firstName || "Unknown",
+          lastName: user.lastName || "User",
+          email: user.email || "N/A",
+        },
+        type: txn.type,
+        status: txn.status,
+        amount: txn.amount,
+      };
+    });
 
     return {
       donations,

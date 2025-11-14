@@ -27,8 +27,6 @@ export default function GivingTab() {
     try {
       setLoading(true);
       setError(null);
-
-      // Load stats and history in parallel
       const [statsData, historyData] = await Promise.all([
         donationsService.getStats(),
         donationsService.getMyDonations(
@@ -78,7 +76,7 @@ export default function GivingTab() {
   if (loading) {
     return (
       <div className="py-12">
-        <LoadingSpinner message="Loading donation history..." />
+        <LoadingSpinner />
       </div>
     );
   }

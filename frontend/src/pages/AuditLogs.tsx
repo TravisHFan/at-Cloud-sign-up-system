@@ -155,7 +155,7 @@ export default function AuditLogs() {
   };
 
   if (loading && (!auditLogs || auditLogs.length === 0)) {
-    return <LoadingSpinner size="lg" message="Loading audit logs..." />;
+    return <LoadingSpinner size="lg" />;
   }
 
   return (

@@ -93,7 +93,7 @@ export default function PublishedEvents() {
   };
 
   if (loading) {
-    return <LoadingSpinner size="lg" message="Loading published events..." />;
+    return <LoadingSpinner size="lg" />;
   }
 
   if (error) {

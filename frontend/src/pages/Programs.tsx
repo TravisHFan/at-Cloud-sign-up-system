@@ -301,7 +301,7 @@ export default function Programs() {
 
   if (loading && programs.length === 0) {
     // Standardized dashboard loading: centered, fullscreen, larger spinner
-    return <LoadingSpinner size="lg" message="Loading programs..." />;
+    return <LoadingSpinner size="lg" />;
   }
 
   return (

@@ -102,7 +102,7 @@ export default function UpcomingEvents() {
 
   if (loading) {
     // Standardized dashboard loading: centered, fullscreen, larger spinner
-    return <LoadingSpinner size="lg" message="Loading upcoming events..." />;
+    return <LoadingSpinner size="lg" />;
   }
 
   if (error) {

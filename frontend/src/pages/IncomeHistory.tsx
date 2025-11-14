@@ -60,26 +60,26 @@ export default function IncomeHistory() {
     }
   }, [currentUser, navigate]);
 
-  const loadAllStats = async () => {
-    try {
-      setLoading(true);
-
-      const [purchaseResponse, donationResponse] = await Promise.all([
-        adminPurchaseService.getPaymentStats(),
-        donationsService.getAdminDonationStats(),
-      ]);
-
-      setPurchaseStats(purchaseResponse.stats);
-      setDonationStats(donationResponse);
-    } catch (err) {
-      console.error("Error loading stats:", err);
-      // Don't set error state - stats are optional
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    const loadAllStats = async () => {
+      try {
+        setLoading(true);
+
+        const [purchaseResponse, donationResponse] = await Promise.all([
+          adminPurchaseService.getPaymentStats(),
+          donationsService.getAdminDonationStats(),
+        ]);
+
+        setPurchaseStats(purchaseResponse.stats);
+        setDonationStats(donationResponse);
+      } catch (err) {
+        console.error("Error loading stats:", err);
+        // Don't set error state - stats are optional
+      } finally {
+        setLoading(false);
+      }
+    };
+
     if (
       currentUser &&
       (currentUser.role === "Super Admin" ||
@@ -87,7 +87,6 @@ export default function IncomeHistory() {
     ) {
       loadAllStats();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]);
 
   // Calculate combined totals

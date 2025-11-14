@@ -93,7 +93,7 @@ export default function ScheduledTab() {
   if (loading) {
     return (
       <div className="py-12">
-        <LoadingSpinner message="Loading scheduled donations..." />
+        <LoadingSpinner />
       </div>
     );
   }
