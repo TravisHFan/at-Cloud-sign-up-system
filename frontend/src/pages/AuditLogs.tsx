@@ -12,6 +12,7 @@ interface AuditLog {
     username: string;
     email: string;
     name: string;
+    role: string;
   } | null;
   eventId?: string | null;
   eventTitle?: string | null;
@@ -361,14 +362,19 @@ export default function AuditLogs() {
                       {log.actorInfo ? (
                         <div>
                           <div className="font-medium">
-                            {log.actorInfo.name}
+                            {log.actorInfo.name || log.actorInfo.username}
                           </div>
                           <div className="text-gray-500 text-xs">
-                            {log.actorInfo.username}
+                            {log.actorInfo.role || "User"}
                           </div>
                         </div>
                       ) : (
-                        "Anonymous"
+                        <div>
+                          <div className="font-medium text-gray-400">
+                            Unknown User
+                          </div>
+                          <div className="text-gray-400 text-xs">N/A</div>
+                        </div>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">

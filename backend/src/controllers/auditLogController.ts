@@ -64,7 +64,12 @@ export class AuditLogController {
           .sort({ createdAt: -1 }) // Most recent first
           .skip(skip)
           .limit(limitNumber)
-          .populate("actorId", "username email firstName lastName", "User")
+          .populate("actorId", "username email firstName lastName role", "User")
+          .populate(
+            "actor.id",
+            "username email firstName lastName role",
+            "User"
+          )
           .populate("eventId", "title", "Event")
           .lean(),
         AuditLog.countDocuments(filter),
@@ -82,6 +87,7 @@ export class AuditLogController {
         email: string;
         firstName?: string;
         lastName?: string;
+        role?: string;
       }
       interface PopulatedEventRef {
         _id?: unknown;
@@ -119,6 +125,7 @@ export class AuditLogController {
             username: string;
             email: string;
             name: string;
+            role: string;
           } | null = null;
 
           // New format: actor object with embedded info
@@ -128,21 +135,50 @@ export class AuditLogController {
               role: string;
               email: string;
             };
-            actorIdStr = actor.id ? String(actor.id) : null;
-            actorInfo = {
-              username: actor.email.split("@")[0], // Use email prefix as username fallback
-              email: actor.email,
-              name: actor.role, // Display role as name for now
-            };
+
+            // Check if actor.id was populated with user details
+            if (
+              actor.id &&
+              typeof actor.id === "object" &&
+              isPopulatedUserRef(actor.id)
+            ) {
+              const populatedUser = actor.id as PopulatedUserRef;
+              actorIdStr = populatedUser._id ? String(populatedUser._id) : null;
+              const fullName = `${populatedUser.firstName || ""} ${
+                populatedUser.lastName || ""
+              }`.trim();
+              actorInfo = {
+                username: populatedUser.username,
+                email: populatedUser.email,
+                name: fullName || populatedUser.username,
+                role: actor.role,
+              };
+            } else {
+              // Fallback if population failed
+              actorIdStr = actor.id ? String(actor.id) : null;
+              actorInfo = {
+                username: actor.email.split("@")[0],
+                email: actor.email,
+                name: "Unknown User",
+                role: actor.role,
+              };
+            }
           }
           // Old format: populated actorId
           else if (isPopulatedUserRef(auditLog.actorId)) {
             const a = auditLog.actorId;
             actorIdStr = a._id ? String(a._id) : null;
+            const fullName = `${a.firstName || ""} ${a.lastName || ""}`.trim();
+
+            // Extract role from populated user if available
+            const userRole =
+              (a as PopulatedUserRef & { role?: string }).role || "User";
+
             actorInfo = {
               username: a.username,
               email: a.email,
-              name: `${a.firstName || ""} ${a.lastName || ""}`.trim(),
+              name: fullName || a.username,
+              role: userRole,
             };
           } else if (typeof auditLog.actorId === "string") {
             actorIdStr = auditLog.actorId;
