@@ -44,7 +44,7 @@ export default function MyEvents() {
         });
       }
     });
-    return <LoadingSpinner size="lg" />;
+
     return Array.from(eventGroups.values()).sort((a, b) => {
       // Sort by effective end datetime (use endDate if present)
       const endDateA = a.event.endDate || a.event.date;
@@ -60,7 +60,7 @@ export default function MyEvents() {
   }, [rawEvents]);
 
   if (loading) {
-    return <LoadingSpinner size="lg" message="Loading my events..." />;
+    return <LoadingSpinner size="lg" />;
   }
 
   if (error) {
