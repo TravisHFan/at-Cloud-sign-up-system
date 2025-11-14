@@ -83,16 +83,20 @@ export default function DonationPage() {
       {/* Tabs */}
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         {/* Tab Headers */}
-        <div className="bg-gray-50 p-1">
-          <nav className="flex gap-1" aria-label="Tabs">
+        <div className="border-b border-gray-200">
+          <nav
+            className="flex gap-0 px-4 pt-4"
+            role="tablist"
+            aria-label="Tabs"
+          >
             <button
               onClick={() => setActiveTab("giving")}
               className={`
-                flex-1 py-3 px-4 text-center font-medium text-sm rounded-md transition-all duration-200 focus:outline-none focus:ring-0 border-0
+                flex-1 py-3 px-4 text-center font-medium text-sm transition-all duration-200 focus:outline-none focus:ring-0 border-t border-x rounded-t-lg rounded-b-none
                 ${
                   activeTab === "giving"
-                    ? "bg-white text-blue-600 shadow-md transform translate-y-0"
-                    : "bg-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-100/50 shadow-none transform translate-y-0.5"
+                    ? "bg-white text-blue-600 border-gray-200 border-b-white -mb-px relative z-10"
+                    : "bg-gray-100 text-gray-600 hover:text-gray-900 hover:bg-gray-200 border-gray-200"
                 }
               `}
             >
@@ -101,11 +105,11 @@ export default function DonationPage() {
             <button
               onClick={() => setActiveTab("scheduled")}
               className={`
-                flex-1 py-3 px-4 text-center font-medium text-sm rounded-md transition-all duration-200 focus:outline-none focus:ring-0 border-0
+                flex-1 py-3 px-4 text-center font-medium text-sm transition-all duration-200 focus:outline-none focus:ring-0 border-t border-x rounded-t-lg rounded-b-none
                 ${
                   activeTab === "scheduled"
-                    ? "bg-white text-blue-600 shadow-md transform translate-y-0"
-                    : "bg-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-100/50 shadow-none transform translate-y-0.5"
+                    ? "bg-white text-blue-600 border-gray-200 border-b-white -mb-px relative z-10"
+                    : "bg-gray-100 text-gray-600 hover:text-gray-900 hover:bg-gray-200 border-gray-200"
                 }
               `}
             >

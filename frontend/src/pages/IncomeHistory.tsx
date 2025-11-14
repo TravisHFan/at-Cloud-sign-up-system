@@ -214,24 +214,24 @@ export default function IncomeHistory() {
 
         {/* Tabbed Interface */}
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="bg-gray-50 p-1">
-            <nav className="flex gap-1">
+          <div className="border-b border-gray-200">
+            <nav className="flex gap-0 px-4 pt-4" role="tablist">
               <button
                 onClick={() => setActiveTab("purchases")}
-                className={`px-6 py-3 text-base font-medium rounded-md transition-all duration-200 focus:outline-none focus:ring-0 border-0 ${
+                className={`px-6 py-3 text-base font-medium transition-all duration-200 focus:outline-none focus:ring-0 border-t border-x rounded-t-lg rounded-b-none ${
                   activeTab === "purchases"
-                    ? "bg-white text-purple-600 shadow-md transform translate-y-0"
-                    : "bg-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-100/50 shadow-none transform translate-y-0.5"
+                    ? "bg-white text-purple-600 border-gray-200 border-b-white -mb-px relative z-10"
+                    : "bg-gray-100 text-gray-600 hover:text-gray-900 hover:bg-gray-200 border-gray-200"
                 }`}
               >
                 Program Purchases
               </button>
               <button
                 onClick={() => setActiveTab("donations")}
-                className={`px-6 py-3 text-base font-medium rounded-md transition-all duration-200 focus:outline-none focus:ring-0 border-0 ${
+                className={`px-6 py-3 text-base font-medium transition-all duration-200 focus:outline-none focus:ring-0 border-t border-x rounded-t-lg rounded-b-none ${
                   activeTab === "donations"
-                    ? "bg-white text-purple-600 shadow-md transform translate-y-0"
-                    : "bg-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-100/50 shadow-none transform translate-y-0.5"
+                    ? "bg-white text-purple-600 border-gray-200 border-b-white -mb-px relative z-10"
+                    : "bg-gray-100 text-gray-600 hover:text-gray-900 hover:bg-gray-200 border-gray-200"
                 }`}
               >
                 Donations

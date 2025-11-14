@@ -37,24 +37,24 @@ export default function AdminPromoCodes() {
 
       {/* Horizontal Tab Navigation */}
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="bg-gray-50 p-1">
-          <nav className="flex gap-1">
+        <div className="border-b border-gray-200">
+          <nav className="flex gap-0 px-4 pt-4" role="tablist">
             <button
               onClick={() => setActiveTab("all")}
-              className={`px-6 py-3 text-base font-medium rounded-md transition-all duration-200 focus:outline-none focus:ring-0 border-0 ${
+              className={`px-6 py-3 text-base font-medium transition-all duration-200 focus:outline-none focus:ring-0 border-t border-x rounded-t-lg rounded-b-none ${
                 activeTab === "all"
-                  ? "bg-white text-purple-600 shadow-md transform translate-y-0"
-                  : "bg-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-100/50 shadow-none transform translate-y-0.5"
+                  ? "bg-white text-purple-600 border-gray-200 border-b-white -mb-px relative z-10"
+                  : "bg-gray-100 text-gray-600 hover:text-gray-900 hover:bg-gray-200 border-gray-200"
               }`}
             >
               View All Codes
             </button>
             <button
               onClick={() => setActiveTab("create-staff")}
-              className={`px-6 py-3 text-base font-medium rounded-md transition-all duration-200 flex items-center gap-2 focus:outline-none focus:ring-0 border-0 ${
+              className={`px-6 py-3 text-base font-medium transition-all duration-200 flex items-center gap-2 focus:outline-none focus:ring-0 border-t border-x rounded-t-lg rounded-b-none ${
                 activeTab === "create-staff"
-                  ? "bg-white text-purple-600 shadow-md transform translate-y-0"
-                  : "bg-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-100/50 shadow-none transform translate-y-0.5"
+                  ? "bg-white text-purple-600 border-gray-200 border-b-white -mb-px relative z-10"
+                  : "bg-gray-100 text-gray-600 hover:text-gray-900 hover:bg-gray-200 border-gray-200"
               }`}
             >
               <PlusIcon className="w-4 h-4" />
@@ -62,10 +62,10 @@ export default function AdminPromoCodes() {
             </button>
             <button
               onClick={() => setActiveTab("create-reward")}
-              className={`px-6 py-3 text-base font-medium rounded-md transition-all duration-200 flex items-center gap-2 focus:outline-none focus:ring-0 border-0 ${
+              className={`px-6 py-3 text-base font-medium transition-all duration-200 flex items-center gap-2 focus:outline-none focus:ring-0 border-t border-x rounded-t-lg rounded-b-none ${
                 activeTab === "create-reward"
-                  ? "bg-white text-purple-600 shadow-md transform translate-y-0"
-                  : "bg-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-100/50 shadow-none transform translate-y-0.5"
+                  ? "bg-white text-purple-600 border-gray-200 border-b-white -mb-px relative z-10"
+                  : "bg-gray-100 text-gray-600 hover:text-gray-900 hover:bg-gray-200 border-gray-200"
               }`}
             >
               <PlusIcon className="w-4 h-4" />
@@ -73,10 +73,10 @@ export default function AdminPromoCodes() {
             </button>
             <button
               onClick={() => setActiveTab("bundle-config")}
-              className={`px-6 py-3 text-base font-medium rounded-md transition-all duration-200 focus:outline-none focus:ring-0 border-0 ${
+              className={`px-6 py-3 text-base font-medium transition-all duration-200 focus:outline-none focus:ring-0 border-t border-x rounded-t-lg rounded-b-none ${
                 activeTab === "bundle-config"
-                  ? "bg-white text-purple-600 shadow-md transform translate-y-0"
-                  : "bg-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-100/50 shadow-none transform translate-y-0.5"
+                  ? "bg-white text-purple-600 border-gray-200 border-b-white -mb-px relative z-10"
+                  : "bg-gray-100 text-gray-600 hover:text-gray-900 hover:bg-gray-200 border-gray-200"
               }`}
             >
               Bundle Settings
