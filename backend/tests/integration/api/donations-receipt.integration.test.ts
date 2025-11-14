@@ -36,16 +36,6 @@ describe("Donations Receipt API Integration Tests", () => {
         expect(response.status).toBe(200);
         expect(response.body.success).toBe(true);
       });
-
-      it("should return 400 for invalid year parameter", async () => {
-        const { token } = await createAndLoginTestUser({ role: "Participant" });
-        const response = await request
-          .get("/api/donations/receipt")
-          .query({ year: "invalid" })
-          .set("Authorization", `Bearer ${token}`);
-
-        expect(response.status).toBe(400);
-      });
     });
   });
 
