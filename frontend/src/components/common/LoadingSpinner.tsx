@@ -25,7 +25,7 @@ export function LoadingSpinner({
   // Full-screen mode: clean, centered spinner without text
   return (
     <div
-      className="min-h-screen bg-gray-50 flex items-center justify-center"
+      className="min-h-screen bg-gray-50 flex items-center justify-center pt-0 pb-48"
       data-testid="loading-spinner-fullscreen"
     >
       <div

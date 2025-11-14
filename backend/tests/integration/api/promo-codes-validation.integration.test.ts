@@ -3,28 +3,41 @@ import request from "supertest";
 import app from "../../../src/app";
 import { createAndLoginTestUser } from "../../test-utils/createTestUser";
 import PromoCode from "../../../src/models/PromoCode";
+import Program from "../../../src/models/Program";
 
 describe("Promo Code Validation Endpoint", () => {
   let userToken: string;
+  let userId: string;
   let activePromoCode: string;
+  let testProgramId: string;
 
   beforeEach(async () => {
     // Create a user with unique credentials
-    const uniqueId = Math.random().toString(36).substring(7);
     const user = await createAndLoginTestUser({
       role: "Participant",
     });
     userToken = user.token;
+    userId = user.userId;
 
-    // Create an active promo code with unique code
-    const promoCode = `TEST${uniqueId.toUpperCase()}`;
+    // Create a test program
+    const program = await Program.create({
+      title: "Test Program for Validation",
+      programType: "EMBA Mentor Circles",
+      fullPriceTicket: 100,
+      createdBy: userId,
+    });
+    testProgramId = program._id.toString();
+
+    // Create an active promo code with unique 8-char code
+    const promoCode = Math.random().toString(36).substring(2, 10).toUpperCase();
     const promo = await PromoCode.create({
       code: promoCode,
-      type: "Early Bird",
+      type: "reward",
       discountPercent: 15,
-      maxUses: 100,
+      ownerId: userId,
+      createdBy: userId,
       expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-      active: true,
+      isActive: true,
     });
     activePromoCode = promo.code;
   });
@@ -33,7 +46,7 @@ describe("Promo Code Validation Endpoint", () => {
     it("requires authentication", async () => {
       await request(app)
         .post("/api/promo-codes/validate")
-        .send({ code: "TESTCODE" })
+        .send({ code: "TESTCODE", programId: "507f1f77bcf86cd799439011" })
         .expect(401);
     });
 
@@ -41,16 +54,16 @@ describe("Promo Code Validation Endpoint", () => {
       const res = await request(app)
         .post("/api/promo-codes/validate")
         .set("Authorization", `Bearer ${userToken}`)
-        .send({ code: activePromoCode })
+        .send({ code: activePromoCode, programId: testProgramId })
         .expect(200);
 
       expect(res.body.success).toBe(true);
-      expect(res.body.data).toEqual(
+      expect(res.body.valid).toBe(true);
+      expect(res.body.code).toEqual(
         expect.objectContaining({
           code: activePromoCode,
           discountPercent: 15,
-          type: "Early Bird",
-          valid: true,
+          type: "reward",
         })
       );
     });
@@ -59,52 +72,61 @@ describe("Promo Code Validation Endpoint", () => {
       const res = await request(app)
         .post("/api/promo-codes/validate")
         .set("Authorization", `Bearer ${userToken}`)
-        .send({ code: "NONEXISTENT" })
-        .expect(404);
+        .send({ code: "NONEXIST", programId: testProgramId })
+        .expect(200); // API returns 200 with valid: false
 
-      expect(res.body.success).toBe(false);
+      expect(res.body.success).toBe(true);
+      expect(res.body.valid).toBe(false);
     });
 
     it("returns invalid for expired code", async () => {
-      // Create expired code
-      await PromoCode.create({
-        code: "EXPIRED2024",
-        type: "Early Bird",
+      // Create code with future expiry, then manually update to past
+      const expiredCode = await PromoCode.create({
+        code: Math.random().toString(36).substring(2, 10).toUpperCase(),
+        type: "reward",
         discountPercent: 20,
-        maxUses: 100,
-        expiresAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
-        active: true,
+        ownerId: userId,
+        createdBy: userId,
+        expiresAt: new Date(Date.now() + 1000), // 1 second in future
+        isActive: true,
       });
+
+      // Manually update to past (bypassing validation)
+      await PromoCode.updateOne(
+        { _id: expiredCode._id },
+        { $set: { expiresAt: new Date(Date.now() - 24 * 60 * 60 * 1000) } }
+      );
 
       const res = await request(app)
         .post("/api/promo-codes/validate")
         .set("Authorization", `Bearer ${userToken}`)
-        .send({ code: "EXPIRED2024" })
+        .send({ code: expiredCode.code, programId: testProgramId })
         .expect(200);
 
       expect(res.body.success).toBe(true);
-      expect(res.body.data.valid).toBe(false);
+      expect(res.body.valid).toBe(false);
     });
 
     it("returns invalid for inactive code", async () => {
-      // Create inactive code
-      await PromoCode.create({
-        code: "INACTIVE2025",
-        type: "Staff Discount",
+      // Create inactive code with unique code
+      const inactiveCode = await PromoCode.create({
+        code: Math.random().toString(36).substring(2, 10).toUpperCase(),
+        type: "staff_access",
         discountPercent: 25,
-        maxUses: 50,
+        ownerId: userId,
+        createdBy: userId,
         expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        active: false,
+        isActive: false,
       });
 
       const res = await request(app)
         .post("/api/promo-codes/validate")
         .set("Authorization", `Bearer ${userToken}`)
-        .send({ code: "INACTIVE2025" })
+        .send({ code: inactiveCode.code, programId: testProgramId })
         .expect(200);
 
       expect(res.body.success).toBe(true);
-      expect(res.body.data.valid).toBe(false);
+      expect(res.body.valid).toBe(false);
     });
 
     it("returns 400 when code is missing", async () => {
@@ -122,14 +144,17 @@ describe("Promo Code Validation Endpoint", () => {
     });
 
     it("returns empty array when user has no promo codes", async () => {
+      // Create a fresh user with no promo codes
+      const { token } = await createAndLoginTestUser({ role: "Participant" });
+
       const res = await request(app)
         .get("/api/promo-codes/my-codes")
-        .set("Authorization", `Bearer ${userToken}`)
+        .set("Authorization", `Bearer ${token}`)
         .expect(200);
 
       expect(res.body.success).toBe(true);
-      expect(res.body.data).toEqual(expect.any(Array));
-      expect(res.body.data.length).toBe(0);
+      expect(res.body.codes).toEqual(expect.any(Array));
+      expect(res.body.codes.length).toBe(0);
     });
 
     it("returns user's assigned promo codes", async () => {
@@ -139,13 +164,13 @@ describe("Promo Code Validation Endpoint", () => {
       });
 
       await PromoCode.create({
-        code: `USER${Math.random().toString(36).substring(7).toUpperCase()}`,
-        type: "Staff Discount",
+        code: Math.random().toString(36).substring(2, 10).toUpperCase(),
+        type: "staff_access",
         discountPercent: 30,
-        maxUses: 10,
+        ownerId: userId,
+        createdBy: userId,
         expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        active: true,
-        assignedTo: userId,
+        isActive: true,
       });
 
       const res = await request(app)
@@ -154,8 +179,8 @@ describe("Promo Code Validation Endpoint", () => {
         .expect(200);
 
       expect(res.body.success).toBe(true);
-      expect(res.body.data).toEqual(expect.any(Array));
-      expect(res.body.data.length).toBeGreaterThan(0);
+      expect(res.body.codes).toEqual(expect.any(Array));
+      expect(res.body.codes.length).toBeGreaterThan(0);
     });
   });
 });
