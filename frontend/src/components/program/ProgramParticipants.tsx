@@ -322,7 +322,7 @@ export function ProgramParticipants({
           Class Representatives
         </h2>
         <p className="text-gray-600 text-sm mb-4 italic">
-          Class representatives are peer leaders chosen within each mentorship
+          Class representatives, are peer leaders chosen within each mentorship
           cohort to support coordination, communication, and community building.
         </p>
 

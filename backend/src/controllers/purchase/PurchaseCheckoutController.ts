@@ -186,6 +186,19 @@ class PurchaseCheckoutController {
               }
             }
 
+            // CRITICAL FIX: If old pending purchase was Class Rep, decrement count before deleting
+            // This prevents double-counting when user clicks "Proceed to Payment" multiple times
+            if (pendingPurchase.isClassRep) {
+              await Program.findByIdAndUpdate(
+                pendingPurchase.programId,
+                { $inc: { classRepCount: -1 } },
+                { runValidators: false } // Allow going below limit on decrement
+              );
+              console.log(
+                `Decremented classRepCount for old Class Rep pending purchase ${pendingPurchase.orderNumber}`
+              );
+            }
+
             // Delete the old pending purchase
             await Purchase.deleteOne({ _id: pendingPurchase._id });
             console.log(

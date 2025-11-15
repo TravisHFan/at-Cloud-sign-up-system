@@ -25,13 +25,14 @@ describe("Guests API Integration", () => {
   const roleName = "Zoom Host"; // valid template role for Effective Communication Workshop (capacity 1)
 
   beforeEach(async () => {
-    // Clean all relevant collections
-    await Promise.all([
-      User.deleteMany({}),
-      Event.deleteMany({}),
-      Registration.deleteMany({}),
-      GuestRegistration.deleteMany({}),
-    ]);
+    // Clean all relevant collections with proper ordering to avoid race conditions
+    await GuestRegistration.deleteMany({});
+    await Registration.deleteMany({});
+    await Event.deleteMany({});
+    await User.deleteMany({});
+
+    // Small delay to ensure cleanup is complete
+    await new Promise((resolve) => setTimeout(resolve, 10));
 
     // Create admin user and login
     const adminData = {
@@ -102,12 +103,11 @@ describe("Guests API Integration", () => {
   });
 
   afterEach(async () => {
-    await Promise.all([
-      GuestRegistration.deleteMany({}),
-      Registration.deleteMany({}),
-      Event.deleteMany({}),
-      User.deleteMany({}),
-    ]);
+    // Clean in reverse dependency order
+    await GuestRegistration.deleteMany({});
+    await Registration.deleteMany({});
+    await Event.deleteMany({});
+    await User.deleteMany({});
   });
 
   const makeGuestPayload = (overrides: Partial<Record<string, any>> = {}) => ({

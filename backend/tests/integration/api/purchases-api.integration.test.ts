@@ -720,4 +720,183 @@ describe("Purchase API Integration Tests", () => {
       expect(response.status).toBe(404);
     });
   });
+
+  describe("POST /api/purchases/create-checkout-session - classRepCount bug fix", () => {
+    it("should not double-increment classRepCount when user clicks 'Proceed to Payment' multiple times with Class Rep", async () => {
+      // Setup: Create a program with Class Rep limit
+      const classRepProgram = await Program.create({
+        title: `Class Rep Test Program ${Date.now()}`,
+        programType: "EMBA Mentor Circles",
+        introduction: "Test program for Class Rep count bug",
+        isFree: false,
+        fullPriceTicket: 2000,
+        classRepDiscount: 500,
+        classRepLimit: 3,
+        createdBy: new mongoose.Types.ObjectId(userId),
+        published: true,
+      });
+
+      // Verify initial state: classRepCount should be 0
+      let program = await Program.findById(classRepProgram._id);
+      expect(program?.classRepCount || 0).toBe(0);
+
+      // Step 1: User clicks "Proceed to Payment" with Class Rep (first time)
+      const response1 = await request(app)
+        .post("/api/purchases/create-checkout-session")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({
+          programId: classRepProgram._id.toString(),
+          isClassRep: true,
+        });
+
+      expect(response1.status).toBe(200);
+      expect(response1.body.success).toBe(true);
+
+      // Verify classRepCount incremented to 1
+      program = await Program.findById(classRepProgram._id);
+      expect(program?.classRepCount).toBe(1);
+
+      // Verify pending purchase exists
+      let pendingPurchase = await Purchase.findOne({
+        userId: userId,
+        programId: classRepProgram._id,
+        status: "pending",
+      });
+      expect(pendingPurchase).toBeDefined();
+      expect(pendingPurchase?.isClassRep).toBe(true);
+
+      // Step 2: User abandons Stripe checkout, returns to Enroll page
+      // User clicks "Proceed to Payment" with Class Rep AGAIN (second time)
+      const response2 = await request(app)
+        .post("/api/purchases/create-checkout-session")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({
+          programId: classRepProgram._id.toString(),
+          isClassRep: true,
+        });
+
+      expect(response2.status).toBe(200);
+      expect(response2.body.success).toBe(true);
+
+      // CRITICAL TEST: classRepCount should STILL be 1 (not 2)
+      // The bug was that it would increment to 2
+      program = await Program.findById(classRepProgram._id);
+      expect(program?.classRepCount).toBe(1);
+
+      // Verify only one pending purchase exists
+      const allPendingPurchases = await Purchase.find({
+        userId: userId,
+        programId: classRepProgram._id,
+        status: "pending",
+      });
+      expect(allPendingPurchases).toHaveLength(1);
+      expect(allPendingPurchases[0].isClassRep).toBe(true);
+    });
+
+    it("should correctly handle switching from Class Rep to regular purchase", async () => {
+      // Setup: Create a program with Class Rep limit
+      const classRepProgram = await Program.create({
+        title: `Class Rep Switch Test ${Date.now()}`,
+        programType: "EMBA Mentor Circles",
+        introduction: "Test switching enrollment types",
+        isFree: false,
+        fullPriceTicket: 2000,
+        classRepDiscount: 500,
+        classRepLimit: 3,
+        createdBy: new mongoose.Types.ObjectId(userId),
+        published: true,
+      });
+
+      // Step 1: User clicks "Proceed to Payment" with Class Rep
+      const response1 = await request(app)
+        .post("/api/purchases/create-checkout-session")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({
+          programId: classRepProgram._id.toString(),
+          isClassRep: true,
+        });
+
+      expect(response1.status).toBe(200);
+
+      // Verify classRepCount = 1
+      let program = await Program.findById(classRepProgram._id);
+      expect(program?.classRepCount).toBe(1);
+
+      // Step 2: User changes mind, clicks "Proceed to Payment" WITHOUT Class Rep
+      const response2 = await request(app)
+        .post("/api/purchases/create-checkout-session")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({
+          programId: classRepProgram._id.toString(),
+          isClassRep: false,
+        });
+
+      expect(response2.status).toBe(200);
+
+      // CRITICAL: classRepCount should be DECREMENTED back to 0
+      program = await Program.findById(classRepProgram._id);
+      expect(program?.classRepCount).toBe(0);
+
+      // Verify purchase is now regular (not Class Rep)
+      const pendingPurchase = await Purchase.findOne({
+        userId: userId,
+        programId: classRepProgram._id,
+        status: "pending",
+      });
+      expect(pendingPurchase?.isClassRep).toBe(false);
+    });
+
+    it("should correctly handle switching from regular to Class Rep purchase", async () => {
+      // Setup: Create a program with Class Rep limit
+      const classRepProgram = await Program.create({
+        title: `Regular to Class Rep Test ${Date.now()}`,
+        programType: "EMBA Mentor Circles",
+        introduction: "Test switching enrollment types",
+        isFree: false,
+        fullPriceTicket: 2000,
+        classRepDiscount: 500,
+        classRepLimit: 3,
+        createdBy: new mongoose.Types.ObjectId(userId),
+        published: true,
+      });
+
+      // Step 1: User clicks "Proceed to Payment" WITHOUT Class Rep
+      const response1 = await request(app)
+        .post("/api/purchases/create-checkout-session")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({
+          programId: classRepProgram._id.toString(),
+          isClassRep: false,
+        });
+
+      expect(response1.status).toBe(200);
+
+      // Verify classRepCount = 0
+      let program = await Program.findById(classRepProgram._id);
+      expect(program?.classRepCount || 0).toBe(0);
+
+      // Step 2: User changes mind, clicks "Proceed to Payment" WITH Class Rep
+      const response2 = await request(app)
+        .post("/api/purchases/create-checkout-session")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({
+          programId: classRepProgram._id.toString(),
+          isClassRep: true,
+        });
+
+      expect(response2.status).toBe(200);
+
+      // CRITICAL: classRepCount should be incremented to 1
+      program = await Program.findById(classRepProgram._id);
+      expect(program?.classRepCount).toBe(1);
+
+      // Verify purchase is now Class Rep
+      const pendingPurchase = await Purchase.findOne({
+        userId: userId,
+        programId: classRepProgram._id,
+        status: "pending",
+      });
+      expect(pendingPurchase?.isClassRep).toBe(true);
+    });
+  });
 });
