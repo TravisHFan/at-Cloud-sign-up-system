@@ -58,10 +58,10 @@ describe("Public Events Listing Integration Tests", () => {
 
     // Create test user for registrations
     testUser = await User.create({
-      username: "testuser",
+      username: "testuser_pubevt",
       firstName: "Test",
       lastName: "User",
-      email: "testuser@example.com",
+      email: "testuser-publicevents@example.com",
       password: "HashedPassword123",
       emailVerified: true,
     });

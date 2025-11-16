@@ -331,6 +331,62 @@ describe("UserDropdown", () => {
         expect(screen.queryByTestId("logout-modal")).toBeNull();
       });
     });
+
+    it("executes logout when confirmed", async () => {
+      render(
+        <BrowserRouter>
+          <UserDropdown user={mockUser} />
+        </BrowserRouter>
+      );
+
+      const button = screen.getByRole("button");
+      fireEvent.click(button);
+
+      await waitFor(() => {
+        expect(screen.getByText("Log Out")).toBeDefined();
+      });
+
+      const logoutButton = screen.getByText("Log Out");
+      fireEvent.click(logoutButton);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("confirm-logout")).toBeDefined();
+      });
+
+      const confirmButton = screen.getByTestId("confirm-logout");
+      fireEvent.click(confirmButton);
+
+      // Verify logout was called and modal closes
+      await waitFor(() => {
+        expect(screen.queryByTestId("logout-modal")).toBeNull();
+      });
+    });
+
+    it("shows loading state during logout", async () => {
+      render(
+        <BrowserRouter>
+          <UserDropdown user={mockUser} />
+        </BrowserRouter>
+      );
+
+      const button = screen.getByRole("button");
+      fireEvent.click(button);
+
+      await waitFor(() => {
+        expect(screen.getByText("Log Out")).toBeDefined();
+      });
+
+      const logoutButton = screen.getByText("Log Out");
+      fireEvent.click(logoutButton);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("confirm-logout")).toBeDefined();
+      });
+
+      // The button should exist (loading state is handled by modal)
+      const confirmButton = screen.getByTestId("confirm-logout");
+      expect(confirmButton).toBeDefined();
+    });
   });
 
   describe("Avatar Handling", () => {

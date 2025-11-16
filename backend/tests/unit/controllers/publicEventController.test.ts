@@ -397,7 +397,8 @@ describe("PublicEventController", () => {
         9,
         "req-123",
         "192.168.1.0/24",
-        mockLog
+        mockLog,
+        null
       );
 
       // Verify cache update (only on non-duplicate)
@@ -1016,7 +1017,8 @@ describe("PublicEventController", () => {
         9,
         "req-123",
         "192.168.1.0/24", // truncateIpToCidr still called with empty string
-        mockLog
+        mockLog,
+        null
       );
     });
 
@@ -1079,7 +1081,8 @@ describe("PublicEventController", () => {
         9,
         undefined, // requestId should be undefined
         "192.168.1.0/24",
-        mockLog
+        mockLog,
+        null
       );
     });
 

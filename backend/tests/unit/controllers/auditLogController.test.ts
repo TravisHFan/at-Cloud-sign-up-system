@@ -60,7 +60,9 @@ describe("AuditLogController", () => {
               limit: vi.fn().mockReturnValue({
                 populate: vi.fn().mockReturnValue({
                   populate: vi.fn().mockReturnValue({
-                    lean: vi.fn().mockResolvedValue([]),
+                    populate: vi.fn().mockReturnValue({
+                      lean: vi.fn().mockResolvedValue([]),
+                    }),
                   }),
                 }),
               }),
@@ -274,7 +276,13 @@ describe("AuditLogController", () => {
             _id: { toString: () => "log123" },
             action: "event_created",
             actor: {
-              id: "user123",
+              id: {
+                _id: "user123",
+                username: "adminuser",
+                email: "admin@example.com",
+                firstName: "Admin",
+                lastName: "User",
+              },
               role: "Administrator",
               email: "admin@example.com",
             },
@@ -289,7 +297,9 @@ describe("AuditLogController", () => {
               limit: vi.fn().mockReturnValue({
                 populate: vi.fn().mockReturnValue({
                   populate: vi.fn().mockReturnValue({
-                    lean: vi.fn().mockResolvedValue(mockLogs),
+                    populate: vi.fn().mockReturnValue({
+                      lean: vi.fn().mockResolvedValue(mockLogs),
+                    }),
                   }),
                 }),
               }),
@@ -311,9 +321,9 @@ describe("AuditLogController", () => {
           action: "event_created",
           actorId: "user123",
           actorInfo: {
-            username: "admin",
+            username: "adminuser",
             email: "admin@example.com",
-            name: "Administrator",
+            name: "Admin User",
           },
         });
       });
@@ -341,7 +351,9 @@ describe("AuditLogController", () => {
               limit: vi.fn().mockReturnValue({
                 populate: vi.fn().mockReturnValue({
                   populate: vi.fn().mockReturnValue({
-                    lean: vi.fn().mockResolvedValue(mockLogs),
+                    populate: vi.fn().mockReturnValue({
+                      lean: vi.fn().mockResolvedValue(mockLogs),
+                    }),
                   }),
                 }),
               }),
@@ -362,6 +374,7 @@ describe("AuditLogController", () => {
           username: "johndoe",
           email: "john@example.com",
           name: "John Doe",
+          role: "User",
         });
       });
 
@@ -382,7 +395,9 @@ describe("AuditLogController", () => {
               limit: vi.fn().mockReturnValue({
                 populate: vi.fn().mockReturnValue({
                   populate: vi.fn().mockReturnValue({
-                    lean: vi.fn().mockResolvedValue(mockLogs),
+                    populate: vi.fn().mockReturnValue({
+                      lean: vi.fn().mockResolvedValue(mockLogs),
+                    }),
                   }),
                 }),
               }),
@@ -431,7 +446,9 @@ describe("AuditLogController", () => {
               limit: vi.fn().mockReturnValue({
                 populate: vi.fn().mockReturnValue({
                   populate: vi.fn().mockReturnValue({
-                    lean: vi.fn().mockResolvedValue(mockLogs),
+                    populate: vi.fn().mockReturnValue({
+                      lean: vi.fn().mockResolvedValue(mockLogs),
+                    }),
                   }),
                 }),
               }),
@@ -477,7 +494,9 @@ describe("AuditLogController", () => {
               limit: vi.fn().mockReturnValue({
                 populate: vi.fn().mockReturnValue({
                   populate: vi.fn().mockReturnValue({
-                    lean: vi.fn().mockResolvedValue(mockLogs),
+                    populate: vi.fn().mockReturnValue({
+                      lean: vi.fn().mockResolvedValue(mockLogs),
+                    }),
                   }),
                 }),
               }),
@@ -516,7 +535,9 @@ describe("AuditLogController", () => {
               limit: vi.fn().mockReturnValue({
                 populate: vi.fn().mockReturnValue({
                   populate: vi.fn().mockReturnValue({
-                    lean: vi.fn().mockResolvedValue(mockLogs),
+                    populate: vi.fn().mockReturnValue({
+                      lean: vi.fn().mockResolvedValue(mockLogs),
+                    }),
                   }),
                 }),
               }),
@@ -559,7 +580,9 @@ describe("AuditLogController", () => {
               limit: vi.fn().mockReturnValue({
                 populate: vi.fn().mockReturnValue({
                   populate: vi.fn().mockReturnValue({
-                    lean: vi.fn().mockResolvedValue(mockLogs),
+                    populate: vi.fn().mockReturnValue({
+                      lean: vi.fn().mockResolvedValue(mockLogs),
+                    }),
                   }),
                 }),
               }),
@@ -595,7 +618,9 @@ describe("AuditLogController", () => {
               limit: vi.fn().mockReturnValue({
                 populate: vi.fn().mockReturnValue({
                   populate: vi.fn().mockReturnValue({
-                    lean: vi.fn().mockResolvedValue([]),
+                    populate: vi.fn().mockReturnValue({
+                      lean: vi.fn().mockResolvedValue([]),
+                    }),
                   }),
                 }),
               }),

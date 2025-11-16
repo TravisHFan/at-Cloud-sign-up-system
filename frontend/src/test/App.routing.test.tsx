@@ -39,9 +39,15 @@ describe("App routing", () => {
     expect(screen.getByText(/Login to @Cloud/i)).toBeInTheDocument();
   });
 
-  it("renders dashboard layout shell for /dashboard route", () => {
+  it("renders dashboard layout shell for /dashboard route", async () => {
+    // Clear auth token to simulate unauthenticated state
+    localStorage.removeItem("authToken");
+
     renderWithRouter(["/dashboard"]);
-    // The dashboard route is protected; when unauthenticated it should render the login page
-    expect(screen.getByText(/Login to @Cloud/i)).toBeInTheDocument();
+    // The dashboard route is protected; when unauthenticated it should redirect to login
+    // Wait for auth loading to complete and redirect to happen
+    expect(
+      await screen.findByText(/Login to @Cloud/i, {}, { timeout: 3000 })
+    ).toBeInTheDocument();
   });
 });
