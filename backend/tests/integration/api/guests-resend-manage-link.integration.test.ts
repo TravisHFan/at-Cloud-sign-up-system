@@ -1,6 +1,16 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import request from "supertest";
 import mongoose from "mongoose";
+
+// Socket service mock - MUST be before app import
+vi.mock("../../../src/services/infrastructure/SocketService", () => ({
+  socketService: {
+    emitBellNotificationUpdate: vi.fn(),
+    emitSystemMessageUpdate: vi.fn(),
+    emitUnreadCountUpdate: vi.fn(),
+  },
+}));
+
 import app from "../../../src/app";
 import User from "../../../src/models/User";
 import Event from "../../../src/models/Event";

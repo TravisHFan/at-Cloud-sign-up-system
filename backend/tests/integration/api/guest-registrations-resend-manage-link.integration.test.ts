@@ -2,8 +2,18 @@
  * Integration tests for Guest Manage Link Controller
  * Tests POST /api/guest-registrations/:id/resend-manage-link endpoint
  */
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import request from "supertest";
+
+// Socket service mock - MUST be before app import
+vi.mock("../../../src/services/infrastructure/SocketService", () => ({
+  socketService: {
+    emitBellNotificationUpdate: vi.fn(),
+    emitSystemMessageUpdate: vi.fn(),
+    emitUnreadCountUpdate: vi.fn(),
+  },
+}));
+
 import app from "../../../src/app";
 import { GuestRegistration, Event, User } from "../../../src/models";
 import { createAndLoginTestUser } from "../../test-utils/createTestUser";

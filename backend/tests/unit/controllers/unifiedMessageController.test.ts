@@ -1179,7 +1179,7 @@ describe("UnifiedMessageController", () => {
 
   describe("markBellNotificationAsRead", () => {
     it("should mark bell notification as read successfully", async () => {
-      const messageId = "notif123";
+      const messageId = "507f1f77bcf86cd799439011"; // Valid ObjectId format
       mockRequest.params = { messageId };
 
       // Ensure the controller's direct Message model has the static helper available
@@ -1210,10 +1210,12 @@ describe("UnifiedMessageController", () => {
 
     // Added: ensure 404 branch when message not found
     it("returns 404 when notification not found", async () => {
-      mockRequest.params = { messageId: "notfound" } as any;
+      mockRequest.params = { messageId: "507f1f77bcf86cd799439011" } as any; // Valid ObjectId
 
       // Explicitly resolve to null for this test to avoid any default behaviors
-      vi.mocked(MessageModel.findById).mockResolvedValueOnce(null as any);
+      vi.mocked(MessageModel.findById).mockImplementationOnce(() =>
+        Promise.resolve(null as any)
+      );
 
       await UnifiedMessageController.markBellNotificationAsRead(
         mockRequest as Request,
@@ -1228,15 +1230,17 @@ describe("UnifiedMessageController", () => {
     });
 
     it("returns 500 when save throws and does not invalidate or emit", async () => {
-      const messageId = "fail-save";
+      const messageId = "507f1f77bcf86cd799439011"; // Valid ObjectId
       mockRequest.params = { messageId } as any;
 
       // Force findById to return a message whose save rejects
-      vi.mocked(MessageModel.findById).mockResolvedValueOnce({
-        _id: messageId,
-        markAsReadEverywhere: vi.fn(),
-        save: vi.fn().mockRejectedValue(new Error("boom")),
-      } as any);
+      vi.mocked(MessageModel.findById).mockImplementationOnce(() =>
+        Promise.resolve({
+          _id: messageId,
+          markAsReadEverywhere: vi.fn(),
+          save: vi.fn().mockRejectedValue(new Error("boom")),
+        } as any)
+      );
 
       await UnifiedMessageController.markBellNotificationAsRead(
         mockRequest as Request,
@@ -1773,7 +1777,9 @@ describe("UnifiedMessageController", () => {
         markAsReadEverywhere: vi.fn(),
         save: vi.fn().mockResolvedValue({}),
       };
-      vi.mocked(MessageModel.findById).mockResolvedValue(mockMessage as any);
+      vi.mocked(MessageModel.findById).mockImplementationOnce(() =>
+        Promise.resolve(mockMessage as any)
+      );
 
       // Act
       await UnifiedMessageController.markAsRead(
@@ -1789,6 +1795,7 @@ describe("UnifiedMessageController", () => {
       expect(mockMessage.save).toHaveBeenCalled();
       expect(mockResponse.status).toHaveBeenCalledWith(200);
       expect(mockResponse.json).toHaveBeenCalledWith({
+        success: true,
         message: "Message marked as read",
       });
     });
@@ -1808,6 +1815,7 @@ describe("UnifiedMessageController", () => {
       // Assert
       expect(mockResponse.status).toHaveBeenCalledWith(400);
       expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
         message: "Invalid message ID",
       });
     });
@@ -1818,7 +1826,9 @@ describe("UnifiedMessageController", () => {
       mockRequest.user = mockUser;
       mockRequest.params = { messageId: "507f1f77bcf86cd799439011" };
 
-      vi.mocked(MessageModel.findById).mockResolvedValue(null);
+      vi.mocked(MessageModel.findById).mockImplementationOnce(() =>
+        Promise.resolve(null)
+      );
 
       // Act
       await UnifiedMessageController.markAsRead(
@@ -1829,6 +1839,7 @@ describe("UnifiedMessageController", () => {
       // Assert
       expect(mockResponse.status).toHaveBeenCalledWith(404);
       expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
         message: "Message not found",
       });
     });
@@ -1839,8 +1850,8 @@ describe("UnifiedMessageController", () => {
       mockRequest.user = mockUser;
       mockRequest.params = { messageId: "507f1f77bcf86cd799439011" };
 
-      vi.mocked(MessageModel.findById).mockRejectedValue(
-        new Error("Database error")
+      vi.mocked(MessageModel.findById).mockImplementationOnce(() =>
+        Promise.reject(new Error("Database error"))
       );
 
       // Act
@@ -1852,6 +1863,7 @@ describe("UnifiedMessageController", () => {
       // Assert
       expect(mockResponse.status).toHaveBeenCalledWith(500);
       expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
         message: "Failed to mark message as read",
       });
     });
@@ -1895,7 +1907,8 @@ describe("UnifiedMessageController", () => {
       expect(mockMessage.save).toHaveBeenCalled();
       expect(mockResponse.status).toHaveBeenCalledWith(200);
       expect(mockResponse.json).toHaveBeenCalledWith({
-        message: "Message deleted",
+        success: true,
+        message: "Message deleted from system messages",
       });
     });
 
@@ -1914,6 +1927,7 @@ describe("UnifiedMessageController", () => {
       // Assert
       expect(mockResponse.status).toHaveBeenCalledWith(400);
       expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
         message: "Invalid message ID",
       });
     });
@@ -1935,6 +1949,7 @@ describe("UnifiedMessageController", () => {
       // Assert
       expect(mockResponse.status).toHaveBeenCalledWith(404);
       expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
         message: "Message not found",
       });
     });
@@ -1958,6 +1973,7 @@ describe("UnifiedMessageController", () => {
       // Assert
       expect(mockResponse.status).toHaveBeenCalledWith(500);
       expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
         message: "Failed to delete message",
       });
     });
