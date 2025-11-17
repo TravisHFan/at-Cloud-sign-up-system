@@ -1,6 +1,18 @@
 import { Request, Response } from "express";
 import { Types } from "mongoose";
 import Message from "../../models/Message";
+import { socketService } from "../../services/infrastructure/SocketService";
+
+// Minimal runtime shapes to reduce explicit any usage without changing behavior
+type UnreadCounts = {
+  bellNotifications: number;
+  systemMessages: number;
+  total: number;
+};
+
+const MessageModel = Message as unknown as {
+  getUnreadCountsForUser: (userId: string) => Promise<UnreadCounts>;
+};
 
 /**
  * Legacy Message Read Controller
@@ -16,13 +28,13 @@ export default class LegacyMessageReadController {
       const userId = (req as unknown as { user: { id: string } }).user.id;
 
       if (!Types.ObjectId.isValid(messageId)) {
-        res.status(400).json({ message: "Invalid message ID" });
+        res.status(400).json({ success: false, message: "Invalid message ID" });
         return;
       }
 
       const message = await Message.findById(messageId);
       if (!message) {
-        res.status(404).json({ message: "Message not found" });
+        res.status(404).json({ success: false, message: "Message not found" });
         return;
       }
 
@@ -30,10 +42,33 @@ export default class LegacyMessageReadController {
       message.markAsReadEverywhere(userId);
       await message.save();
 
-      res.status(200).json({ message: "Message marked as read" });
+      // Get updated unread counts
+      const updatedCounts = await MessageModel.getUnreadCountsForUser(userId);
+
+      // Emit real-time updates
+      socketService.emitSystemMessageUpdate(userId, "message_read", {
+        messageId: message._id,
+        isRead: true,
+        readAt: new Date(),
+      });
+
+      socketService.emitBellNotificationUpdate(userId, "notification_read", {
+        messageId: message._id,
+        isRead: true,
+        readAt: new Date(),
+      });
+
+      // Emit unread count update for real-time updates
+      socketService.emitUnreadCountUpdate(userId, updatedCounts);
+
+      res
+        .status(200)
+        .json({ success: true, message: "Message marked as read" });
     } catch (error) {
       console.error("Error marking message as read:", error);
-      res.status(500).json({ message: "Failed to mark message as read" });
+      res
+        .status(500)
+        .json({ success: false, message: "Failed to mark message as read" });
     }
   }
 }

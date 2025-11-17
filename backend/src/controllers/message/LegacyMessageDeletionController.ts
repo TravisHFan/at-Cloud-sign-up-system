@@ -28,13 +28,13 @@ export default class LegacyMessageDeletionController {
       const userId = (req as unknown as { user: { id: string } }).user.id;
 
       if (!Types.ObjectId.isValid(messageId)) {
-        res.status(400).json({ message: "Invalid message ID" });
+        res.status(400).json({ success: false, message: "Invalid message ID" });
         return;
       }
 
       const message = await Message.findById(messageId);
       if (!message) {
-        res.status(404).json({ message: "Message not found" });
+        res.status(404).json({ success: false, message: "Message not found" });
         return;
       }
 
@@ -62,10 +62,17 @@ export default class LegacyMessageDeletionController {
         socketService.emitUnreadCountUpdate(userId, unreadCounts);
       }
 
-      res.status(200).json({ message: "Message deleted" });
+      res
+        .status(200)
+        .json({
+          success: true,
+          message: "Message deleted from system messages",
+        });
     } catch (error) {
       console.error("Error deleting message:", error);
-      res.status(500).json({ message: "Failed to delete message" });
+      res
+        .status(500)
+        .json({ success: false, message: "Failed to delete message" });
     }
   }
 }

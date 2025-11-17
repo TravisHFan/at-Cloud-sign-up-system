@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { Types } from "mongoose";
 import Message from "../../models/Message";
 import { socketService } from "../../services/infrastructure/SocketService";
 import { CachePatterns } from "../../services";
@@ -35,6 +36,14 @@ export default class BellNotificationsReadController {
         res.status(401).json({
           success: false,
           message: "Authentication required",
+        });
+        return;
+      }
+
+      if (!Types.ObjectId.isValid(messageId)) {
+        res.status(400).json({
+          success: false,
+          message: "Invalid message ID",
         });
         return;
       }

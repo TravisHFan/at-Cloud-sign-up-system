@@ -94,7 +94,7 @@ describe("LegacyMessageDeletionController - DELETE /api/notifications/system/:me
         .set("Authorization", `Bearer ${token}`);
 
       expect(response.status).toBe(200);
-      expect(response.body.message).toBe("Message deleted");
+      expect(response.body.message).toBe("Message deleted from system messages");
 
       // Verify message is soft deleted
       const updatedMessage = await Message.findById(message._id);
@@ -317,7 +317,7 @@ describe("LegacyMessageDeletionController - DELETE /api/notifications/system/:me
         .set("Authorization", `Bearer ${token}`);
 
       expect(response.status).toBe(200);
-      expect(response.body.message).toBe("Message deleted");
+      expect(response.body.message).toBe("Message deleted from system messages");
     });
 
     it("should auto-remove from bell when deleted from system (REQ 9)", async () => {
@@ -372,7 +372,7 @@ describe("LegacyMessageDeletionController - DELETE /api/notifications/system/:me
         .set("Authorization", `Bearer ${token}`);
 
       expect(response.status).toBe(200);
-      expect(response.body.message).toBe("Message deleted");
+      expect(response.body.message).toBe("Message deleted from system messages");
     });
   });
 
@@ -399,10 +399,12 @@ describe("LegacyMessageDeletionController - DELETE /api/notifications/system/:me
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty("message");
-      expect(response.body.message).toBe("Message deleted");
+      expect(response.body.message).toBe(
+        "Message deleted from system messages"
+      );
     });
 
-    it("should not include success field on 200 response", async () => {
+    it("should include success field on 200 response", async () => {
       const user = await User.create({
         name: "Test User",
         username: "testuser",
@@ -422,7 +424,8 @@ describe("LegacyMessageDeletionController - DELETE /api/notifications/system/:me
         .set("Authorization", `Bearer ${token}`);
 
       expect(response.status).toBe(200);
-      expect(response.body).not.toHaveProperty("success");
+      expect(response.body).toHaveProperty("success");
+      expect(response.body.success).toBe(true);
       expect(response.body).not.toHaveProperty("data");
     });
   });
