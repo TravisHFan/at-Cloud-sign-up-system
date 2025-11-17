@@ -1,4 +1,5 @@
 import React from "react";
+import { createPortal } from "react-dom";
 import Icon from "./Icon";
 
 interface NotificationPromptModalProps {
@@ -20,7 +21,7 @@ export default function NotificationPromptModal({
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
         {/* Header */}
@@ -118,6 +119,7 @@ export default function NotificationPromptModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

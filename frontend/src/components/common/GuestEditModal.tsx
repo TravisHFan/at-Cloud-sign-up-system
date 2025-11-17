@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 interface GuestEditModalProps {
   isOpen: boolean;
@@ -45,7 +46,7 @@ export default function GuestEditModal({
     });
   };
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
       role="dialog"
@@ -116,6 +117,7 @@ export default function GuestEditModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { createPortal } from "react-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import Icon from "./Icon";
 
@@ -40,7 +41,7 @@ export default function NameCardActionModal({
     onClose();
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl p-6 min-w-80 max-w-md mx-4">
         {/* Header */}
@@ -98,6 +99,7 @@ export default function NameCardActionModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

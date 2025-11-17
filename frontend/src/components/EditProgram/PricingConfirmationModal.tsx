@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { formatCurrency } from "../../utils/currency";
 
 interface PricingChange {
@@ -37,7 +38,7 @@ export default function PricingConfirmationModal({
 }: PricingConfirmationModalProps) {
   if (!show) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center">
         {/* Background overlay */}
@@ -225,6 +226,7 @@ export default function PricingConfirmationModal({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

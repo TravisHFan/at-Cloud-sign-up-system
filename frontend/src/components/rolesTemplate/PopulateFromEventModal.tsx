@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { searchService } from "../../services/api";
 import type { EventData } from "../../types/event";
 import Icon from "../common/Icon";
@@ -99,7 +100,7 @@ export default function PopulateFromEventModal({
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[80vh] flex flex-col">
         {/* Header */}
@@ -253,6 +254,7 @@ export default function PopulateFromEventModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

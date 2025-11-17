@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import useShortLink from "../../hooks/useShortLink";
 
 interface ShareModalProps {
@@ -41,7 +42,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
   const shortUrl = record?.url;
   const stateLabel = status?.state;
 
-  return (
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -123,7 +124,8 @@ export const ShareModal: React.FC<ShareModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

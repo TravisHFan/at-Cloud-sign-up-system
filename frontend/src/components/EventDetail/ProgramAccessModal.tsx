@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { createPortal } from "react-dom";
 
 interface ProgramAccessModalProps {
   isOpen: boolean;
@@ -42,7 +43,7 @@ export default function ProgramAccessModal({
     navigate("/dashboard/programs");
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="fixed inset-0 bg-black/50" onClick={onClose} />
       <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
@@ -101,6 +102,7 @@ export default function ProgramAccessModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

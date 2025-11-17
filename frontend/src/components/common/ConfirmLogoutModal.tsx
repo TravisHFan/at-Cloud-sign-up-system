@@ -1,4 +1,5 @@
 import React from "react";
+import { createPortal } from "react-dom";
 
 interface ConfirmLogoutModalProps {
   open: boolean;
@@ -15,7 +16,7 @@ export const ConfirmLogoutModal: React.FC<ConfirmLogoutModalProps> = ({
 }) => {
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
@@ -47,7 +48,8 @@ export const ConfirmLogoutModal: React.FC<ConfirmLogoutModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

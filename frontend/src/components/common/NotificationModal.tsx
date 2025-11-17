@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import Icon from "./Icon";
 
 interface NotificationModalProps {
@@ -87,7 +88,7 @@ export default function NotificationModal({
 
   const styles = getTypeStyles();
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]">
       <div
         className={`bg-white rounded-lg shadow-xl max-w-md w-full border-2 ${styles.borderColor} ${styles.bgColor} animate-slide-in`}
@@ -165,6 +166,7 @@ export default function NotificationModal({
           {/* Countdown bar & auto-close removed; modal persists until a button is clicked. */}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

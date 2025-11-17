@@ -1,4 +1,5 @@
 import React from "react";
+import { createPortal } from "react-dom";
 
 interface RegistrationDeletionConfirmModalProps {
   isOpen: boolean;
@@ -25,7 +26,7 @@ export const RegistrationDeletionConfirmModal: React.FC<
 }) => {
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* Backdrop */}
       <div
@@ -106,6 +107,7 @@ export const RegistrationDeletionConfirmModal: React.FC<
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
