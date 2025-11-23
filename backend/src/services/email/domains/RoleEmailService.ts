@@ -1425,6 +1425,14 @@ export class RoleEmailService {
       )}. Location: ${
         eventData.location
       }. Assigned by: ${organizerName}. Please check the event management dashboard for more details.`,
+    }).catch((error) => {
+      log.error(
+        "Failed to send co-organizer assignment email",
+        error as Error,
+        undefined,
+        { recipient: coOrganizerEmail, event: eventData.title }
+      );
+      throw error;
     });
   }
 }

@@ -169,9 +169,7 @@ describe("CreateEvent - flyerUrl optional + upload", () => {
     });
 
     // Choose notification option (required before submit in main form)
-    fireEvent.click(
-      screen.getByRole("radio", { name: /don’t send notifications now/i })
-    );
+    fireEvent.click(screen.getByRole("radio", { name: /don't send.*later/i }));
 
     fireEvent.click(screen.getByRole("button", { name: /preview/i }));
     await screen.findByText(/event preview/i);
@@ -255,9 +253,7 @@ describe("CreateEvent - flyerUrl optional + upload", () => {
     });
 
     // Choose notification option (required before submit in main form)
-    fireEvent.click(
-      screen.getByRole("radio", { name: /don’t send notifications now/i })
-    );
+    fireEvent.click(screen.getByRole("radio", { name: /don't send.*later/i }));
 
     // Find the file input by label title on the wrapper label ("Upload image")
     const uploadLabels = screen.getAllByTitle(/upload image/i);

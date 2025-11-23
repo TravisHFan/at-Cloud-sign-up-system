@@ -60,12 +60,16 @@ export class CoOrganizerNotificationService {
       );
 
       // Get user details for new co-organizers
+      // Note: Co-organizers are explicitly assigned a responsibility, so they should
+      // be notified regardless of their emailNotifications preference setting.
+      // Only verify they are active and verified users.
       const newCoOrganizers = await User.find({
         _id: { $in: newCoOrganizerIds },
         isActive: true,
         isVerified: true,
-        emailNotifications: true,
-      }).select("email firstName lastName");
+        // emailNotifications filter intentionally omitted - co-organizers
+        // are explicitly assigned and should be notified of their responsibilities
+      }).select("_id email firstName lastName");
 
       // Send email notifications to new co-organizers
       const coOrganizerEmailPromises = newCoOrganizers.map(

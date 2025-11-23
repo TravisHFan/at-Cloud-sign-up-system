@@ -47,7 +47,7 @@ const NotificationPreference: React.FC<NotificationPreferenceProps> = ({
             />
             <span className="text-sm text-gray-700">
               <span className="font-medium">Send notifications now</span> (email
-              + system message).
+              + system message to all users).
             </span>
           </label>
           <label className="flex items-start gap-2 cursor-pointer">
@@ -64,7 +64,7 @@ const NotificationPreference: React.FC<NotificationPreferenceProps> = ({
             />
             <span className="text-sm text-gray-700">
               <span className="font-medium">Don't send notifications now</span>{" "}
-              — I'll notify users later.
+              — I'll notify users later (co-organizers will still be notified).
             </span>
           </label>
         </div>

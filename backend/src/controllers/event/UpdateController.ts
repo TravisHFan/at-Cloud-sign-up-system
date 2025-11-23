@@ -31,6 +31,7 @@ import { RoleUpdateService } from "../../services/event/RoleUpdateService";
 import { AutoUnpublishService } from "../../services/event/AutoUnpublishService";
 import { CoOrganizerNotificationService } from "../../services/event/CoOrganizerNotificationService";
 import { ParticipantNotificationService } from "../../services/event/ParticipantNotificationService";
+import { CoOrganizerProgramAccessService } from "../../services/event/CoOrganizerProgramAccessService";
 
 const logger = Logger.getInstance().child("UpdateController");
 
@@ -227,6 +228,39 @@ export class UpdateController {
       }
 
       // Note: Mentor Circle logic removed - no longer refreshing mentors from programs
+
+      // ============================================================
+      // STEP 4.5: Co-Organizer Program Access Validation
+      // ============================================================
+      // Validate that all co-organizers have access to the event's paid programs
+      // Use normalized organizer details if provided, otherwise use existing event organizers
+      const organizersToValidate =
+        (normalizedData as { organizerDetails?: unknown }).organizerDetails ||
+        event.organizerDetails;
+      const programsToValidate =
+        (normalizedData as { programLabels?: unknown }).programLabels ||
+        event.programLabels;
+
+      const coOrganizerAccessResult =
+        await CoOrganizerProgramAccessService.validateCoOrganizerAccess(
+          organizersToValidate as Parameters<
+            typeof CoOrganizerProgramAccessService.validateCoOrganizerAccess
+          >[0],
+          programsToValidate as Parameters<
+            typeof CoOrganizerProgramAccessService.validateCoOrganizerAccess
+          >[1]
+        );
+
+      if (!coOrganizerAccessResult.valid && coOrganizerAccessResult.error) {
+        res.status(coOrganizerAccessResult.error.status).json({
+          success: false,
+          message: coOrganizerAccessResult.error.message,
+          ...(coOrganizerAccessResult.error.data
+            ? { data: coOrganizerAccessResult.error.data }
+            : {}),
+        });
+        return;
+      }
 
       Object.assign(event, normalizedData);
 

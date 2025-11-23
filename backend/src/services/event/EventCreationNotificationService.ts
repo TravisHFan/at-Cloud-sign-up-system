@@ -74,10 +74,153 @@ export class EventCreationNotificationService {
   }
 
   /**
+   * Send co-organizer assignment notifications ONLY.
+   * This is called separately from broadcast notifications and always runs,
+   * regardless of the suppressNotifications flag, because co-organizer
+   * assignments are mandatory responsibility notifications.
+   */
+  static async sendCoOrganizerNotifications(
+    event: IEvent,
+    currentUser: CurrentUser,
+    toIdString?: (id: unknown) => string
+  ): Promise<boolean> {
+    // Use provided toIdString or fallback to toString
+    const idToString =
+      toIdString ||
+      ((id: unknown): string => {
+        if (typeof id === "string") return id;
+        if (id && typeof id === "object" && "toString" in id) {
+          return (id as { toString: () => string }).toString();
+        }
+        return String(id);
+      });
+
+    try {
+      // Get populated event data for notifications (includes real emails)
+      let populatedEvent: unknown;
+      try {
+        populatedEvent =
+          await ResponseBuilderService.buildEventWithRegistrations(
+            idToString(event._id)
+          );
+      } catch (populationError) {
+        logger.error(
+          "Error populating event data for co-organizer notifications",
+          populationError as Error
+        );
+        populatedEvent = event; // fallback to raw event
+      }
+
+      if (!populatedEvent) {
+        populatedEvent = event;
+      }
+
+      if (
+        !EventCreationNotificationService.hasOrganizerDetails(populatedEvent) ||
+        !populatedEvent.organizerDetails ||
+        populatedEvent.organizerDetails.length === 0
+      ) {
+        return false;
+      }
+
+      // Get co-organizers (excluding main organizer)
+      const coOrganizers = await EmailRecipientUtils.getEventCoOrganizers(
+        populatedEvent as unknown as IEvent
+      );
+
+      if (coOrganizers.length === 0) {
+        return false;
+      }
+
+      // Send email notifications to co-organizers
+      const coOrganizerEmailPromises = coOrganizers.map(async (coOrganizer) => {
+        try {
+          await EmailService.sendCoOrganizerAssignedEmail(
+            coOrganizer.email,
+            {
+              firstName: coOrganizer.firstName,
+              lastName: coOrganizer.lastName,
+            },
+            {
+              title: event.title,
+              date: event.date,
+              time: event.time,
+              location: event.location || "",
+            },
+            {
+              firstName: currentUser.firstName || "Unknown",
+              lastName: currentUser.lastName || "User",
+            }
+          );
+          return true;
+        } catch (error) {
+          logger.error(
+            `Failed to send co-organizer email to ${coOrganizer.email}`,
+            error as Error
+          );
+          return false;
+        }
+      });
+
+      // Send system messages to co-organizers
+      const coOrganizerSystemMessagePromises = coOrganizers.map(
+        async (coOrganizer) => {
+          try {
+            if (coOrganizer._id) {
+              await UnifiedMessageController.createTargetedSystemMessage(
+                {
+                  title: `Co-Organizer Assignment: ${event.title}`,
+                  content: `You have been assigned as a co-organizer for the event "${event.title}" scheduled for ${event.date} at ${event.time}. Please review the event details and reach out to the main organizer if you have any questions.`,
+                  type: "announcement",
+                  priority: "high",
+                },
+                [idToString(coOrganizer._id)],
+                {
+                  id: idToString(currentUser._id),
+                  firstName: currentUser.firstName || "Unknown",
+                  lastName: currentUser.lastName || "User",
+                  username: currentUser.username || "unknown",
+                  avatar: currentUser.avatar,
+                  gender: currentUser.gender || "male",
+                  authLevel: currentUser.role,
+                  roleInAtCloud: currentUser.roleInAtCloud,
+                }
+              );
+            }
+            return true;
+          } catch (error) {
+            logger.error(
+              `Failed to send co-organizer system message to ${coOrganizer.email}`,
+              error as Error
+            );
+            return false;
+          }
+        }
+      );
+
+      // Wait for all notifications
+      await Promise.all([
+        ...coOrganizerEmailPromises,
+        ...coOrganizerSystemMessagePromises,
+      ]);
+
+      return true;
+    } catch (error) {
+      logger.error(
+        "Error in sendCoOrganizerNotifications",
+        error as Error,
+        undefined,
+        { eventId: event._id }
+      );
+      return false;
+    }
+  }
+
+  /**
    * Send all notifications for a newly created event:
    * 1. System messages to all active users
    * 2. Email notifications to all active users (excluding creator)
-   * 3. Co-organizer assignment notifications (if applicable)
+   * NOTE: Co-organizer notifications are now sent separately via sendCoOrganizerNotifications()
    */
   static async sendAllNotifications(
     event: IEvent,
@@ -107,7 +250,6 @@ export class EventCreationNotificationService {
 
     // 1. Create system messages for all active users (including event creator)
     try {
-      console.log("🔔 Creating system messages for new event...");
       logger.info("Creating system messages for new event", undefined, {
         title: eventData.title,
         date: eventData.date,
@@ -164,9 +306,6 @@ export class EventCreationNotificationService {
           }
         );
 
-        console.log(
-          `✅ System message created successfully for ${allUserIds.length} users`
-        );
         logger.info("System message created successfully", undefined, {
           recipients: allUserIds.length,
           isRecurring,
@@ -174,11 +313,9 @@ export class EventCreationNotificationService {
         });
         result.systemMessagesSent = true;
       } else {
-        console.log("ℹ️  No active users found for system message");
         logger.info("No active users found for system message");
       }
     } catch (error) {
-      console.error("❌ Failed to create system messages for event:", error);
       logger.error(
         "Failed to create system messages for event",
         error as Error,
@@ -248,151 +385,9 @@ export class EventCreationNotificationService {
       // Don't fail the event creation if email notifications fail
     }
 
-    // 3. Send co-organizer assignment notifications (if applicable)
-    try {
-      // Get populated event data for notifications (includes real emails)
-      let populatedEvent: unknown;
-      try {
-        populatedEvent =
-          await ResponseBuilderService.buildEventWithRegistrations(
-            idToString(event._id)
-          );
-      } catch (populationError) {
-        console.error("Error populating event data:", populationError);
-        populatedEvent = event; // fallback to raw event
-      }
-      // Additional safeguard: if population returned null/undefined, fall back to original event
-      if (!populatedEvent) {
-        populatedEvent = event;
-      }
-
-      if (
-        EventCreationNotificationService.hasOrganizerDetails(populatedEvent) &&
-        populatedEvent.organizerDetails &&
-        populatedEvent.organizerDetails.length > 0
-      ) {
-        console.log("🔔 Sending co-organizer assignment notifications...");
-
-        // Get co-organizers (excluding main organizer) using populated event
-        const coOrganizers = await EmailRecipientUtils.getEventCoOrganizers(
-          populatedEvent as unknown as IEvent
-        );
-
-        if (coOrganizers.length > 0) {
-          console.log(
-            `📧 Found ${coOrganizers.length} co-organizers to notify`
-          );
-
-          // Send email notifications to co-organizers
-          const coOrganizerEmailPromises = coOrganizers.map(
-            async (coOrganizer) => {
-              try {
-                await EmailService.sendCoOrganizerAssignedEmail(
-                  coOrganizer.email,
-                  {
-                    firstName: coOrganizer.firstName,
-                    lastName: coOrganizer.lastName,
-                  },
-                  {
-                    title: event.title,
-                    date: event.date,
-                    time: event.time,
-                    location: event.location || "",
-                  },
-                  {
-                    firstName: currentUser.firstName || "Unknown",
-                    lastName: currentUser.lastName || "User",
-                  }
-                );
-                console.log(
-                  `✅ Co-organizer notification sent to ${coOrganizer.email}`
-                );
-                return true;
-              } catch (error) {
-                console.error(
-                  `❌ Failed to send co-organizer notification to ${coOrganizer.email}:`,
-                  error
-                );
-                return false;
-              }
-            }
-          );
-
-          // Send system messages to co-organizers (targeted messages)
-          const coOrganizerSystemMessagePromises = coOrganizers.map(
-            async (coOrganizer) => {
-              try {
-                // Get the user ID for targeted system message
-                const coOrganizerUser = await User.findOne({
-                  email: coOrganizer.email,
-                }).select("_id");
-
-                if (coOrganizerUser) {
-                  // Create targeted system message using the new method
-                  await UnifiedMessageController.createTargetedSystemMessage(
-                    {
-                      title: `Co-Organizer Assignment: ${event.title}`,
-                      content: `You have been assigned as a co-organizer for the event "${event.title}" scheduled for ${event.date} at ${event.time}. Please review the event details and reach out to the main organizer if you have any questions.`,
-                      type: "announcement",
-                      priority: "high",
-                    },
-                    [idToString(coOrganizerUser._id)],
-                    {
-                      id: idToString(currentUser._id),
-                      firstName: currentUser.firstName || "Unknown",
-                      lastName: currentUser.lastName || "User",
-                      username: currentUser.username || "unknown",
-                      avatar: currentUser.avatar,
-                      gender: currentUser.gender || "male",
-                      authLevel: currentUser.role,
-                      roleInAtCloud: currentUser.roleInAtCloud,
-                    }
-                  );
-
-                  console.log(
-                    `✅ Co-organizer system message sent to ${coOrganizer.email}`
-                  );
-                }
-                return true;
-              } catch (error) {
-                console.error(
-                  `❌ Failed to send co-organizer system message to ${coOrganizer.email}:`,
-                  error
-                );
-                return false;
-              }
-            }
-          );
-
-          // Process notifications in the background
-          Promise.all([
-            ...coOrganizerEmailPromises,
-            ...coOrganizerSystemMessagePromises,
-          ])
-            .then((results) => {
-              console.log(
-                `✅ Processed ${results.length} co-organizer notifications`
-              );
-            })
-            .catch((error) => {
-              console.error(
-                "Error processing co-organizer notifications:",
-                error
-              );
-            });
-
-          result.coOrganizerNotificationsSent = true;
-        } else {
-          console.log("ℹ️  No co-organizers found for notifications");
-        }
-      }
-    } catch (coOrganizerError) {
-      console.error(
-        "Error sending co-organizer notifications:",
-        coOrganizerError
-      );
-      // Don't fail the event creation if co-organizer notifications fail
-    }
+    // NOTE: Co-organizer assignment notifications are now sent separately
+    // via sendCoOrganizerNotifications() method, which is always called
+    // regardless of suppressNotifications flag
 
     return result;
   }

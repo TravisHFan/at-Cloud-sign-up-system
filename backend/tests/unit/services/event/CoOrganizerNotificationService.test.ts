@@ -106,11 +106,11 @@ describe("CoOrganizerNotificationService", () => {
       req
     );
 
+    // Co-organizers are notified regardless of emailNotifications preference
     expect(User.find).toHaveBeenCalledWith({
       _id: { $in: ["user-2"] },
       isActive: true,
       isVerified: true,
-      emailNotifications: true,
     });
 
     expect(EmailService.sendCoOrganizerAssignedEmail).toHaveBeenCalledWith(

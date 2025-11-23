@@ -87,8 +87,11 @@ export class EmailRecipientUtils {
    */
   static async getEventAllOrganizers(
     event: IEvent
-  ): Promise<Array<{ email: string; firstName: string; lastName: string }>> {
+  ): Promise<
+    Array<{ _id: string; email: string; firstName: string; lastName: string }>
+  > {
     const organizerEmails: Array<{
+      _id: string;
       email: string;
       firstName: string;
       lastName: string;
@@ -105,10 +108,11 @@ export class EmailRecipientUtils {
         isActive: true,
         isVerified: true,
         emailNotifications: true,
-      }).select("email firstName lastName");
+      }).select("_id email firstName lastName");
 
       if (mainOrganizer) {
         organizerEmails.push({
+          _id: mainOrganizer._id.toString(),
           email: mainOrganizer.email,
           firstName: mainOrganizer.firstName,
           lastName: mainOrganizer.lastName,
@@ -133,10 +137,11 @@ export class EmailRecipientUtils {
           isActive: true,
           isVerified: true,
           emailNotifications: true,
-        }).select("email firstName lastName");
+        }).select("_id email firstName lastName");
 
         organizerEmails.push(
           ...coOrganizers.map((org) => ({
+            _id: org._id.toString(),
             email: org.email,
             firstName: org.firstName,
             lastName: org.lastName,
@@ -154,25 +159,27 @@ export class EmailRecipientUtils {
    */
   static async getEventCoOrganizers(
     event: IEvent
-  ): Promise<Array<{ email: string; firstName: string; lastName: string }>> {
+  ): Promise<
+    Array<{ _id: string; email: string; firstName: string; lastName: string }>
+  > {
     // Get the main organizer's ID for exclusion (handle both ObjectId and string)
-    // FIX: Handle populated User objects (id field) and ObjectId objects (toString method)
+    // Handle populated User objects (id field) and ObjectId objects (toString method)
     const mainOrganizerId =
       extractIdString(
         // createdBy is declared as ObjectId but may be populated at runtime
         (event as unknown as { createdBy: unknown }).createdBy
       ) || "";
+
     if (!event.organizerDetails || event.organizerDetails.length === 0) {
       return [];
     }
 
-    // FIX: Use userId instead of email for filtering (stored emails are placeholders)
+    // Use userId instead of email for filtering (stored emails are placeholders)
     // Get all organizer userIds except the main organizer
     const coOrganizerUserIds = event.organizerDetails
       .filter((organizer) => {
         const orgUserId = organizer.userId?.toString() || organizer.userId;
-        const isNotMainOrganizer = orgUserId && orgUserId !== mainOrganizerId;
-        return isNotMainOrganizer;
+        return orgUserId && orgUserId !== mainOrganizerId;
       })
       .map((organizer) => organizer.userId);
 
@@ -181,12 +188,23 @@ export class EmailRecipientUtils {
     }
 
     // Look up users by their IDs to get fresh contact information
-    return await User.find({
+    // Note: Co-organizers are explicitly assigned a responsibility, so they should
+    // be notified regardless of their emailNotifications preference setting.
+    // Only verify they are active and verified users.
+    const coOrganizers = await User.find({
       _id: { $in: coOrganizerUserIds },
       isActive: true,
       isVerified: true,
-      emailNotifications: true,
-    }).select("email firstName lastName");
+      // emailNotifications filter intentionally omitted - co-organizers
+      // are explicitly assigned and should be notified of their responsibilities
+    }).select("_id email firstName lastName");
+
+    return coOrganizers.map((org) => ({
+      _id: org._id.toString(),
+      email: org.email,
+      firstName: org.firstName,
+      lastName: org.lastName,
+    }));
   }
 
   /**

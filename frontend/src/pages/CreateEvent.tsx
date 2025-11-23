@@ -520,12 +520,22 @@ export default function NewEvent() {
       setTemplateConfirmed(false);
       setSelectedTemplateId(null);
     } else {
-      // No database templates - start with empty roles list
-      setValue("roles", []);
+      // No database templates - start with one empty role and show role configuration
+      setValue("roles", [
+        {
+          id: `role-${Date.now()}`,
+          name: "New Role",
+          description: "Describe this role",
+          agenda: "",
+          maxParticipants: 1,
+          currentSignups: [],
+        },
+      ]);
       setShowTemplateSelector(false);
       setTemplateConfirmed(true);
+      setCustomizeRoles(true); // Auto-expand role configuration section
     }
-  }, [selectedEventType, dbTemplates, setValue]);
+  }, [selectedEventType, dbTemplates, setValue, setCustomizeRoles]);
 
   // Show preview if requested
   if (showPreview) {
@@ -705,7 +715,8 @@ export default function NewEvent() {
                 </legend>
                 <p className="text-xs text-gray-500 mb-2">
                   Choose whether to notify all users now via email and a system
-                  message.
+                  message. <strong>Note:</strong> Co-organizers will always
+                  receive assignment notifications regardless of this setting.
                 </p>
                 <div className="space-y-2">
                   <label className="flex items-start gap-2 cursor-pointer">
@@ -724,7 +735,7 @@ export default function NewEvent() {
                       <span className="font-medium">
                         Send notifications now
                       </span>{" "}
-                      (email + system message).
+                      (email + system message to all users).
                     </span>
                   </label>
                   <label className="flex items-start gap-2 cursor-pointer">
@@ -741,9 +752,10 @@ export default function NewEvent() {
                     />
                     <span className="text-sm text-gray-700">
                       <span className="font-medium">
-                        Don’t send notifications now
+                        Don't send notifications now
                       </span>{" "}
-                      — I’ll notify users later.
+                      — I'll notify users later (co-organizers will still be
+                      notified).
                     </span>
                   </label>
                 </div>

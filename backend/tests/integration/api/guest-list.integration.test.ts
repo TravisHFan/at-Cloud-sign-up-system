@@ -314,14 +314,34 @@ describe("GuestListController - GET /api/events/:eventId/guests", () => {
       const fakeEventId = new mongoose.Types.ObjectId();
       const token = TokenService.generateTokenPair(admin).accessToken;
 
-      const response = await request(app)
-        .get(`/api/events/${fakeEventId}/guests`)
-        .set("Authorization", `Bearer ${token}`);
+      // Retry logic to handle intermittent server connection issues under load
+      let response;
+      let attempts = 0;
+      const maxAttempts = 3;
 
-      expect(response.status).toBe(200);
-      expect(response.body.success).toBe(true);
-      expect(response.body.data.guests).toEqual([]);
-      expect(response.body.data.count).toBe(0);
+      while (attempts < maxAttempts) {
+        try {
+          response = await request(app)
+            .get(`/api/events/${fakeEventId}/guests`)
+            .set("Authorization", `Bearer ${token}`);
+          break; // Success, exit retry loop
+        } catch (error: any) {
+          attempts++;
+          if (
+            attempts >= maxAttempts ||
+            error.code !== "HPE_INVALID_CONSTANT"
+          ) {
+            throw error; // Re-throw if max attempts reached or different error
+          }
+          // Wait 100ms before retry
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+      }
+
+      expect(response!.status).toBe(200);
+      expect(response!.body.success).toBe(true);
+      expect(response!.body.data.guests).toEqual([]);
+      expect(response!.body.data.count).toBe(0);
     });
 
     it("should handle multiple guests for same event", async () => {

@@ -87,6 +87,7 @@ import { EventOrganizerDataService } from "../../services/event/EventOrganizerDa
 import { EventProgramLinkageService } from "../../services/event/EventProgramLinkageService";
 import { RecurringEventGenerationService } from "../../services/event/RecurringEventGenerationService";
 import { EventCreationNotificationService } from "../../services/event/EventCreationNotificationService";
+import { CoOrganizerProgramAccessService } from "../../services/event/CoOrganizerProgramAccessService";
 
 // Initialize logger
 const logger = Logger.getInstance().child("CreationController");
@@ -143,6 +144,7 @@ export class CreationController {
    * 4. Role Preparation (EventRolePreparationService)
    * 5. Organizer Data Processing (EventOrganizerDataService)
    * 6. Program Linkage Validation (EventProgramLinkageService)
+   * 6.5. Co-Organizer Program Access Validation (CoOrganizerProgramAccessService)
    * 7. Event Creation & Recurring Series Generation (RecurringEventGenerationService)
    * 8. Notification Dispatch (EventCreationNotificationService)
    * 9. Cache Invalidation & Response Building
@@ -293,6 +295,27 @@ export class CreationController {
       const linkedPrograms = programLinkageResult.linkedPrograms!;
 
       // ========================================
+      // STEP 6.5: Co-Organizer Program Access Validation
+      // ========================================
+      // Validate that all co-organizers have access to the event's paid programs
+      const coOrganizerAccessResult =
+        await CoOrganizerProgramAccessService.validateCoOrganizerAccess(
+          processedOrganizerDetails,
+          validatedProgramLabels
+        );
+
+      if (!coOrganizerAccessResult.valid && coOrganizerAccessResult.error) {
+        res.status(coOrganizerAccessResult.error.status).json({
+          success: false,
+          message: coOrganizerAccessResult.error.message,
+          ...(coOrganizerAccessResult.error.data
+            ? { data: coOrganizerAccessResult.error.data }
+            : {}),
+        });
+        return;
+      }
+
+      // ========================================
       // STEP 7: Event Creation & Recurring Series Generation
       // ========================================
       // Helper to create an Event document from a payload
@@ -376,21 +399,43 @@ export class CreationController {
             )
           : false;
 
-      // Send all notifications (system messages, emails, co-organizer assignments)
+      // Send broadcast notifications (system messages & emails to all users)
+      // These respect the suppressNotifications flag
       if (!suppressNotifications) {
-        await EventCreationNotificationService.sendAllNotifications(
+        try {
+          await EventCreationNotificationService.sendAllNotifications(
+            event,
+            eventData,
+            req.user!,
+            isValidRecurring
+              ? {
+                  isRecurring: recurring!.isRecurring!,
+                  frequency: recurring!.frequency!,
+                  occurrenceCount: recurring!.occurrenceCount!,
+                }
+              : undefined,
+            EventController.toIdString
+          );
+        } catch (notificationError) {
+          console.error(
+            "Failed to send broadcast notifications:",
+            notificationError
+          );
+          // Don't throw - continue with event creation
+        }
+      }
+
+      // ALWAYS send co-organizer assignment notifications
+      // These are mandatory responsibility notifications, not optional broadcasts
+      try {
+        await EventCreationNotificationService.sendCoOrganizerNotifications(
           event,
-          eventData,
           req.user!,
-          isValidRecurring
-            ? {
-                isRecurring: recurring!.isRecurring!,
-                frequency: recurring!.frequency!,
-                occurrenceCount: recurring!.occurrenceCount!,
-              }
-            : undefined,
           EventController.toIdString
         );
+      } catch (coOrgError) {
+        console.error("Failed to send co-organizer notifications:", coOrgError);
+        // Don't throw - continue with event creation
       }
 
       // ========================================

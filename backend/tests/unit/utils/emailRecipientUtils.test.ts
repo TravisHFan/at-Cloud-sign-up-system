@@ -94,23 +94,23 @@ describe("EmailRecipientUtils", () => {
 
   it("getEventCoOrganizers queries by userIds excluding main organizer (string id)", async () => {
     User.select.mockResolvedValueOnce([
-      { email: "co1@x.com", firstName: "C1", lastName: "L1" },
+      { _id: "u2", email: "co1@x.com", firstName: "C1", lastName: "L1" },
     ]);
     await EmailRecipientUtils.getEventCoOrganizers({
       createdBy: "u1",
       organizerDetails: [{ userId: "u1" }, { userId: "u2" }],
     } as any);
+    // Co-organizers are notified regardless of emailNotifications preference
     expect(User.find).toHaveBeenCalledWith({
       _id: { $in: ["u2"] },
       isActive: true,
       isVerified: true,
-      emailNotifications: true,
     });
   });
 
   it("getEventCoOrganizers handles createdBy as populated user object with id string", async () => {
     User.select.mockResolvedValueOnce([
-      { email: "co2@x.com", firstName: "C2", lastName: "L2" },
+      { _id: "co123", email: "co2@x.com", firstName: "C2", lastName: "L2" },
     ]);
     await EmailRecipientUtils.getEventCoOrganizers({
       createdBy: { id: "main123" },
@@ -120,13 +120,12 @@ describe("EmailRecipientUtils", () => {
       _id: { $in: ["co123"] },
       isActive: true,
       isVerified: true,
-      emailNotifications: true,
     });
   });
 
   it("getEventCoOrganizers handles createdBy as ObjectId-like with toString()", async () => {
     User.select.mockResolvedValueOnce([
-      { email: "co3@x.com", firstName: "C3", lastName: "L3" },
+      { _id: "xyz789", email: "co3@x.com", firstName: "C3", lastName: "L3" },
     ]);
     const objectId = { toString: () => "abc123" } as any;
     await EmailRecipientUtils.getEventCoOrganizers({
@@ -137,13 +136,17 @@ describe("EmailRecipientUtils", () => {
       _id: { $in: ["xyz789"] },
       isActive: true,
       isVerified: true,
-      emailNotifications: true,
     });
   });
 
   it("getEventCoOrganizers handles createdBy object with _id field", async () => {
     User.select.mockResolvedValueOnce([
-      { email: "co4@x.com", firstName: "C4", lastName: "L4" },
+      {
+        _id: { toString: () => "helper1" },
+        email: "co4@x.com",
+        firstName: "C4",
+        lastName: "L4",
+      },
     ]);
     await EmailRecipientUtils.getEventCoOrganizers({
       createdBy: { _id: { toString: () => "owner1" } },
@@ -158,7 +161,6 @@ describe("EmailRecipientUtils", () => {
     expect(call).toMatchObject({
       isActive: true,
       isVerified: true,
-      emailNotifications: true,
     });
     expect(call._id.$in).toHaveLength(1);
     expect(typeof call._id.$in[0].toString).toBe("function");
@@ -168,7 +170,7 @@ describe("EmailRecipientUtils", () => {
   it("getEventCoOrganizers falls back to String(createdBy) when given a plain object", async () => {
     // createdBy lacks id/_id and has default toString => "[object Object]"
     User.select.mockResolvedValueOnce([
-      { email: "co5@x.com", firstName: "C5", lastName: "L5" },
+      { _id: "u10", email: "co5@x.com", firstName: "C5", lastName: "L5" },
     ]);
     const plainObject = { foo: "bar" } as any;
     await EmailRecipientUtils.getEventCoOrganizers({
@@ -180,9 +182,8 @@ describe("EmailRecipientUtils", () => {
       _id: { $in: ["u10", "u20"] },
       isActive: true,
       isVerified: true,
-      emailNotifications: true,
     });
-    expect(User.select).toHaveBeenCalledWith("email firstName lastName");
+    expect(User.select).toHaveBeenCalledWith("_id email firstName lastName");
   });
 
   it("getEventCoOrganizers returns [] when no co-organizers after excluding main organizer", async () => {

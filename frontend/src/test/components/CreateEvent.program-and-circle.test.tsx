@@ -209,7 +209,7 @@ describe("CreateEvent - Program Labels wiring", () => {
 
     // Choose notification option (required before submit)
     const dontSend = screen.getByRole("radio", {
-      name: /don’t send notifications now/i,
+      name: /don't send.*later/i,
     });
     fireEvent.click(dontSend);
 
