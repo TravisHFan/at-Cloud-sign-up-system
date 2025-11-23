@@ -42,8 +42,11 @@ export interface IPromoCode extends Document, IPromoCodeMethods {
 
   // Ownership & restrictions
   ownerId?: mongoose.Types.ObjectId; // User who owns/can use this code (optional for general codes)
+  applicableToType?: "program" | "event"; // What type of purchase this code applies to (default: 'program' for backward compatibility)
   allowedProgramIds?: mongoose.Types.ObjectId[]; // For staff_access: specific programs (empty = all programs)
+  allowedEventIds?: mongoose.Types.ObjectId[]; // For staff_access/events: specific events (empty = all events)
   excludedProgramId?: mongoose.Types.ObjectId; // For bundle_discount: can't use on the program that generated this code
+  excludedEventId?: mongoose.Types.ObjectId; // For bundle_discount/events: can't use on the event that generated this code
 
   // Status tracking
   isActive: boolean; // Can this code be used? (admin can deactivate)
@@ -160,6 +163,12 @@ const promoCodeSchema = new Schema<
       },
       index: true, // Frequently query codes by owner
     },
+    applicableToType: {
+      type: String,
+      enum: ["program", "event"],
+      default: "program", // Default to program for backward compatibility
+      index: true,
+    },
     allowedProgramIds: {
       type: [Schema.Types.ObjectId],
       ref: "Program",
@@ -169,14 +178,39 @@ const promoCodeSchema = new Schema<
           this: IPromoCode,
           value: mongoose.Types.ObjectId[] | undefined
         ) {
-          // Only staff_access and reward codes can have allowedProgramIds
+          // Only relevant for program type codes
           if (value !== undefined && value.length > 0) {
-            return this.type === "staff_access" || this.type === "reward";
+            return (
+              this.applicableToType === "program" &&
+              (this.type === "staff_access" || this.type === "reward")
+            );
           }
           return true;
         },
         message:
-          "Only staff_access and reward codes can specify allowedProgramIds",
+          "Only program-type staff_access and reward codes can specify allowedProgramIds",
+      },
+    },
+    allowedEventIds: {
+      type: [Schema.Types.ObjectId],
+      ref: "Event",
+      default: undefined, // undefined means all events allowed
+      validate: {
+        validator: function (
+          this: IPromoCode,
+          value: mongoose.Types.ObjectId[] | undefined
+        ) {
+          // Only relevant for event type codes
+          if (value !== undefined && value.length > 0) {
+            return (
+              this.applicableToType === "event" &&
+              (this.type === "staff_access" || this.type === "reward")
+            );
+          }
+          return true;
+        },
+        message:
+          "Only event-type staff_access and reward codes can specify allowedEventIds",
       },
     },
     excludedProgramId: {
@@ -187,13 +221,38 @@ const promoCodeSchema = new Schema<
           this: IPromoCode,
           value: mongoose.Types.ObjectId | undefined
         ) {
-          // Only bundle_discount codes can have excludedProgramId
+          // Only bundle_discount codes for programs can have excludedProgramId
           if (value !== undefined) {
-            return this.type === "bundle_discount";
+            return (
+              this.type === "bundle_discount" &&
+              this.applicableToType === "program"
+            );
           }
           return true;
         },
-        message: "Only bundle_discount codes can have excludedProgramId",
+        message:
+          "Only program-type bundle_discount codes can have excludedProgramId",
+      },
+    },
+    excludedEventId: {
+      type: Schema.Types.ObjectId,
+      ref: "Event",
+      validate: {
+        validator: function (
+          this: IPromoCode,
+          value: mongoose.Types.ObjectId | undefined
+        ) {
+          // Only bundle_discount codes for events can have excludedEventId
+          if (value !== undefined) {
+            return (
+              this.type === "bundle_discount" &&
+              this.applicableToType === "event"
+            );
+          }
+          return true;
+        },
+        message:
+          "Only event-type bundle_discount codes can have excludedEventId",
       },
     },
     isActive: {

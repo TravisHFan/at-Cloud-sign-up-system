@@ -20,7 +20,9 @@ export interface IPaymentMethod {
 export interface IPurchase extends Document {
   // Core purchase info
   userId: mongoose.Types.ObjectId;
-  programId: mongoose.Types.ObjectId;
+  purchaseType: "program" | "event"; // Type of purchase: program enrollment or event ticket
+  programId?: mongoose.Types.ObjectId; // Required if purchaseType = 'program'
+  eventId?: mongoose.Types.ObjectId; // Required if purchaseType = 'event'
   orderNumber: string; // Unique order number (e.g., "ORD-20250114-XXXXX")
 
   // Pricing breakdown (all values in cents)
@@ -114,10 +116,27 @@ const purchaseSchema = new Schema<IPurchase>(
       required: true,
       index: true,
     },
+    purchaseType: {
+      type: String,
+      required: true,
+      enum: ["program", "event"],
+      default: "program", // Default for backward compatibility with existing purchases
+      index: true,
+    },
     programId: {
       type: Schema.Types.ObjectId,
       ref: "Program",
-      required: true,
+      required: function (this: IPurchase) {
+        return this.purchaseType === "program";
+      },
+      index: true,
+    },
+    eventId: {
+      type: Schema.Types.ObjectId,
+      ref: "Event",
+      required: function (this: IPurchase) {
+        return this.purchaseType === "event";
+      },
       index: true,
     },
     orderNumber: {

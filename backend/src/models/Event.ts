@@ -84,6 +84,12 @@ export interface IEvent extends Document {
   programId?: mongoose.Types.ObjectId | null; // DEPRECATED: Use programLabels instead (kept for migration)
   programLabels?: mongoose.Types.ObjectId[]; // Array of program IDs this event is labeled with
 
+  // Pricing System
+  pricing?: {
+    isFree: boolean; // Default true for backward compatibility
+    price?: number; // USD, required if isFree = false, minimum $1
+  };
+
   // Event Reminder System
   "24hReminderSent"?: boolean;
   "24hReminderSentAt"?: Date;
@@ -491,6 +497,40 @@ const eventSchema: Schema = new Schema(
       ref: "Program",
       default: [],
       index: true,
+    },
+
+    // Pricing System
+    pricing: {
+      type: new Schema(
+        {
+          isFree: {
+            type: Boolean,
+            required: true,
+            default: true,
+          },
+          price: {
+            type: Number,
+            min: [1, "Price must be at least $1"],
+            validate: {
+              validator: function (
+                this: { isFree: boolean },
+                value: number | undefined
+              ) {
+                // If isFree is false, price is required and must be >= 1
+                if (!this.isFree) {
+                  return value !== undefined && value !== null && value >= 1;
+                }
+                // If isFree is true, price should be undefined/null
+                return value === undefined || value === null;
+              },
+              message:
+                "Price is required for paid events and must be at least $1. Free events should not have a price.",
+            },
+          },
+        },
+        { _id: false }
+      ),
+      default: () => ({ isFree: true }),
     },
 
     // Workshop-specific fields
