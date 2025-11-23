@@ -127,6 +127,32 @@ export class UpdateController {
       }
 
       // ============================================================
+      // STEP 1.5: Pricing Validation (Paid Events Feature)
+      // ============================================================
+      // Validate pricing data if provided in update
+      if (
+        normalizedData.pricing !== undefined &&
+        normalizedData.pricing !== null
+      ) {
+        const { validatePricing } = await import(
+          "../../utils/event/eventValidation"
+        );
+        const pricingValidation = validatePricing(
+          normalizedData.pricing as
+            | { isFree?: boolean; price?: number }
+            | undefined
+        );
+
+        if (!pricingValidation.valid) {
+          res.status(400).json({
+            success: false,
+            message: pricingValidation.error || "Invalid pricing configuration",
+          });
+          return;
+        }
+      }
+
+      // ============================================================
       // STEP 2: Role Management
       // ============================================================
       // Handle roles update if provided

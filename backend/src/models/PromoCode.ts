@@ -6,12 +6,23 @@ interface IPromoCodeMethods {
     valid: boolean;
     reason?: string;
   };
+  canBeUsedForEvent(eventId: string | mongoose.Types.ObjectId): {
+    valid: boolean;
+    reason?: string;
+  };
   markAsUsed(
     programId: mongoose.Types.ObjectId,
     userId?: mongoose.Types.ObjectId,
     userName?: string,
     userEmail?: string,
     programTitle?: string
+  ): Promise<IPromoCode>;
+  markAsUsedForEvent(
+    eventId: mongoose.Types.ObjectId,
+    userId?: mongoose.Types.ObjectId,
+    userName?: string,
+    userEmail?: string,
+    eventTitle?: string
   ): Promise<IPromoCode>;
   deactivate(): Promise<IPromoCode>;
   reactivate(): Promise<IPromoCode>;
@@ -56,6 +67,7 @@ export interface IPromoCode extends Document, IPromoCodeMethods {
   // Usage tracking
   usedAt?: Date; // When the code was actually used (deprecated for general codes, use usageHistory)
   usedForProgramId?: mongoose.Types.ObjectId; // Which program it was used for (deprecated for general codes)
+  usedForEventId?: mongoose.Types.ObjectId; // Which event it was used for (for event purchases)
   usageHistory?: Array<{
     userId: mongoose.Types.ObjectId;
     userName: string;
@@ -63,6 +75,8 @@ export interface IPromoCode extends Document, IPromoCodeMethods {
     usedAt: Date;
     programId?: mongoose.Types.ObjectId;
     programTitle?: string;
+    eventId?: mongoose.Types.ObjectId;
+    eventTitle?: string;
   }>; // For general staff codes: track all users who used this code
 
   // Metadata
@@ -311,6 +325,23 @@ const promoCodeSchema = new Schema<
         message: "usedForProgramId can only be set when isUsed is true",
       },
     },
+    usedForEventId: {
+      type: Schema.Types.ObjectId,
+      ref: "Event",
+      validate: {
+        validator: function (
+          this: IPromoCode,
+          value: mongoose.Types.ObjectId | undefined
+        ) {
+          // usedForEventId should only be set if isUsed is true
+          if (value !== undefined) {
+            return this.isUsed === true;
+          }
+          return true;
+        },
+        message: "usedForEventId can only be set when isUsed is true",
+      },
+    },
     usageHistory: {
       type: [
         {
@@ -340,6 +371,14 @@ const promoCodeSchema = new Schema<
             ref: "Program",
           },
           programTitle: {
+            type: String,
+            trim: true,
+          },
+          eventId: {
+            type: Schema.Types.ObjectId,
+            ref: "Event",
+          },
+          eventTitle: {
             type: String,
             trim: true,
           },
@@ -454,6 +493,63 @@ promoCodeSchema.methods.canBeUsedForProgram = function (
   return { valid: true };
 };
 
+// Validate if code can be used for a specific event
+promoCodeSchema.methods.canBeUsedForEvent = function (
+  this: IPromoCode,
+  eventId: string | mongoose.Types.ObjectId
+): { valid: boolean; reason?: string } {
+  const eventIdStr = eventId.toString();
+
+  // Check if already used (skip for general codes - they can be reused)
+  if (this.isUsed && !this.isGeneral) {
+    return { valid: false, reason: "Code has already been used" };
+  }
+
+  // Check if active
+  if (!this.isActive) {
+    return { valid: false, reason: "Code is no longer active" };
+  }
+
+  // Check if expired
+  if (this.expiresAt && this.expiresAt < new Date()) {
+    return { valid: false, reason: "Code has expired" };
+  }
+
+  // Check if code is for events (not programs)
+  if (this.applicableToType !== "event") {
+    return { valid: false, reason: "Code is not valid for events" };
+  }
+
+  // Bundle discount specific validation
+  if (this.type === "bundle_discount") {
+    if (
+      this.excludedEventId &&
+      this.excludedEventId.toString() === eventIdStr
+    ) {
+      return {
+        valid: false,
+        reason: "Cannot use bundle code on the event that generated it",
+      };
+    }
+  }
+
+  // Staff access specific validation
+  if (this.type === "staff_access") {
+    // If allowedEventIds is specified (not empty), check if event is in the list
+    if (this.allowedEventIds && this.allowedEventIds.length > 0) {
+      const isAllowed = this.allowedEventIds.some(
+        (id) => id.toString() === eventIdStr
+      );
+      if (!isAllowed) {
+        return { valid: false, reason: "Code is not valid for this event" };
+      }
+    }
+    // If allowedEventIds is empty or undefined, code is valid for all events
+  }
+
+  return { valid: true };
+};
+
 // Mark code as used
 promoCodeSchema.methods.markAsUsed = async function (
   this: IPromoCode,
@@ -488,6 +584,45 @@ promoCodeSchema.methods.markAsUsed = async function (
     this.isUsed = true;
     this.usedAt = new Date();
     this.usedForProgramId = programId;
+  }
+
+  return await this.save();
+};
+
+// Mark code as used for event purchase
+promoCodeSchema.methods.markAsUsedForEvent = async function (
+  this: IPromoCode,
+  eventId: mongoose.Types.ObjectId,
+  userId?: mongoose.Types.ObjectId,
+  userName?: string,
+  userEmail?: string,
+  eventTitle?: string
+): Promise<IPromoCode> {
+  if (this.isGeneral) {
+    // For general codes: append to usage history instead of marking as used
+    if (!userId || !userName || !userEmail) {
+      throw new Error(
+        "User information (userId, userName, userEmail) is required for general code usage tracking"
+      );
+    }
+
+    if (!this.usageHistory) {
+      this.usageHistory = [];
+    }
+
+    this.usageHistory.push({
+      userId,
+      userName,
+      userEmail,
+      usedAt: new Date(),
+      eventId,
+      eventTitle,
+    });
+  } else {
+    // For personal codes: mark as used
+    this.isUsed = true;
+    this.usedAt = new Date();
+    this.usedForEventId = eventId;
   }
 
   return await this.save();

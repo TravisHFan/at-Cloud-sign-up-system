@@ -121,6 +121,155 @@ router.post(
   EventController.recalculateSignupCounts
 );
 
+// Event Purchase & Access Control Routes (paid events feature)
+// Check if user has access to a paid event (requires authentication)
+router.get(
+  "/:id/access",
+  authenticate,
+  validateObjectId,
+  handleValidationErrors,
+  async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const userId = (
+        req.user as { _id?: { toString: () => string } }
+      )._id?.toString();
+
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: "Authentication required",
+        });
+      }
+
+      const EventAccessControlService = (
+        await import("../services/event/EventAccessControlService")
+      ).default;
+      const result = await EventAccessControlService.checkUserAccess(
+        userId,
+        id
+      );
+
+      return res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      console.error("Error checking event access:", error);
+      return res.status(500).json({
+        success: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : "Failed to check event access",
+      });
+    }
+  }
+);
+
+// Get event pricing info with optional promo code (requires authentication)
+router.get(
+  "/:id/purchase-info",
+  authenticate,
+  validateObjectId,
+  handleValidationErrors,
+  async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { promoCode } = req.query;
+
+      const event = await Event.findById(id);
+      if (!event) {
+        return res.status(404).json({
+          success: false,
+          message: "Event not found",
+        });
+      }
+
+      if (event.pricing?.isFree !== false) {
+        return res.status(400).json({
+          success: false,
+          message: "This event is free, no purchase required",
+        });
+      }
+
+      const originalPrice = event.pricing.price || 0;
+      let discount = 0;
+      let finalPrice = originalPrice;
+      let promoCodeValid = false;
+      let promoCodeMessage = "";
+
+      // If promo code provided, validate it
+      if (promoCode && typeof promoCode === "string") {
+        const PromoCode = (await import("../models/PromoCode")).default;
+        const validatedCode = await PromoCode.findOne({
+          code: promoCode.toUpperCase(),
+        });
+
+        if (validatedCode) {
+          const validation = validatedCode.canBeUsedForEvent(id);
+          if (validation.valid) {
+            promoCodeValid = true;
+
+            // Calculate discount
+            if (validatedCode.discountAmount) {
+              discount = validatedCode.discountAmount;
+            } else if (validatedCode.discountPercent) {
+              discount = Math.round(
+                (originalPrice * validatedCode.discountPercent) / 100
+              );
+            }
+
+            // Apply 100% discount cap
+            if (discount > originalPrice) {
+              discount = originalPrice;
+            }
+
+            finalPrice = originalPrice - discount;
+          } else {
+            promoCodeMessage = validation.reason || "Promo code is not valid";
+          }
+        } else {
+          promoCodeMessage = "Promo code not found";
+        }
+      }
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          eventId: id,
+          eventTitle: event.title,
+          originalPrice, // in dollars
+          discount, // in dollars
+          finalPrice, // in dollars
+          promoCodeValid,
+          promoCodeMessage,
+        },
+      });
+    } catch (error) {
+      console.error("Error getting purchase info:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to get purchase information",
+      });
+    }
+  }
+);
+
+// Purchase event ticket (requires authentication)
+router.post(
+  "/:id/purchase",
+  authenticate,
+  validateObjectId,
+  handleValidationErrors,
+  async (req: Request, res: Response) => {
+    const { default: EventPurchaseController } = await import(
+      "../controllers/purchase/EventPurchaseController"
+    );
+    return EventPurchaseController.createCheckoutSession(req, res);
+  }
+);
+
 // All routes below require authentication
 router.use(authenticate);
 

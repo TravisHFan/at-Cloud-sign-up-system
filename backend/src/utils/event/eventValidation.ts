@@ -54,3 +54,68 @@ export function validateRoles(
   if (errors.length > 0) return { valid: false, errors };
   return { valid: true };
 }
+
+/**
+ * Validates event pricing structure.
+ *
+ * Rules:
+ * - If pricing.isFree is false, pricing.price is required and must be >= 1
+ * - If pricing.isFree is true, pricing.price must be undefined/null
+ * - Price must be in USD (whole dollars, converted to cents for storage)
+ *
+ * @param pricing - Pricing object to validate
+ * @returns Validation result with success flag and optional error message
+ */
+export function validatePricing(pricing?: {
+  isFree?: boolean;
+  price?: number;
+}): { valid: true } | { valid: false; error: string } {
+  // If pricing is undefined or null, default to free (backward compatibility)
+  if (!pricing) {
+    return { valid: true };
+  }
+
+  const isFree = pricing.isFree !== false; // Default to true if undefined
+
+  // Paid event validation
+  if (!isFree) {
+    if (pricing.price === undefined || pricing.price === null) {
+      return {
+        valid: false,
+        error: "Price is required for paid events",
+      };
+    }
+
+    if (typeof pricing.price !== "number" || Number.isNaN(pricing.price)) {
+      return {
+        valid: false,
+        error: "Price must be a valid number",
+      };
+    }
+
+    if (pricing.price < 1) {
+      return {
+        valid: false,
+        error: "Minimum price is $1 for paid events",
+      };
+    }
+
+    // Optional: add maximum price validation if needed
+    if (pricing.price > 10000) {
+      return {
+        valid: false,
+        error: "Maximum price is $10,000",
+      };
+    }
+  } else {
+    // Free event validation - price should not be set
+    if (pricing.price !== undefined && pricing.price !== null) {
+      return {
+        valid: false,
+        error: "Free events should not have a price",
+      };
+    }
+  }
+
+  return { valid: true };
+}

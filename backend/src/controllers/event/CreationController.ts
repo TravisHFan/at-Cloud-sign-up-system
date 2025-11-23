@@ -239,6 +239,25 @@ export class CreationController {
       }
 
       // ========================================
+      // STEP 3.5: Pricing Validation (Paid Events Feature)
+      // ========================================
+      // Validate pricing data if provided
+      const { validatePricing } = await import(
+        "../../utils/event/eventValidation"
+      );
+      const pricingValidation = validatePricing(
+        eventData.pricing as { isFree?: boolean; price?: number } | undefined
+      );
+
+      if (!pricingValidation.valid) {
+        res.status(400).json({
+          success: false,
+          message: pricingValidation.error || "Invalid pricing configuration",
+        });
+        return;
+      }
+
+      // ========================================
       // STEP 4: Role Preparation
       // ========================================
       // Prepare and validate event roles
@@ -300,7 +319,9 @@ export class CreationController {
       // Validate that all co-organizers have access to the event's paid programs
       const coOrganizerAccessResult =
         await CoOrganizerProgramAccessService.validateCoOrganizerAccess(
-          processedOrganizerDetails,
+          processedOrganizerDetails as unknown as Parameters<
+            typeof CoOrganizerProgramAccessService.validateCoOrganizerAccess
+          >[0],
           validatedProgramLabels
         );
 
