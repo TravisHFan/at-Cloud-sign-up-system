@@ -43,6 +43,31 @@ export const eventSchema = yup
     // Event-level mentor additions (IDs only); merged on server with inherited program mentors
     mentorIds: yup.array().of(yup.string().required()).optional(),
 
+    // Paid Events Feature (Phase 5)
+    pricing: yup
+      .object({
+        isFree: yup.boolean().required(),
+        price: yup
+          .number()
+          .transform((value, originalValue) => {
+            // Handle empty string or undefined
+            return originalValue === "" || originalValue === undefined
+              ? undefined
+              : value;
+          })
+          .when("isFree", {
+            is: false,
+            then: (schema) =>
+              schema
+                .required("Price is required for paid events")
+                .min(100, "Minimum price is $1.00") // 100 cents = $1.00
+                .max(1000000, "Maximum price is $10,000.00"), // 1,000,000 cents = $10,000.00
+            otherwise: (schema) => schema.optional().nullable(),
+          }),
+      })
+      .optional()
+      .default({ isFree: true }),
+
     // System fields that can be auto-generated
     id: yup.string().optional(),
     isHybrid: yup.boolean().optional(),

@@ -7,6 +7,7 @@ import EventPreview from "../components/events/EventPreview";
 import BasicEventFields from "../components/EditEvent/BasicEventFields";
 import FormatSettings from "../components/EditEvent/FormatSettings";
 import RoleManagement from "../components/EditEvent/RoleManagement";
+import PricingSection from "../components/EditEvent/PricingSection";
 import ValidationIndicator from "../components/events/ValidationIndicator";
 import ConfirmationModal from "../components/common/ConfirmationModal";
 import TemplateSelectorModal from "../components/common/TemplateSelectorModal";
@@ -673,6 +674,16 @@ export default function NewEvent() {
             eventData={null}
             formatWarningMissing={[]}
           />
+
+          {/* Pricing Section - Free vs Paid event selection (Phase 5) */}
+          <PricingSection
+            register={register}
+            errors={errors}
+            watch={watch}
+            setValue={setValue}
+            isEditMode={false}
+          />
+
           {/* Role Management - Template selector, role customization, CRUD operations */}
           <RoleManagement
             selectedEventType={selectedEventType}

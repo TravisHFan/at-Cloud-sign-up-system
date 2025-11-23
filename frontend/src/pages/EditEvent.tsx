@@ -6,6 +6,7 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import BasicEventFields from "../components/EditEvent/BasicEventFields";
 import FormatSettings from "../components/EditEvent/FormatSettings";
 import RoleManagement from "../components/EditEvent/RoleManagement";
+import PricingSection from "../components/EditEvent/PricingSection";
 import NotificationPreference from "../components/EditEvent/NotificationPreference";
 import EditEventModals from "../components/EditEvent/EditEventModals";
 import { useAuth } from "../hooks/useAuth";
@@ -572,6 +573,15 @@ export default function EditEvent() {
             validations={validations}
             eventData={eventData}
             formatWarningMissing={formatWarningMissing}
+          />
+
+          {/* Pricing Section - Free vs Paid event selection (Phase 5) */}
+          <PricingSection
+            register={register}
+            errors={errors}
+            watch={watch}
+            setValue={setValue}
+            isEditMode={true}
           />
 
           {/* Role Management */}
