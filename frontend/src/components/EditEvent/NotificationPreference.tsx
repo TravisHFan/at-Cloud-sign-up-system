@@ -64,7 +64,8 @@ const NotificationPreference: React.FC<NotificationPreferenceProps> = ({
             />
             <span className="text-sm text-gray-700">
               <span className="font-medium">Don't send notifications now</span>{" "}
-              — I'll notify users later (co-organizers will still be notified).
+              — I'll notify users later (New co-organizers will still be
+              notified).
             </span>
           </label>
         </div>
