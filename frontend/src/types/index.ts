@@ -3,6 +3,9 @@
  * This file centralizes all shared types to ensure consistency across the application
  */
 
+// Re-export Purchase types (Phase 4 - Paid Events Feature)
+export * from "./purchase";
+
 // Base User Types
 export type SystemAuthorizationLevel =
   | "Super Admin"
@@ -128,6 +131,11 @@ export interface Event {
   status: "upcoming" | "ongoing" | "completed" | "cancelled";
   createdAt: string;
   updatedAt: string;
+  // Paid Events Feature (Phase 4)
+  pricing?: {
+    isFree: boolean;
+    price?: number; // Price in cents (e.g., 2500 = $25.00)
+  };
 }
 
 // API Response Types

@@ -81,6 +81,12 @@ export interface EventData {
   // Programs integration - many-to-many relationship
   programLabels?: string[]; // Array of program IDs this event belongs to
 
+  // Paid Events Feature (Phase 4)
+  pricing?: {
+    isFree: boolean;
+    price?: number; // Price in cents (e.g., 2500 = $25.00)
+  };
+
   // Workshop-specific topics per group A-F
   workshopGroupTopics?: {
     A?: string;
