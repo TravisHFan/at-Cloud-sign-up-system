@@ -496,6 +496,97 @@ class EventsApiClient extends BaseApiClient {
 
     throw new Error(response.message || "Failed to get created events");
   }
+
+  // ========== Paid Events (Phase 6) ==========
+
+  /**
+   * Check if current user has access to a paid event
+   * Returns access status and reason
+   */
+  async checkEventAccess(eventId: string): Promise<{
+    hasAccess: boolean;
+    requiresPurchase: boolean;
+    accessReason: string;
+  }> {
+    const response = await this.request<{
+      hasAccess: boolean;
+      requiresPurchase: boolean;
+      accessReason: string;
+    }>(`/events/${eventId}/access`);
+
+    if (response.data) {
+      return response.data;
+    }
+
+    throw new Error(response.message || "Failed to check event access");
+  }
+
+  /**
+   * Get event purchase information with optional promo code
+   * Returns pricing details with discount applied
+   */
+  async getEventPurchaseInfo(
+    eventId: string,
+    promoCode?: string
+  ): Promise<{
+    eventId: string;
+    eventTitle: string;
+    originalPrice: number; // in cents
+    discount: number; // in cents
+    finalPrice: number; // in cents
+    promoCodeValid: boolean;
+    promoCodeMessage: string;
+  }> {
+    const queryParams = promoCode
+      ? `?promoCode=${encodeURIComponent(promoCode)}`
+      : "";
+    const response = await this.request<{
+      eventId: string;
+      eventTitle: string;
+      originalPrice: number;
+      discount: number;
+      finalPrice: number;
+      promoCodeValid: boolean;
+      promoCodeMessage: string;
+    }>(`/events/${eventId}/purchase-info${queryParams}`);
+
+    if (response.data) {
+      return response.data;
+    }
+
+    throw new Error(
+      response.message || "Failed to get event purchase information"
+    );
+  }
+
+  /**
+   * Create a Stripe checkout session for event ticket purchase
+   */
+  async createEventPurchase(
+    eventId: string,
+    promoCode?: string
+  ): Promise<{
+    sessionId: string;
+    sessionUrl: string;
+    purchaseId: string;
+    orderNumber: string;
+  }> {
+    const response = await this.request<{
+      sessionId: string;
+      sessionUrl: string;
+      purchaseId: string;
+      orderNumber: string;
+    }>(`/events/${eventId}/purchase`, {
+      method: "POST",
+      body: JSON.stringify({ promoCode }),
+    });
+
+    if (response.data) {
+      return response.data;
+    }
+
+    throw new Error(response.message || "Failed to create event purchase");
+  }
 }
 
 // Export singleton instance
@@ -578,6 +669,14 @@ export const eventsService = {
   getUserEvents: (page?: number, limit?: number) =>
     eventsApiClient.getUserEvents(page, limit),
   getCreatedEvents: () => eventsApiClient.getCreatedEvents(),
+
+  // Paid Events (Phase 6)
+  checkEventAccess: (eventId: string) =>
+    eventsApiClient.checkEventAccess(eventId),
+  getEventPurchaseInfo: (eventId: string, promoCode?: string) =>
+    eventsApiClient.getEventPurchaseInfo(eventId, promoCode),
+  createEventPurchase: (eventId: string, promoCode?: string) =>
+    eventsApiClient.createEventPurchase(eventId, promoCode),
 };
 
 // Legacy export (singular name for backward compatibility)

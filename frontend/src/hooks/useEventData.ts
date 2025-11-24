@@ -255,6 +255,10 @@ export function useEventData({
           publish: (eventData as { publish?: boolean }).publish,
           publishedAt: (eventData as { publishedAt?: string }).publishedAt,
           publicSlug: (eventData as { publicSlug?: string }).publicSlug,
+          // Phase 6: Paid Events - Include pricing information
+          pricing: (
+            eventData as { pricing?: { isFree?: boolean; price?: number } }
+          ).pricing,
         };
 
         setEvent(convertedEvent);

@@ -32,6 +32,17 @@ interface ProgramDTO {
   title: string;
 }
 
+interface EventDTO {
+  id: string;
+  _id?: string;
+  title: string;
+  date: string;
+  pricing?: {
+    isFree: boolean;
+    price?: number;
+  };
+}
+
 interface PromoCodeResponse {
   _id: string;
   code: string;
@@ -77,10 +88,15 @@ export default function StaffCodeCreator({ onSuccess }: StaffCodeCreatorProps) {
   const [codeDescription, setCodeDescription] = useState("");
 
   // Shared states
-  const [programMode, setProgramMode] = useState<"all" | "specific">("all");
+  const [accessMode, setAccessMode] = useState<
+    "all" | "specificPrograms" | "specificEvents"
+  >("all");
   const [selectedPrograms, setSelectedPrograms] = useState<string[]>([]);
+  const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
   const [programs, setPrograms] = useState<ProgramDTO[]>([]);
+  const [events, setEvents] = useState<EventDTO[]>([]);
   const [loadingPrograms, setLoadingPrograms] = useState(false);
+  const [loadingEvents, setLoadingEvents] = useState(false);
 
   const [expirationMode, setExpirationMode] = useState<"never" | "custom">(
     "never"
@@ -92,6 +108,7 @@ export default function StaffCodeCreator({ onSuccess }: StaffCodeCreatorProps) {
   // Load programs on mount
   useEffect(() => {
     loadPrograms();
+    loadEvents();
   }, []);
 
   const loadPrograms = async () => {
@@ -103,6 +120,36 @@ export default function StaffCodeCreator({ onSuccess }: StaffCodeCreatorProps) {
       console.error("Failed to load programs:", err);
     } finally {
       setLoadingPrograms(false);
+    }
+  };
+
+  const loadEvents = async () => {
+    try {
+      setLoadingEvents(true);
+      const { eventsService } = await import(
+        "../../../services/api/events.api"
+      );
+      const response = await eventsService.getEvents({});
+
+      // Filter out past events and free events
+      const now = new Date();
+      const filteredEvents = (response.events as EventDTO[]).filter((event) => {
+        // Filter out past events
+        const eventDate = new Date(event.date);
+        if (eventDate < now) return false;
+
+        // Filter out free events
+        if (event.pricing?.isFree === true || !event.pricing?.price)
+          return false;
+
+        return true;
+      });
+
+      setEvents(filteredEvents);
+    } catch (err) {
+      console.error("Failed to load events:", err);
+    } finally {
+      setLoadingEvents(false);
     }
   };
 
@@ -123,6 +170,14 @@ export default function StaffCodeCreator({ onSuccess }: StaffCodeCreatorProps) {
     );
   };
 
+  const toggleEvent = (eventId: string) => {
+    setSelectedEvents((prev) =>
+      prev.includes(eventId)
+        ? prev.filter((id) => id !== eventId)
+        : [...prev, eventId]
+    );
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -133,8 +188,13 @@ export default function StaffCodeCreator({ onSuccess }: StaffCodeCreatorProps) {
         return;
       }
 
-      if (programMode === "specific" && selectedPrograms.length === 0) {
+      if (accessMode === "specificPrograms" && selectedPrograms.length === 0) {
         setError("Please select at least one program");
+        return;
+      }
+
+      if (accessMode === "specificEvents" && selectedEvents.length === 0) {
+        setError("Please select at least one event");
         return;
       }
     }
@@ -161,16 +221,23 @@ export default function StaffCodeCreator({ onSuccess }: StaffCodeCreatorProps) {
         const payload: {
           userId: string;
           discountPercent: number;
+          applicableToType?: "program" | "event";
           allowedProgramIds?: string[];
+          allowedEventIds?: string[];
           expiresAt?: string;
         } = {
           userId: selectedUser!.id,
           discountPercent: 100, // Staff codes are always 100% discount
         };
 
-        if (programMode === "specific") {
+        if (accessMode === "specificPrograms") {
+          payload.applicableToType = "program";
           payload.allowedProgramIds = selectedPrograms;
+        } else if (accessMode === "specificEvents") {
+          payload.applicableToType = "event";
+          payload.allowedEventIds = selectedEvents;
         }
+        // If accessMode === "all", don't set applicableToType (general code)
 
         if (expirationMode === "custom") {
           payload.expiresAt = new Date(expirationDate).toISOString();
@@ -183,8 +250,9 @@ export default function StaffCodeCreator({ onSuccess }: StaffCodeCreatorProps) {
         // Reset form
         clearUserSelection();
         setShowUserModal(false);
-        setProgramMode("all");
+        setAccessMode("all");
         setSelectedPrograms([]);
+        setSelectedEvents([]);
         setExpirationMode("never");
         setExpirationDate("");
       } else if (codeType === "general") {
@@ -330,8 +398,8 @@ export default function StaffCodeCreator({ onSuccess }: StaffCodeCreatorProps) {
                       Create General Staff Code
                     </h4>
                     <p className="text-sm text-gray-600">
-                      Generate a reusable code for all programs, unlimited uses,
-                      manual distribution
+                      Generate a reusable code for all programs, events,
+                      unlimited uses, manual distribution
                     </p>
                   </div>
                 </div>
@@ -434,38 +502,49 @@ export default function StaffCodeCreator({ onSuccess }: StaffCodeCreatorProps) {
               description="Choose a user who will receive the 100% discount staff access code"
             />
 
-            {/* Program Selection */}
+            {/* Program/Event Access Selection */}
             <div>
               <label className="block text-base font-medium text-gray-700 mb-2">
-                Program Access
+                Access Scope
               </label>
               <div className="space-y-3">
-                <div className="flex gap-4">
+                <div className="flex gap-4 flex-wrap">
                   <label className="flex items-center">
                     <input
                       type="radio"
-                      checked={programMode === "all"}
-                      onChange={() => setProgramMode("all")}
+                      checked={accessMode === "all"}
+                      onChange={() => setAccessMode("all")}
                       className="mr-2"
                     />
                     <span className="text-base text-gray-700">
-                      All programs
+                      All Programs and Events
                     </span>
                   </label>
                   <label className="flex items-center">
                     <input
                       type="radio"
-                      checked={programMode === "specific"}
-                      onChange={() => setProgramMode("specific")}
+                      checked={accessMode === "specificPrograms"}
+                      onChange={() => setAccessMode("specificPrograms")}
                       className="mr-2"
                     />
                     <span className="text-base text-gray-700">
                       Specific programs
                     </span>
                   </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      checked={accessMode === "specificEvents"}
+                      onChange={() => setAccessMode("specificEvents")}
+                      className="mr-2"
+                    />
+                    <span className="text-base text-gray-700">
+                      Specific events
+                    </span>
+                  </label>
                 </div>
 
-                {programMode === "specific" && (
+                {accessMode === "specificPrograms" && (
                   <div className="border border-gray-200 rounded-lg p-4 max-h-60 overflow-y-auto">
                     {loadingPrograms ? (
                       <div className="flex justify-center py-4">
@@ -494,6 +573,43 @@ export default function StaffCodeCreator({ onSuccess }: StaffCodeCreatorProps) {
                             />
                             <span className="text-sm text-gray-900">
                               {program.title}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {accessMode === "specificEvents" && (
+                  <div className="border border-gray-200 rounded-lg p-4 max-h-60 overflow-y-auto">
+                    {loadingEvents ? (
+                      <div className="flex justify-center py-4">
+                        <LoadingSpinner size="sm" inline />
+                      </div>
+                    ) : events.length === 0 ? (
+                      <p className="text-sm text-gray-500 text-center py-4">
+                        No events available
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {events.map((event) => (
+                          <label
+                            key={event._id || event.id}
+                            className="flex items-center p-2 hover:bg-gray-50 rounded cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedEvents.includes(
+                                event._id || event.id
+                              )}
+                              onChange={() =>
+                                toggleEvent(event._id || event.id)
+                              }
+                              className="mr-3"
+                            />
+                            <span className="text-sm text-gray-900">
+                              {event.title}
                             </span>
                           </label>
                         ))}
@@ -684,7 +800,7 @@ export default function StaffCodeCreator({ onSuccess }: StaffCodeCreatorProps) {
                 <div className="text-sm text-blue-800">
                   <p className="font-medium mb-1">General Staff Code</p>
                   <ul className="space-y-1 text-blue-700">
-                    <li>• 100% discount on all programs</li>
+                    <li>• 100% discount on all programs and events</li>
                     <li>• Can be used by any user</li>
                     <li>• Unlimited number of uses</li>
                     <li>• Must be manually shared with users</li>
@@ -803,11 +919,17 @@ export default function StaffCodeCreator({ onSuccess }: StaffCodeCreatorProps) {
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Programs:</span>
+                      <span className="text-gray-600">Access:</span>
                       <span className="font-medium text-gray-900">
                         {createdCode.allowedProgramIds?.length
                           ? `${createdCode.allowedProgramIds.length} program(s)`
-                          : "All programs"}
+                          : (createdCode as { allowedEventIds?: string[] })
+                              .allowedEventIds?.length
+                          ? `${
+                              (createdCode as { allowedEventIds?: string[] })
+                                .allowedEventIds?.length || 0
+                            } event(s)`
+                          : "All programs and events"}
                       </span>
                     </div>
                     {createdCode.isGeneral && (

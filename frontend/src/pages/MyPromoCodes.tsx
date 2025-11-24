@@ -103,9 +103,41 @@ export default function MyPromoCodes() {
     // Toast notification would be added here in real implementation
   };
 
-  const handleUseCode = (code: string) => {
-    // Navigate to programs page with code pre-filled
-    navigate(`/dashboard/programs?promoCode=${code}`);
+  const handleUseCode = (codeData: PromoCode) => {
+    // Navigate based on code restrictions
+
+    // If code is for a specific event, go to that event's detail page
+    if (codeData.allowedEventIds && codeData.allowedEventIds.length === 1) {
+      navigate(`/dashboard/event/${codeData.allowedEventIds[0]}`);
+      return;
+    }
+
+    // If code is for multiple specific events, go to events listing
+    if (codeData.allowedEventIds && codeData.allowedEventIds.length > 1) {
+      navigate(`/dashboard/events?promoCode=${codeData.code}`);
+      return;
+    }
+
+    // If code is for a specific program, go to that program's detail page
+    if (codeData.allowedProgramIds && codeData.allowedProgramIds.length === 1) {
+      navigate(`/dashboard/program/${codeData.allowedProgramIds[0]}`);
+      return;
+    }
+
+    // If code is for multiple specific programs, go to programs listing with code pre-filled
+    if (codeData.allowedProgramIds && codeData.allowedProgramIds.length > 1) {
+      navigate(`/dashboard/programs?promoCode=${codeData.code}`);
+      return;
+    }
+
+    // If code is event-only (applicableToType === "event"), go to events listing
+    if (codeData.applicableToType === "event") {
+      navigate(`/dashboard/events?promoCode=${codeData.code}`);
+      return;
+    }
+
+    // Otherwise (general code or program-only code), go to programs listing
+    navigate(`/dashboard/programs?promoCode=${codeData.code}`);
   };
 
   const handleBrowsePrograms = () => {
@@ -240,8 +272,11 @@ export default function MyPromoCodes() {
                     usedForProgramTitle={code.usedForProgramTitle}
                     allowedProgramIds={code.allowedProgramIds}
                     allowedProgramTitles={code.allowedProgramTitles}
+                    allowedEventIds={code.allowedEventIds}
+                    allowedEventTitles={code.allowedEventTitles}
+                    applicableToType={code.applicableToType}
                     onCopy={() => handleCopy(code.code)}
-                    onUse={() => handleUseCode(code.code)}
+                    onUse={() => handleUseCode(code)}
                   />
                 ))}
               </div>

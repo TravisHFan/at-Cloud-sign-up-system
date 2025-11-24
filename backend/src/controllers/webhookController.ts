@@ -294,22 +294,38 @@ export class WebhookController {
                 const user = await User.findById(purchase.userId).select(
                   "firstName lastName email"
                 );
-                const program = await Program.findById(
-                  purchase.programId
-                ).select("title");
+
+                // Get program or event based on purchase type
+                const itemId =
+                  purchase.purchaseType === "program"
+                    ? purchase.programId
+                    : purchase.eventId;
+
+                let itemTitle = "Unknown Item";
+                if (purchase.purchaseType === "program") {
+                  const program = await Program.findById(
+                    purchase.programId
+                  ).select("title");
+                  itemTitle = program?.title || "Unknown Program";
+                } else {
+                  const { default: Event } = await import("../models/Event");
+                  const event = await Event.findById(purchase.eventId).select(
+                    "title"
+                  );
+                  itemTitle = event?.title || "Unknown Event";
+                }
 
                 const userName = user
                   ? `${user.firstName} ${user.lastName}`
                   : "Unknown User";
                 const userEmail = user?.email || "unknown@example.com";
-                const programTitle = program?.title || "Unknown Program";
 
                 await promoCode.markAsUsed(
-                  purchase.programId,
+                  itemId,
                   purchase.userId as mongoose.Types.ObjectId,
                   userName,
                   userEmail,
-                  programTitle
+                  itemTitle
                 );
                 console.log(`Promo code ${purchase.promoCode} marked as used`);
 
@@ -335,20 +351,32 @@ export class WebhookController {
                       console.log(
                         `📤 WEBHOOK DEBUG: Sending notification to ${adminIds.length} admins...`
                       );
+
+                      const itemType =
+                        purchase.purchaseType === "program"
+                          ? "program"
+                          : "event";
+                      const metadata: Record<string, string> = {
+                        promoCodeId: (
+                          promoCode._id as mongoose.Types.ObjectId
+                        ).toString(),
+                        userId: purchase.userId.toString(),
+                      };
+
+                      if (purchase.purchaseType === "program") {
+                        metadata.programId = purchase.programId!.toString();
+                      } else {
+                        metadata.eventId = purchase.eventId!.toString();
+                      }
+
                       await TrioNotificationService.createTrio({
                         systemMessage: {
                           title: "General Staff Code Used",
-                          content: `${userName} (${userEmail}) used general staff code "${promoCode.code}" for program "${programTitle}".`,
+                          content: `${userName} (${userEmail}) used general staff code "${promoCode.code}" for ${itemType} "${itemTitle}".`,
                           type: "announcement",
                           priority: "medium",
                           hideCreator: true, // System-generated notification, no sender
-                          metadata: {
-                            promoCodeId: (
-                              promoCode._id as mongoose.Types.ObjectId
-                            ).toString(),
-                            userId: purchase.userId.toString(),
-                            programId: purchase.programId.toString(),
-                          },
+                          metadata,
                         },
                         recipients: adminIds,
                       });
@@ -380,38 +408,40 @@ export class WebhookController {
           }
         }
 
-        // 9. Auto-generate bundle promo code if feature enabled
+        // 9. Auto-generate bundle promo code if feature enabled (program purchases only)
         try {
-          const bundleConfig = await SystemConfig.getBundleDiscountConfig();
+          if (purchase.purchaseType === "program") {
+            const bundleConfig = await SystemConfig.getBundleDiscountConfig();
 
-          if (bundleConfig.enabled && purchase.finalPrice > 0) {
-            const { PromoCode } = await import("../models");
+            if (bundleConfig.enabled && purchase.finalPrice > 0) {
+              const { PromoCode } = await import("../models");
 
-            // Generate unique code
-            const generatedCode = await PromoCode.generateUniqueCode();
+              // Generate unique code
+              const generatedCode = await PromoCode.generateUniqueCode();
 
-            // Calculate expiry date
-            const expiresAt = new Date();
-            expiresAt.setDate(expiresAt.getDate() + bundleConfig.expiryDays);
+              // Calculate expiry date
+              const expiresAt = new Date();
+              expiresAt.setDate(expiresAt.getDate() + bundleConfig.expiryDays);
 
-            // Create bundle promo code
-            const bundlePromoCode = await PromoCode.create({
-              code: generatedCode,
-              type: "bundle_discount",
-              discountAmount: bundleConfig.discountAmount,
-              ownerId: purchase.userId,
-              excludedProgramId: purchase.programId, // Can't use on same program
-              isActive: true,
-              isUsed: false,
-              expiresAt: expiresAt,
-              createdBy: "system",
-            });
+              // Create bundle promo code
+              const bundlePromoCode = await PromoCode.create({
+                code: generatedCode,
+                type: "bundle_discount",
+                discountAmount: bundleConfig.discountAmount,
+                ownerId: purchase.userId,
+                excludedProgramId: purchase.programId, // Can't use on same program
+                isActive: true,
+                isUsed: false,
+                expiresAt: expiresAt,
+                createdBy: "system",
+              });
 
-            // Update purchase with bundle code info
-            purchase.bundlePromoCode = bundlePromoCode.code;
-            purchase.bundleDiscountAmount = bundleConfig.discountAmount;
-            purchase.bundleExpiresAt = expiresAt;
-            await purchase.save();
+              // Update purchase with bundle code info
+              purchase.bundlePromoCode = bundlePromoCode.code;
+              purchase.bundleDiscountAmount = bundleConfig.discountAmount;
+              purchase.bundleExpiresAt = expiresAt;
+              await purchase.save();
+            }
           }
         } catch (bundleError) {
           // Log error but don't fail the purchase
@@ -421,15 +451,35 @@ export class WebhookController {
         // 10. Send confirmation email AFTER save (best effort)
         // Email failure doesn't affect purchase completion
         try {
-          await purchase.populate([{ path: "userId" }, { path: "programId" }]);
+          // Populate based on purchase type
+          if (purchase.purchaseType === "program") {
+            await purchase.populate([
+              { path: "userId" },
+              { path: "programId" },
+            ]);
+          } else {
+            await purchase.populate([{ path: "userId" }, { path: "eventId" }]);
+          }
 
           const user = purchase.userId as unknown as IUser;
-          const program = purchase.programId as unknown as IProgram;
 
-          if (user && program) {
-            const frontendUrl =
-              process.env.FRONTEND_URL || "http://localhost:5173";
-            const receiptUrl = `${frontendUrl}/dashboard/purchase-receipt/${purchase._id}`;
+          if (!user) {
+            console.warn("Could not send confirmation email: user not found");
+            return;
+          }
+
+          const frontendUrl =
+            process.env.FRONTEND_URL || "http://localhost:5173";
+          const receiptUrl = `${frontendUrl}/dashboard/purchase-receipt/${purchase._id}`;
+
+          if (purchase.purchaseType === "program") {
+            const program = purchase.programId as unknown as IProgram;
+            if (!program) {
+              console.warn(
+                "Could not send confirmation email: program not found"
+              );
+              return;
+            }
 
             await EmailService.sendPurchaseConfirmationEmail({
               email: user.email,
@@ -447,10 +497,40 @@ export class WebhookController {
               receiptUrl,
             });
 
-            console.log(`Purchase confirmation email sent to ${user.email}`);
+            console.log(
+              `Program purchase confirmation email sent to ${user.email}`
+            );
           } else {
-            console.warn(
-              "Could not send confirmation email: user or program not found"
+            // Event purchase
+            const { default: Event } = await import("../models/Event");
+            const event = await Event.findById(purchase.eventId);
+            if (!event) {
+              console.warn(
+                "Could not send confirmation email: event not found"
+              );
+              return;
+            }
+
+            // For events, use a simplified email or skip if no event-specific template exists
+            // TODO: Create event-specific confirmation email template
+            await EmailService.sendPurchaseConfirmationEmail({
+              email: user.email,
+              name: `${user.firstName} ${user.lastName}`,
+              orderNumber: purchase.orderNumber,
+              programTitle: event.title, // Reuse programTitle field for event title
+              programType: "Event",
+              purchaseDate: purchase.purchaseDate,
+              fullPrice: purchase.fullPrice,
+              finalPrice: purchase.finalPrice,
+              classRepDiscount: 0, // Events don't have class rep discounts
+              earlyBirdDiscount: 0, // Events don't have early bird discounts
+              isClassRep: false,
+              isEarlyBird: false,
+              receiptUrl,
+            });
+
+            console.log(
+              `Event purchase confirmation email sent to ${user.email}`
             );
           }
         } catch (emailError) {

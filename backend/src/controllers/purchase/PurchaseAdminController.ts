@@ -74,6 +74,10 @@ class PurchaseAdminController {
           path: "programId",
           select: "title startDate endDate",
         })
+        .populate({
+          path: "eventId",
+          select: "title",
+        })
         .sort({ createdAt: -1 });
 
       // Apply search filter after population (if search is provided)
@@ -88,12 +92,14 @@ class PurchaseAdminController {
             username?: string;
           };
           const program = purchase.programId as { title?: string };
+          const event = purchase.eventId as { title?: string };
 
           const userFirstName = user?.firstName?.toLowerCase() || "";
           const userLastName = user?.lastName?.toLowerCase() || "";
           const userEmail = user?.email?.toLowerCase() || "";
           const userName = user?.username?.toLowerCase() || "";
           const programTitle = program?.title?.toLowerCase() || "";
+          const eventTitle = event?.title?.toLowerCase() || "";
           const orderNumber = purchase.orderNumber?.toLowerCase() || "";
 
           return (
@@ -102,6 +108,7 @@ class PurchaseAdminController {
             userEmail.includes(searchLower) ||
             userName.includes(searchLower) ||
             programTitle.includes(searchLower) ||
+            eventTitle.includes(searchLower) ||
             orderNumber.includes(searchLower)
           );
         });
@@ -124,10 +131,15 @@ class PurchaseAdminController {
           _id?: unknown;
           title?: string;
         };
+        const event = purchase.eventId as {
+          _id?: unknown;
+          title?: string;
+        };
 
         return {
           id: purchase._id,
           orderNumber: purchase.orderNumber,
+          purchaseType: purchase.purchaseType,
           user: {
             id: user?._id,
             name:
@@ -136,10 +148,20 @@ class PurchaseAdminController {
               "Unknown User",
             email: user?.email || "",
           },
-          program: {
-            id: program?._id,
-            name: program?.title || "Unknown Program",
-          },
+          program:
+            purchase.purchaseType === "program"
+              ? {
+                  id: program?._id,
+                  name: program?.title || "Unknown Program",
+                }
+              : undefined,
+          event:
+            purchase.purchaseType === "event"
+              ? {
+                  id: event?._id,
+                  name: event?.title || "Unknown Event",
+                }
+              : undefined,
           fullPrice: purchase.fullPrice,
           classRepDiscount: purchase.classRepDiscount,
           earlyBirdDiscount: purchase.earlyBirdDiscount,

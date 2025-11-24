@@ -335,6 +335,8 @@ class PromoCodesApiClient extends BaseApiClient {
     userId: string;
     discountPercent: number;
     allowedProgramIds?: string[];
+    allowedEventIds?: string[];
+    applicableToType?: "program" | "event";
     expiresAt?: string;
   }): Promise<{
     code: {
@@ -445,6 +447,8 @@ class PromoCodesApiClient extends BaseApiClient {
     userId: string;
     discountPercent: number;
     allowedProgramIds?: string[];
+    allowedEventIds?: string[];
+    applicableToType?: "program" | "event";
     expiresAt?: string;
   }): Promise<{
     promoCode: {

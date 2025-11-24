@@ -62,6 +62,8 @@ type EventLean = {
   meetingId?: string;
   passcode?: string;
   disclaimer?: string;
+  requirements?: string;
+  materials?: string;
   workshopGroupTopics?: Record<string, unknown>;
   organizerDetails?: Array<Record<string, unknown>>;
   roles: EventRole[];
@@ -309,6 +311,20 @@ export class ResponseBuilderService {
           event.organizerDetails || []
         );
 
+      // Build pricing object
+      const pricingData = (
+        event as { pricing?: { isFree?: boolean; price?: number } }
+      ).pricing
+        ? {
+            isFree:
+              (event as { pricing?: { isFree?: boolean; price?: number } })
+                .pricing!.isFree ?? true,
+            price:
+              (event as { pricing?: { isFree?: boolean; price?: number } })
+                .pricing!.price ?? undefined,
+          }
+        : { isFree: true };
+
       return {
         id: event._id.toString(),
         title: event.title,
@@ -402,6 +418,10 @@ export class ResponseBuilderService {
         autoUnpublishedReason:
           (event as { autoUnpublishedReason?: string | null })
             .autoUnpublishedReason || null,
+        requirements: event.requirements,
+        materials: event.materials,
+        // Pricing (Paid Events Feature - Phase 6)
+        pricing: pricingData,
       };
     } catch (error) {
       this.logger.error("buildEventWithRegistrations error", error as Error);

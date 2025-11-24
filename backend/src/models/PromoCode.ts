@@ -180,7 +180,7 @@ const promoCodeSchema = new Schema<
     applicableToType: {
       type: String,
       enum: ["program", "event"],
-      default: "program", // Default to program for backward compatibility
+      // No default - undefined means code applies to both programs and events
       index: true,
     },
     allowedProgramIds: {
@@ -463,6 +463,13 @@ promoCodeSchema.methods.canBeUsedForProgram = function (
     return { valid: false, reason: "Code has expired" };
   }
 
+  // If code has applicableToType='event', it cannot be used for programs
+  // But if applicableToType is undefined/null or 'program', it's allowed
+  // This allows general codes (no applicableToType) to work for both
+  if (this.applicableToType === "event") {
+    return { valid: false, reason: "Code is only valid for events" };
+  }
+
   // Bundle discount specific validation
   if (this.type === "bundle_discount") {
     if (
@@ -515,9 +522,11 @@ promoCodeSchema.methods.canBeUsedForEvent = function (
     return { valid: false, reason: "Code has expired" };
   }
 
-  // Check if code is for events (not programs)
-  if (this.applicableToType !== "event") {
-    return { valid: false, reason: "Code is not valid for events" };
+  // If code has applicableToType='program', it cannot be used for events
+  // But if applicableToType is undefined/null or 'event', it's allowed
+  // This allows general codes (no applicableToType) to work for both
+  if (this.applicableToType === "program") {
+    return { valid: false, reason: "Code is only valid for programs" };
   }
 
   // Bundle discount specific validation

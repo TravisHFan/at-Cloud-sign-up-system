@@ -15,11 +15,14 @@ export interface PromoCode {
   _id: string;
   code: string;
   type: "bundle_discount" | "staff_access" | "reward";
+  applicableToType: "program" | "event"; // Whether code is for programs or events
   discountAmount?: number; // Dollar amount (e.g., 50 = $50 off)
   discountPercent?: number; // Percentage (e.g., 100 = 100% off for staff, 10-100% for reward)
   ownerId: string;
   allowedProgramIds?: string[];
   allowedProgramTitles?: string[];
+  allowedEventIds?: string[]; // For event codes: specific events (empty = all events)
+  allowedEventTitles?: string[]; // Titles of allowed events
   isActive: boolean;
   isUsed: boolean;
   expiresAt?: string; // ISO date string
@@ -80,11 +83,48 @@ class PromoCodeService {
       // Must not be expired
       if (code.expiresAt && new Date(code.expiresAt) < now) return false;
 
+      // Exclude codes explicitly marked for events only
+      if (code.applicableToType === "event") return false;
+
       // If code has program restrictions, must include this program
       if (
         code.allowedProgramIds &&
         code.allowedProgramIds.length > 0 &&
         !code.allowedProgramIds.includes(programId)
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+  }
+
+  /**
+   * Get available (active, unused, not expired) promo codes for a specific event
+   * Used at event checkout to show user which codes they can apply
+   *
+   * @param eventId - ID of the event
+   * @returns Promise<PromoCode[]>
+   */
+  async getUserAvailableCodesForEvent(eventId: string): Promise<PromoCode[]> {
+    const allCodes = await this.getMyPromoCodes();
+    const now = new Date();
+
+    return allCodes.filter((code) => {
+      // Must be active and not used
+      if (!code.isActive || code.isUsed) return false;
+
+      // Must not be expired
+      if (code.expiresAt && new Date(code.expiresAt) < now) return false;
+
+      // Exclude codes explicitly marked for programs only
+      if (code.applicableToType === "program") return false;
+
+      // If code has event restrictions, must include this event
+      if (
+        code.allowedEventIds &&
+        code.allowedEventIds.length > 0 &&
+        !code.allowedEventIds.includes(eventId)
       ) {
         return false;
       }

@@ -39,6 +39,21 @@ function EventBasicDetails({ event }: EventBasicDetailsProps) {
         <Icon name="check-circle" className="w-5 h-5 mr-3" />
         Type: {event.type || "No Type"}
       </div>
+      {/* Pricing */}
+      {event.pricing && !event.pricing.isFree && event.pricing.price && (
+        <div className="flex items-center text-gray-600">
+          <Icon name="tag" className="w-5 h-5 mr-3" />
+          <span className="font-semibold text-blue-600">
+            Price: ${(event.pricing.price / 100).toFixed(2)}
+          </span>
+        </div>
+      )}
+      {event.pricing && event.pricing.isFree && (
+        <div className="flex items-center text-gray-600">
+          <Icon name="tag" className="w-5 h-5 mr-3" />
+          <span className="font-semibold text-green-600">Free Event</span>
+        </div>
+      )}
     </div>
   );
 }

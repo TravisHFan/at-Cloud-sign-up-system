@@ -45,6 +45,7 @@ export default class UserCodesController {
         .populate("usedForProgramId", "title")
         .populate("excludedProgramId", "title")
         .populate("allowedProgramIds", "title")
+        .populate("allowedEventIds", "title")
         .sort({ createdAt: -1 });
 
       res.status(200).json({
@@ -62,10 +63,23 @@ export default class UserCodesController {
                 .filter(Boolean)
             : undefined;
 
+          // Extract allowed event titles if populated
+          const allowedEventTitles = code.allowedEventIds
+            ? (
+                code.allowedEventIds as unknown as Array<{
+                  _id: string;
+                  title: string;
+                }>
+              )
+                .map((e) => e.title)
+                .filter(Boolean)
+            : undefined;
+
           return {
             _id: code._id,
             code: code.code,
             type: code.type,
+            applicableToType: code.applicableToType,
             discountAmount: code.discountAmount,
             discountPercent: code.discountPercent,
             isActive: code.isActive,
@@ -85,6 +99,12 @@ export default class UserCodesController {
                 ).map((p) => p._id.toString())
               : undefined,
             allowedProgramTitles,
+            allowedEventIds: code.allowedEventIds
+              ? (code.allowedEventIds as unknown as Array<{ _id: string }>).map(
+                  (e) => e._id.toString()
+                )
+              : undefined,
+            allowedEventTitles,
             createdAt: code.createdAt,
           };
         }),

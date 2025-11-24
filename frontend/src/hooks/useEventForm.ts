@@ -98,6 +98,16 @@ export const useEventForm = (
             }
           : {}),
 
+        // Pricing (Paid Events Feature)
+        ...(data.pricing
+          ? {
+              pricing: {
+                isFree: data.pricing.isFree,
+                price: data.pricing.price,
+              },
+            }
+          : {}),
+
         // Provide basic role structure if no roles configured
         roles:
           data.roles && data.roles.length > 0

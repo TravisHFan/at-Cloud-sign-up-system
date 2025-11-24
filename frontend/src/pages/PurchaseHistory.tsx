@@ -6,13 +6,20 @@ import { formatCurrency } from "../utils/currency";
 interface Purchase {
   id: string;
   orderNumber: string;
-  programId:
+  purchaseType: "program" | "event"; // Type of purchase
+  programId?:
     | {
         id: string; // Backend toJSON converts _id to id
         title: string;
         programType?: string;
       }
     | string; // Can be ObjectId string if not populated
+  eventId?:
+    | {
+        id: string;
+        title: string;
+      }
+    | string; // Event details if purchaseType = 'event'
   fullPrice: number;
   classRepDiscount: number;
   earlyBirdDiscount: number;
@@ -67,6 +74,9 @@ export default function PurchaseHistory() {
   } | null>(null);
   const [refundingId, setRefundingId] = useState<string | null>(null);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [purchaseTypeFilter, setPurchaseTypeFilter] = useState<
+    "all" | "program" | "event"
+  >("all");
 
   const loadPurchases = async () => {
     try {
@@ -89,6 +99,12 @@ export default function PurchaseHistory() {
   useEffect(() => {
     loadPurchases();
   }, []);
+
+  // Filter purchases by type
+  const filteredPurchases = purchases.filter((p) => {
+    if (purchaseTypeFilter === "all") return true;
+    return p.purchaseType === purchaseTypeFilter;
+  });
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -308,7 +324,11 @@ export default function PurchaseHistory() {
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="text-lg font-semibold text-gray-900">
-                          {typeof purchase.programId === "object"
+                          {purchase.purchaseType === "event"
+                            ? typeof purchase.eventId === "object"
+                              ? purchase.eventId.title
+                              : "Event"
+                            : typeof purchase.programId === "object"
                             ? purchase.programId.title
                             : "Program"}
                         </h3>
@@ -379,7 +399,11 @@ export default function PurchaseHistory() {
                           setCancelConfirm({
                             purchaseId: purchase.id,
                             programTitle:
-                              typeof purchase.programId === "object"
+                              purchase.purchaseType === "event"
+                                ? typeof purchase.eventId === "object"
+                                  ? purchase.eventId.title
+                                  : "Event"
+                                : typeof purchase.programId === "object"
                                 ? purchase.programId.title
                                 : "Program",
                           })
@@ -550,6 +574,32 @@ export default function PurchaseHistory() {
               </div>
             </div>
 
+            {/* Filter Controls */}
+            <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
+              <div className="flex items-center gap-4">
+                <label className="text-sm font-medium text-gray-700">
+                  Filter by Type:
+                </label>
+                <select
+                  value={purchaseTypeFilter}
+                  onChange={(e) =>
+                    setPurchaseTypeFilter(
+                      e.target.value as "all" | "program" | "event"
+                    )
+                  }
+                  className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="all">All Purchases</option>
+                  <option value="program">Programs Only</option>
+                  <option value="event">Events Only</option>
+                </select>
+                <span className="text-sm text-gray-500">
+                  Showing {filteredPurchases.length} of {purchases.length}{" "}
+                  purchases
+                </span>
+              </div>
+            </div>
+
             {/* Purchase Table */}
             <div
               className="bg-white rounded-lg shadow-sm"
@@ -578,7 +628,13 @@ export default function PurchaseHistory() {
                         scope="col"
                         className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                       >
-                        Program
+                        Type
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Program / Event
                       </th>
                       <th
                         scope="col"
@@ -601,7 +657,7 @@ export default function PurchaseHistory() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {purchases.map((purchase) => (
+                    {filteredPurchases.map((purchase) => (
                       <tr
                         key={purchase.id}
                         className="hover:bg-gray-50 transition-colors"
@@ -619,30 +675,66 @@ export default function PurchaseHistory() {
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                           {purchase.orderNumber}
                         </td>
-                        <td className="px-6 py-4">
-                          <button
-                            onClick={() => {
-                              // Extract program ID - handle both object and string formats
-                              const programId =
-                                typeof purchase.programId === "object"
-                                  ? purchase.programId.id
-                                  : purchase.programId;
-                              if (programId) {
-                                navigate(`/dashboard/programs/${programId}`);
-                              }
-                            }}
-                            className="text-sm font-medium text-purple-600 hover:text-purple-800 hover:underline text-left"
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              purchase.purchaseType === "program"
+                                ? "bg-purple-100 text-purple-800"
+                                : "bg-blue-100 text-blue-800"
+                            }`}
                           >
-                            {typeof purchase.programId === "object"
-                              ? purchase.programId.title
-                              : "Program"}
-                          </button>
-                          {typeof purchase.programId === "object" &&
-                            purchase.programId.programType && (
-                              <p className="text-xs text-gray-500 mt-1">
-                                {purchase.programId.programType}
-                              </p>
-                            )}
+                            {purchase.purchaseType === "program"
+                              ? "Program"
+                              : "Event"}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          {purchase.purchaseType === "program" ? (
+                            <>
+                              <button
+                                onClick={() => {
+                                  // Extract program ID - handle both object and string formats
+                                  const programId =
+                                    typeof purchase.programId === "object"
+                                      ? purchase.programId?.id
+                                      : purchase.programId;
+                                  if (programId) {
+                                    navigate(
+                                      `/dashboard/programs/${programId}`
+                                    );
+                                  }
+                                }}
+                                className="text-sm font-medium text-purple-600 hover:text-purple-800 hover:underline text-left"
+                              >
+                                {typeof purchase.programId === "object"
+                                  ? purchase.programId?.title
+                                  : "Program"}
+                              </button>
+                              {typeof purchase.programId === "object" &&
+                                purchase.programId?.programType && (
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    {purchase.programId.programType}
+                                  </p>
+                                )}
+                            </>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                const eventId =
+                                  typeof purchase.eventId === "object"
+                                    ? purchase.eventId?.id
+                                    : purchase.eventId;
+                                if (eventId) {
+                                  navigate(`/dashboard/event/${eventId}`);
+                                }
+                              }}
+                              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline text-left"
+                            >
+                              {typeof purchase.eventId === "object"
+                                ? purchase.eventId?.title
+                                : "Event"}
+                            </button>
+                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm">

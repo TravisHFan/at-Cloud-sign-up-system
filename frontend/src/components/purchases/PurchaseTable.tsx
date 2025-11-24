@@ -4,12 +4,17 @@ import { format } from "date-fns";
 export interface PurchaseTableRow {
   id: string;
   orderNumber: string;
+  purchaseType: "program" | "event"; // Type of purchase
   user?: {
     id: string;
     name: string;
     email: string;
   };
-  program: {
+  program?: {
+    id?: string;
+    name: string;
+  };
+  event?: {
     id?: string;
     name: string;
   };
@@ -43,12 +48,16 @@ interface PurchaseTableProps {
   purchases: PurchaseTableRow[];
   showUser?: boolean; // Show user column for admin view
   onRowClick?: (purchase: PurchaseTableRow) => void;
+  purchaseTypeFilter?: "all" | "program" | "event";
+  onPurchaseTypeFilterChange?: (filter: "all" | "program" | "event") => void;
 }
 
 export default function PurchaseTable({
   purchases,
   showUser = false,
   onRowClick,
+  purchaseTypeFilter: _purchaseTypeFilter = "all",
+  onPurchaseTypeFilterChange: _onPurchaseTypeFilterChange,
 }: PurchaseTableProps) {
   if (purchases.length === 0) {
     return (
@@ -126,7 +135,10 @@ export default function PurchaseTable({
                 </th>
               )}
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Program
+                Type
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Program / Event
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Price
@@ -184,9 +196,24 @@ export default function PurchaseTable({
                       </div>
                     </td>
                   )}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        purchase.purchaseType === "program"
+                          ? "bg-purple-100 text-purple-800"
+                          : "bg-blue-100 text-blue-800"
+                      }`}
+                    >
+                      {purchase.purchaseType === "program"
+                        ? "Program"
+                        : "Event"}
+                    </span>
+                  </td>
                   <td className="px-6 py-4">
                     <div className="text-sm text-gray-900">
-                      {purchase.program.name}
+                      {purchase.purchaseType === "program"
+                        ? purchase.program?.name || "Unknown Program"
+                        : purchase.event?.name || "Unknown Event"}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">

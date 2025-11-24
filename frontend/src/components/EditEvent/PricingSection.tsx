@@ -124,7 +124,9 @@ export default function PricingSection({
                   Free Event
                 </span>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  No ticket purchase required. All users can register directly.
+                  No ticket purchase required. All users can register directly,
+                  unless you put this event in a paid program. In that case,
+                  only users enrolled in the program can join this event.
                 </p>
               </div>
             </label>
@@ -196,6 +198,11 @@ export default function PricingSection({
               <strong>Note:</strong> Organizers, co-organizers, and users
               enrolled in the event's associated programs will have free access.
               All other users must purchase a ticket.
+              <br />
+              <strong>Please be aware:</strong> If you are creating this event
+              within a paid program, you needn’t select ‘Paid Event’—unless the
+              event must be open to external participants and charged
+              separately.
             </p>
           </div>
         </div>

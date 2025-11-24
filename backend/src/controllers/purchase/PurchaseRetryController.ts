@@ -36,7 +36,9 @@ class PurchaseRetryController {
       }
 
       // Find the pending purchase
-      const pendingPurchase = await Purchase.findById(id).populate("programId");
+      const pendingPurchase = await Purchase.findById(id)
+        .populate("programId")
+        .populate("eventId");
 
       if (!pendingPurchase) {
         res
@@ -66,38 +68,93 @@ class PurchaseRetryController {
         return;
       }
 
-      // CRITICAL: Check if user already has a completed purchase for this program
-      const existingCompletedPurchase = await Purchase.findOne({
-        userId: req.user._id,
-        programId: pendingPurchase.programId,
-        status: "completed",
-      });
+      // CRITICAL: Check if user already has a completed purchase for this item
+      let existingCompletedPurchase = null;
+      if (pendingPurchase.purchaseType === "program") {
+        existingCompletedPurchase = await Purchase.findOne({
+          userId: req.user._id,
+          programId: pendingPurchase.programId,
+          status: "completed",
+        });
+      } else if (pendingPurchase.purchaseType === "event") {
+        existingCompletedPurchase = await Purchase.findOne({
+          userId: req.user._id,
+          eventId: pendingPurchase.eventId,
+          status: "completed",
+        });
+      }
 
       if (existingCompletedPurchase) {
+        const itemType =
+          pendingPurchase.purchaseType === "event" ? "event" : "program";
         res.status(400).json({
           success: false,
-          message:
-            "You have already purchased this program. Check your purchase history.",
+          message: `You have already purchased this ${itemType}. Check your purchase history.`,
         });
         return;
       }
 
-      // Get program details
-      const program = pendingPurchase.programId as unknown as IProgram;
+      // Create new Stripe checkout session based on purchase type
+      let session;
 
-      // Create new Stripe checkout session (reusing the same pricing logic)
-      const session = await stripeCreateCheckoutSession({
-        userId: (req.user._id as mongoose.Types.ObjectId).toString(),
-        userEmail: req.user.email,
-        programId: (program._id as mongoose.Types.ObjectId).toString(),
-        programTitle: program.title,
-        fullPrice: pendingPurchase.fullPrice,
-        classRepDiscount: pendingPurchase.classRepDiscount,
-        earlyBirdDiscount: pendingPurchase.earlyBirdDiscount,
-        finalPrice: pendingPurchase.finalPrice,
-        isClassRep: pendingPurchase.isClassRep,
-        isEarlyBird: pendingPurchase.isEarlyBird,
-      });
+      if (pendingPurchase.purchaseType === "program") {
+        const program = pendingPurchase.programId as unknown as IProgram;
+
+        session = await stripeCreateCheckoutSession({
+          userId: (req.user._id as mongoose.Types.ObjectId).toString(),
+          userEmail: req.user.email,
+          programId: (program._id as mongoose.Types.ObjectId).toString(),
+          programTitle: program.title,
+          fullPrice: pendingPurchase.fullPrice,
+          classRepDiscount: pendingPurchase.classRepDiscount,
+          earlyBirdDiscount: pendingPurchase.earlyBirdDiscount,
+          finalPrice: pendingPurchase.finalPrice,
+          isClassRep: pendingPurchase.isClassRep,
+          isEarlyBird: pendingPurchase.isEarlyBird,
+        });
+      } else {
+        // Event purchase retry
+        const { default: Event } = await import("../../models/Event");
+        const event = await Event.findById(pendingPurchase.eventId);
+
+        if (!event) {
+          res.status(404).json({
+            success: false,
+            message: "Event not found.",
+          });
+          return;
+        }
+
+        const { stripe } = await import("../../services/stripeService");
+
+        session = await stripe.checkout.sessions.create({
+          payment_method_types: ["card"],
+          line_items: [
+            {
+              price_data: {
+                currency: "usd",
+                product_data: {
+                  name: event.title,
+                  description: `Event on ${new Date(
+                    event.date
+                  ).toLocaleDateString()}`,
+                },
+                unit_amount: Math.round(pendingPurchase.finalPrice),
+              },
+              quantity: 1,
+            },
+          ],
+          mode: "payment",
+          success_url: `${process.env.FRONTEND_URL}/dashboard/events/${event._id}/purchase/success?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${process.env.FRONTEND_URL}/dashboard/purchase/cancel?event_id=${event._id}`,
+          customer_email: req.user.email,
+          metadata: {
+            userId: (req.user._id as mongoose.Types.ObjectId).toString(),
+            eventId: (event._id as mongoose.Types.ObjectId).toString(),
+            purchaseId: pendingPurchase._id.toString(),
+          },
+        });
+      }
 
       // Update the pending purchase with new session ID
       pendingPurchase.stripeSessionId = session.id;

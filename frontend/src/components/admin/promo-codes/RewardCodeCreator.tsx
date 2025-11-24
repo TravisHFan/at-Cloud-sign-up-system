@@ -32,6 +32,17 @@ interface ProgramDTO {
   title: string;
 }
 
+interface EventDTO {
+  id: string;
+  _id?: string;
+  title: string;
+  date: string;
+  pricing?: {
+    isFree: boolean;
+    price?: number;
+  };
+}
+
 interface PromoCodeResponse {
   _id: string;
   code: string;
@@ -73,11 +84,16 @@ export default function RewardCodeCreator({
   // Discount percentage (10-100%)
   const [discountPercent, setDiscountPercent] = useState(50);
 
-  // Program selection
-  const [programMode, setProgramMode] = useState<"all" | "specific">("all");
+  // Access selection
+  const [accessMode, setAccessMode] = useState<
+    "all" | "specificPrograms" | "specificEvents"
+  >("all");
   const [selectedPrograms, setSelectedPrograms] = useState<string[]>([]);
+  const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
   const [programs, setPrograms] = useState<ProgramDTO[]>([]);
+  const [events, setEvents] = useState<EventDTO[]>([]);
   const [loadingPrograms, setLoadingPrograms] = useState(false);
+  const [loadingEvents, setLoadingEvents] = useState(false);
 
   // Expiration
   const [expirationMode, setExpirationMode] = useState<"never" | "custom">(
@@ -87,9 +103,10 @@ export default function RewardCodeCreator({
 
   const [copiedCode, setCopiedCode] = useState(false);
 
-  // Load programs on mount
+  // Load programs and events on mount
   useEffect(() => {
     loadPrograms();
+    loadEvents();
   }, []);
 
   const loadPrograms = async () => {
@@ -101,6 +118,36 @@ export default function RewardCodeCreator({
       console.error("Failed to load programs:", err);
     } finally {
       setLoadingPrograms(false);
+    }
+  };
+
+  const loadEvents = async () => {
+    try {
+      setLoadingEvents(true);
+      const { eventsService } = await import(
+        "../../../services/api/events.api"
+      );
+      const response = await eventsService.getEvents({});
+
+      // Filter out past events and free events
+      const now = new Date();
+      const filteredEvents = (response.events as EventDTO[]).filter((event) => {
+        // Filter out past events
+        const eventDate = new Date(event.date);
+        if (eventDate < now) return false;
+
+        // Filter out free events
+        if (event.pricing?.isFree === true || !event.pricing?.price)
+          return false;
+
+        return true;
+      });
+
+      setEvents(filteredEvents);
+    } catch (err) {
+      console.error("Failed to load events:", err);
+    } finally {
+      setLoadingEvents(false);
     }
   };
 
@@ -121,6 +168,14 @@ export default function RewardCodeCreator({
     );
   };
 
+  const toggleEvent = (eventId: string) => {
+    setSelectedEvents((prev) =>
+      prev.includes(eventId)
+        ? prev.filter((id) => id !== eventId)
+        : [...prev, eventId]
+    );
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -135,8 +190,13 @@ export default function RewardCodeCreator({
       return;
     }
 
-    if (programMode === "specific" && selectedPrograms.length === 0) {
+    if (accessMode === "specificPrograms" && selectedPrograms.length === 0) {
       setError("Please select at least one program");
+      return;
+    }
+
+    if (accessMode === "specificEvents" && selectedEvents.length === 0) {
+      setError("Please select at least one event");
       return;
     }
 
@@ -152,16 +212,23 @@ export default function RewardCodeCreator({
       const payload: {
         userId: string;
         discountPercent: number;
+        applicableToType?: "program" | "event";
         allowedProgramIds?: string[];
+        allowedEventIds?: string[];
         expiresAt?: string;
       } = {
         userId: selectedUser.id,
         discountPercent,
       };
 
-      if (programMode === "specific") {
+      if (accessMode === "specificPrograms") {
+        payload.applicableToType = "program";
         payload.allowedProgramIds = selectedPrograms;
+      } else if (accessMode === "specificEvents") {
+        payload.applicableToType = "event";
+        payload.allowedEventIds = selectedEvents;
       }
+      // If accessMode === "all", don't set applicableToType (general code)
 
       if (expirationMode === "custom") {
         payload.expiresAt = new Date(expirationDate).toISOString();
@@ -199,8 +266,9 @@ export default function RewardCodeCreator({
     // Reset form
     clearUserSelection();
     setDiscountPercent(50);
-    setProgramMode("all");
+    setAccessMode("all");
     setSelectedPrograms([]);
+    setSelectedEvents([]);
     setExpirationMode("never");
     setExpirationDate("");
 
@@ -316,38 +384,50 @@ export default function RewardCodeCreator({
           </div>
         </div>
 
-        {/* Program Selection */}
+        {/* Access Scope Selection */}
         <div>
           <label className="block text-base font-medium text-gray-700 mb-2">
-            Program Access
+            Access Scope
           </label>
           <div className="space-y-3">
-            <div className="flex gap-4">
+            <div className="flex gap-4 flex-wrap">
               <label className="flex items-center">
                 <input
                   type="radio"
-                  name="programMode"
-                  checked={programMode === "all"}
-                  onChange={() => setProgramMode("all")}
+                  name="accessMode"
+                  checked={accessMode === "all"}
+                  onChange={() => setAccessMode("all")}
                   className="mr-2"
                 />
-                <span className="text-base text-gray-700">All programs</span>
+                <span className="text-base text-gray-700">
+                  All Programs and Events
+                </span>
               </label>
               <label className="flex items-center">
                 <input
                   type="radio"
-                  name="programMode"
-                  checked={programMode === "specific"}
-                  onChange={() => setProgramMode("specific")}
+                  name="accessMode"
+                  checked={accessMode === "specificPrograms"}
+                  onChange={() => setAccessMode("specificPrograms")}
                   className="mr-2"
                 />
                 <span className="text-base text-gray-700">
                   Specific programs
                 </span>
               </label>
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="accessMode"
+                  checked={accessMode === "specificEvents"}
+                  onChange={() => setAccessMode("specificEvents")}
+                  className="mr-2"
+                />
+                <span className="text-base text-gray-700">Specific events</span>
+              </label>
             </div>
 
-            {programMode === "specific" && (
+            {accessMode === "specificPrograms" && (
               <div className="border border-gray-200 rounded-lg p-4 max-h-60 overflow-y-auto">
                 {loadingPrograms ? (
                   <div className="flex justify-center py-4">
@@ -376,6 +456,43 @@ export default function RewardCodeCreator({
                         />
                         <span className="text-sm text-gray-900">
                           {program.title}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {accessMode === "specificEvents" && (
+              <div className="border border-gray-200 rounded-lg p-4 max-h-60 overflow-y-auto">
+                {loadingEvents ? (
+                  <div className="flex justify-center py-4">
+                    <LoadingSpinner size="sm" inline />
+                  </div>
+                ) : events.length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center py-4">
+                    No events available
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {events.map((event) => (
+                      <label
+                        key={event.id || event._id}
+                        className="flex items-center p-2 hover:bg-gray-50 rounded cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedEvents.includes(
+                            event.id || event._id || ""
+                          )}
+                          onChange={() =>
+                            toggleEvent(event.id || event._id || "")
+                          }
+                          className="mr-3"
+                        />
+                        <span className="text-sm text-gray-900">
+                          {event.title}
                         </span>
                       </label>
                     ))}
@@ -528,11 +645,13 @@ export default function RewardCodeCreator({
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Programs:</span>
+                        <span className="text-gray-600">Access:</span>
                         <span className="font-medium text-gray-900">
                           {createdCode.allowedProgramIds?.length
                             ? `${createdCode.allowedProgramIds.length} program(s)`
-                            : "All programs"}
+                            : createdCode.allowedEventIds?.length
+                            ? `${createdCode.allowedEventIds.length} event(s)`
+                            : "All programs and events"}
                         </span>
                       </div>
                       <div className="flex justify-between">

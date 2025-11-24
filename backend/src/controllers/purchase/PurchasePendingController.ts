@@ -42,17 +42,29 @@ class PurchasePendingController {
         status: "pending",
       })
         .populate("programId", "title programType")
+        .populate("eventId", "title date")
         .sort({ createdAt: -1 });
 
-      // Auto-cleanup 2: Remove pending purchases for programs that are already completed
+      // Auto-cleanup 2: Remove pending purchases that are already completed
       const redundantPurchaseIds: string[] = [];
       for (const pending of pendingPurchases) {
-        const programId = (pending.programId as { _id: unknown })._id;
-        const existingCompletedPurchase = await Purchase.findOne({
-          userId: req.user._id,
-          programId: programId,
-          status: "completed",
-        });
+        let existingCompletedPurchase = null;
+
+        if (pending.purchaseType === "program" && pending.programId) {
+          const programId = (pending.programId as { _id: unknown })._id;
+          existingCompletedPurchase = await Purchase.findOne({
+            userId: req.user._id,
+            programId: programId,
+            status: "completed",
+          });
+        } else if (pending.purchaseType === "event" && pending.eventId) {
+          const eventId = (pending.eventId as { _id: unknown })._id;
+          existingCompletedPurchase = await Purchase.findOne({
+            userId: req.user._id,
+            eventId: eventId,
+            status: "completed",
+          });
+        }
 
         if (existingCompletedPurchase) {
           redundantPurchaseIds.push(pending._id.toString());
@@ -64,7 +76,7 @@ class PurchasePendingController {
           _id: { $in: redundantPurchaseIds },
         });
         console.log(
-          `Auto-cleaned ${redundantCleanupResult.deletedCount} redundant pending purchases (already purchased programs) for user ${req.user._id}`
+          `Auto-cleaned ${redundantCleanupResult.deletedCount} redundant pending purchases (already purchased items) for user ${req.user._id}`
         );
 
         // Re-fetch pending purchases after redundant cleanup
@@ -73,6 +85,7 @@ class PurchasePendingController {
           status: "pending",
         })
           .populate("programId", "title programType")
+          .populate("eventId", "title date")
           .sort({ createdAt: -1 });
 
         res.status(200).json({

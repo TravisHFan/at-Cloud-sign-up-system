@@ -250,22 +250,25 @@ class EventPurchaseController {
             eventId: event._id,
             purchaseType: "event",
             orderNumber,
-            amount: finalPrice,
+            fullPrice: fullPrice,
+            finalPrice: finalPrice,
+            classRepDiscount: 0,
+            earlyBirdDiscount: 0,
+            isClassRep: false,
+            isEarlyBird: false,
             status: "pending",
             billingInfo: {
-              name: userName,
+              fullName: userName,
               email: userEmail,
             },
-            paymentInfo: {
-              method: "stripe",
+            paymentMethod: {
+              type: "card",
             },
-            promoCodeUsed: validatedPromoCode
-              ? {
-                  code: validatedPromoCode.code,
-                  discountAmount: promoDiscountAmount,
-                  discountPercent: promoDiscountPercent,
-                }
-              : undefined,
+            promoCode: validatedPromoCode?.code,
+            promoDiscountAmount:
+              promoDiscountAmount > 0 ? promoDiscountAmount : undefined,
+            promoDiscountPercent:
+              promoDiscountPercent > 0 ? promoDiscountPercent : undefined,
           });
 
           console.log(
@@ -274,8 +277,8 @@ class EventPurchaseController {
 
           // 4. Create Stripe checkout session (directly using stripe API for events)
           const { stripe } = await import("../../services/stripeService");
-          const successUrl = `${process.env.FRONTEND_URL}/events/${eventId}/purchase/success?session_id={CHECKOUT_SESSION_ID}`;
-          const cancelUrl = `${process.env.FRONTEND_URL}/events/${eventId}`;
+          const successUrl = `${process.env.FRONTEND_URL}/dashboard/events/${eventId}/purchase/success?session_id={CHECKOUT_SESSION_ID}`;
+          const cancelUrl = `${process.env.FRONTEND_URL}/dashboard/purchase/cancel?event_id=${eventId}`;
 
           // Build description with discount details
           let description = "Event ticket purchase";

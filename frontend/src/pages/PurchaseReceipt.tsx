@@ -6,10 +6,15 @@ import { formatCurrency } from "../utils/currency";
 interface PurchaseReceipt {
   id: string;
   orderNumber: string;
-  programId: {
+  purchaseType: "program" | "event";
+  programId?: {
     _id: string;
     title: string;
     programType?: string;
+  };
+  eventId?: {
+    _id: string;
+    title: string;
   };
   userId: {
     _id: string;
@@ -318,18 +323,28 @@ export default function PurchaseReceipt() {
             </div>
           </div>
 
-          {/* Program Information */}
+          {/* Program/Event Information */}
           <div className="mb-8">
             <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
-              Program Details
+              {receipt.purchaseType === "event"
+                ? "Event Details"
+                : "Program Details"}
             </h3>
             <div className="bg-gray-50 rounded-lg p-4">
-              <h4 className="text-lg font-semibold text-gray-900">
-                {receipt.programId.title}
-              </h4>
-              <p className="text-sm text-gray-600 mt-1">
-                {receipt.programId.programType}
-              </p>
+              {receipt.purchaseType === "event" && receipt.eventId ? (
+                <h4 className="text-lg font-semibold text-gray-900">
+                  {receipt.eventId.title}
+                </h4>
+              ) : receipt.programId ? (
+                <>
+                  <h4 className="text-lg font-semibold text-gray-900">
+                    {receipt.programId.title}
+                  </h4>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {receipt.programId.programType}
+                  </p>
+                </>
+              ) : null}
             </div>
           </div>
 
@@ -341,7 +356,11 @@ export default function PurchaseReceipt() {
             <table className="w-full">
               <tbody className="divide-y divide-gray-200">
                 <tr>
-                  <td className="py-3 text-gray-900">Program Enrollment</td>
+                  <td className="py-3 text-gray-900">
+                    {receipt.purchaseType === "event"
+                      ? "Event Ticket"
+                      : "Program Enrollment"}
+                  </td>
                   <td className="py-3 text-right text-gray-900 font-medium">
                     {formatCurrency(receipt.fullPrice || 0)}
                   </td>
@@ -427,7 +446,9 @@ export default function PurchaseReceipt() {
           <div className="border-t border-gray-200 pt-8 mt-8">
             <div className="text-center">
               <p className="text-sm text-gray-600 mb-2">
-                Thank you for enrolling in our program!
+                {receipt.purchaseType === "event"
+                  ? "Thank you for purchasing your event ticket!"
+                  : "Thank you for enrolling in our program!"}
               </p>
               <p className="text-xs text-gray-500">
                 If you have any questions about this receipt, please contact us

@@ -58,6 +58,8 @@ import PromoCodeDetail from "./pages/PromoCodeDetail";
 import DonationPage from "./pages/DonationPage";
 import DonationReceipt from "./pages/DonationReceipt";
 import SessionExpiredModal from "./components/common/SessionExpiredModal";
+import EventPurchase from "./pages/EventPurchase";
+import EventPurchaseSuccess from "./pages/EventPurchaseSuccess";
 
 function App() {
   return (
@@ -317,6 +319,24 @@ function App() {
                 }
               />
             </Route>
+            {/* Paid Events Purchase Flow (Phase 6) */}
+            <Route
+              path="/dashboard/events/:id/purchase"
+              element={
+                <ProtectedRoute>
+                  <EventPurchase />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/events/:id/purchase/success"
+              element={
+                <ProtectedRoute>
+                  <EventPurchaseSuccess />
+                </ProtectedRoute>
+              }
+            />
+            {/* Event Detail Page */}
             <Route
               path="/dashboard/event/:id"
               element={

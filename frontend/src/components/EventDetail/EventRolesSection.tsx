@@ -105,6 +105,8 @@ interface EventRolesSectionProps {
   maxRolesForUser: number;
   isRoleAllowedForUser: (roleName: string) => boolean;
   canManageSignups: boolean | null;
+  // Phase 6: Paid events - indicate if event requires purchase
+  requiresPurchase?: boolean;
 }
 
 function EventRolesSection({
@@ -136,6 +138,7 @@ function EventRolesSection({
   maxRolesForUser,
   isRoleAllowedForUser,
   canManageSignups,
+  requiresPurchase = false,
 }: EventRolesSectionProps) {
   return (
     <>
@@ -686,6 +689,7 @@ function EventRolesSection({
                 guestCount={guestCountForRole}
                 guestList={guestsByRole[role.id]}
                 isOrganizer={!!canManageSignups}
+                requiresPurchase={requiresPurchase}
                 onAssignUser={async (
                   roleId,
                   userId,

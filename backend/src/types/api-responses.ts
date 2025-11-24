@@ -43,6 +43,7 @@ export interface EventWithRegistrationData {
   meetingId?: string;
   passcode?: string;
   requirements?: string;
+  materials?: string;
   // Workshop-specific fields
   workshopGroupTopics?: {
     A?: string;
@@ -72,6 +73,11 @@ export interface EventWithRegistrationData {
   // Auto-unpublish tracking
   autoUnpublishedAt?: Date | null;
   autoUnpublishedReason?: string | null;
+  // Pricing (Paid Events Feature - Phase 6)
+  pricing?: {
+    isFree?: boolean;
+    price?: number;
+  };
 }
 
 export interface EventRoleWithCounts {

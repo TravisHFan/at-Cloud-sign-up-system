@@ -19,8 +19,14 @@ export default class RewardCodeCreationController {
         return;
       }
 
-      const { userId, discountPercent, allowedProgramIds, expiresAt } =
-        req.body;
+      const {
+        userId,
+        discountPercent,
+        allowedProgramIds,
+        allowedEventIds,
+        applicableToType,
+        expiresAt,
+      } = req.body;
 
       // Validate user ID
       if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
@@ -75,6 +81,26 @@ export default class RewardCodeCreationController {
         }
       }
 
+      // Validate allowed event IDs if provided
+      let validatedEventIds: mongoose.Types.ObjectId[] | undefined;
+      if (allowedEventIds && Array.isArray(allowedEventIds)) {
+        if (allowedEventIds.length > 0) {
+          const allValid = allowedEventIds.every((id) =>
+            mongoose.Types.ObjectId.isValid(id)
+          );
+          if (!allValid) {
+            res.status(400).json({
+              success: false,
+              message: "Invalid event ID in allowedEventIds.",
+            });
+            return;
+          }
+          validatedEventIds = allowedEventIds.map(
+            (id) => new mongoose.Types.ObjectId(id)
+          );
+        }
+      }
+
       // Validate expiration date
       let validatedExpiresAt: Date | undefined;
       if (expiresAt) {
@@ -99,6 +125,8 @@ export default class RewardCodeCreationController {
         ownerId: new mongoose.Types.ObjectId(userId),
         discountPercent,
         allowedProgramIds: validatedProgramIds,
+        allowedEventIds: validatedEventIds,
+        applicableToType,
         expiresAt: validatedExpiresAt,
         createdBy: req.user.username || req.user.email,
       });
@@ -107,6 +135,9 @@ export default class RewardCodeCreationController {
       await promoCode.populate("ownerId", "username email firstName lastName");
       if (validatedProgramIds && validatedProgramIds.length > 0) {
         await promoCode.populate("allowedProgramIds", "title");
+      }
+      if (validatedEventIds && validatedEventIds.length > 0) {
+        await promoCode.populate("allowedEventIds", "title");
       }
 
       // Send notifications to the code recipient

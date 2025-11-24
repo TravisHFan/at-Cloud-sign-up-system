@@ -19,6 +19,9 @@ export interface PromoCodeCardProps {
   usedForProgramTitle?: string;
   allowedProgramIds?: string[]; // List of program IDs this code is valid for
   allowedProgramTitles?: string[]; // List of program titles this code is valid for
+  allowedEventIds?: string[]; // List of event IDs this code is valid for
+  allowedEventTitles?: string[]; // List of event titles this code is valid for
+  applicableToType?: "program" | "event"; // Whether code is for programs or events
   onCopy?: () => void;
   onUse?: () => void;
 }
@@ -33,6 +36,9 @@ export default function PromoCodeCard({
   usedForProgramTitle,
   allowedProgramIds,
   allowedProgramTitles,
+  allowedEventIds,
+  allowedEventTitles,
+  applicableToType,
   onCopy,
   onUse,
 }: PromoCodeCardProps) {
@@ -188,12 +194,33 @@ export default function PromoCodeCard({
           </div>
         )}
 
-        {/* Valid for programs */}
+        {/* Valid for programs/events */}
         {status === "active" && (
           <div className="flex items-start text-sm text-gray-600">
             <CheckCircleIcon className="h-4 w-4 mr-2 flex-shrink-0 mt-0.5" />
             <span>
               {(() => {
+                // Check if code is restricted to specific events
+                if (
+                  applicableToType === "event" ||
+                  (allowedEventIds && allowedEventIds.length > 0)
+                ) {
+                  if (allowedEventTitles && allowedEventTitles.length > 0) {
+                    // Show event titles if available
+                    if (allowedEventTitles.length === 1) {
+                      return `Valid for: ${allowedEventTitles[0]}`;
+                    } else {
+                      return `Valid for ${allowedEventTitles.length} specific events`;
+                    }
+                  } else if (allowedEventIds && allowedEventIds.length > 0) {
+                    return `Valid for ${allowedEventIds.length} specific event${
+                      allowedEventIds.length > 1 ? "s" : ""
+                    }`;
+                  } else {
+                    return "Valid for all paid events";
+                  }
+                }
+
                 // Check if code is restricted to specific programs
                 if (allowedProgramIds && allowedProgramIds.length > 0) {
                   if (allowedProgramTitles && allowedProgramTitles.length > 0) {
@@ -216,9 +243,9 @@ export default function PromoCodeCard({
                 if (type === "bundle_discount") {
                   return "Valid for any program";
                 } else if (type === "reward") {
-                  return "Valid for all paid programs";
+                  return "Valid for all paid programs and events";
                 } else {
-                  return "Valid for all paid programs";
+                  return "Valid for all paid programs and events";
                 }
               })()}
             </span>

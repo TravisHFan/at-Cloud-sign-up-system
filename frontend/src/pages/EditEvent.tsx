@@ -483,6 +483,14 @@ export default function EditEvent() {
         organizerDetails: organizerDetails || [],
       };
 
+      // Pricing (Paid Events Feature)
+      if (data.pricing) {
+        payload.pricing = {
+          isFree: data.pricing.isFree,
+          price: data.pricing.price,
+        };
+      }
+
       // Zoom field normalization based on format
       if (
         payload.format === "Online" ||

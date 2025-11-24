@@ -131,6 +131,10 @@ interface CreateEventRequest {
   }>;
   hostedBy?: string;
   suppressNotifications?: boolean;
+  pricing?: {
+    isFree: boolean;
+    price?: number;
+  };
 }
 
 export class CreationController {
@@ -350,8 +354,14 @@ export class CreationController {
           hostedBy?: string;
         }
       ) => {
+        // Ensure pricing is set - default to free if not provided
+        const pricingData = (data.pricing as
+          | { isFree?: boolean; price?: number }
+          | undefined) || { isFree: true };
+
         const ev = new Event({
           ...data,
+          pricing: pricingData,
           programLabels: validatedProgramLabels, // Override with validated ObjectIds
           organizerDetails: processedOrganizerDetails,
           roles: eventRoles,

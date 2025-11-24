@@ -1,7 +1,10 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import type { EventRole, OrganizerDetail } from "../../types/event";
-import { getAvatarUrlWithCacheBust, getAvatarAlt } from "../../utils/avatarUtils";
+import {
+  getAvatarUrlWithCacheBust,
+  getAvatarAlt,
+} from "../../utils/avatarUtils";
 import { Icon } from "../common";
 import NameCardActionModal from "../common/NameCardActionModal";
 import NotificationPromptModal from "../common/NotificationPromptModal";
@@ -163,6 +166,8 @@ interface EventRoleSignupProps {
   }>;
   // Organizer contacts snapshot used by updateEvent payload contract
   organizerDetails?: OrganizerDetail[];
+  // Phase 6: Paid events - hide assignment/guest invitation for paid events
+  requiresPurchase?: boolean;
 }
 
 export default function EventRoleSignup({
@@ -181,6 +186,7 @@ export default function EventRoleSignup({
   guestCount = 0,
   guestList = [],
   organizerDetails: _organizerDetails,
+  requiresPurchase = false,
 }: EventRoleSignupProps) {
   const navigate = useNavigate();
   const [showSignupForm, setShowSignupForm] = useState(false);
@@ -555,18 +561,21 @@ export default function EventRoleSignup({
                                   Sign Up Myself
                                 </button>
                               )}
-                            {isOrganizer && onAssignUser && (
-                              <button
-                                onClick={() => {
-                                  setShowAssignModal(true);
-                                  setShowSignUpDropdown(false);
-                                }}
-                                className="w-full text-left px-2 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                              >
-                                Assign User
-                              </button>
-                            )}
-                            {isRoleAllowedForUser && (
+                            {/* Hide Assign User and Invite Guest for paid events that require purchase */}
+                            {!requiresPurchase &&
+                              isOrganizer &&
+                              onAssignUser && (
+                                <button
+                                  onClick={() => {
+                                    setShowAssignModal(true);
+                                    setShowSignUpDropdown(false);
+                                  }}
+                                  className="w-full text-left px-2 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                >
+                                  Assign User
+                                </button>
+                              )}
+                            {!requiresPurchase && isRoleAllowedForUser && (
                               <button
                                 onClick={() => {
                                   if (isFull) return;

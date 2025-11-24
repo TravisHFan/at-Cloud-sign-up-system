@@ -530,7 +530,7 @@ const eventSchema: Schema = new Schema(
         },
         { _id: false }
       ),
-      default: () => ({ isFree: true }),
+      default: undefined, // Don't set default here - let application code handle it
     },
 
     // Workshop-specific fields

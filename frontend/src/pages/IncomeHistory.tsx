@@ -105,8 +105,8 @@ export default function IncomeHistory() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Income History</h1>
           <p className="mt-2 text-gray-600">
-            View and manage all program purchases and donations across the
-            platform
+            View and manage all purchases (programs and events) and donations
+            across the platform
           </p>
         </div>
 
@@ -224,7 +224,7 @@ export default function IncomeHistory() {
                     : "bg-gray-100 text-gray-600 hover:text-gray-900 hover:bg-gray-200 border-gray-200"
                 }`}
               >
-                Program Purchases
+                Purchases
               </button>
               <button
                 onClick={() => setActiveTab("donations")}

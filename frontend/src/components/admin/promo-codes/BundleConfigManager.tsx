@@ -127,7 +127,7 @@ export default function BundleConfigManager({
             Bundle Discount Settings
           </h2>
           <p className="text-sm text-gray-600 mt-1">
-            Configure automatic promo codes generated after purchases
+            Configure automatic promo codes generated after program purchases
           </p>
         </div>
       </div>
@@ -155,7 +155,7 @@ export default function BundleConfigManager({
               Enable Bundle Codes
             </label>
             <p className="text-base text-gray-600 mt-1">
-              Automatically generate promo codes after each purchase
+              Automatically generate promo codes after each program purchase
             </p>
           </div>
           <button
@@ -274,8 +274,8 @@ export default function BundleConfigManager({
                 <p className="text-sm text-gray-700 italic flex items-start">
                   <LightBulbIcon className="w-4 h-4 mr-1.5 mt-0.5 flex-shrink-0 text-purple-600" />
                   <span>
-                    When a user completes a purchase, they will automatically
-                    receive a{" "}
+                    When a user completes a program purchase, they will
+                    automatically receive a{" "}
                     <strong className="text-purple-700">
                       {formatAmount(formAmount)} promo code
                     </strong>{" "}
@@ -314,11 +314,11 @@ export default function BundleConfigManager({
             <ul className="text-base text-gray-700 space-y-1">
               <li>
                 • Bundle codes are automatically generated when users complete a
-                purchase
+                program purchase (not event purchases)
               </li>
               <li>
                 • Each code provides a fixed discount amount (set above) off
-                their next purchase
+                their next program purchase
               </li>
               <li>
                 • Codes can be used on any program and are single-use only

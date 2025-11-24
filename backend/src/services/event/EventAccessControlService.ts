@@ -1,8 +1,8 @@
 import mongoose from "mongoose";
-import Event, { IEvent, IOrganizerDetail } from "../../models/Event.js";
-import Purchase from "../../models/Purchase.js";
-import User from "../../models/User.js";
-import { Logger } from "../LoggerService.js";
+import Event, { IEvent, IOrganizerDetail } from "../../models/Event";
+import Purchase from "../../models/Purchase";
+import User from "../../models/User";
+import { Logger } from "../LoggerService";
 
 const log = Logger.getInstance().child("EventAccessControlService");
 

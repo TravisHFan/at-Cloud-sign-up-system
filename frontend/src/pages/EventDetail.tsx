@@ -19,6 +19,7 @@ import { useProgramAccess } from "../hooks/useProgramAccess";
 import { useEmailModal } from "../hooks/useEmailModal";
 import { useEventData } from "../hooks/useEventData";
 import { useRealtimeEventUpdates } from "../hooks/useRealtimeEventUpdates";
+import { useEventAccess } from "../hooks/useEventAccess";
 import WorkshopGroupsSection from "../components/EventDetail/WorkshopGroupsSection";
 import EventModals from "../components/EventDetail/EventModals";
 import EventRolesSection from "../components/EventDetail/EventRolesSection";
@@ -77,6 +78,14 @@ export default function EventDetail() {
     event,
     currentUser,
   });
+
+  // Use custom hook for paid event access checking (Phase 6)
+  const {
+    hasAccess: hasPaidEventAccess,
+    requiresPurchase,
+    accessReason,
+    isLoading: checkingPaidAccess,
+  } = useEventAccess(id);
 
   const [managementMode, setManagementMode] = useState(false);
   const [showDeletionModal, setShowDeletionModal] = useState(false);
@@ -207,7 +216,7 @@ export default function EventDetail() {
     locationPathname: location.pathname,
   });
 
-  if (loading) {
+  if (loading || checkingPaidAccess) {
     return <LoadingSpinner size="lg" />;
   }
 
@@ -229,6 +238,9 @@ export default function EventDetail() {
       </div>
     );
   }
+
+  // Paid Event Access Restriction Flag (Phase 6)
+  const showRestrictedView = !hasPaidEventAccess && requiresPurchase;
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
@@ -263,8 +275,28 @@ export default function EventDetail() {
         setShowShareModal={setShowShareModal}
         setShowDeletionModal={setShowDeletionModal}
         handleDownloadCalendar={handleDownloadCalendar}
+        showGetTicketButton={showRestrictedView}
       />
       <div className="bg-white rounded-lg shadow-sm p-6 space-y-6">
+        {/* Thank you message for users who purchased the event */}
+        {accessReason === "event_purchase" && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
+            <Icon
+              name="check-circle"
+              className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5"
+            />
+            <div>
+              <h4 className="font-semibold text-green-900 mb-1">
+                Thank You for Your Purchase!
+              </h4>
+              <p className="text-green-800 text-sm">
+                You have full access to this event. You can now view all event
+                details, access meeting information, and register for roles.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Event Details */}
         <EventBasicDetails event={event} />
         <EventHostAndPurpose event={event} />
@@ -490,280 +522,282 @@ export default function EventDetail() {
             })()}
           </div>
 
-          {/* Online Meeting Link - Always visible to authenticated dashboard users */}
-          {(event.format === "Online" ||
-            event.format === "Hybrid Participation") &&
-            event.zoomLink && (
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Online Meeting Link
-                </h3>
-                <a
-                  href={event.zoomLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-800 underline break-all"
-                >
-                  {event.zoomLink}
-                </a>
-              </div>
-            )}
-
-          {/* Meeting Details - Always visible to authenticated dashboard users */}
-          {(event.format === "Online" ||
-            event.format === "Hybrid Participation") &&
-            (event.meetingId || event.passcode) && (
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Meeting Details
-                </h3>
-                <div className="space-y-1 text-gray-700">
-                  {event.meetingId && (
-                    <div className="flex items-center">
-                      <span className="font-medium w-24">Meeting ID:</span>
-                      <span className="font-mono">{event.meetingId}</span>
-                    </div>
-                  )}
-                  {event.passcode && (
-                    <div className="flex items-center">
-                      <span className="font-medium w-24">Passcode:</span>
-                      <span className="font-mono">{event.passcode}</span>
-                    </div>
-                  )}
+          {/* Pricing Section for Paid Events - Show when user needs to purchase */}
+          {showRestrictedView && event.pricing && !event.pricing.isFree && (
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Pricing
+              </h3>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-2xl font-bold text-gray-900">
+                      ${(event.pricing.price! / 100).toFixed(2)}
+                    </p>
+                    <p className="text-sm text-gray-600 mt-1">per ticket</p>
+                  </div>
+                  <Icon name="lock" className="w-12 h-12 text-blue-600" />
                 </div>
+                <p className="text-gray-700 mb-4">
+                  Purchase a ticket to view full event details, access meeting
+                  information, and register for roles.
+                </p>
+                <button
+                  onClick={() => navigate(`/dashboard/events/${id}/purchase`)}
+                  className="w-full bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 font-semibold transition-colors"
+                >
+                  Get Ticket Now
+                </button>
               </div>
-            )}
+            </div>
+          )}
 
-          {/* Program Labels - Shows which programs this event belongs to */}
-          {event.programLabels && event.programLabels.length > 0 && (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                Associated Programs
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {event.programLabels.map((programId) => (
-                  <button
-                    key={programId}
-                    onClick={() => navigate(`/dashboard/programs/${programId}`)}
-                    className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200 hover:bg-blue-200 transition-colors cursor-pointer"
-                  >
-                    <svg
-                      className="w-4 h-4 mr-1.5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+          {/* All content below this point is hidden for users who need to purchase */}
+          {!showRestrictedView && (
+            <>
+              {/* Online Meeting Link - Always visible to authenticated dashboard users */}
+              {(event.format === "Online" ||
+                event.format === "Hybrid Participation") &&
+                event.zoomLink && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      Online Meeting Link
+                    </h3>
+                    <a
+                      href={event.zoomLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800 underline break-all"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
-                      />
-                    </svg>
-                    {programNames[programId] || "Loading..."}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+                      {event.zoomLink}
+                    </a>
+                  </div>
+                )}
 
-          {/* Requirements */}
-          {event.requirements && (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Requirements
-              </h3>
-              <p className="text-gray-700">{event.requirements}</p>
-            </div>
-          )}
+              {/* Meeting Details - Always visible to authenticated dashboard users */}
+              {(event.format === "Online" ||
+                event.format === "Hybrid Participation") &&
+                (event.meetingId || event.passcode) && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      Meeting Details
+                    </h3>
+                    <div className="space-y-1 text-gray-700">
+                      {event.meetingId && (
+                        <div className="flex items-center">
+                          <span className="font-medium w-24">Meeting ID:</span>
+                          <span className="font-mono">{event.meetingId}</span>
+                        </div>
+                      )}
+                      {event.passcode && (
+                        <div className="flex items-center">
+                          <span className="font-medium w-24">Passcode:</span>
+                          <span className="font-mono">{event.passcode}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
-          {/* Materials Needed */}
-          {event.materials && (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Materials Needed
-              </h3>
-              <p className="text-gray-700">{event.materials}</p>
-            </div>
-          )}
+              {/* Program Labels - Shows which programs this event belongs to */}
+              {event.programLabels && event.programLabels.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                    Associated Programs
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {event.programLabels.map((programId) => (
+                      <button
+                        key={programId}
+                        onClick={() =>
+                          navigate(`/dashboard/programs/${programId}`)
+                        }
+                        className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200 hover:bg-blue-200 transition-colors cursor-pointer"
+                      >
+                        <svg
+                          className="w-4 h-4 mr-1.5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+                          />
+                        </svg>
+                        {programNames[programId] || "Loading..."}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-          {event.disclaimer && (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Disclaimer
-              </h3>
-              <div
-                className="text-gray-700"
-                data-testid="event-detail-disclaimer"
-              >
-                <Multiline text={event.disclaimer} />
-              </div>
-            </div>
+              {/* Requirements */}
+              {event.requirements && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Requirements
+                  </h3>
+                  <p className="text-gray-700">{event.requirements}</p>
+                </div>
+              )}
+
+              {/* Materials Needed */}
+              {event.materials && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Materials Needed
+                  </h3>
+                  <p className="text-gray-700">{event.materials}</p>
+                </div>
+              )}
+
+              {event.disclaimer && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Disclaimer
+                  </h3>
+                  <div
+                    className="text-gray-700"
+                    data-testid="event-detail-disclaimer"
+                  >
+                    <Multiline text={event.disclaimer} />
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
 
-      {/* User's Current Signup Status - Only show for upcoming events in normal mode */}
-      {isUserSignedUp && !managementMode && !isPassedEvent && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <div className="flex items-center mb-2">
-            <Icon name="check-circle" className="w-5 h-5 text-green-600 mr-3" />
-            <h3 className="text-sm font-medium text-green-800">
-              You're signed up for {userSignedUpRoles.length} role
-              {userSignedUpRoles.length !== 1 ? "s" : ""}:
-            </h3>
-          </div>
-          <div className="ml-8 space-y-1">
-            {userSignedUpRoles.map((role) => (
-              <div key={role.id} className="text-sm text-green-700">
-                <span className="font-medium">{role.name}</span> -{" "}
-                <span className="whitespace-pre-line">{role.description}</span>
+      {/* All sections below are hidden for users who need to purchase */}
+      {!showRestrictedView && (
+        <>
+          {/* User's Current Signup Status - Only show for upcoming events in normal mode */}
+          {isUserSignedUp && !managementMode && !isPassedEvent && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-center mb-2">
+                <Icon
+                  name="check-circle"
+                  className="w-5 h-5 text-green-600 mr-3"
+                />
+                <h3 className="text-sm font-medium text-green-800">
+                  You're signed up for {userSignedUpRoles.length} role
+                  {userSignedUpRoles.length !== 1 ? "s" : ""}:
+                </h3>
               </div>
-            ))}
-          </div>
-          {!hasUnlimitedRoles(currentUser?.role) &&
-            userSignedUpRoles.length < maxRolesForUser && (
-              <p className="text-xs text-green-600 mt-2 ml-8">
-                You can sign up for {maxRolesForUser - userSignedUpRoles.length}{" "}
-                more role
-                {maxRolesForUser - userSignedUpRoles.length !== 1 ? "s" : ""}.
-                {currentUserRole === "Participant" && (
-                  <span className="block mt-1 text-gray-600">
-                    As a Participant, available roles depend on event type.
-                  </span>
+              <div className="ml-8 space-y-1">
+                {userSignedUpRoles.map((role) => (
+                  <div key={role.id} className="text-sm text-green-700">
+                    <span className="font-medium">{role.name}</span> -{" "}
+                    <span className="whitespace-pre-line">
+                      {role.description}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              {!hasUnlimitedRoles(currentUser?.role) &&
+                userSignedUpRoles.length < maxRolesForUser && (
+                  <p className="text-xs text-green-600 mt-2 ml-8">
+                    You can sign up for{" "}
+                    {maxRolesForUser - userSignedUpRoles.length} more role
+                    {maxRolesForUser - userSignedUpRoles.length !== 1
+                      ? "s"
+                      : ""}
+                    .
+                    {currentUserRole === "Participant" && (
+                      <span className="block mt-1 text-gray-600">
+                        As a Participant, available roles depend on event type.
+                      </span>
+                    )}
+                  </p>
                 )}
-              </p>
-            )}
-          {hasUnlimitedRoles(currentUser?.role) && (
-            <p className="text-xs text-green-600 mt-2 ml-8">
-              As {currentUser?.role}, you can sign up for unlimited roles.
-            </p>
+              {hasUnlimitedRoles(currentUser?.role) && (
+                <p className="text-xs text-green-600 mt-2 ml-8">
+                  As {currentUser?.role}, you can sign up for unlimited roles.
+                </p>
+              )}
+            </div>
           )}
-        </div>
-      )}
 
-      {/* Maximum roles reached warning - Only show for upcoming events in normal mode */}
-      {hasReachedMaxRoles && !managementMode && !isPassedEvent && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-          <div className="flex items-center">
-            <Icon name="tag" className="w-5 h-5 text-amber-600 mr-3" />
-            <div>
-              <h3 className="text-sm font-medium text-amber-800">
-                Maximum Roles Reached
-              </h3>
-              <p className="text-xs text-amber-600 mt-1">
-                You have reached the maximum of {maxRolesForUser} roles for this
-                event as {currentUser?.role}.
-              </p>
+          {/* Maximum roles reached warning - Only show for upcoming events in normal mode */}
+          {hasReachedMaxRoles && !managementMode && !isPassedEvent && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <div className="flex items-center">
+                <Icon name="tag" className="w-5 h-5 text-amber-600 mr-3" />
+                <div>
+                  <h3 className="text-sm font-medium text-amber-800">
+                    Maximum Roles Reached
+                  </h3>
+                  <p className="text-xs text-amber-600 mt-1">
+                    You have reached the maximum of {maxRolesForUser} roles for
+                    this event as {currentUser?.role}.
+                  </p>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          )}
 
-      {/* Completed Event Notice - Only show for passed events */}
-      {isPassedEvent && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-center">
-            <Icon name="check-circle" className="w-5 h-5 text-blue-600 mr-3" />
-            <div>
-              <h3 className="text-sm font-medium text-blue-800">
-                This event has been completed.
-              </h3>
-              <p className="text-sm text-blue-600">
-                This event took place on {formatDateToAmerican(event.date)} and
-                had {event.attendees || event.signedUp} attendees. You can view
-                the participant list below, but no changes can be made.
-              </p>
+          {/* Completed Event Notice - Only show for passed events */}
+          {isPassedEvent && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center">
+                <Icon
+                  name="check-circle"
+                  className="w-5 h-5 text-blue-600 mr-3"
+                />
+                <div>
+                  <h3 className="text-sm font-medium text-blue-800">
+                    This event has been completed.
+                  </h3>
+                  <p className="text-sm text-blue-600">
+                    This event took place on {formatDateToAmerican(event.date)}{" "}
+                    and had {event.attendees || event.signedUp} attendees. You
+                    can view the participant list below, but no changes can be
+                    made.
+                  </p>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          )}
 
-      {/* Cancelled Event Notice */}
-      {event.status === "cancelled" && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="flex items-center">
-            <Icon name="tag" className="w-5 h-5 text-red-600 mr-3" />
-            <div>
-              <h3 className="text-sm font-medium text-red-800">
-                This event has been cancelled by the organizers.
-              </h3>
-              <p className="text-sm text-red-600">
-                All participants have been notified of the cancellation. The
-                event will be moved to past events after its scheduled time.
-              </p>
+          {/* Cancelled Event Notice */}
+          {event.status === "cancelled" && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-center">
+                <Icon name="tag" className="w-5 h-5 text-red-600 mr-3" />
+                <div>
+                  <h3 className="text-sm font-medium text-red-800">
+                    This event has been cancelled by the organizers.
+                  </h3>
+                  <p className="text-sm text-red-600">
+                    All participants have been notified of the cancellation. The
+                    event will be moved to past events after its scheduled time.
+                  </p>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          )}
 
-      {/* Roles Section */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-6">
-          {isPassedEvent
-            ? "Event Participants"
-            : managementMode
-            ? "Manage Event Sign-ups"
-            : "Event Roles & Sign-up"}
-        </h2>
+          {/* Roles Section */}
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-6">
+              {isPassedEvent
+                ? "Event Participants"
+                : managementMode
+                ? "Manage Event Sign-ups"
+                : "Event Roles & Sign-up"}
+            </h2>
 
-        {/* Management Action Buttons - moved from header */}
-        <div className="flex items-center space-x-3 mb-6">
-          {isPassedEvent ? (
-            /* For passed events, only show Export button for Super Admin, Administrators, and Organizers */
-            currentUserRole === "Super Admin" ||
-            currentUserRole === "Administrator" ||
-            isCurrentUserOrganizer ? (
-              <button
-                onClick={handleExportSignups}
-                className="inline-flex items-center bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
-              >
-                <svg
-                  className="w-4 h-4 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                Export Data
-              </button>
-            ) : null
-          ) : (
-            /* For upcoming events, show management buttons for authorized users */
-            canManageSignups && (
-              <>
-                <button
-                  onClick={() => setManagementMode(!managementMode)}
-                  className={`px-4 py-2 rounded-md transition-colors ${
-                    managementMode
-                      ? "bg-gray-600 text-white hover:bg-gray-700"
-                      : "bg-blue-600 text-white hover:bg-blue-700"
-                  }`}
-                >
-                  {managementMode ? "Exit Management" : "Manage Sign-ups"}
-                </button>
-                <button
-                  onClick={() =>
-                    setEmailModal({
-                      open: true,
-                      subject: "",
-                      bodyHtml: "",
-                      includeUsers: true,
-                      includeGuests: false,
-                      sending: false,
-                    })
-                  }
-                  className="px-4 py-2 rounded-md transition-colors bg-purple-600 text-white hover:bg-purple-700"
-                >
-                  Email Participants
-                </button>
-                {managementMode && (
+            {/* Management Action Buttons - moved from header */}
+            <div className="flex items-center space-x-3 mb-6">
+              {isPassedEvent ? (
+                /* For passed events, only show Export button for Super Admin, Administrators, and Organizers */
+                currentUserRole === "Super Admin" ||
+                currentUserRole === "Administrator" ||
+                isCurrentUserOrganizer ? (
                   <button
                     onClick={handleExportSignups}
                     className="inline-flex items-center bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
@@ -783,56 +817,109 @@ export default function EventDetail() {
                     </svg>
                     Export Data
                   </button>
-                )}
-              </>
-            )
-          )}
-        </div>
+                ) : null
+              ) : (
+                /* For upcoming events, show management buttons for authorized users */
+                canManageSignups && (
+                  <>
+                    <button
+                      onClick={() => setManagementMode(!managementMode)}
+                      className={`px-4 py-2 rounded-md transition-colors ${
+                        managementMode
+                          ? "bg-gray-600 text-white hover:bg-gray-700"
+                          : "bg-blue-600 text-white hover:bg-blue-700"
+                      }`}
+                    >
+                      {managementMode ? "Exit Management" : "Manage Sign-ups"}
+                    </button>
+                    <button
+                      onClick={() =>
+                        setEmailModal({
+                          open: true,
+                          subject: "",
+                          bodyHtml: "",
+                          includeUsers: true,
+                          includeGuests: false,
+                          sending: false,
+                        })
+                      }
+                      className="px-4 py-2 rounded-md transition-colors bg-purple-600 text-white hover:bg-purple-700"
+                    >
+                      Email Participants
+                    </button>
+                    {managementMode && (
+                      <button
+                        onClick={handleExportSignups}
+                        className="inline-flex items-center bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
+                      >
+                        <svg
+                          className="w-4 h-4 mr-2"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          />
+                        </svg>
+                        Export Data
+                      </button>
+                    )}
+                  </>
+                )
+              )}
+            </div>
 
-        {/* Workshop Group Topics Section */}
-        <WorkshopGroupsSection
-          event={event}
-          isPassedEvent={isPassedEvent}
-          canEditWorkshopGroup={canEditWorkshopGroup}
-          editingGroup={editingGroup}
-          topicDraft={topicDraft}
-          setTopicDraft={setTopicDraft}
-          startEditTopic={startEditTopic}
-          saveTopic={saveTopic}
-          cancelEditTopic={cancelEditTopic}
-        />
+            {/* Workshop Group Topics Section */}
+            <WorkshopGroupsSection
+              event={event}
+              isPassedEvent={isPassedEvent}
+              canEditWorkshopGroup={canEditWorkshopGroup}
+              editingGroup={editingGroup}
+              topicDraft={topicDraft}
+              setTopicDraft={setTopicDraft}
+              startEditTopic={startEditTopic}
+              saveTopic={saveTopic}
+              cancelEditTopic={cancelEditTopic}
+            />
 
-        <EventRolesSection
-          event={event}
-          isPassedEvent={isPassedEvent}
-          managementMode={managementMode}
-          currentUserId={currentUserId}
-          currentUserRole={currentUserRole}
-          canNavigateToProfiles={canNavigateToProfiles}
-          isCurrentUserOrganizer={isCurrentUserOrganizer}
-          guestsByRole={guestsByRole}
-          notification={notification}
-          setCancelConfirm={setCancelConfirm}
-          setEditGuest={setEditGuest}
-          handleNameCardClick={handleNameCardClick}
-          draggedUserId={draggedUserId}
-          draggedGuestId={draggedGuestId}
-          handleDragOver={handleDragOver}
-          handleDrop={handleDrop}
-          handleDragStart={handleDragStart}
-          handleGuestDragStart={handleGuestDragStart}
-          handleDragEnd={handleDragEnd}
-          setEvent={setEvent}
-          handleManagementCancel={handleManagementCancel}
-          setResendLinkConfirm={setResendLinkConfirm}
-          handleRoleSignup={handleRoleSignup}
-          handleRoleCancel={handleRoleCancel}
-          hasReachedMaxRoles={hasReachedMaxRoles}
-          maxRolesForUser={maxRolesForUser}
-          isRoleAllowedForUser={isRoleAllowedForUser}
-          canManageSignups={canManageSignups}
-        />
-      </div>
+            <EventRolesSection
+              event={event}
+              isPassedEvent={isPassedEvent}
+              managementMode={managementMode}
+              currentUserId={currentUserId}
+              currentUserRole={currentUserRole}
+              canNavigateToProfiles={canNavigateToProfiles}
+              isCurrentUserOrganizer={isCurrentUserOrganizer}
+              guestsByRole={guestsByRole}
+              notification={notification}
+              setCancelConfirm={setCancelConfirm}
+              setEditGuest={setEditGuest}
+              handleNameCardClick={handleNameCardClick}
+              draggedUserId={draggedUserId}
+              draggedGuestId={draggedGuestId}
+              handleDragOver={handleDragOver}
+              handleDrop={handleDrop}
+              handleDragStart={handleDragStart}
+              handleGuestDragStart={handleGuestDragStart}
+              handleDragEnd={handleDragEnd}
+              setEvent={setEvent}
+              handleManagementCancel={handleManagementCancel}
+              setResendLinkConfirm={setResendLinkConfirm}
+              handleRoleSignup={handleRoleSignup}
+              handleRoleCancel={handleRoleCancel}
+              hasReachedMaxRoles={hasReachedMaxRoles}
+              maxRolesForUser={maxRolesForUser}
+              isRoleAllowedForUser={isRoleAllowedForUser}
+              canManageSignups={canManageSignups}
+              requiresPurchase={event.pricing?.isFree === false}
+            />
+          </div>
+        </>
+      )}
 
       {/* All Event Modals */}
       {event && (

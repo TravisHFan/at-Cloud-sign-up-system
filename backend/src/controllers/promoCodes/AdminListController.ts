@@ -78,6 +78,7 @@ export default class AdminListController {
           .populate("usedForProgramId", "title")
           .populate("excludedProgramId", "title")
           .populate("allowedProgramIds", "title")
+          .populate("allowedEventIds", "title")
           .sort({ createdAt: -1 })
           .skip(skip)
           .limit(limitNum),
@@ -98,10 +99,35 @@ export default class AdminListController {
               ? (code.usedForProgramId as unknown as PopulatedProgram)
               : null;
 
+          // Extract allowed program titles if populated
+          const allowedProgramTitles = code.allowedProgramIds
+            ? (
+                code.allowedProgramIds as unknown as Array<{
+                  _id: string;
+                  title: string;
+                }>
+              )
+                .map((p) => p.title)
+                .filter(Boolean)
+            : undefined;
+
+          // Extract allowed event titles if populated
+          const allowedEventTitles = code.allowedEventIds
+            ? (
+                code.allowedEventIds as unknown as Array<{
+                  _id: string;
+                  title: string;
+                }>
+              )
+                .map((e) => e.title)
+                .filter(Boolean)
+            : undefined;
+
           return {
             _id: code._id,
             code: code.code,
             type: code.type,
+            applicableToType: code.applicableToType,
             discountAmount: code.discountAmount,
             discountPercent: code.discountPercent,
             isGeneral: code.isGeneral,
@@ -123,7 +149,18 @@ export default class AdminListController {
               : code.usedForProgramId,
             usedForProgramTitle: usedForProgramPopulated?.title,
             excludedProgramId: code.excludedProgramId,
-            allowedProgramIds: code.allowedProgramIds,
+            allowedProgramIds: code.allowedProgramIds
+              ? (
+                  code.allowedProgramIds as unknown as Array<{ _id: string }>
+                ).map((p) => p._id.toString())
+              : undefined,
+            allowedProgramTitles,
+            allowedEventIds: code.allowedEventIds
+              ? (code.allowedEventIds as unknown as Array<{ _id: string }>).map(
+                  (e) => e._id.toString()
+                )
+              : undefined,
+            allowedEventTitles,
             createdAt: code.createdAt,
             createdBy: code.createdBy,
           };

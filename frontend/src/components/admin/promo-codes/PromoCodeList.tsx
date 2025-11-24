@@ -23,6 +23,10 @@ export interface PromoCodeResponse {
   ownerName?: string;
   description?: string;
   allowedProgramIds?: string[];
+  allowedProgramTitles?: string[];
+  allowedEventIds?: string[];
+  allowedEventTitles?: string[];
+  applicableToType?: "program" | "event";
   isActive: boolean;
   isUsed: boolean;
   expiresAt?: string;
@@ -109,6 +113,51 @@ function formatExpiry(expiresAt?: string) {
   return <span className="text-gray-600">in {formatDistanceToNow(date)}</span>;
 }
 
+function formatScope(promoCode: PromoCodeResponse) {
+  // Check for event-specific codes
+  if (
+    promoCode.applicableToType === "event" ||
+    (promoCode.allowedEventIds && promoCode.allowedEventIds.length > 0)
+  ) {
+    if (
+      promoCode.allowedEventTitles &&
+      promoCode.allowedEventTitles.length > 0
+    ) {
+      if (promoCode.allowedEventTitles.length === 1) {
+        return `Event: ${promoCode.allowedEventTitles[0]}`;
+      } else {
+        return `${promoCode.allowedEventTitles.length} Events`;
+      }
+    } else if (
+      promoCode.allowedEventIds &&
+      promoCode.allowedEventIds.length > 0
+    ) {
+      return `${promoCode.allowedEventIds.length} Events`;
+    } else {
+      return "All Events";
+    }
+  }
+
+  // Check for program-specific codes
+  if (promoCode.allowedProgramIds && promoCode.allowedProgramIds.length > 0) {
+    if (
+      promoCode.allowedProgramTitles &&
+      promoCode.allowedProgramTitles.length > 0
+    ) {
+      if (promoCode.allowedProgramTitles.length === 1) {
+        return `Program: ${promoCode.allowedProgramTitles[0]}`;
+      } else {
+        return `${promoCode.allowedProgramTitles.length} Programs`;
+      }
+    } else {
+      return `${promoCode.allowedProgramIds.length} Programs`;
+    }
+  }
+
+  // General code
+  return "General";
+}
+
 export default function PromoCodeList({
   codes,
   loading,
@@ -191,6 +240,9 @@ export default function PromoCodeList({
                 Discount
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Scope
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -232,6 +284,11 @@ export default function PromoCodeList({
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className="text-sm text-gray-900">
                     {formatDiscount(code)}
+                  </span>
+                </td>
+                <td className="px-6 py-4">
+                  <span className="text-sm text-gray-600">
+                    {formatScope(code)}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">

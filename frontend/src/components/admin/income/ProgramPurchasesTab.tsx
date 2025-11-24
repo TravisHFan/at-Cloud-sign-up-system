@@ -35,6 +35,9 @@ export default function ProgramPurchasesTab() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [purchaseTypeFilter, setPurchaseTypeFilter] = useState<
+    "all" | "program" | "event"
+  >("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -367,6 +370,28 @@ export default function ProgramPurchasesTab() {
             </select>
           </div>
 
+          {/* Type Filter */}
+          <div className="sm:w-48">
+            <label htmlFor="type" className="sr-only">
+              Filter by type
+            </label>
+            <select
+              id="type"
+              value={purchaseTypeFilter}
+              onChange={(e) => {
+                setPurchaseTypeFilter(
+                  e.target.value as "all" | "program" | "event"
+                );
+                setCurrentPage(1);
+              }}
+              className="block w-full py-2 px-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            >
+              <option value="all">All Types</option>
+              <option value="program">Programs Only</option>
+              <option value="event">Events Only</option>
+            </select>
+          </div>
+
           {/* Search Button */}
           <button
             type="submit"
@@ -387,6 +412,8 @@ export default function ProgramPurchasesTab() {
         purchases={purchases}
         showUser={true}
         onRowClick={handleRowClick}
+        purchaseTypeFilter={purchaseTypeFilter}
+        onPurchaseTypeFilterChange={setPurchaseTypeFilter}
       />
 
       {/* Pagination */}
