@@ -7,6 +7,19 @@ import mongoose from "mongoose";
 // Mock dependencies
 vi.mock("../../../../src/models/Purchase");
 
+/**
+ * Helper to create mock chain for Purchase.find().populate().populate().sort()
+ */
+function mockPurchaseFindChain(purchases: any[]) {
+  return {
+    populate: vi.fn().mockReturnValue({
+      populate: vi.fn().mockReturnValue({
+        sort: vi.fn().mockResolvedValue(purchases),
+      }),
+    }),
+  } as any;
+}
+
 describe("PurchaseHistoryController", () => {
   let mockReq: Partial<Request> & { user?: any };
   let mockRes: Partial<Response>;
@@ -61,11 +74,9 @@ describe("PurchaseHistoryController", () => {
 
       const mockPurchases: any[] = [];
 
-      vi.mocked(Purchase.find).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          sort: vi.fn().mockResolvedValue(mockPurchases),
-        }),
-      } as any);
+      vi.mocked(Purchase.find).mockReturnValue(
+        mockPurchaseFindChain(mockPurchases)
+      );
 
       await PurchaseHistoryController.getMyPurchases(
         mockReq as Request,
@@ -74,7 +85,9 @@ describe("PurchaseHistoryController", () => {
 
       expect(Purchase.find).toHaveBeenCalledWith({
         userId: userId,
-        status: { $in: ["completed", "refund_processing", "refund_failed", "refunded"] },
+        status: {
+          $in: ["completed", "refund_processing", "refund_failed", "refunded"],
+        },
       });
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith({
@@ -100,7 +113,14 @@ describe("PurchaseHistoryController", () => {
             title: "Program B",
             programType: "Webinar",
           },
-          status: { $in: ["completed", "refund_processing", "refund_failed", "refunded"] },
+          status: {
+            $in: [
+              "completed",
+              "refund_processing",
+              "refund_failed",
+              "refunded",
+            ],
+          },
           purchaseDate: purchaseDate2,
           finalPrice: 150,
         },
@@ -112,17 +132,22 @@ describe("PurchaseHistoryController", () => {
             title: "Program A",
             programType: "Workshop",
           },
-          status: { $in: ["completed", "refund_processing", "refund_failed", "refunded"] },
+          status: {
+            $in: [
+              "completed",
+              "refund_processing",
+              "refund_failed",
+              "refunded",
+            ],
+          },
           purchaseDate: purchaseDate1,
           finalPrice: 100,
         },
       ];
 
-      vi.mocked(Purchase.find).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          sort: vi.fn().mockResolvedValue(mockPurchases),
-        }),
-      } as any);
+      vi.mocked(Purchase.find).mockReturnValue(
+        mockPurchaseFindChain(mockPurchases)
+      );
 
       await PurchaseHistoryController.getMyPurchases(
         mockReq as Request,
@@ -143,7 +168,9 @@ describe("PurchaseHistoryController", () => {
 
       const findMock = vi.fn().mockReturnValue({
         populate: vi.fn().mockReturnValue({
-          sort: vi.fn().mockResolvedValue([]),
+          populate: vi.fn().mockReturnValue({
+            sort: vi.fn().mockResolvedValue([]),
+          }),
         }),
       });
 
@@ -156,7 +183,9 @@ describe("PurchaseHistoryController", () => {
 
       expect(findMock).toHaveBeenCalledWith({
         userId: userId,
-        status: { $in: ["completed", "refund_processing", "refund_failed", "refunded"] },
+        status: {
+          $in: ["completed", "refund_processing", "refund_failed", "refunded"],
+        },
       });
     });
 
@@ -165,8 +194,11 @@ describe("PurchaseHistoryController", () => {
         _id: userId,
       };
 
-      const populateMock = vi.fn().mockReturnValue({
+      const populateMock2 = vi.fn().mockReturnValue({
         sort: vi.fn().mockResolvedValue([]),
+      });
+      const populateMock = vi.fn().mockReturnValue({
+        populate: populateMock2,
       });
 
       vi.mocked(Purchase.find).mockReturnValue({
@@ -193,7 +225,9 @@ describe("PurchaseHistoryController", () => {
 
       vi.mocked(Purchase.find).mockReturnValue({
         populate: vi.fn().mockReturnValue({
-          sort: sortMock,
+          populate: vi.fn().mockReturnValue({
+            sort: sortMock,
+          }),
         }),
       } as any);
 
@@ -222,7 +256,14 @@ describe("PurchaseHistoryController", () => {
             programType: "Webinar",
           },
           purchaseDate: newDate,
-          status: { $in: ["completed", "refund_processing", "refund_failed", "refunded"] },
+          status: {
+            $in: [
+              "completed",
+              "refund_processing",
+              "refund_failed",
+              "refunded",
+            ],
+          },
         },
         {
           _id: new mongoose.Types.ObjectId(),
@@ -232,15 +273,20 @@ describe("PurchaseHistoryController", () => {
             programType: "Workshop",
           },
           purchaseDate: oldDate,
-          status: { $in: ["completed", "refund_processing", "refund_failed", "refunded"] },
+          status: {
+            $in: [
+              "completed",
+              "refund_processing",
+              "refund_failed",
+              "refunded",
+            ],
+          },
         },
       ];
 
-      vi.mocked(Purchase.find).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          sort: vi.fn().mockResolvedValue(mockPurchases),
-        }),
-      } as any);
+      vi.mocked(Purchase.find).mockReturnValue(
+        mockPurchaseFindChain(mockPurchases)
+      );
 
       await PurchaseHistoryController.getMyPurchases(
         mockReq as Request,
@@ -262,16 +308,21 @@ describe("PurchaseHistoryController", () => {
           _id: new mongoose.Types.ObjectId(),
           userId,
           programId: null,
-          status: { $in: ["completed", "refund_processing", "refund_failed", "refunded"] },
+          status: {
+            $in: [
+              "completed",
+              "refund_processing",
+              "refund_failed",
+              "refunded",
+            ],
+          },
           purchaseDate: new Date(),
         },
       ];
 
-      vi.mocked(Purchase.find).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          sort: vi.fn().mockResolvedValue(mockPurchases),
-        }),
-      } as any);
+      vi.mocked(Purchase.find).mockReturnValue(
+        mockPurchaseFindChain(mockPurchases)
+      );
 
       await PurchaseHistoryController.getMyPurchases(
         mockReq as Request,
@@ -294,7 +345,9 @@ describe("PurchaseHistoryController", () => {
 
       vi.mocked(Purchase.find).mockReturnValue({
         populate: vi.fn().mockReturnValue({
-          sort: vi.fn().mockRejectedValue(dbError),
+          populate: vi.fn().mockReturnValue({
+            sort: vi.fn().mockRejectedValue(dbError),
+          }),
         }),
       } as any);
 
@@ -321,7 +374,9 @@ describe("PurchaseHistoryController", () => {
 
       vi.mocked(Purchase.find).mockReturnValue({
         populate: vi.fn().mockReturnValue({
-          sort: vi.fn().mockRejectedValue("Unexpected string error"),
+          populate: vi.fn().mockReturnValue({
+            sort: vi.fn().mockRejectedValue("Unexpected string error"),
+          }),
         }),
       } as any);
 
@@ -350,7 +405,9 @@ describe("PurchaseHistoryController", () => {
 
       const findMock = vi.fn().mockReturnValue({
         populate: vi.fn().mockReturnValue({
-          sort: vi.fn().mockResolvedValue([]),
+          populate: vi.fn().mockReturnValue({
+            sort: vi.fn().mockResolvedValue([]),
+          }),
         }),
       });
 

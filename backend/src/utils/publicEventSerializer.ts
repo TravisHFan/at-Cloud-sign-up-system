@@ -32,6 +32,10 @@ export interface PublicEventPayload {
   roles: PublicEventRole[];
   slug: string;
   format?: string; // Online | In-person | Hybrid Participation
+  pricing?: {
+    isFree: boolean;
+    price?: number; // in cents
+  };
 }
 
 // Basic sanitization of free-text fields while PRESERVING intended line breaks.
@@ -160,5 +164,12 @@ export async function serializePublicEvent(
     roles,
     slug: event.publicSlug || "",
     format: event.format,
+    pricing: event.pricing
+      ? {
+          isFree:
+            event.pricing.isFree !== false && (event.pricing.price ?? 0) === 0, // Free if isFree is not false AND no price set
+          price: event.pricing.price,
+        }
+      : { isFree: true }, // Default to free if no pricing object
   };
 }

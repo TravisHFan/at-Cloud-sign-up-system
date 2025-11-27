@@ -265,6 +265,7 @@ describe("Refund Webhook Integration Tests", () => {
         type: "bundle_discount",
         discountAmount: 50,
         ownerId: regularUser._id,
+        applicableToType: "program",
         excludedProgramId: program._id,
         isActive: true,
         isUsed: false,
@@ -320,6 +321,7 @@ describe("Refund Webhook Integration Tests", () => {
         type: "bundle_discount",
         discountAmount: 50,
         ownerId: regularUser._id,
+        applicableToType: "program",
         excludedProgramId: program._id,
         isActive: true,
         isUsed: true, // Already used

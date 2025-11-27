@@ -7,6 +7,19 @@ import mongoose from "mongoose";
 // Mock dependencies
 vi.mock("../../../../src/models/Purchase");
 
+/**
+ * Helper to create mock chain for Purchase.findById().populate().populate().populate()
+ */
+function mockPurchaseFindByIdChain(purchase: any) {
+  return {
+    populate: vi.fn().mockReturnValue({
+      populate: vi.fn().mockReturnValue({
+        populate: vi.fn().mockResolvedValue(purchase),
+      }),
+    }),
+  } as any;
+}
+
 describe("PurchaseReceiptController", () => {
   let mockReq: Partial<Request> & { user?: any };
   let mockRes: Partial<Response>;
@@ -79,11 +92,9 @@ describe("PurchaseReceiptController", () => {
       };
       mockReq.params = { id: purchaseId.toString() };
 
-      vi.mocked(Purchase.findById).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockResolvedValue(null),
-        }),
-      } as any);
+      vi.mocked(Purchase.findById).mockReturnValue(
+        mockPurchaseFindByIdChain(null)
+      );
 
       await PurchaseReceiptController.getPurchaseReceipt(
         mockReq as Request,
@@ -112,11 +123,9 @@ describe("PurchaseReceiptController", () => {
         status: "completed",
       };
 
-      vi.mocked(Purchase.findById).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockResolvedValue(mockPurchase),
-        }),
-      } as any);
+      vi.mocked(Purchase.findById).mockReturnValue(
+        mockPurchaseFindByIdChain(mockPurchase)
+      );
 
       await PurchaseReceiptController.getPurchaseReceipt(
         mockReq as Request,
@@ -144,11 +153,9 @@ describe("PurchaseReceiptController", () => {
         status: "pending",
       };
 
-      vi.mocked(Purchase.findById).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockResolvedValue(mockPurchase),
-        }),
-      } as any);
+      vi.mocked(Purchase.findById).mockReturnValue(
+        mockPurchaseFindByIdChain(mockPurchase)
+      );
 
       await PurchaseReceiptController.getPurchaseReceipt(
         mockReq as Request,
@@ -178,16 +185,16 @@ describe("PurchaseReceiptController", () => {
           programType: "Workshop",
           hostedBy: "Test Org",
         },
+        purchaseType: "program",
+        eventId: null,
         status: "completed",
         orderNumber: "ORDER-001",
         finalPrice: 100,
       };
 
-      vi.mocked(Purchase.findById).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockResolvedValue(mockPurchase),
-        }),
-      } as any);
+      vi.mocked(Purchase.findById).mockReturnValue(
+        mockPurchaseFindByIdChain(mockPurchase)
+      );
 
       await PurchaseReceiptController.getPurchaseReceipt(
         mockReq as Request,
@@ -217,15 +224,15 @@ describe("PurchaseReceiptController", () => {
           title: "Test Program",
           programType: "Workshop",
         },
+        purchaseType: "program",
+        eventId: null,
         status: "completed",
         orderNumber: "ORDER-002",
       };
 
-      vi.mocked(Purchase.findById).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockResolvedValue(mockPurchase),
-        }),
-      } as any);
+      vi.mocked(Purchase.findById).mockReturnValue(
+        mockPurchaseFindByIdChain(mockPurchase)
+      );
 
       await PurchaseReceiptController.getPurchaseReceipt(
         mockReq as Request,
@@ -254,11 +261,9 @@ describe("PurchaseReceiptController", () => {
         status: "completed",
       };
 
-      vi.mocked(Purchase.findById).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockResolvedValue(mockPurchase),
-        }),
-      } as any);
+      vi.mocked(Purchase.findById).mockReturnValue(
+        mockPurchaseFindByIdChain(mockPurchase)
+      );
 
       await PurchaseReceiptController.getPurchaseReceipt(
         mockReq as Request,
@@ -287,14 +292,14 @@ describe("PurchaseReceiptController", () => {
           _id: programId,
           title: "Test Program",
         },
+        purchaseType: "program",
+        eventId: null,
         status: "completed",
       };
 
-      vi.mocked(Purchase.findById).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockResolvedValue(mockPurchase),
-        }),
-      } as any);
+      vi.mocked(Purchase.findById).mockReturnValue(
+        mockPurchaseFindByIdChain(mockPurchase)
+      );
 
       await PurchaseReceiptController.getPurchaseReceipt(
         mockReq as Request,
@@ -322,11 +327,9 @@ describe("PurchaseReceiptController", () => {
         status: "completed",
       };
 
-      vi.mocked(Purchase.findById).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockResolvedValue(mockPurchase),
-        }),
-      } as any);
+      vi.mocked(Purchase.findById).mockReturnValue(
+        mockPurchaseFindByIdChain(mockPurchase)
+      );
 
       await PurchaseReceiptController.getPurchaseReceipt(
         mockReq as Request,
@@ -350,8 +353,12 @@ describe("PurchaseReceiptController", () => {
         status: "completed",
       };
 
+      const populateUserMock = vi.fn().mockResolvedValue(mockPurchase);
+      const populateEventMock = vi.fn().mockReturnValue({
+        populate: populateUserMock,
+      });
       const populateProgramMock = vi.fn().mockReturnValue({
-        populate: vi.fn().mockResolvedValue(mockPurchase),
+        populate: populateEventMock,
       });
 
       vi.mocked(Purchase.findById).mockReturnValue({
@@ -368,7 +375,8 @@ describe("PurchaseReceiptController", () => {
         "programId",
         "title programType hostedBy"
       );
-      expect(populateProgramMock().populate).toHaveBeenCalledWith(
+      expect(populateEventMock).toHaveBeenCalledWith("eventId", "title");
+      expect(populateUserMock).toHaveBeenCalledWith(
         "userId",
         "firstName lastName email"
       );
@@ -385,7 +393,9 @@ describe("PurchaseReceiptController", () => {
 
       vi.mocked(Purchase.findById).mockReturnValue({
         populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockRejectedValue(dbError),
+          populate: vi.fn().mockReturnValue({
+            populate: vi.fn().mockRejectedValue(dbError),
+          }),
         }),
       } as any);
 
@@ -421,7 +431,9 @@ describe("PurchaseReceiptController", () => {
 
       vi.mocked(Purchase.findById).mockReturnValue({
         populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockRejectedValue("Unexpected error"),
+          populate: vi.fn().mockReturnValue({
+            populate: vi.fn().mockRejectedValue("Unexpected error"),
+          }),
         }),
       } as any);
 
@@ -458,11 +470,9 @@ describe("PurchaseReceiptController", () => {
         status: "completed",
       };
 
-      vi.mocked(Purchase.findById).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockResolvedValue(mockPurchase),
-        }),
-      } as any);
+      vi.mocked(Purchase.findById).mockReturnValue(
+        mockPurchaseFindByIdChain(mockPurchase)
+      );
 
       await PurchaseReceiptController.getPurchaseReceipt(
         mockReq as Request,
@@ -490,11 +500,9 @@ describe("PurchaseReceiptController", () => {
         status: "failed",
       };
 
-      vi.mocked(Purchase.findById).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockResolvedValue(mockPurchase),
-        }),
-      } as any);
+      vi.mocked(Purchase.findById).mockReturnValue(
+        mockPurchaseFindByIdChain(mockPurchase)
+      );
 
       await PurchaseReceiptController.getPurchaseReceipt(
         mockReq as Request,
@@ -522,11 +530,9 @@ describe("PurchaseReceiptController", () => {
         status: "cancelled",
       };
 
-      vi.mocked(Purchase.findById).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockResolvedValue(mockPurchase),
-        }),
-      } as any);
+      vi.mocked(Purchase.findById).mockReturnValue(
+        mockPurchaseFindByIdChain(mockPurchase)
+      );
 
       await PurchaseReceiptController.getPurchaseReceipt(
         mockReq as Request,

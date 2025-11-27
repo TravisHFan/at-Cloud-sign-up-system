@@ -257,7 +257,7 @@ export function useEventData({
           publicSlug: (eventData as { publicSlug?: string }).publicSlug,
           // Phase 6: Paid Events - Include pricing information
           pricing: (
-            eventData as { pricing?: { isFree?: boolean; price?: number } }
+            eventData as { pricing?: { isFree: boolean; price?: number } }
           ).pricing,
         };
 

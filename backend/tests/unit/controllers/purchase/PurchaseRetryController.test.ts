@@ -9,6 +9,17 @@ import mongoose from "mongoose";
 vi.mock("../../../../src/models/Purchase");
 vi.mock("../../../../src/services/stripeService");
 
+/**
+ * Helper to create mock chain for Purchase.findById().populate().populate()
+ */
+function mockPurchaseFindByIdChain(purchase: any) {
+  return {
+    populate: vi.fn().mockReturnValue({
+      populate: vi.fn().mockResolvedValue(purchase),
+    }),
+  } as any;
+}
+
 describe("PurchaseRetryController", () => {
   let mockReq: Partial<Request> & { user?: any; params?: any };
   let mockRes: Partial<Response>;
@@ -85,9 +96,9 @@ describe("PurchaseRetryController", () => {
       };
       mockReq.params = { id: purchaseId.toString() };
 
-      vi.mocked(Purchase.findById).mockReturnValue({
-        populate: vi.fn().mockResolvedValue(null),
-      } as any);
+      vi.mocked(Purchase.findById).mockReturnValue(
+        mockPurchaseFindByIdChain(null)
+      );
 
       await PurchaseRetryController.retryPendingPurchase(
         mockReq as Request,
@@ -117,9 +128,9 @@ describe("PurchaseRetryController", () => {
         status: "pending",
       };
 
-      vi.mocked(Purchase.findById).mockReturnValue({
-        populate: vi.fn().mockResolvedValue(mockPurchase),
-      } as any);
+      vi.mocked(Purchase.findById).mockReturnValue(
+        mockPurchaseFindByIdChain(mockPurchase)
+      );
 
       await PurchaseRetryController.retryPendingPurchase(
         mockReq as Request,
@@ -146,9 +157,9 @@ describe("PurchaseRetryController", () => {
         status: "completed",
       };
 
-      vi.mocked(Purchase.findById).mockReturnValue({
-        populate: vi.fn().mockResolvedValue(mockPurchase),
-      } as any);
+      vi.mocked(Purchase.findById).mockReturnValue(
+        mockPurchaseFindByIdChain(mockPurchase)
+      );
 
       await PurchaseRetryController.retryPendingPurchase(
         mockReq as Request,
@@ -175,9 +186,9 @@ describe("PurchaseRetryController", () => {
         status: "failed",
       };
 
-      vi.mocked(Purchase.findById).mockReturnValue({
-        populate: vi.fn().mockResolvedValue(mockPurchase),
-      } as any);
+      vi.mocked(Purchase.findById).mockReturnValue(
+        mockPurchaseFindByIdChain(mockPurchase)
+      );
 
       await PurchaseRetryController.retryPendingPurchase(
         mockReq as Request,
@@ -202,6 +213,8 @@ describe("PurchaseRetryController", () => {
         _id: purchaseId,
         userId,
         programId,
+        purchaseType: "program",
+        eventId: null,
         status: "pending",
       };
 
@@ -209,12 +222,13 @@ describe("PurchaseRetryController", () => {
         _id: new mongoose.Types.ObjectId(),
         userId,
         programId,
+        purchaseType: "program",
         status: "completed",
       };
 
-      vi.mocked(Purchase.findById).mockReturnValue({
-        populate: vi.fn().mockResolvedValue(mockPendingPurchase),
-      } as any);
+      vi.mocked(Purchase.findById).mockReturnValue(
+        mockPurchaseFindByIdChain(mockPendingPurchase)
+      );
 
       vi.mocked(Purchase.findOne).mockResolvedValue(
         mockCompletedPurchase as any
@@ -252,6 +266,8 @@ describe("PurchaseRetryController", () => {
           _id: programId,
           title: "Test Program",
         },
+        purchaseType: "program",
+        eventId: null,
         status: "pending",
         orderNumber: "ORDER-001",
         fullPrice: 100,
@@ -264,9 +280,9 @@ describe("PurchaseRetryController", () => {
         save: vi.fn().mockResolvedValue({}),
       };
 
-      vi.mocked(Purchase.findById).mockReturnValue({
-        populate: vi.fn().mockResolvedValue(mockPendingPurchase),
-      } as any);
+      vi.mocked(Purchase.findById).mockReturnValue(
+        mockPurchaseFindByIdChain(mockPendingPurchase)
+      );
 
       vi.mocked(Purchase.findOne).mockResolvedValue(null);
 
@@ -328,6 +344,8 @@ describe("PurchaseRetryController", () => {
           _id: programId,
           title: "Test Program",
         },
+        purchaseType: "program",
+        eventId: null,
         status: "pending",
         orderNumber: "ORDER-002",
         fullPrice: 100,
@@ -339,9 +357,9 @@ describe("PurchaseRetryController", () => {
         save: vi.fn().mockResolvedValue({}),
       };
 
-      vi.mocked(Purchase.findById).mockReturnValue({
-        populate: vi.fn().mockResolvedValue(mockPendingPurchase),
-      } as any);
+      vi.mocked(Purchase.findById).mockReturnValue(
+        mockPurchaseFindByIdChain(mockPendingPurchase)
+      );
 
       vi.mocked(Purchase.findOne).mockResolvedValue(null);
 
@@ -389,6 +407,8 @@ describe("PurchaseRetryController", () => {
           _id: programId,
           title: "Test Program",
         },
+        purchaseType: "program",
+        eventId: null,
         status: "pending",
         orderNumber: "ORDER-003",
         fullPrice: 100,
@@ -400,9 +420,9 @@ describe("PurchaseRetryController", () => {
         save: vi.fn().mockResolvedValue({}),
       };
 
-      vi.mocked(Purchase.findById).mockReturnValue({
-        populate: vi.fn().mockResolvedValue(mockPendingPurchase),
-      } as any);
+      vi.mocked(Purchase.findById).mockReturnValue(
+        mockPurchaseFindByIdChain(mockPendingPurchase)
+      );
 
       vi.mocked(Purchase.findOne).mockResolvedValue(null);
 
@@ -433,7 +453,9 @@ describe("PurchaseRetryController", () => {
       const dbError = new Error("Database connection failed");
 
       vi.mocked(Purchase.findById).mockReturnValue({
-        populate: vi.fn().mockRejectedValue(dbError),
+        populate: vi.fn().mockReturnValue({
+          populate: vi.fn().mockRejectedValue(dbError),
+        }),
       } as any);
 
       await PurchaseRetryController.retryPendingPurchase(
@@ -467,6 +489,8 @@ describe("PurchaseRetryController", () => {
           _id: programId,
           title: "Test Program",
         },
+        purchaseType: "program",
+        eventId: null,
         status: "pending",
         fullPrice: 100,
         classRepDiscount: 0,
@@ -477,9 +501,9 @@ describe("PurchaseRetryController", () => {
         save: vi.fn().mockResolvedValue({}),
       };
 
-      vi.mocked(Purchase.findById).mockReturnValue({
-        populate: vi.fn().mockResolvedValue(mockPendingPurchase),
-      } as any);
+      vi.mocked(Purchase.findById).mockReturnValue(
+        mockPurchaseFindByIdChain(mockPendingPurchase)
+      );
 
       vi.mocked(Purchase.findOne).mockResolvedValue(null);
 
@@ -521,6 +545,8 @@ describe("PurchaseRetryController", () => {
           _id: programId,
           title: "Test Program",
         },
+        purchaseType: "program",
+        eventId: null,
         status: "pending",
         fullPrice: 100,
         classRepDiscount: 0,
@@ -531,9 +557,9 @@ describe("PurchaseRetryController", () => {
         save: vi.fn().mockRejectedValue(saveError),
       };
 
-      vi.mocked(Purchase.findById).mockReturnValue({
-        populate: vi.fn().mockResolvedValue(mockPendingPurchase),
-      } as any);
+      vi.mocked(Purchase.findById).mockReturnValue(
+        mockPurchaseFindByIdChain(mockPendingPurchase)
+      );
 
       vi.mocked(Purchase.findOne).mockResolvedValue(null);
 
@@ -571,7 +597,9 @@ describe("PurchaseRetryController", () => {
       mockReq.params = { id: purchaseId.toString() };
 
       vi.mocked(Purchase.findById).mockReturnValue({
-        populate: vi.fn().mockRejectedValue("Unexpected string error"),
+        populate: vi.fn().mockReturnValue({
+          populate: vi.fn().mockRejectedValue("Unexpected string error"),
+        }),
       } as any);
 
       await PurchaseRetryController.retryPendingPurchase(

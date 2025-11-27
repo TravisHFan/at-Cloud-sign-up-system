@@ -7,6 +7,19 @@ import mongoose from "mongoose";
 // Mock dependencies
 vi.mock("../../../../src/models/Purchase");
 
+// Helper function to mock the Purchase.find() chain
+function mockPurchaseFindChain(purchases: any[]) {
+  return {
+    populate: vi.fn().mockReturnValue({
+      populate: vi.fn().mockReturnValue({
+        populate: vi.fn().mockReturnValue({
+          sort: vi.fn().mockResolvedValue(purchases),
+        }),
+      }),
+    }),
+  } as any;
+}
+
 describe("PurchaseAdminController", () => {
   let mockReq: Partial<Request> & { user?: any; query?: any };
   let mockRes: Partial<Response>;
@@ -94,13 +107,9 @@ describe("PurchaseAdminController", () => {
 
       const mockPurchases: any[] = [];
 
-      vi.mocked(Purchase.find).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockReturnValue({
-            sort: vi.fn().mockResolvedValue(mockPurchases),
-          }),
-        }),
-      } as any);
+      vi.mocked(Purchase.find).mockReturnValue(
+        mockPurchaseFindChain(mockPurchases)
+      );
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
@@ -118,13 +127,9 @@ describe("PurchaseAdminController", () => {
 
       const mockPurchases: any[] = [];
 
-      vi.mocked(Purchase.find).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockReturnValue({
-            sort: vi.fn().mockResolvedValue(mockPurchases),
-          }),
-        }),
-      } as any);
+      vi.mocked(Purchase.find).mockReturnValue(
+        mockPurchaseFindChain(mockPurchases)
+      );
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
@@ -154,6 +159,8 @@ describe("PurchaseAdminController", () => {
             _id: programId,
             title: "Test Program",
           },
+          eventId: null,
+          purchaseType: "program",
           fullPrice: 100,
           finalPrice: 100,
           status: "completed",
@@ -163,13 +170,9 @@ describe("PurchaseAdminController", () => {
         },
       ];
 
-      vi.mocked(Purchase.find).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockReturnValue({
-            sort: vi.fn().mockResolvedValue(mockPurchases),
-          }),
-        }),
-      } as any);
+      vi.mocked(Purchase.find).mockReturnValue(
+        mockPurchaseFindChain(mockPurchases)
+      );
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
@@ -225,6 +228,8 @@ describe("PurchaseAdminController", () => {
           _id: programId,
           title: "Program",
         },
+        eventId: null,
+        purchaseType: "program",
         fullPrice: 100,
         finalPrice: 100,
         status: "completed",
@@ -233,13 +238,9 @@ describe("PurchaseAdminController", () => {
         createdAt: new Date(),
       }));
 
-      vi.mocked(Purchase.find).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockReturnValue({
-            sort: vi.fn().mockResolvedValue(mockPurchases),
-          }),
-        }),
-      } as any);
+      vi.mocked(Purchase.find).mockReturnValue(
+        mockPurchaseFindChain(mockPurchases)
+      );
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
@@ -276,13 +277,9 @@ describe("PurchaseAdminController", () => {
 
       const mockPurchases: any[] = [];
 
-      vi.mocked(Purchase.find).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockReturnValue({
-            sort: vi.fn().mockResolvedValue(mockPurchases),
-          }),
-        }),
-      } as any);
+      vi.mocked(Purchase.find).mockReturnValue(
+        mockPurchaseFindChain(mockPurchases)
+      );
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
@@ -303,13 +300,9 @@ describe("PurchaseAdminController", () => {
 
       const mockPurchases: any[] = [];
 
-      vi.mocked(Purchase.find).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockReturnValue({
-            sort: vi.fn().mockResolvedValue(mockPurchases),
-          }),
-        }),
-      } as any);
+      vi.mocked(Purchase.find).mockReturnValue(
+        mockPurchaseFindChain(mockPurchases)
+      );
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
@@ -330,13 +323,9 @@ describe("PurchaseAdminController", () => {
 
       const mockPurchases: any[] = [];
 
-      vi.mocked(Purchase.find).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockReturnValue({
-            sort: vi.fn().mockResolvedValue(mockPurchases),
-          }),
-        }),
-      } as any);
+      vi.mocked(Purchase.find).mockReturnValue(
+        mockPurchaseFindChain(mockPurchases)
+      );
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
@@ -427,6 +416,8 @@ describe("PurchaseAdminController", () => {
             _id: programId,
             title: "Program A",
           },
+          eventId: null,
+          purchaseType: "program",
           fullPrice: 100,
           finalPrice: 100,
           status: "completed",
@@ -447,6 +438,8 @@ describe("PurchaseAdminController", () => {
             _id: programId,
             title: "Program B",
           },
+          eventId: null,
+          purchaseType: "program",
           fullPrice: 100,
           finalPrice: 100,
           status: "completed",
@@ -456,13 +449,9 @@ describe("PurchaseAdminController", () => {
         },
       ];
 
-      vi.mocked(Purchase.find).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockReturnValue({
-            sort: vi.fn().mockResolvedValue(mockPurchases),
-          }),
-        }),
-      } as any);
+      vi.mocked(Purchase.find).mockReturnValue(
+        mockPurchaseFindChain(mockPurchases)
+      );
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
@@ -497,6 +486,8 @@ describe("PurchaseAdminController", () => {
             _id: programId,
             title: "Program A",
           },
+          eventId: null,
+          purchaseType: "program",
           fullPrice: 100,
           finalPrice: 100,
           status: "completed",
@@ -517,6 +508,8 @@ describe("PurchaseAdminController", () => {
             _id: programId,
             title: "Program B",
           },
+          eventId: null,
+          purchaseType: "program",
           fullPrice: 100,
           finalPrice: 100,
           status: "completed",
@@ -526,13 +519,9 @@ describe("PurchaseAdminController", () => {
         },
       ];
 
-      vi.mocked(Purchase.find).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockReturnValue({
-            sort: vi.fn().mockResolvedValue(mockPurchases),
-          }),
-        }),
-      } as any);
+      vi.mocked(Purchase.find).mockReturnValue(
+        mockPurchaseFindChain(mockPurchases)
+      );
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
@@ -567,6 +556,8 @@ describe("PurchaseAdminController", () => {
             _id: programId,
             title: "Program A",
           },
+          eventId: null,
+          purchaseType: "program",
           fullPrice: 100,
           finalPrice: 100,
           status: "completed",
@@ -587,6 +578,8 @@ describe("PurchaseAdminController", () => {
             _id: programId,
             title: "Program B",
           },
+          eventId: null,
+          purchaseType: "program",
           fullPrice: 100,
           finalPrice: 100,
           status: "completed",
@@ -596,13 +589,9 @@ describe("PurchaseAdminController", () => {
         },
       ];
 
-      vi.mocked(Purchase.find).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockReturnValue({
-            sort: vi.fn().mockResolvedValue(mockPurchases),
-          }),
-        }),
-      } as any);
+      vi.mocked(Purchase.find).mockReturnValue(
+        mockPurchaseFindChain(mockPurchases)
+      );
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
@@ -637,6 +626,8 @@ describe("PurchaseAdminController", () => {
             _id: programId,
             title: "Workshop on Testing",
           },
+          eventId: null,
+          purchaseType: "program",
           fullPrice: 100,
           finalPrice: 100,
           status: "completed",
@@ -657,6 +648,8 @@ describe("PurchaseAdminController", () => {
             _id: programId,
             title: "Webinar on Security",
           },
+          eventId: null,
+          purchaseType: "program",
           fullPrice: 100,
           finalPrice: 100,
           status: "completed",
@@ -666,13 +659,9 @@ describe("PurchaseAdminController", () => {
         },
       ];
 
-      vi.mocked(Purchase.find).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockReturnValue({
-            sort: vi.fn().mockResolvedValue(mockPurchases),
-          }),
-        }),
-      } as any);
+      vi.mocked(Purchase.find).mockReturnValue(
+        mockPurchaseFindChain(mockPurchases)
+      );
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
@@ -707,6 +696,8 @@ describe("PurchaseAdminController", () => {
             _id: programId,
             title: "Program A",
           },
+          eventId: null,
+          purchaseType: "program",
           fullPrice: 100,
           finalPrice: 100,
           status: "completed",
@@ -727,6 +718,8 @@ describe("PurchaseAdminController", () => {
             _id: programId,
             title: "Program B",
           },
+          eventId: null,
+          purchaseType: "program",
           fullPrice: 100,
           finalPrice: 100,
           status: "completed",
@@ -736,13 +729,9 @@ describe("PurchaseAdminController", () => {
         },
       ];
 
-      vi.mocked(Purchase.find).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockReturnValue({
-            sort: vi.fn().mockResolvedValue(mockPurchases),
-          }),
-        }),
-      } as any);
+      vi.mocked(Purchase.find).mockReturnValue(
+        mockPurchaseFindChain(mockPurchases)
+      );
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
@@ -774,6 +763,8 @@ describe("PurchaseAdminController", () => {
             _id: programId,
             title: "Test Program",
           },
+          eventId: null,
+          purchaseType: "program",
           fullPrice: 100,
           finalPrice: 100,
           status: "completed",
@@ -783,13 +774,9 @@ describe("PurchaseAdminController", () => {
         },
       ];
 
-      vi.mocked(Purchase.find).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockReturnValue({
-            sort: vi.fn().mockResolvedValue(mockPurchases),
-          }),
-        }),
-      } as any);
+      vi.mocked(Purchase.find).mockReturnValue(
+        mockPurchaseFindChain(mockPurchases)
+      );
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
@@ -815,6 +802,8 @@ describe("PurchaseAdminController", () => {
             _id: programId,
             title: "Test Program",
           },
+          eventId: null,
+          purchaseType: "program",
           fullPrice: 100,
           finalPrice: 100,
           status: "completed",
@@ -824,13 +813,9 @@ describe("PurchaseAdminController", () => {
         },
       ];
 
-      vi.mocked(Purchase.find).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockReturnValue({
-            sort: vi.fn().mockResolvedValue(mockPurchases),
-          }),
-        }),
-      } as any);
+      vi.mocked(Purchase.find).mockReturnValue(
+        mockPurchaseFindChain(mockPurchases)
+      );
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
@@ -858,6 +843,8 @@ describe("PurchaseAdminController", () => {
             email: "john@example.com",
           },
           programId: null,
+          eventId: null,
+          purchaseType: "program",
           fullPrice: 100,
           finalPrice: 100,
           status: "completed",
@@ -867,13 +854,9 @@ describe("PurchaseAdminController", () => {
         },
       ];
 
-      vi.mocked(Purchase.find).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockReturnValue({
-            sort: vi.fn().mockResolvedValue(mockPurchases),
-          }),
-        }),
-      } as any);
+      vi.mocked(Purchase.find).mockReturnValue(
+        mockPurchaseFindChain(mockPurchases)
+      );
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
@@ -907,6 +890,8 @@ describe("PurchaseAdminController", () => {
             _id: programId,
             title: "Test Program",
           },
+          eventId: null,
+          purchaseType: "program",
           fullPrice: 200,
           classRepDiscount: 20,
           earlyBirdDiscount: 10,
@@ -927,13 +912,9 @@ describe("PurchaseAdminController", () => {
         },
       ];
 
-      vi.mocked(Purchase.find).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockReturnValue({
-            sort: vi.fn().mockResolvedValue(mockPurchases),
-          }),
-        }),
-      } as any);
+      vi.mocked(Purchase.find).mockReturnValue(
+        mockPurchaseFindChain(mockPurchases)
+      );
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
@@ -974,7 +955,9 @@ describe("PurchaseAdminController", () => {
       vi.mocked(Purchase.find).mockReturnValue({
         populate: vi.fn().mockReturnValue({
           populate: vi.fn().mockReturnValue({
-            sort: vi.fn().mockRejectedValue(dbError),
+            populate: vi.fn().mockReturnValue({
+              sort: vi.fn().mockRejectedValue(dbError),
+            }),
           }),
         }),
       } as any);
@@ -1004,8 +987,11 @@ describe("PurchaseAdminController", () => {
       const mockPurchases: any[] = [];
 
       const sortMock = vi.fn().mockResolvedValue(mockPurchases);
-      const populateMock2 = vi.fn().mockReturnValue({
+      const populateMock3 = vi.fn().mockReturnValue({
         sort: sortMock,
+      });
+      const populateMock2 = vi.fn().mockReturnValue({
+        populate: populateMock3,
       });
       const populateMock1 = vi.fn().mockReturnValue({
         populate: populateMock2,
@@ -1032,8 +1018,11 @@ describe("PurchaseAdminController", () => {
       const mockPurchases: any[] = [];
 
       const sortMock = vi.fn().mockResolvedValue(mockPurchases);
-      const populateMock2 = vi.fn().mockReturnValue({
+      const populateMock3 = vi.fn().mockReturnValue({
         sort: sortMock,
+      });
+      const populateMock2 = vi.fn().mockReturnValue({
+        populate: populateMock3,
       });
       const populateMock1 = vi.fn().mockReturnValue({
         populate: populateMock2,
@@ -1081,6 +1070,8 @@ describe("PurchaseAdminController", () => {
             _id: programId,
             title: "Test Program",
           },
+          eventId: null,
+          purchaseType: "program",
           fullPrice: 100,
           finalPrice: 100,
           status: "completed",
@@ -1090,13 +1081,9 @@ describe("PurchaseAdminController", () => {
         },
       ];
 
-      vi.mocked(Purchase.find).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockReturnValue({
-            sort: vi.fn().mockResolvedValue(mockPurchases),
-          }),
-        }),
-      } as any);
+      vi.mocked(Purchase.find).mockReturnValue(
+        mockPurchaseFindChain(mockPurchases)
+      );
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,

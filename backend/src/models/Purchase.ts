@@ -37,6 +37,7 @@ export interface IPurchase extends Document {
 
   // Promo code fields - code USED on this purchase
   promoCode?: string; // The promo code that was applied to this purchase
+  promoCodeId?: mongoose.Types.ObjectId; // Reference to the promo code document
   promoDiscountAmount?: number; // Dollar discount from promo (in cents, e.g., 5000 = $50)
   promoDiscountPercent?: number; // Percentage discount from promo (0-100, for 100% staff codes)
 
@@ -188,6 +189,10 @@ const purchaseSchema = new Schema<IPurchase>(
       trim: true,
       maxlength: 20,
       index: true, // Index for searching by promo code
+    },
+    promoCodeId: {
+      type: Schema.Types.ObjectId,
+      ref: "PromoCode",
     },
     promoDiscountAmount: {
       type: Number,

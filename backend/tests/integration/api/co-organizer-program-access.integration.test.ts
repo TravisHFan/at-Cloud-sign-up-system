@@ -15,6 +15,7 @@ import { describe, it, expect, beforeAll, afterEach } from "vitest";
 import request from "supertest";
 import mongoose from "mongoose";
 import app from "../../../src/app";
+import { createAndLoginTestUser } from "../../test-utils/createTestUser";
 import {
   User,
   Event,
@@ -50,113 +51,40 @@ describe("Co-Organizer Program Access Integration Tests", () => {
     await Registration.deleteMany({});
 
     // Create Super Admin user for setup
-    const superAdminData = {
-      email: "superadmin-coorg@test.com",
-      username: "superadmin-coorg",
-      password: "Admin123!",
-      firstName: "Super",
-      lastName: "Admin",
-      role: "Super Admin",
-      roleInAtCloud: "Super Admin",
-      isVerified: true,
-    };
-    const regResponse = await request(app)
-      .post("/api/auth/register")
-      .send(superAdminData);
-
-    // If registration fails due to existing user, just proceed with login
-    if (regResponse.status !== 201) {
-      console.log("Super admin already exists, proceeding with login");
-    }
-
-    const superAdminLoginResponse = await request(app)
-      .post("/api/auth/login")
-      .send({
-        emailOrUsername: "superadmin-coorg@test.com",
-        password: "Admin123!",
-      });
-    superAdminToken = superAdminLoginResponse.body.data.accessToken;
+    const adminUser = await createAndLoginTestUser({ role: "Administrator" });
+    superAdminToken = adminUser.token;
 
     // Create event creator (Leader)
-    const creatorData = {
-      email: "creator-coorg@test.com",
-      username: "creator-coorg",
-      password: "Creator123!",
-      firstName: "Event",
-      lastName: "Creator",
-      role: "Leader",
-      roleInAtCloud: "Leader",
-      isVerified: true,
-    };
-    await request(app).post("/api/auth/register").send(creatorData);
-    await User.findOneAndUpdate(
-      { email: "creator-coorg@test.com" },
-      { isVerified: true }
-    );
-    const creatorLoginResponse = await request(app)
-      .post("/api/auth/login")
-      .send({
-        emailOrUsername: "creator-coorg@test.com",
-        password: "Creator123!",
-      });
-    authToken = creatorLoginResponse.body.data.accessToken;
-    creatorId = creatorLoginResponse.body.data.user.id;
+    const creator = await createAndLoginTestUser({ role: "Leader" });
+    authToken = creator.token;
+    creatorId = creator.userId;
+    await User.findByIdAndUpdate(creatorId, { isAtCloudLeader: true });
 
     // Create Leader users to be co-organizers
-    const leader1Data = {
-      email: "leader1-coorg@test.com",
-      username: "leader1-coorg",
-      password: "Leader123!",
-      firstName: "Leader",
-      lastName: "One",
-      role: "Leader",
-      roleInAtCloud: "Leader",
-      isVerified: true,
-    };
-    await request(app).post("/api/auth/register").send(leader1Data);
-    await User.findOneAndUpdate(
-      { email: "leader1-coorg@test.com" },
-      { isVerified: true }
-    );
-    const leader1 = await User.findOne({ email: "leader1-coorg@test.com" });
-    leaderUserId = leader1!._id.toString();
+    const leader1 = await createAndLoginTestUser({ role: "Leader" });
+    leaderUserId = leader1.userId;
+    await User.findByIdAndUpdate(leaderUserId, { isAtCloudLeader: true });
 
-    const leader2Data = {
-      email: "leader2-coorg@test.com",
-      username: "leader2-coorg",
-      password: "Leader123!",
-      firstName: "Leader",
-      lastName: "Two",
-      role: "Leader",
-      roleInAtCloud: "Leader",
-      isVerified: true,
-    };
-    await request(app).post("/api/auth/register").send(leader2Data);
-    await User.findOneAndUpdate(
-      { email: "leader2-coorg@test.com" },
-      { isVerified: true }
-    );
-    const leader2 = await User.findOne({ email: "leader2-coorg@test.com" });
-    leaderUser2Id = leader2!._id.toString();
+    const leader2 = await createAndLoginTestUser({ role: "Leader" });
+    leaderUser2Id = leader2.userId;
+    await User.findByIdAndUpdate(leaderUser2Id, { isAtCloudLeader: true });
 
     // Create a paid program
-    const paidProgram = await Program.create({
+    const program = await Program.create({
       title: "Paid Program",
-      description: "This is a paid program",
-      programType: "series",
+      programType: "Effective Communication Workshops",
+      fullPriceTicket: 100,
       isFree: false,
-      fullPriceTicket: 5000,
-      createdBy: new mongoose.Types.ObjectId(creatorId),
-      mentors: [],
+      mentors: [], // No mentors initially
+      createdBy: leaderUserId,
     });
-    paidProgramId = paidProgram._id.toString();
-
-    // Create a free program
+    paidProgramId = program._id.toString(); // Create a free program
     const freeProgram = await Program.create({
       title: "Free Program",
       description: "This is a free program",
-      programType: "series",
+      programType: "Effective Communication Workshops",
       isFree: true,
+      fullPriceTicket: 0,
       createdBy: new mongoose.Types.ObjectId(creatorId),
       mentors: [],
     });
@@ -165,6 +93,7 @@ describe("Co-Organizer Program Access Integration Tests", () => {
     // Give event creator access to paid program
     await Purchase.create({
       userId: new mongoose.Types.ObjectId(creatorId),
+      purchaseType: "program",
       programId: new mongoose.Types.ObjectId(paidProgramId),
       fullPrice: 5000,
       finalPrice: 5000,
@@ -174,13 +103,13 @@ describe("Co-Organizer Program Access Integration Tests", () => {
       orderNumber: "ORD-CREATOR-001",
       stripeSessionId: "sess_creator_001",
       purchaseDate: new Date(),
-      paymentMethod: { type: "card", cardBrand: "visa", last4: "4242" },
+      paymentMethod: { type: "card", brand: "visa", last4: "4242" },
       billingInfo: {
         fullName: "Event Creator",
         email: "creator-coorg@test.com",
       },
     });
-  });
+  }, 30000);
 
   afterEach(async () => {
     // Clean up events and registrations after each test
@@ -198,6 +127,7 @@ describe("Co-Organizer Program Access Integration Tests", () => {
         title: "Test Event with Unauthorized Co-Organizer",
         type: "Effective Communication Workshop",
         date: dateStr,
+        endDate: dateStr,
         time: "14:00",
         endTime: "16:00",
         format: "In-person",
@@ -237,6 +167,7 @@ describe("Co-Organizer Program Access Integration Tests", () => {
       // Give leader1 access to paid program
       await Purchase.create({
         userId: new mongoose.Types.ObjectId(leaderUserId),
+        purchaseType: "program",
         programId: new mongoose.Types.ObjectId(paidProgramId),
         fullPrice: 5000,
         finalPrice: 5000,
@@ -246,7 +177,7 @@ describe("Co-Organizer Program Access Integration Tests", () => {
         orderNumber: "ORD-LEADER1-001",
         stripeSessionId: "sess_leader1_001",
         purchaseDate: new Date(),
-        paymentMethod: { type: "card", cardBrand: "visa", last4: "4242" },
+        paymentMethod: { type: "card", brand: "visa", last4: "4242" },
         billingInfo: { fullName: "Leader One", email: "leader1@test.com" },
       });
 
@@ -258,6 +189,7 @@ describe("Co-Organizer Program Access Integration Tests", () => {
         title: "Test Event with Authorized Co-Organizer",
         type: "Effective Communication Workshop",
         date: dateStr,
+        endDate: dateStr,
         time: "14:00",
         endTime: "16:00",
         format: "In-person",
@@ -310,6 +242,7 @@ describe("Co-Organizer Program Access Integration Tests", () => {
         title: "Test Event with Mentor Co-Organizer",
         type: "Effective Communication Workshop",
         date: dateStr,
+        endDate: dateStr,
         time: "14:00",
         endTime: "16:00",
         format: "In-person",
@@ -351,6 +284,7 @@ describe("Co-Organizer Program Access Integration Tests", () => {
         title: "Test Event with Free Program",
         type: "Effective Communication Workshop",
         date: dateStr,
+        endDate: dateStr,
         time: "14:00",
         endTime: "16:00",
         format: "In-person",
@@ -392,6 +326,7 @@ describe("Co-Organizer Program Access Integration Tests", () => {
         title: "Test Event with No Program",
         type: "Effective Communication Workshop",
         date: dateStr,
+        endDate: dateStr,
         time: "14:00",
         endTime: "16:00",
         format: "In-person",
@@ -429,7 +364,7 @@ describe("Co-Organizer Program Access Integration Tests", () => {
       const paidProgram2 = await Program.create({
         title: "Second Paid Program",
         description: "Another paid program",
-        programType: "series",
+        programType: "Marketplace Church Incubator Program (MCIP)",
         isFree: false,
         fullPriceTicket: 3000,
         createdBy: new mongoose.Types.ObjectId(creatorId),
@@ -440,6 +375,7 @@ describe("Co-Organizer Program Access Integration Tests", () => {
       // Give creator access to both programs
       await Purchase.create({
         userId: new mongoose.Types.ObjectId(creatorId),
+        purchaseType: "program",
         programId: new mongoose.Types.ObjectId(paidProgram2Id),
         fullPrice: 3000,
         finalPrice: 3000,
@@ -449,7 +385,7 @@ describe("Co-Organizer Program Access Integration Tests", () => {
         orderNumber: "ORD-CREATOR-002",
         stripeSessionId: "sess_creator_002",
         purchaseDate: new Date(),
-        paymentMethod: { type: "card", cardBrand: "visa", last4: "4242" },
+        paymentMethod: { type: "card", brand: "visa", last4: "4242" },
         billingInfo: {
           fullName: "Event Creator",
           email: "creator-coorg@test.com",
@@ -458,7 +394,8 @@ describe("Co-Organizer Program Access Integration Tests", () => {
 
       // Give leader1 access to ONLY second program (not first)
       await Purchase.create({
-        userId: new mongoose.Types.ObjectId(leaderUserId),
+        userId: new mongoose.Types.ObjectId(leaderUser2Id),
+        purchaseType: "program",
         programId: new mongoose.Types.ObjectId(paidProgram2Id),
         fullPrice: 3000,
         finalPrice: 3000,
@@ -468,7 +405,7 @@ describe("Co-Organizer Program Access Integration Tests", () => {
         orderNumber: "ORD-LEADER1-002",
         stripeSessionId: "sess_leader1_002",
         purchaseDate: new Date(),
-        paymentMethod: { type: "card", cardBrand: "visa", last4: "4242" },
+        paymentMethod: { type: "card", brand: "visa", last4: "4242" },
         billingInfo: { fullName: "Leader One", email: "leader1@test.com" },
       });
 
@@ -480,6 +417,7 @@ describe("Co-Organizer Program Access Integration Tests", () => {
         title: "Test Event with Multiple Programs",
         type: "Effective Communication Workshop",
         date: dateStr,
+        endDate: dateStr,
         time: "14:00",
         endTime: "16:00",
         format: "In-person",
@@ -521,6 +459,15 @@ describe("Co-Organizer Program Access Integration Tests", () => {
       futureDate.setDate(futureDate.getDate() + 7);
       const dateStr = futureDate.toISOString().split("T")[0];
 
+      // Create a paid program
+      const paidProgram = await Program.create({
+        title: "Paid Program for Edit",
+        programType: "Effective Communication Workshops",
+        fullPriceTicket: 100,
+        createdBy: creatorId,
+        mentors: [{ userId: creatorId }], // Creator needs access to create event
+      });
+
       const createResponse = await request(app)
         .post("/api/events")
         .set("Authorization", `Bearer ${authToken}`)
@@ -528,13 +475,14 @@ describe("Co-Organizer Program Access Integration Tests", () => {
           title: "Initial Event",
           type: "Effective Communication Workshop",
           date: dateStr,
+          endDate: dateStr,
           time: "14:00",
           endTime: "16:00",
           format: "In-person",
           location: "Conference Room",
           organizer: "Event Creator (Leader)",
           purpose: "Test purpose",
-          programLabels: [paidProgramId],
+          programLabels: [paidProgram.id],
           organizerDetails: [],
           roles: [
             {
@@ -546,7 +494,7 @@ describe("Co-Organizer Program Access Integration Tests", () => {
         });
 
       expect(createResponse.status).toBe(201);
-      const eventId = createResponse.body.data._id;
+      const eventId = createResponse.body.data.event.id;
 
       // Now try to edit and add co-organizer without access
       const updateResponse = await request(app)
@@ -572,6 +520,7 @@ describe("Co-Organizer Program Access Integration Tests", () => {
       // Give leader1 access to paid program
       await Purchase.create({
         userId: new mongoose.Types.ObjectId(leaderUserId),
+        purchaseType: "program",
         programId: new mongoose.Types.ObjectId(paidProgramId),
         fullPrice: 5000,
         finalPrice: 5000,
@@ -581,7 +530,7 @@ describe("Co-Organizer Program Access Integration Tests", () => {
         orderNumber: "ORD-LEADER1-EDIT-001",
         stripeSessionId: "sess_leader1_edit_001",
         purchaseDate: new Date(),
-        paymentMethod: { type: "card", cardBrand: "visa", last4: "4242" },
+        paymentMethod: { type: "card", brand: "visa", last4: "4242" },
         billingInfo: {
           fullName: "Leader One",
           email: "leader1-coorg@test.com",
@@ -600,6 +549,7 @@ describe("Co-Organizer Program Access Integration Tests", () => {
           title: "Initial Event for Edit",
           type: "Effective Communication Workshop",
           date: dateStr,
+          endDate: dateStr,
           time: "14:00",
           endTime: "16:00",
           format: "In-person",
@@ -618,7 +568,7 @@ describe("Co-Organizer Program Access Integration Tests", () => {
         });
 
       expect(createResponse.status).toBe(201);
-      const eventId = createResponse.body.data._id;
+      const eventId = createResponse.body.data.event.id;
 
       // Now edit and add co-organizer with access
       const updateResponse = await request(app)

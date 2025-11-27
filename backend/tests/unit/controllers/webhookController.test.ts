@@ -365,25 +365,28 @@ describe("WebhookController", () => {
           orderNumber: "ORDER-001",
           userId: new mongoose.Types.ObjectId("507f1f77bcf86cd799439012"),
           programId: new mongoose.Types.ObjectId("507f1f77bcf86cd799439013"),
+          purchaseType: "program",
+          eventId: null,
           billingInfo: {
             fullName: "",
             email: "",
           },
           finalPrice: 100,
           save: vi.fn().mockResolvedValue({}),
-          populate: vi.fn().mockResolvedValue({
-            userId: {
-              _id: "507f1f77bcf86cd799439012",
-              email: "john@example.com",
-              firstName: "John",
-              lastName: "Doe",
-            },
-            programId: {
-              _id: "507f1f77bcf86cd799439013",
-              title: "Test Program",
-              programType: "Workshop",
-            },
-          }),
+          populate: vi.fn().mockReturnThis(),
+        } as any;
+
+        // Make populate return the purchase with populated fields
+        mockPurchase.userId = {
+          _id: "507f1f77bcf86cd799439012",
+          email: "john@example.com",
+          firstName: "John",
+          lastName: "Doe",
+        } as any;
+        mockPurchase.programId = {
+          _id: "507f1f77bcf86cd799439013",
+          title: "Test Program",
+          programType: "Workshop",
         } as any;
 
         const mockEvent = {
@@ -582,6 +585,7 @@ describe("WebhookController", () => {
         mockPurchase = {
           _id: "purchase123",
           status: "pending",
+          purchaseType: "program",
           userId: new mongoose.Types.ObjectId(),
           programId: new mongoose.Types.ObjectId(),
           promoCode: "TESTCODE",
@@ -764,6 +768,7 @@ describe("WebhookController", () => {
         mockPurchase = {
           _id: "purchase123",
           status: "pending",
+          purchaseType: "program",
           userId: new mongoose.Types.ObjectId(),
           programId: new mongoose.Types.ObjectId(),
           finalPrice: 100,
@@ -909,6 +914,7 @@ describe("WebhookController", () => {
         mockPurchase = {
           _id: "purchase123",
           status: "pending",
+          purchaseType: "program",
           userId,
           programId,
           orderNumber: "ORDER-001",

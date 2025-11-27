@@ -118,6 +118,16 @@ export default class RewardCodeCreationController {
       // Generate unique code
       const code = await PromoCode.generateUniqueCode();
 
+      // Determine applicableToType based on what IDs are provided
+      let finalApplicableToType = applicableToType;
+      if (!finalApplicableToType) {
+        if (validatedProgramIds && validatedProgramIds.length > 0) {
+          finalApplicableToType = "program";
+        } else if (validatedEventIds && validatedEventIds.length > 0) {
+          finalApplicableToType = "event";
+        }
+      }
+
       // Create promo code
       const promoCode = await PromoCode.create({
         code,
@@ -126,7 +136,7 @@ export default class RewardCodeCreationController {
         discountPercent,
         allowedProgramIds: validatedProgramIds,
         allowedEventIds: validatedEventIds,
-        applicableToType,
+        applicableToType: finalApplicableToType,
         expiresAt: validatedExpiresAt,
         createdBy: req.user.username || req.user.email,
       });

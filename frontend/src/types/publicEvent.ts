@@ -52,6 +52,10 @@ export interface PublicEventData {
   roles: PublicEventRole[];
   slug: string;
   isAuthenticated?: boolean; // added optional auth flag
+  pricing?: {
+    isFree: boolean;
+    price?: number; // in cents
+  };
 }
 
 export interface PublicRegistrationResponse {

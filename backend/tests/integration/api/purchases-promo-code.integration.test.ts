@@ -358,6 +358,7 @@ describe("Purchase Flow with Promo Codes", () => {
         type: "staff_access",
         discountPercent: 100,
         ownerId: userId,
+        applicableToType: "program",
         allowedProgramIds: [allowedProgram._id], // Only for specific program
         isActive: true,
         isUsed: false,

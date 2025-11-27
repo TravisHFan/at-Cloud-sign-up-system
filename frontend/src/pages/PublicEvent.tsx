@@ -336,445 +336,480 @@ export default function PublicEvent() {
         </section>
       )}
 
-      <section className="mb-8" data-testid="public-event-roles">
-        <h2 className="text-xl font-semibold mb-3">
-          {data.roles.length === 1 ? "Reserve a Spot" : "Available Roles"}
-        </h2>
-        {!data.isAuthenticated && (
-          <div
-            className="mb-4 p-4 border border-blue-200 rounded-md bg-blue-50 flex flex-col md:flex-row md:items-center md:justify-between gap-3"
-            data-testid="public-event-login-prompt"
-          >
-            <p className="text-sm text-blue-800 leading-relaxed">
-              Register below to save time, or log in / sign up first to view
-              additional event details and role assignments.
-            </p>
-            <div className="flex items-center gap-2">
+      {/* Show pricing section for paid events, roles section for free events */}
+      {data.pricing && (data.pricing.price ?? 0) > 0 ? (
+        <section className="mb-8" data-testid="public-event-pricing">
+          <h2 className="text-xl font-semibold mb-3">Pricing</h2>
+          <div className="border-2 border-blue-500 rounded-lg p-6 bg-gradient-to-br from-blue-50 to-white">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <div className="text-4xl font-bold text-blue-900 mb-2">
+                  ${((data.pricing.price || 0) / 100).toFixed(2)}
+                </div>
+                <p className="text-sm text-gray-600">per ticket</p>
+              </div>
               <Link
                 to={`/login?redirect=/dashboard/event/${data.id}`}
-                className="inline-flex items-center justify-center h-10 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 whitespace-nowrap"
+                className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-lg hover:shadow-xl transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
-                Log In
-              </Link>
-              <Link
-                to="/signup"
-                className="inline-flex items-center justify-center h-10 px-4 py-2 text-sm font-medium text-blue-700 bg-white border border-blue-300 hover:bg-blue-50 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 whitespace-nowrap"
-              >
-                Sign Up
+                <Icon name="ticket" className="mr-2" />
+                Get Ticket Now
               </Link>
             </div>
+            <div className="mt-4 pt-4 border-t border-blue-200">
+              <p className="text-sm text-gray-700">
+                <Icon name="info-circle" className="inline mr-1" />
+                You'll need to log in or sign up to purchase your ticket.
+              </p>
+            </div>
           </div>
-        )}
-        {data.roles.length === 0 && (
-          <p className="text-sm text-gray-500">
-            No public roles are available for this event.
-          </p>
-        )}
-        <div className="grid gap-4 md:grid-cols-2">
-          {data.roles.map((r) => {
-            const isFull = r.capacityRemaining === 0;
-            const isSelected = roleId === r.roleId;
-            const capacityPercentage =
-              ((r.maxParticipants - r.capacityRemaining) / r.maxParticipants) *
-              100;
+        </section>
+      ) : (
+        <section className="mb-8" data-testid="public-event-roles">
+          <h2 className="text-xl font-semibold mb-3">
+            {data.roles.length === 1 ? "Reserve a Spot" : "Available Roles"}
+          </h2>
+          {!data.isAuthenticated && (
+            <div
+              className="mb-4 p-4 border border-blue-200 rounded-md bg-blue-50 flex flex-col md:flex-row md:items-center md:justify-between gap-3"
+              data-testid="public-event-login-prompt"
+            >
+              <p className="text-sm text-blue-800 leading-relaxed">
+                Register below to save time, or log in / sign up first to view
+                additional event details and role assignments.
+              </p>
+              <div className="flex items-center gap-2">
+                <Link
+                  to={`/login?redirect=/dashboard/event/${data.id}`}
+                  className="inline-flex items-center justify-center h-10 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 whitespace-nowrap"
+                >
+                  Log In
+                </Link>
+                <Link
+                  to="/signup"
+                  className="inline-flex items-center justify-center h-10 px-4 py-2 text-sm font-medium text-blue-700 bg-white border border-blue-300 hover:bg-blue-50 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 whitespace-nowrap"
+                >
+                  Sign Up
+                </Link>
+              </div>
+            </div>
+          )}
+          {data.roles.length === 0 && (
+            <p className="text-sm text-gray-500">
+              No public roles are available for this event.
+            </p>
+          )}
+          <div className="grid gap-4 md:grid-cols-2">
+            {data.roles.map((r) => {
+              const isFull = r.capacityRemaining === 0;
+              const isSelected = roleId === r.roleId;
+              const capacityPercentage =
+                ((r.maxParticipants - r.capacityRemaining) /
+                  r.maxParticipants) *
+                100;
 
-            const isSingleRole = data.roles.length === 1;
+              const isSingleRole = data.roles.length === 1;
 
-            return (
-              <div
-                key={r.roleId}
-                className={`${
-                  isSingleRole ? "" : "border-2"
-                } rounded-lg p-4 transition-all cursor-pointer ${
-                  isSelected
-                    ? "border-blue-500 bg-blue-50"
-                    : isFull
-                    ? `${
-                        isSingleRole ? "" : "border-gray-200"
-                      } bg-gray-50 opacity-60`
-                    : `${
-                        isSingleRole
-                          ? ""
-                          : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
-                      }`
-                }`}
-                onClick={() => {
-                  if (isFull || submitting) return;
-                  if (
-                    resultMsg &&
-                    !resultMsg.toLowerCase().includes("error") &&
-                    !resultMsg.toLowerCase().includes("failed")
-                  ) {
-                    setResultMsg(null);
-                    setDuplicate(false);
-                    setName("");
-                    setEmail("");
-                    setPhone("");
-                  }
-                  setRoleId(r.roleId);
-                  scrollRegistration();
-                }}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1">
-                    {!isSingleRole && (
-                      <>
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="font-semibold text-lg text-gray-900">
-                            {r.name}
-                          </h3>
-                          {isSelected && (
-                            <Icon
-                              name="check-circle"
-                              className="w-5 h-5 text-green-600"
-                            />
-                          )}
-                          {isFull && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                              Full
+              return (
+                <div
+                  key={r.roleId}
+                  className={`${
+                    isSingleRole ? "" : "border-2"
+                  } rounded-lg p-4 transition-all cursor-pointer ${
+                    isSelected
+                      ? "border-blue-500 bg-blue-50"
+                      : isFull
+                      ? `${
+                          isSingleRole ? "" : "border-gray-200"
+                        } bg-gray-50 opacity-60`
+                      : `${
+                          isSingleRole
+                            ? ""
+                            : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
+                        }`
+                  }`}
+                  onClick={() => {
+                    if (isFull || submitting) return;
+                    if (
+                      resultMsg &&
+                      !resultMsg.toLowerCase().includes("error") &&
+                      !resultMsg.toLowerCase().includes("failed")
+                    ) {
+                      setResultMsg(null);
+                      setDuplicate(false);
+                      setName("");
+                      setEmail("");
+                      setPhone("");
+                    }
+                    setRoleId(r.roleId);
+                    scrollRegistration();
+                  }}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1">
+                      {!isSingleRole && (
+                        <>
+                          <div className="flex items-center gap-2 mb-2">
+                            <h3 className="font-semibold text-lg text-gray-900">
+                              {r.name}
+                            </h3>
+                            {isSelected && (
+                              <Icon
+                                name="check-circle"
+                                className="w-5 h-5 text-green-600"
+                              />
+                            )}
+                            {isFull && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                Full
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-600 mb-3 whitespace-pre-line">
+                            {normalizeMultiline(r.description)}
+                          </p>
+                        </>
+                      )}
+
+                      {/* Capacity Bar */}
+                      <div className="mb-2">
+                        <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
+                          <span>Capacity</span>
+                          <span>
+                            {r.maxParticipants - r.capacityRemaining}/
+                            {r.maxParticipants} registered
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full transition-all ${
+                              capacityPercentage >= 90
+                                ? "bg-red-500"
+                                : capacityPercentage >= 70
+                                ? "bg-yellow-500"
+                                : "bg-green-500"
+                            }`}
+                            style={{ width: `${capacityPercentage}%` }}
+                          />
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {r.capacityRemaining > 0 ? (
+                            <span className="text-green-600 font-medium">
+                              {r.capacityRemaining} spots available
+                            </span>
+                          ) : (
+                            <span className="text-red-600 font-medium">
+                              No spots available
                             </span>
                           )}
                         </div>
-                        <p className="text-sm text-gray-600 mb-3 whitespace-pre-line">
-                          {normalizeMultiline(r.description)}
-                        </p>
-                      </>
-                    )}
-
-                    {/* Capacity Bar */}
-                    <div className="mb-2">
-                      <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
-                        <span>Capacity</span>
-                        <span>
-                          {r.maxParticipants - r.capacityRemaining}/
-                          {r.maxParticipants} registered
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className={`h-2 rounded-full transition-all ${
-                            capacityPercentage >= 90
-                              ? "bg-red-500"
-                              : capacityPercentage >= 70
-                              ? "bg-yellow-500"
-                              : "bg-green-500"
-                          }`}
-                          style={{ width: `${capacityPercentage}%` }}
-                        />
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        {r.capacityRemaining > 0 ? (
-                          <span className="text-green-600 font-medium">
-                            {r.capacityRemaining} spots available
-                          </span>
-                        ) : (
-                          <span className="text-red-600 font-medium">
-                            No spots available
-                          </span>
-                        )}
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Action Button */}
-                <div className="mt-3">
-                  <button
-                    type="button"
-                    disabled={submitting || isFull}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (!isFull) {
-                        setRoleId(r.roleId);
-                        scrollRegistration();
-                      }
-                    }}
-                    className={`w-full px-4 py-2 text-sm font-medium rounded-md border transition-colors ${
-                      isSelected
-                        ? "bg-blue-600 text-white border-blue-600"
+                  {/* Action Button */}
+                  <div className="mt-3">
+                    <button
+                      type="button"
+                      disabled={submitting || isFull}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!isFull) {
+                          setRoleId(r.roleId);
+                          scrollRegistration();
+                        }
+                      }}
+                      className={`w-full px-4 py-2 text-sm font-medium rounded-md border transition-colors ${
+                        isSelected
+                          ? "bg-blue-600 text-white border-blue-600"
+                          : isFull
+                          ? "bg-gray-200 text-gray-500 border-gray-200 cursor-not-allowed"
+                          : "bg-white text-blue-700 border-blue-300 hover:bg-blue-50"
+                      }`}
+                    >
+                      {isSelected
+                        ? "Selected"
                         : isFull
-                        ? "bg-gray-200 text-gray-500 border-gray-200 cursor-not-allowed"
-                        : "bg-white text-blue-700 border-blue-300 hover:bg-blue-50"
-                    }`}
-                  >
-                    {isSelected
-                      ? "Selected"
-                      : isFull
-                      ? "Full"
-                      : isSingleRole
-                      ? "Get a Ticket"
-                      : "Select This Role"}
-                  </button>
+                        ? "Full"
+                        : isSingleRole
+                        ? "Get a Ticket"
+                        : "Select This Role"}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* Registration form section - only show for free events */}
+      {(!data.pricing || (data.pricing.price ?? 0) === 0) && (
+        <section
+          className="mb-10 focus:outline-none"
+          data-testid="public-event-registration-form"
+          ref={registerSectionRef}
+          tabIndex={-1}
+          aria-label="Event registration form"
+        >
+          {!roleId && data.roles.length > 1 && (
+            <p className="text-sm text-gray-600 mb-4">
+              Select a role above to begin registration.
+              <br /> Upon completing your registration, the Zoom link or venue
+              details will be sent to your registered email address.
+            </p>
+          )}
+          {!roleId && data.roles.length === 1 && (
+            <p className="text-sm text-gray-600 mb-4">
+              Upon completing your registration, the Zoom link or venue details
+              will be sent to your registered email address.
+            </p>
+          )}
+          {roleId && !resultMsg && (
+            <form
+              className="space-y-4 max-w-md"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!slug) return;
+                setSubmitting(true);
+                setResultMsg(null);
+                setDuplicate(false);
+                try {
+                  const res: PublicRegistrationResponse =
+                    await apiClient.registerForPublicEvent(slug, {
+                      roleId,
+                      attendee: { name, email, phone },
+                      consent: { termsAccepted: true },
+                    });
+                  const isSameRoleDuplicate = !!res.duplicate;
+                  setDuplicate(isSameRoleDuplicate);
+                  const baseMsg =
+                    res.message ||
+                    (isSameRoleDuplicate
+                      ? "Already registered for this role"
+                      : "Registered successfully");
+                  setResultMsg(baseMsg);
+                  // Immediately reflect capacity change locally so user sees updated numbers without reload
+                  if (!isSameRoleDuplicate) {
+                    setData((prev) => {
+                      if (!prev) return prev;
+                      return {
+                        ...prev,
+                        roles: prev.roles.map((r) =>
+                          r.roleId === roleId && r.capacityRemaining > 0
+                            ? {
+                                ...r,
+                                capacityRemaining: r.capacityRemaining - 1,
+                              }
+                            : r
+                        ),
+                      };
+                    });
+                  }
+                } catch (err) {
+                  const e = err as Error;
+                  const errorMsg = e.message || "Registration failed";
+
+                  // Check if this is a validation error - show in modal
+                  const isValidationError =
+                    errorMsg.toLowerCase().includes("phone") ||
+                    errorMsg.toLowerCase().includes("email") ||
+                    errorMsg.toLowerCase().includes("name") ||
+                    errorMsg.toLowerCase().includes("must be at least") ||
+                    errorMsg.toLowerCase().includes("is required") ||
+                    errorMsg.toLowerCase().includes("invalid");
+
+                  if (isValidationError) {
+                    // Show validation errors in a modal
+                    setErrorModalMessage(errorMsg);
+                    setShowErrorModal(true);
+                  } else if (
+                    errorMsg.includes("-role limit") ||
+                    errorMsg.includes("reached the")
+                  ) {
+                    // Handle role limit errors inline (complex message with formatting)
+                    const lc = errorMsg.toLowerCase();
+                    const backendIndicatesUser =
+                      lc.includes("you have reached");
+                    // Extract the limit number from error message (e.g., "1-role", "3-role", "5-role")
+                    const limitMatch = errorMsg.match(/(\d+)-role limit/);
+                    const roleLimit = limitMatch ? limitMatch[1] : "maximum";
+
+                    // Tailor message for authenticated (system) users OR when backend phrasing indicates user limit
+                    if (data?.isAuthenticated || backendIndicatesUser) {
+                      setResultMsg(
+                        data?.isAuthenticated
+                          ? `You have already registered for the maximum of ${roleLimit} role${
+                              roleLimit !== "1" ? "s" : ""
+                            } for this event. To change roles, visit this event in your dashboard and remove one role before adding another.`
+                          : `This email already has ${roleLimit} role${
+                              roleLimit !== "1" ? "s" : ""
+                            } registered for this event. Log in to your account to manage or swap roles (remove one before adding another).`
+                      );
+                    } else {
+                      // Guest (email-only) with 1-role limit
+                      setResultMsg(
+                        roleLimit === "1"
+                          ? "You've already registered for this event. If you need to change your role, please contact the event organizer."
+                          : `You've already registered for the maximum number of roles (${roleLimit}) for this event. If you need to make changes, please contact the event organizer.`
+                      );
+                    }
+                  } else {
+                    // Other errors - show inline
+                    setResultMsg(errorMsg);
+                  }
+                } finally {
+                  setSubmitting(false);
+                }
+              }}
+            >
+              <div>
+                <label
+                  htmlFor="public-reg-full-name"
+                  className="block text-sm font-medium mb-1"
+                >
+                  Full Name
+                </label>
+                <input
+                  id="public-reg-full-name"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring focus:border-indigo-500"
+                  placeholder="Your name"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="public-reg-email"
+                  className="block text-sm font-medium mb-1"
+                >
+                  Email
+                </label>
+                <input
+                  id="public-reg-email"
+                  required
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring focus:border-indigo-500"
+                  placeholder="you@example.com"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="public-reg-phone"
+                  className="block text-sm font-medium mb-1"
+                >
+                  Phone
+                </label>
+                <input
+                  id="public-reg-phone"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  required
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring focus:border-indigo-500"
+                  placeholder="+1 555 0100"
+                />
+              </div>
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={submitting || !name || !email || !phone}
+                  className="inline-flex items-center px-4 py-2 rounded bg-indigo-600 text-white text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed hover:bg-indigo-700 transition-colors"
+                >
+                  {submitting ? "Submitting..." : "Submit Registration"}
+                </button>
+              </div>
+            </form>
+          )}
+          {roleId && !resultMsg && (
+            <p
+              className="text-xs text-gray-500 mt-4"
+              data-testid="public-event-registration-reminder-inline"
+            >
+              Upon completing your registration, the Zoom link or venue details
+              will be sent to your registered email address.
+            </p>
+          )}
+          {resultMsg && (
+            <div
+              className={`max-w-md p-4 border rounded text-sm mt-4 ${
+                resultMsg.toLowerCase().includes("error") ||
+                resultMsg.toLowerCase().includes("failed") ||
+                resultMsg.toLowerCase().includes("maximum number of roles")
+                  ? "bg-red-50 border-red-200 text-red-800"
+                  : "bg-green-50 border-green-200 text-green-800"
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <Icon
+                  name={
+                    resultMsg.toLowerCase().includes("error") ||
+                    resultMsg.toLowerCase().includes("failed") ||
+                    resultMsg.toLowerCase().includes("maximum number of roles")
+                      ? "x-circle"
+                      : "check-circle"
+                  }
+                  className="w-5 h-5 flex-shrink-0 mt-0.5"
+                />
+                <div className="flex-1">
+                  <p className="font-medium mb-1">{resultMsg}</p>
+                  {!resultMsg.toLowerCase().includes("error") &&
+                    !resultMsg.toLowerCase().includes("failed") &&
+                    !resultMsg
+                      .toLowerCase()
+                      .includes("maximum number of roles") &&
+                    (duplicate ? (
+                      <p className="text-sm opacity-80">
+                        You already registered for this role. We've sent another
+                        confirmation email.
+                      </p>
+                    ) : (
+                      <p className="text-sm opacity-80">
+                        Check your email for a confirmation with event details
+                        and calendar invite.
+                      </p>
+                    ))}
+                  {(() => {
+                    const lc = resultMsg.toLowerCase();
+                    const isGuestLimit = lc.includes("maximum number of roles");
+                    const isUserLimit =
+                      lc.includes(
+                        "you have already registered for the maximum"
+                      ) || lc.includes("this email already has 3 roles");
+                    if (!(isGuestLimit || isUserLimit)) return null;
+                    return (
+                      <div className="text-sm opacity-80 mt-2">
+                        <p className="mb-2">What you can do:</p>
+                        {isUserLimit ? (
+                          <ul className="list-disc list-inside space-y-1">
+                            <li>Open your dashboard event page</li>
+                            <li>Remove an existing role you no longer need</li>
+                            <li>
+                              Return here (or refresh) and register the new role
+                            </li>
+                          </ul>
+                        ) : (
+                          <ul className="list-disc list-inside space-y-1">
+                            <li>Check your email for previous registrations</li>
+                            <li>
+                              Contact the organizer if you need to change roles
+                            </li>
+                            <li>
+                              Create an account to manage your registrations
+                            </li>
+                          </ul>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
-            );
-          })}
-        </div>
-      </section>
-
-      <section
-        className="mb-10 focus:outline-none"
-        data-testid="public-event-registration-form"
-        ref={registerSectionRef}
-        tabIndex={-1}
-        aria-label="Event registration form"
-      >
-        {!roleId && data.roles.length > 1 && (
-          <p className="text-sm text-gray-600 mb-4">
-            Select a role above to begin registration.
-            <br /> Upon completing your registration, the Zoom link or venue
-            details will be sent to your registered email address.
-          </p>
-        )}
-        {!roleId && data.roles.length === 1 && (
-          <p className="text-sm text-gray-600 mb-4">
-            Upon completing your registration, the Zoom link or venue details
-            will be sent to your registered email address.
-          </p>
-        )}
-        {roleId && !resultMsg && (
-          <form
-            className="space-y-4 max-w-md"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              if (!slug) return;
-              setSubmitting(true);
-              setResultMsg(null);
-              setDuplicate(false);
-              try {
-                const res: PublicRegistrationResponse =
-                  await apiClient.registerForPublicEvent(slug, {
-                    roleId,
-                    attendee: { name, email, phone },
-                    consent: { termsAccepted: true },
-                  });
-                const isSameRoleDuplicate = !!res.duplicate;
-                setDuplicate(isSameRoleDuplicate);
-                const baseMsg =
-                  res.message ||
-                  (isSameRoleDuplicate
-                    ? "Already registered for this role"
-                    : "Registered successfully");
-                setResultMsg(baseMsg);
-                // Immediately reflect capacity change locally so user sees updated numbers without reload
-                if (!isSameRoleDuplicate) {
-                  setData((prev) => {
-                    if (!prev) return prev;
-                    return {
-                      ...prev,
-                      roles: prev.roles.map((r) =>
-                        r.roleId === roleId && r.capacityRemaining > 0
-                          ? {
-                              ...r,
-                              capacityRemaining: r.capacityRemaining - 1,
-                            }
-                          : r
-                      ),
-                    };
-                  });
-                }
-              } catch (err) {
-                const e = err as Error;
-                const errorMsg = e.message || "Registration failed";
-
-                // Check if this is a validation error - show in modal
-                const isValidationError =
-                  errorMsg.toLowerCase().includes("phone") ||
-                  errorMsg.toLowerCase().includes("email") ||
-                  errorMsg.toLowerCase().includes("name") ||
-                  errorMsg.toLowerCase().includes("must be at least") ||
-                  errorMsg.toLowerCase().includes("is required") ||
-                  errorMsg.toLowerCase().includes("invalid");
-
-                if (isValidationError) {
-                  // Show validation errors in a modal
-                  setErrorModalMessage(errorMsg);
-                  setShowErrorModal(true);
-                } else if (
-                  errorMsg.includes("-role limit") ||
-                  errorMsg.includes("reached the")
-                ) {
-                  // Handle role limit errors inline (complex message with formatting)
-                  const lc = errorMsg.toLowerCase();
-                  const backendIndicatesUser = lc.includes("you have reached");
-                  // Extract the limit number from error message (e.g., "1-role", "3-role", "5-role")
-                  const limitMatch = errorMsg.match(/(\d+)-role limit/);
-                  const roleLimit = limitMatch ? limitMatch[1] : "maximum";
-
-                  // Tailor message for authenticated (system) users OR when backend phrasing indicates user limit
-                  if (data?.isAuthenticated || backendIndicatesUser) {
-                    setResultMsg(
-                      data?.isAuthenticated
-                        ? `You have already registered for the maximum of ${roleLimit} role${
-                            roleLimit !== "1" ? "s" : ""
-                          } for this event. To change roles, visit this event in your dashboard and remove one role before adding another.`
-                        : `This email already has ${roleLimit} role${
-                            roleLimit !== "1" ? "s" : ""
-                          } registered for this event. Log in to your account to manage or swap roles (remove one before adding another).`
-                    );
-                  } else {
-                    // Guest (email-only) with 1-role limit
-                    setResultMsg(
-                      roleLimit === "1"
-                        ? "You've already registered for this event. If you need to change your role, please contact the event organizer."
-                        : `You've already registered for the maximum number of roles (${roleLimit}) for this event. If you need to make changes, please contact the event organizer.`
-                    );
-                  }
-                } else {
-                  // Other errors - show inline
-                  setResultMsg(errorMsg);
-                }
-              } finally {
-                setSubmitting(false);
-              }
-            }}
-          >
-            <div>
-              <label
-                htmlFor="public-reg-full-name"
-                className="block text-sm font-medium mb-1"
-              >
-                Full Name
-              </label>
-              <input
-                id="public-reg-full-name"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring focus:border-indigo-500"
-                placeholder="Your name"
-              />
             </div>
-            <div>
-              <label
-                htmlFor="public-reg-email"
-                className="block text-sm font-medium mb-1"
-              >
-                Email
-              </label>
-              <input
-                id="public-reg-email"
-                required
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring focus:border-indigo-500"
-                placeholder="you@example.com"
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="public-reg-phone"
-                className="block text-sm font-medium mb-1"
-              >
-                Phone
-              </label>
-              <input
-                id="public-reg-phone"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                required
-                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring focus:border-indigo-500"
-                placeholder="+1 555 0100"
-              />
-            </div>
-            <div className="pt-2">
-              <button
-                type="submit"
-                disabled={submitting || !name || !email || !phone}
-                className="inline-flex items-center px-4 py-2 rounded bg-indigo-600 text-white text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed hover:bg-indigo-700 transition-colors"
-              >
-                {submitting ? "Submitting..." : "Submit Registration"}
-              </button>
-            </div>
-          </form>
-        )}
-        {roleId && !resultMsg && (
-          <p
-            className="text-xs text-gray-500 mt-4"
-            data-testid="public-event-registration-reminder-inline"
-          >
-            Upon completing your registration, the Zoom link or venue details
-            will be sent to your registered email address.
-          </p>
-        )}
-        {resultMsg && (
-          <div
-            className={`max-w-md p-4 border rounded text-sm mt-4 ${
-              resultMsg.toLowerCase().includes("error") ||
-              resultMsg.toLowerCase().includes("failed") ||
-              resultMsg.toLowerCase().includes("maximum number of roles")
-                ? "bg-red-50 border-red-200 text-red-800"
-                : "bg-green-50 border-green-200 text-green-800"
-            }`}
-          >
-            <div className="flex items-start gap-3">
-              <Icon
-                name={
-                  resultMsg.toLowerCase().includes("error") ||
-                  resultMsg.toLowerCase().includes("failed") ||
-                  resultMsg.toLowerCase().includes("maximum number of roles")
-                    ? "x-circle"
-                    : "check-circle"
-                }
-                className="w-5 h-5 flex-shrink-0 mt-0.5"
-              />
-              <div className="flex-1">
-                <p className="font-medium mb-1">{resultMsg}</p>
-                {!resultMsg.toLowerCase().includes("error") &&
-                  !resultMsg.toLowerCase().includes("failed") &&
-                  !resultMsg
-                    .toLowerCase()
-                    .includes("maximum number of roles") &&
-                  (duplicate ? (
-                    <p className="text-sm opacity-80">
-                      You already registered for this role. We've sent another
-                      confirmation email.
-                    </p>
-                  ) : (
-                    <p className="text-sm opacity-80">
-                      Check your email for a confirmation with event details and
-                      calendar invite.
-                    </p>
-                  ))}
-                {(() => {
-                  const lc = resultMsg.toLowerCase();
-                  const isGuestLimit = lc.includes("maximum number of roles");
-                  const isUserLimit =
-                    lc.includes(
-                      "you have already registered for the maximum"
-                    ) || lc.includes("this email already has 3 roles");
-                  if (!(isGuestLimit || isUserLimit)) return null;
-                  return (
-                    <div className="text-sm opacity-80 mt-2">
-                      <p className="mb-2">What you can do:</p>
-                      {isUserLimit ? (
-                        <ul className="list-disc list-inside space-y-1">
-                          <li>Open your dashboard event page</li>
-                          <li>Remove an existing role you no longer need</li>
-                          <li>
-                            Return here (or refresh) and register the new role
-                          </li>
-                        </ul>
-                      ) : (
-                        <ul className="list-disc list-inside space-y-1">
-                          <li>Check your email for previous registrations</li>
-                          <li>
-                            Contact the organizer if you need to change roles
-                          </li>
-                          <li>
-                            Create an account to manage your registrations
-                          </li>
-                        </ul>
-                      )}
-                    </div>
-                  );
-                })()}
-              </div>
-            </div>
-          </div>
-        )}
-      </section>
+          )}
+        </section>
+      )}
 
       <footer
         className="pt-4 border-t text-xs text-gray-500"

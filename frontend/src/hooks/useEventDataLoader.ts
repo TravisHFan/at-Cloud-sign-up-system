@@ -281,6 +281,8 @@ export function useEventDataLoader({
             (event as unknown as { programLabels?: string[] }).programLabels ||
             [],
           roles: rolesForForm,
+          // Paid Events Feature - include pricing data
+          pricing: event.pricing || { isFree: true },
         };
 
         // Get mentor IDs if present

@@ -483,18 +483,14 @@ promoCodeSchema.methods.canBeUsedForProgram = function (
     }
   }
 
-  // Staff access specific validation
-  if (this.type === "staff_access") {
-    // If allowedProgramIds is specified (not empty), check if program is in the list
-    if (this.allowedProgramIds && this.allowedProgramIds.length > 0) {
-      const isAllowed = this.allowedProgramIds.some(
-        (id) => id.toString() === programIdStr
-      );
-      if (!isAllowed) {
-        return { valid: false, reason: "Code is not valid for this program" };
-      }
+  // Check allowedProgramIds if specified (for any type)
+  if (this.allowedProgramIds && this.allowedProgramIds.length > 0) {
+    const isAllowed = this.allowedProgramIds.some(
+      (id) => id.toString() === programIdStr
+    );
+    if (!isAllowed) {
+      return { valid: false, reason: "Code is not valid for this program" };
     }
-    // If allowedProgramIds is empty or undefined, code is valid for all programs
   }
 
   return { valid: true };
@@ -542,18 +538,14 @@ promoCodeSchema.methods.canBeUsedForEvent = function (
     }
   }
 
-  // Staff access specific validation
-  if (this.type === "staff_access") {
-    // If allowedEventIds is specified (not empty), check if event is in the list
-    if (this.allowedEventIds && this.allowedEventIds.length > 0) {
-      const isAllowed = this.allowedEventIds.some(
-        (id) => id.toString() === eventIdStr
-      );
-      if (!isAllowed) {
-        return { valid: false, reason: "Code is not valid for this event" };
-      }
+  // Check allowedEventIds if specified (for any type)
+  if (this.allowedEventIds && this.allowedEventIds.length > 0) {
+    const isAllowed = this.allowedEventIds.some(
+      (id) => id.toString() === eventIdStr
+    );
+    if (!isAllowed) {
+      return { valid: false, reason: "Code is not valid for this event" };
     }
-    // If allowedEventIds is empty or undefined, code is valid for all events
   }
 
   return { valid: true };

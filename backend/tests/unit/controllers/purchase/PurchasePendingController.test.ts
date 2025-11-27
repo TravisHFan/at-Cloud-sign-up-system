@@ -7,6 +7,19 @@ import mongoose from "mongoose";
 // Mock dependencies
 vi.mock("../../../../src/models/Purchase");
 
+/**
+ * Helper to create mock chain for Purchase.find().populate().populate().sort()
+ */
+function mockPurchaseFindChain(purchases: any[]) {
+  return {
+    populate: vi.fn().mockReturnValue({
+      populate: vi.fn().mockReturnValue({
+        sort: vi.fn().mockResolvedValue(purchases),
+      }),
+    }),
+  } as any;
+}
+
 describe("PurchasePendingController", () => {
   let mockReq: Partial<Request> & { user?: any };
   let mockRes: Partial<Response>;
@@ -63,11 +76,7 @@ describe("PurchasePendingController", () => {
       const deleteManyMock = vi.fn().mockResolvedValue({ deletedCount: 3 });
       vi.mocked(Purchase.deleteMany).mockImplementation(deleteManyMock);
 
-      vi.mocked(Purchase.find).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          sort: vi.fn().mockResolvedValue([]),
-        }),
-      } as any);
+      vi.mocked(Purchase.find).mockReturnValue(mockPurchaseFindChain([]));
 
       await PurchasePendingController.getMyPendingPurchases(
         mockReq as Request,
@@ -103,11 +112,7 @@ describe("PurchasePendingController", () => {
         deletedCount: 0,
       } as any);
 
-      vi.mocked(Purchase.find).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          sort: vi.fn().mockResolvedValue([]),
-        }),
-      } as any);
+      vi.mocked(Purchase.find).mockReturnValue(mockPurchaseFindChain([]));
 
       await PurchasePendingController.getMyPendingPurchases(
         mockReq as Request,
@@ -128,11 +133,7 @@ describe("PurchasePendingController", () => {
         deletedCount: 0,
       } as any);
 
-      vi.mocked(Purchase.find).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          sort: vi.fn().mockResolvedValue([]),
-        }),
-      } as any);
+      vi.mocked(Purchase.find).mockReturnValue(mockPurchaseFindChain([]));
 
       await PurchasePendingController.getMyPendingPurchases(
         mockReq as Request,
@@ -164,6 +165,7 @@ describe("PurchasePendingController", () => {
             title: "Program A",
             programType: "Workshop",
           },
+          purchaseType: "program",
           status: "pending",
           createdAt: new Date(),
         },
@@ -175,6 +177,7 @@ describe("PurchasePendingController", () => {
             title: "Program B",
             programType: "Webinar",
           },
+          purchaseType: "program",
           status: "pending",
           createdAt: new Date(),
         },
@@ -182,7 +185,9 @@ describe("PurchasePendingController", () => {
 
       vi.mocked(Purchase.find).mockReturnValue({
         populate: vi.fn().mockReturnValue({
-          sort: vi.fn().mockResolvedValue(mockPendingPurchases),
+          populate: vi.fn().mockReturnValue({
+            sort: vi.fn().mockResolvedValue(mockPendingPurchases),
+          }),
         }),
       } as any);
 
@@ -229,6 +234,7 @@ describe("PurchasePendingController", () => {
             title: "Program A",
             programType: "Workshop",
           },
+          purchaseType: "program",
           status: "pending",
           createdAt: new Date(),
         },
@@ -243,7 +249,9 @@ describe("PurchasePendingController", () => {
           findCallCount === 1 ? mockPendingPurchases : mockUpdatedPurchases;
         return {
           populate: vi.fn().mockReturnValue({
-            sort: vi.fn().mockResolvedValue(result),
+            populate: vi.fn().mockReturnValue({
+              sort: vi.fn().mockResolvedValue(result),
+            }),
           }),
         } as any;
       });
@@ -264,7 +272,7 @@ describe("PurchasePendingController", () => {
       });
 
       expect(console.log).toHaveBeenCalledWith(
-        `Auto-cleaned 1 redundant pending purchases (already purchased programs) for user ${userId}`
+        `Auto-cleaned 1 redundant pending purchases (already purchased items) for user ${userId}`
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -292,6 +300,7 @@ describe("PurchasePendingController", () => {
             title: "Program A",
             programType: "Workshop",
           },
+          purchaseType: "program",
           status: "pending",
         },
         {
@@ -302,13 +311,16 @@ describe("PurchasePendingController", () => {
             title: "Program B",
             programType: "Webinar",
           },
+          purchaseType: "program",
           status: "pending",
         },
       ];
 
       vi.mocked(Purchase.find).mockReturnValue({
         populate: vi.fn().mockReturnValue({
-          sort: vi.fn().mockResolvedValue(mockPendingPurchases),
+          populate: vi.fn().mockReturnValue({
+            sort: vi.fn().mockResolvedValue(mockPendingPurchases),
+          }),
         }),
       } as any);
 
@@ -344,7 +356,9 @@ describe("PurchasePendingController", () => {
 
       const findMock = vi.fn().mockReturnValue({
         populate: vi.fn().mockReturnValue({
-          sort: vi.fn().mockResolvedValue([]),
+          populate: vi.fn().mockReturnValue({
+            sort: vi.fn().mockResolvedValue([]),
+          }),
         }),
       });
 
@@ -402,7 +416,9 @@ describe("PurchasePendingController", () => {
 
       vi.mocked(Purchase.find).mockReturnValue({
         populate: vi.fn().mockReturnValue({
-          sort: sortMock,
+          populate: vi.fn().mockReturnValue({
+            sort: sortMock,
+          }),
         }),
       } as any);
 
@@ -437,6 +453,7 @@ describe("PurchasePendingController", () => {
             title: "Program A",
             programType: "Workshop",
           },
+          purchaseType: "program",
           status: "pending",
         },
       ];
@@ -450,7 +467,9 @@ describe("PurchasePendingController", () => {
           callCount === 1 ? mockInitialPurchases : mockUpdatedPurchases;
         return {
           populate: vi.fn().mockReturnValue({
-            sort: vi.fn().mockResolvedValue(result),
+            populate: vi.fn().mockReturnValue({
+              sort: vi.fn().mockResolvedValue(result),
+            }),
           }),
         };
       });
@@ -509,7 +528,9 @@ describe("PurchasePendingController", () => {
       const fetchError = new Error("Fetch failed");
       vi.mocked(Purchase.find).mockReturnValue({
         populate: vi.fn().mockReturnValue({
-          sort: vi.fn().mockRejectedValue(fetchError),
+          populate: vi.fn().mockReturnValue({
+            sort: vi.fn().mockRejectedValue(fetchError),
+          }),
         }),
       } as any);
 
@@ -578,6 +599,7 @@ describe("PurchasePendingController", () => {
             title: "Program A",
             programType: "Workshop",
           },
+          purchaseType: "program",
           status: "pending",
         },
         {
@@ -588,6 +610,7 @@ describe("PurchasePendingController", () => {
             title: "Program B",
             programType: "Webinar",
           },
+          purchaseType: "program",
           status: "pending",
         },
       ];
@@ -598,7 +621,9 @@ describe("PurchasePendingController", () => {
         const result = findCallCount === 1 ? mockPendingPurchases : [];
         return {
           populate: vi.fn().mockReturnValue({
-            sort: vi.fn().mockResolvedValue(result),
+            populate: vi.fn().mockReturnValue({
+              sort: vi.fn().mockResolvedValue(result),
+            }),
           }),
         } as any;
       });
@@ -618,7 +643,7 @@ describe("PurchasePendingController", () => {
       });
 
       expect(console.log).toHaveBeenCalledWith(
-        `Auto-cleaned 2 redundant pending purchases (already purchased programs) for user ${userId}`
+        `Auto-cleaned 2 redundant pending purchases (already purchased items) for user ${userId}`
       );
     });
   });

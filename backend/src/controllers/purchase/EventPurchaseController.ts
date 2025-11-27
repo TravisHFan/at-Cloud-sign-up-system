@@ -265,6 +265,7 @@ class EventPurchaseController {
               type: "card",
             },
             promoCode: validatedPromoCode?.code,
+            promoCodeId: validatedPromoCode?._id,
             promoDiscountAmount:
               promoDiscountAmount > 0 ? promoDiscountAmount : undefined,
             promoDiscountPercent:
