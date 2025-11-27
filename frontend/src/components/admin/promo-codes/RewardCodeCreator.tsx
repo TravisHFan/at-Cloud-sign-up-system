@@ -52,6 +52,7 @@ interface PromoCodeResponse {
   ownerEmail?: string;
   discountPercent: number;
   allowedProgramIds?: string[];
+  allowedEventIds?: string[];
   usedBy?: string[];
   expiresAt?: string;
   isActive: boolean;

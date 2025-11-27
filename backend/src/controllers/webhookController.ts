@@ -296,12 +296,7 @@ export class WebhookController {
                 "firstName lastName email"
               );
 
-              // Get program or event based on purchase type
-              const itemId =
-                purchase.purchaseType === "program"
-                  ? purchase.programId
-                  : purchase.eventId;
-
+              // Get program or event title based on purchase type
               let itemTitle = "Unknown Item";
               if (purchase.purchaseType === "program") {
                 const program = await Program.findById(

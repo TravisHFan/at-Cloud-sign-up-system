@@ -15,7 +15,7 @@ export interface PromoCode {
   _id: string;
   code: string;
   type: "bundle_discount" | "staff_access" | "reward";
-  applicableToType: "program" | "event"; // Whether code is for programs or events
+  applicableToType?: "program" | "event"; // Whether code is for programs or events (optional for backward compatibility)
   discountAmount?: number; // Dollar amount (e.g., 50 = $50 off)
   discountPercent?: number; // Percentage (e.g., 100 = 100% off for staff, 10-100% for reward)
   ownerId: string;
