@@ -84,13 +84,16 @@ export function useManagement(providedUsers?: User[]) {
   const pageRoleStats = useRoleStats(users);
 
   // Determine if user has permission to view system analytics
-  // Only Super Admin, Administrator, and Leader can view system-wide stats
+  // All roles with VIEW_USER_PROFILES (can access Community page) should fetch stats
+  // to ensure stats reflect ALL users, not just the current page
   const canViewSystemAnalytics =
     currentUserRole === "Super Admin" ||
     currentUserRole === "Administrator" ||
-    currentUserRole === "Leader";
+    currentUserRole === "Leader" ||
+    currentUserRole === "Guest Expert" ||
+    currentUserRole === "Participant";
 
-  // 2) Backend-wide stats for the whole collection (only fetch if user has permission)
+  // 2) Backend-wide stats for the whole collection (fetch for all Community page users)
   const { stats: backendStats, loading: backendStatsLoading } = useUserStats(
     canViewSystemAnalytics
   );

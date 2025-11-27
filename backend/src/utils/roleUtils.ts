@@ -316,10 +316,12 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
 
   [ROLES.GUEST_EXPERT]: [
     PERMISSIONS.VIEW_USER_PROFILES, // Same permissions as Participant
+    PERMISSIONS.VIEW_SYSTEM_ANALYTICS, // Allow viewing community stats on Community page
   ],
 
   [ROLES.PARTICIPANT]: [
     PERMISSIONS.VIEW_USER_PROFILES, // Allow viewing Community page
+    PERMISSIONS.VIEW_SYSTEM_ANALYTICS, // Allow viewing community stats on Community page
   ],
 };
 
