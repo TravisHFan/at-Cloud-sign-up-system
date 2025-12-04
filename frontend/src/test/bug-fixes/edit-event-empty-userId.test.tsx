@@ -23,8 +23,14 @@ const mockedEventService = vi.hoisted(() => ({
   updateEvent: vi.fn(),
 }));
 
+const mockedAuthService = vi.hoisted(() => ({
+  getProfile: vi.fn(),
+  logout: vi.fn(),
+}));
+
 vi.mock("../../services/api", () => ({
   eventService: mockedEventService,
+  authService: mockedAuthService,
   programService: {
     list: vi.fn().mockResolvedValue([]),
   },
@@ -76,6 +82,21 @@ vi.mock("../../hooks/useAuth", () => ({
 describe("Bug Fix: Edit Event with empty userId in organizerDetails", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // Mock getEventTemplates to prevent infinite loops
+    mockedEventService.getEventTemplates.mockResolvedValue([]);
+
+    // Mock authService.getProfile to return user data
+    mockedAuthService.getProfile.mockResolvedValue({
+      id: "u1",
+      firstName: "Test",
+      lastName: "User",
+      email: "test@example.com",
+      role: "Leader",
+      roleInAtCloud: "Leader",
+      gender: "male",
+      avatar: null,
+    });
   });
 
   it("should filter out organizers with empty IDs when updating event", async () => {
@@ -85,7 +106,7 @@ describe("Bug Fix: Edit Event with empty userId in organizerDetails", () => {
       title: "Test Event",
       type: "Meeting",
       format: "In-person",
-      date: "2025-12-01",
+      date: "2026-01-15",
       time: "10:00",
       endTime: "12:00",
       location: "Conference Room",
@@ -146,7 +167,9 @@ describe("Bug Fix: Edit Event with empty userId in organizerDetails", () => {
     });
 
     // Select notification preference
-    const sendRadio = screen.getAllByRole("radio")[0]; // First radio is "send"
+    const sendRadio = screen.getByRole("radio", {
+      name: /^send notifications now/i,
+    });
     fireEvent.click(sendRadio);
 
     // Submit
@@ -255,7 +278,9 @@ describe("Bug Fix: Edit Event with empty userId in organizerDetails", () => {
     });
 
     // Select notification preference
-    const sendRadio = screen.getAllByRole("radio")[0]; // First radio is "send"
+    const sendRadio = screen.getByRole("radio", {
+      name: /^send notifications now/i,
+    });
     fireEvent.click(sendRadio);
 
     // Submit

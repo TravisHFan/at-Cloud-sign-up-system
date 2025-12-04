@@ -67,8 +67,8 @@ describe("Public Events API - audit logs", () => {
       .send({
         title: "Audit Event",
         type: "Webinar",
-        date: "2025-12-01",
-        endDate: "2025-12-01",
+        date: "2026-01-15",
+        endDate: "2026-01-15",
         time: "10:00",
         endTime: "11:00",
         location: "Online",

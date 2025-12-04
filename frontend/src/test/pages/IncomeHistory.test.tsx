@@ -67,6 +67,7 @@ describe("IncomeHistory Component", () => {
     {
       id: "pur1",
       orderNumber: "ORD-2025-001",
+      purchaseType: "program",
       user: {
         id: "user1",
         name: "John Doe",
@@ -94,6 +95,7 @@ describe("IncomeHistory Component", () => {
     {
       id: "pur2",
       orderNumber: "ORD-2025-002",
+      purchaseType: "program",
       user: {
         id: "user2",
         name: "Jane Smith",
@@ -241,7 +243,7 @@ describe("IncomeHistory Component", () => {
       expect(purchaseCounts.length).toBeGreaterThan(0);
 
       // Check that both tabs are present
-      expect(screen.getByText("Program Purchases")).toBeInTheDocument();
+      expect(screen.getByText("Purchases")).toBeInTheDocument();
       expect(screen.getByText("Donations")).toBeInTheDocument();
     });
 
@@ -303,7 +305,7 @@ describe("IncomeHistory Component", () => {
         // Check table headers
         expect(screen.getByText("Order Number")).toBeInTheDocument();
         expect(screen.getByText("User")).toBeInTheDocument();
-        expect(screen.getByText("Program")).toBeInTheDocument();
+        expect(screen.getByText("Program / Event")).toBeInTheDocument();
 
         // Check purchase data
         expect(screen.getByText("ORD-2025-001")).toBeInTheDocument();
@@ -376,8 +378,8 @@ describe("IncomeHistory Component", () => {
       );
 
       await waitFor(() => {
-        const statusFilter = screen.getByRole("combobox");
-        expect(statusFilter).toBeInTheDocument();
+        const statusFilters = screen.getAllByRole("combobox");
+        expect(statusFilters.length).toBeGreaterThan(0);
       });
     });
 

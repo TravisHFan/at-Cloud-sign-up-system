@@ -74,8 +74,8 @@ describe("Auto-unpublish on update when necessary fields removed", () => {
       .send({
         title: "Online Auto Unpublish",
         type: "Webinar",
-        date: "2025-12-01",
-        endDate: "2025-12-01",
+        date: "2026-01-15",
+        endDate: "2026-01-15",
         time: "09:00",
         endTime: "10:00",
         location: "Online",
@@ -124,8 +124,8 @@ describe("Auto-unpublish on update when necessary fields removed", () => {
       .send({
         title: "In-person Auto Unpublish",
         type: "Webinar",
-        date: "2025-12-02",
-        endDate: "2025-12-02",
+        date: "2026-01-16",
+        endDate: "2026-01-16",
         time: "09:00",
         endTime: "10:00",
         location: "Hall A",
@@ -163,8 +163,8 @@ describe("Auto-unpublish on update when necessary fields removed", () => {
       .send({
         title: "Hybrid Auto Unpublish",
         type: "Conference",
-        date: "2025-12-03",
-        endDate: "2025-12-03",
+        date: "2026-01-17",
+        endDate: "2026-01-17",
         time: "09:00",
         endTime: "10:00",
         location: "Campus Center",

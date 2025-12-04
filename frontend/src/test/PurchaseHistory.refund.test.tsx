@@ -43,6 +43,7 @@ const renderWithRouter = (component: React.ReactElement) => {
 const mockCompletedPurchase = {
   id: "purchase-1",
   orderNumber: "ORD-20250110-00001",
+  purchaseType: "program" as const,
   programId: {
     id: "program-1",
     title: "Test Program",

@@ -102,6 +102,48 @@ describe("Event Access Control Integration Tests", () => {
   });
 
   describe("CRITICAL: Event-only purchase access control", () => {
+    it("should allow Super Admin free access to paid events without purchase", async () => {
+      // Update user to Super Admin
+      await User.findByIdAndUpdate(userId, { role: "Super Admin" });
+
+      // Login again to get fresh token with updated role
+      const loginRes = await request(app)
+        .post("/api/auth/login")
+        .send({ emailOrUsername: "eventbuyer@test.com", password: "Test123!" });
+      const adminToken = loginRes.body.data.accessToken;
+
+      // Try to access the paid event detail page without purchasing
+      const response = await request(app)
+        .get(`/api/events/${eventId}`)
+        .set("Authorization", `Bearer ${adminToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.event).toBeDefined();
+      expect(response.body.data.event.id).toBe(eventId.toString());
+    });
+
+    it("should allow Administrator free access to paid events without purchase", async () => {
+      // Update user to Administrator
+      await User.findByIdAndUpdate(userId, { role: "Administrator" });
+
+      // Login again to get fresh token with updated role
+      const loginRes = await request(app)
+        .post("/api/auth/login")
+        .send({ emailOrUsername: "eventbuyer@test.com", password: "Test123!" });
+      const adminToken = loginRes.body.data.accessToken;
+
+      // Try to access the paid event detail page without purchasing
+      const response = await request(app)
+        .get(`/api/events/${eventId}`)
+        .set("Authorization", `Bearer ${adminToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.event).toBeDefined();
+      expect(response.body.data.event.id).toBe(eventId.toString());
+    });
+
     it("should allow access to event detail page when user purchased event ticket (without program purchase)", async () => {
       // Create a completed event purchase (no program purchase)
       await Purchase.create({

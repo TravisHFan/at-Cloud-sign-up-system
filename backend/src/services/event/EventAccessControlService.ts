@@ -74,10 +74,7 @@ class EventAccessControlService {
       }
 
       // Check 2: System Authorization - Super Admin or Administrator
-      if (
-        user.systemAuthorizationLevel === "Super Admin" ||
-        user.systemAuthorizationLevel === "Administrator"
-      ) {
+      if (user.role === "Super Admin" || user.role === "Administrator") {
         return {
           hasAccess: true,
           requiresPurchase: false,

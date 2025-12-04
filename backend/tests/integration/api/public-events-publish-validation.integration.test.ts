@@ -63,8 +63,8 @@ describe("Public Events API - publish validation", () => {
       .send({
         title: "Validation Event",
         type: "Webinar",
-        date: "2025-12-01",
-        endDate: "2025-12-01",
+        date: "2026-01-15",
+        endDate: "2026-01-15",
         time: "09:00",
         endTime: "10:00",
         ...publishFieldsForFormat("Online", "val"),

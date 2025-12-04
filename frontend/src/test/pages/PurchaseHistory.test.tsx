@@ -23,6 +23,7 @@ describe("PurchaseHistory Component", () => {
       id: "pur1",
       _id: "pur1",
       orderNumber: "ORD-2025-001",
+      purchaseType: "program",
       programId: {
         _id: "prog1",
         title: "Advanced Leadership Training",
@@ -46,6 +47,7 @@ describe("PurchaseHistory Component", () => {
       id: "pur2",
       _id: "pur2",
       orderNumber: "ORD-2025-002",
+      purchaseType: "program",
       programId: {
         _id: "prog2",
         title: "Ministry Workshop Series",

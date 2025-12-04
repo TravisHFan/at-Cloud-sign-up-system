@@ -195,8 +195,8 @@ describe("Email Notifications API - Integration Tests", () => {
       .send({
         title: "Test Event for Email Notifications",
         type: "Conference",
-        date: "2025-12-01",
-        endDate: "2025-12-01",
+        date: "2026-01-15",
+        endDate: "2026-01-15",
         time: "14:00",
         endTime: "15:00",
         location: "Test Location",
@@ -255,7 +255,7 @@ describe("Email Notifications API - Integration Tests", () => {
         .send({
           eventData: {
             title: "Test Event",
-            date: "2025-12-01",
+            date: "2026-01-15",
             time: "14:00",
             location: "Test Location",
             organizerName: "Test Organizer",
@@ -273,7 +273,7 @@ describe("Email Notifications API - Integration Tests", () => {
         .send({
           eventData: {
             title: "Test Event",
-            date: "2025-12-01",
+            date: "2026-01-15",
             time: "14:00",
             location: "Test Location",
             organizerName: "Test Organizer",
@@ -291,7 +291,7 @@ describe("Email Notifications API - Integration Tests", () => {
           eventId: testEventId,
           eventData: {
             title: "Test Event",
-            date: "2025-12-01",
+            date: "2026-01-15",
             time: "14:00",
             location: "Test Location",
           },
@@ -315,7 +315,7 @@ describe("Email Notifications API - Integration Tests", () => {
         .send({
           eventData: {
             title: "New Amazing Event",
-            date: "2025-12-15",
+            date: "2026-01-20",
             time: "18:00",
             location: "Community Center",
             organizerName: "Admin User",
@@ -337,7 +337,7 @@ describe("Email Notifications API - Integration Tests", () => {
         .send({
           eventData: {
             title: "Exclusive Event",
-            date: "2025-12-20",
+            date: "2026-01-25",
             time: "19:00",
             location: "Private Venue",
             organizerName: "Admin User",
@@ -355,7 +355,7 @@ describe("Email Notifications API - Integration Tests", () => {
         .set("Authorization", `Bearer ${adminToken}`)
         .send({
           eventData: {
-            date: "2025-12-01",
+            date: "2026-01-15",
             time: "14:00",
             location: "Test Location",
             organizerName: "Test Organizer",
@@ -392,7 +392,7 @@ describe("Email Notifications API - Integration Tests", () => {
         .send({
           eventData: {
             title: "Simple Event",
-            date: "2025-12-25",
+            date: "2026-01-30",
             time: "10:00",
             location: "Simple Location",
             organizerName: "Simple Organizer",
@@ -607,7 +607,7 @@ describe("Email Notifications API - Integration Tests", () => {
           },
           eventData: {
             title: "Test Event",
-            date: "2025-12-01",
+            date: "2026-01-15",
             time: "14:00",
             location: "Test Location",
           },
@@ -632,7 +632,7 @@ describe("Email Notifications API - Integration Tests", () => {
         .send({
           eventData: {
             title: "Test Event",
-            date: "2025-12-01",
+            date: "2026-01-15",
             time: "14:00",
             location: "Test Location",
           },
@@ -661,7 +661,7 @@ describe("Email Notifications API - Integration Tests", () => {
           eventId: testEventId,
           eventData: {
             title: "Test Event",
-            date: "2025-12-01",
+            date: "2026-01-15",
             time: "14:00",
             location: "Test Location",
           },
@@ -680,7 +680,7 @@ describe("Email Notifications API - Integration Tests", () => {
           eventId: testEventId,
           eventData: {
             title: "Test Event",
-            date: "2025-12-01",
+            date: "2026-01-15",
             time: "14:00",
             location: "Test Location",
           },
@@ -699,7 +699,7 @@ describe("Email Notifications API - Integration Tests", () => {
           eventId: testEventId,
           eventData: {
             title: "Test Event",
-            date: "2025-12-01",
+            date: "2026-01-15",
             time: "14:00",
             location: "Test Location",
           },
@@ -717,7 +717,7 @@ describe("Email Notifications API - Integration Tests", () => {
         .send({
           eventData: {
             title: "Test Event",
-            date: "2025-12-01",
+            date: "2026-01-15",
             time: "14:00",
             location: "Test Location",
           },
