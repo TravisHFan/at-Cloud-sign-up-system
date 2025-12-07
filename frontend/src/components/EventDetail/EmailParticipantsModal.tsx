@@ -1,10 +1,13 @@
 import { createPortal } from "react-dom";
+import { useEffect, useRef } from "react";
 import { eventService } from "../../services/api";
+import useShortLink from "../../hooks/useShortLink";
 
 interface EmailParticipantsModalProps {
   isOpen: boolean;
   eventId: string;
   eventTitle: string;
+  publicSlug?: string; // Optional: if event is published
   emailModal: {
     subject: string;
     bodyHtml: string;
@@ -40,17 +43,67 @@ interface EmailParticipantsModalProps {
  * - Paste as plain text to avoid formatting issues
  * - Loading state during email send
  * - Recipient count feedback
+ * - Auto-populated meeting agenda link if event is published
  */
 export default function EmailParticipantsModal({
   isOpen,
   eventId,
   eventTitle,
+  publicSlug,
   emailModal,
   setEmailModal,
   emailEditorRef,
   applyEditorCommand,
   notification,
 }: EmailParticipantsModalProps) {
+  const { load, record } = useShortLink(
+    publicSlug ? eventId : undefined // Only fetch short link if event is published
+  );
+  const hasInitializedRef = useRef(false);
+
+  // Fetch short link and initialize default text when modal opens (only once per open)
+  useEffect(() => {
+    if (!isOpen) {
+      hasInitializedRef.current = false;
+      return;
+    }
+
+    if (publicSlug && !hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+
+      // Load the short link
+      void load();
+    }
+  }, [isOpen, publicSlug, load]);
+
+  // When short link is loaded, initialize default text if body is empty
+  useEffect(() => {
+    if (!isOpen || !publicSlug || !record) return;
+
+    // Check if email body is empty - if so, add default text
+    setEmailModal((prev) => {
+      if (prev.bodyHtml.trim().length > 0) return prev; // Don't override existing content
+
+      // Use the short link URL from the record
+      const shortUrl = record.url;
+      if (!shortUrl) return prev;
+
+      // Construct full URL
+      const fullUrl = `${window.location.origin}${shortUrl}`;
+      const defaultText = `Detailed meeting agenda: <a href="${fullUrl}">${fullUrl}</a>`;
+
+      return { ...prev, bodyHtml: defaultText };
+    });
+  }, [isOpen, publicSlug, record, setEmailModal]); // Sync editor innerHTML when bodyHtml state changes (for default text initialization)
+  useEffect(() => {
+    if (emailEditorRef.current && emailModal.bodyHtml) {
+      // Only update if the editor content differs from state
+      if (emailEditorRef.current.innerHTML !== emailModal.bodyHtml) {
+        emailEditorRef.current.innerHTML = emailModal.bodyHtml;
+      }
+    }
+  }, [emailModal.bodyHtml, emailEditorRef]);
+
   if (!isOpen) return null;
 
   const handleClose = () => {

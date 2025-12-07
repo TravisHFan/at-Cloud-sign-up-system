@@ -219,6 +219,7 @@ function EventModals({
         isOpen={emailModal.open}
         eventId={event.id}
         eventTitle={event.title}
+        publicSlug={event.publicSlug}
         emailModal={emailModal}
         setEmailModal={setEmailModal}
         emailEditorRef={emailEditorRef}
