@@ -58,8 +58,8 @@ describe("Publish necessary fields enforcement", () => {
       .send({
         title: "Online Missing Virtual",
         type: "Webinar",
-        date: "2025-12-10",
-        endDate: "2025-12-10",
+        date: "2026-06-15",
+        endDate: "2026-06-15",
         time: "09:00",
         endTime: "10:00",
         // Use helper then strip necessary fields to simulate omission
@@ -95,8 +95,8 @@ describe("Publish necessary fields enforcement", () => {
       .send({
         title: "Online Complete",
         type: "Webinar",
-        date: "2025-12-11",
-        endDate: "2025-12-11",
+        date: "2026-06-15",
+        endDate: "2026-06-15",
         time: "09:00",
         endTime: "10:00",
         ...publishFieldsForFormat("Online", "complete"),

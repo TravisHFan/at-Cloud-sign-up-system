@@ -204,7 +204,7 @@ describe("Bug Fix: Edit Event with empty userId in organizerDetails", () => {
       title: "Another Event",
       type: "Workshop",
       format: "Online",
-      date: "2025-12-10",
+      date: "2026-06-15",
       time: "14:00",
       endTime: "16:00",
       location: "Online",

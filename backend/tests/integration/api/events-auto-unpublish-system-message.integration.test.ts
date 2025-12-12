@@ -71,8 +71,8 @@ describe("Auto-unpublish system message emission", () => {
       .send({
         title: "System Msg Auto Unpublish",
         type: "Webinar",
-        date: "2025-12-10",
-        endDate: "2025-12-10",
+        date: "2026-06-15",
+        endDate: "2026-06-15",
         time: "09:00",
         endTime: "10:00",
         location: "Online",

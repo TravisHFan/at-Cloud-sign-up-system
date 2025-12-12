@@ -166,7 +166,7 @@ interface EventRoleSignupProps {
   }>;
   // Organizer contacts snapshot used by updateEvent payload contract
   organizerDetails?: OrganizerDetail[];
-  // Phase 6: Paid events - hide assignment/guest invitation for paid events
+  // Phase 6: Paid events - indicates if event requires purchase (for role access control, not UI hiding)
   requiresPurchase?: boolean;
 }
 
@@ -186,7 +186,7 @@ export default function EventRoleSignup({
   guestCount = 0,
   guestList = [],
   organizerDetails: _organizerDetails,
-  requiresPurchase = false,
+  requiresPurchase: _requiresPurchase = false,
 }: EventRoleSignupProps) {
   const navigate = useNavigate();
   const [showSignupForm, setShowSignupForm] = useState(false);
@@ -561,21 +561,20 @@ export default function EventRoleSignup({
                                   Sign Up Myself
                                 </button>
                               )}
-                            {/* Hide Assign User and Invite Guest for paid events that require purchase */}
-                            {!requiresPurchase &&
-                              isOrganizer &&
-                              onAssignUser && (
-                                <button
-                                  onClick={() => {
-                                    setShowAssignModal(true);
-                                    setShowSignUpDropdown(false);
-                                  }}
-                                  className="w-full text-left px-2 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                                >
-                                  Assign User
-                                </button>
-                              )}
-                            {!requiresPurchase && isRoleAllowedForUser && (
+                            {/* Assign User - available for organizers */}
+                            {isOrganizer && onAssignUser && (
+                              <button
+                                onClick={() => {
+                                  setShowAssignModal(true);
+                                  setShowSignUpDropdown(false);
+                                }}
+                                className="w-full text-left px-2 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                              >
+                                Assign User
+                              </button>
+                            )}
+                            {/* Invite Guest - available for users who can sign up for the role */}
+                            {isRoleAllowedForUser && (
                               <button
                                 onClick={() => {
                                   if (isFull) return;

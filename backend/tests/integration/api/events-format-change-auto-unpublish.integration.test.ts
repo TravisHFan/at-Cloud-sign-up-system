@@ -80,8 +80,8 @@ describe("Auto-unpublish on format change introducing new missing necessary fiel
       .send({
         title: "Format Change Auto Unpublish",
         type: "Webinar",
-        date: "2025-12-10",
-        endDate: "2025-12-10",
+        date: "2026-06-15",
+        endDate: "2026-06-15",
         time: "09:00",
         endTime: "10:00",
         location: "Room 1",
