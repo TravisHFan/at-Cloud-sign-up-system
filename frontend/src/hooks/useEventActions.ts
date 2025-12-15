@@ -5,7 +5,7 @@ import * as XLSX from "xlsx";
 
 export interface EventActionsResult {
   handleDownloadCalendar: () => Promise<void>;
-  handleExportSignups: () => void;
+  handleExportSignups: () => Promise<void>;
   handleDeleteEvent: () => Promise<void>;
   handleCancelEvent: () => Promise<void>;
 }
@@ -62,16 +62,16 @@ export function useEventActions({
     }
   };
 
-  // Export signups to Excel
-  const handleExportSignups = () => {
+  // Export signups to Excel (with optional Purchases tab for paid events)
+  const handleExportSignups = async () => {
     if (!event) return;
 
-    // Prepare data for export
-    const exportData: Array<Record<string, string | number | undefined>> = [];
+    // Prepare signup data for export
+    const signupData: Array<Record<string, string | number | undefined>> = [];
 
     event.roles.forEach((role) => {
       role.currentSignups?.forEach((signup) => {
-        exportData.push({
+        signupData.push({
           "First Name": signup.firstName || "",
           "Last Name": signup.lastName || "",
           Username: signup.username,
@@ -86,9 +86,44 @@ export function useEventActions({
       });
     });
 
-    if (exportData.length === 0) {
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+
+    // Add signups worksheet if there are signups
+    if (signupData.length > 0) {
+      const signupsWs = XLSX.utils.json_to_sheet(signupData);
+      XLSX.utils.book_append_sheet(wb, signupsWs, "Event Signups");
+    }
+
+    // For paid events, fetch and add purchases tab
+    let purchaseCount = 0;
+    if (event.pricing?.isFree === false) {
+      try {
+        const purchasesResult = await eventService.getEventPurchases(event.id);
+        if (purchasesResult.purchases.length > 0) {
+          const purchaseData = purchasesResult.purchases.map((p) => ({
+            Name: p.name,
+            Email: p.email,
+            "Payment Date": new Date(p.paymentDate).toLocaleString(),
+            "Amount Paid": `$${p.amountPaid.toFixed(2)}`,
+            "Promo Code": p.promoCode || "",
+            "Order Number": p.orderNumber,
+          }));
+
+          const purchasesWs = XLSX.utils.json_to_sheet(purchaseData);
+          XLSX.utils.book_append_sheet(wb, purchasesWs, "Ticket Purchases");
+          purchaseCount = purchasesResult.purchases.length;
+        }
+      } catch (err) {
+        console.error("Failed to fetch purchases for export:", err);
+        // Continue with export even if purchases fetch fails
+      }
+    }
+
+    // Check if we have any data to export
+    if (signupData.length === 0 && purchaseCount === 0) {
       notification.warning(
-        "There are currently no signups to export for this event.",
+        "There are currently no signups or purchases to export for this event.",
         {
           title: "No Data to Export",
           autoCloseDelay: 4000,
@@ -96,15 +131,6 @@ export function useEventActions({
       );
       return;
     }
-
-    // Create workbook and worksheet
-    const wb = XLSX.utils.book_new();
-
-    // Convert data to worksheet
-    const ws = XLSX.utils.json_to_sheet(exportData);
-
-    // Add worksheet to workbook
-    XLSX.utils.book_append_sheet(wb, ws, "Event Signups");
 
     // Generate filename with current date
     const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
@@ -116,18 +142,26 @@ export function useEventActions({
     // Write and download the file
     XLSX.writeFile(wb, filename);
 
-    notification.success(
-      `Successfully exported signup data for ${exportData.length} participants.`,
-      {
-        title: "Export Complete",
-        autoCloseDelay: 4000,
-        actionButton: {
-          text: "Export Again",
-          onClick: () => handleExportSignups(),
-          variant: "secondary",
-        },
-      }
-    );
+    // Build success message
+    const parts: string[] = [];
+    if (signupData.length > 0) {
+      parts.push(
+        `${signupData.length} signup${signupData.length !== 1 ? "s" : ""}`
+      );
+    }
+    if (purchaseCount > 0) {
+      parts.push(`${purchaseCount} purchase${purchaseCount !== 1 ? "s" : ""}`);
+    }
+
+    notification.success(`Successfully exported ${parts.join(" and ")}.`, {
+      title: "Export Complete",
+      autoCloseDelay: 4000,
+      actionButton: {
+        text: "Export Again",
+        onClick: () => handleExportSignups(),
+        variant: "secondary",
+      },
+    });
   };
 
   // Handle event deletion

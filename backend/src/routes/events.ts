@@ -270,6 +270,68 @@ router.post(
   }
 );
 
+// Get list of users who purchased tickets for this event (organizers/admins only)
+router.get(
+  "/:id/purchases",
+  authenticate,
+  validateObjectId,
+  handleValidationErrors,
+  authorizeEventManagement,
+  async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const Purchase = (await import("../models/Purchase")).default;
+
+      // Find all completed purchases for this event
+      const purchases = await Purchase.find({
+        purchaseType: "event",
+        eventId: id,
+        status: "completed",
+      })
+        .populate("userId", "firstName lastName email")
+        .sort({ purchaseDate: -1 });
+
+      // Map to response format
+      const purchasers = purchases.map((purchase) => {
+        const user = purchase.userId as unknown as {
+          _id: { toString(): string };
+          firstName?: string;
+          lastName?: string;
+          email?: string;
+        } | null;
+
+        return {
+          id: purchase._id.toString(),
+          userId: user?._id?.toString() || "",
+          name: user
+            ? `${user.firstName || ""} ${user.lastName || ""}`.trim()
+            : purchase.billingInfo?.fullName || "Unknown",
+          email: user?.email || purchase.billingInfo?.email || "",
+          paymentDate: purchase.purchaseDate,
+          amountPaid: purchase.finalPrice / 100, // Convert cents to dollars
+          promoCode: purchase.promoCode || null,
+          orderNumber: purchase.orderNumber,
+        };
+      });
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          purchases: purchasers,
+          totalCount: purchasers.length,
+          totalRevenue: purchasers.reduce((sum, p) => sum + p.amountPaid, 0),
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching event purchases:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to fetch event purchases",
+      });
+    }
+  }
+);
+
 // All routes below require authentication
 router.use(authenticate);
 

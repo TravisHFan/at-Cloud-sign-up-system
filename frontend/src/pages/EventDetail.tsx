@@ -23,6 +23,7 @@ import { useEventAccess } from "../hooks/useEventAccess";
 import WorkshopGroupsSection from "../components/EventDetail/WorkshopGroupsSection";
 import EventModals from "../components/EventDetail/EventModals";
 import EventRolesSection from "../components/EventDetail/EventRolesSection";
+import EventPurchasersSection from "../components/EventDetail/EventPurchasersSection";
 import FlyerDisplay from "../components/EventDetail/FlyerDisplay";
 import EventBasicDetails from "../components/EventDetail/EventBasicDetails";
 import EventHostAndPurpose from "../components/EventDetail/EventHostAndPurpose";
@@ -780,6 +781,18 @@ export default function EventDetail() {
               </div>
             </div>
           )}
+
+          {/* Ticket Purchases Section - Only for paid events and authorized users */}
+          <EventPurchasersSection
+            eventId={event.id}
+            isPaidEvent={event.pricing?.isFree === false}
+            canViewPurchases={
+              currentUserRole === "Super Admin" ||
+              currentUserRole === "Administrator" ||
+              isCurrentUserOrganizer ||
+              !!canManageSignups
+            }
+          />
 
           {/* Roles Section */}
           <div className="bg-white rounded-lg shadow-sm p-6">

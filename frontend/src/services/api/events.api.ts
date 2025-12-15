@@ -587,6 +587,46 @@ class EventsApiClient extends BaseApiClient {
 
     throw new Error(response.message || "Failed to create event purchase");
   }
+
+  /**
+   * Get list of users who purchased tickets for this event
+   * Only available to organizers and admins
+   */
+  async getEventPurchases(eventId: string): Promise<{
+    purchases: Array<{
+      id: string;
+      userId: string;
+      name: string;
+      email: string;
+      paymentDate: string;
+      amountPaid: number;
+      promoCode: string | null;
+      orderNumber: string;
+    }>;
+    totalCount: number;
+    totalRevenue: number;
+  }> {
+    const response = await this.request<{
+      purchases: Array<{
+        id: string;
+        userId: string;
+        name: string;
+        email: string;
+        paymentDate: string;
+        amountPaid: number;
+        promoCode: string | null;
+        orderNumber: string;
+      }>;
+      totalCount: number;
+      totalRevenue: number;
+    }>(`/events/${eventId}/purchases`);
+
+    if (response.data) {
+      return response.data;
+    }
+
+    throw new Error(response.message || "Failed to fetch event purchases");
+  }
 }
 
 // Export singleton instance
@@ -677,6 +717,8 @@ export const eventsService = {
     eventsApiClient.getEventPurchaseInfo(eventId, promoCode),
   createEventPurchase: (eventId: string, promoCode?: string) =>
     eventsApiClient.createEventPurchase(eventId, promoCode),
+  getEventPurchases: (eventId: string) =>
+    eventsApiClient.getEventPurchases(eventId),
 };
 
 // Legacy export (singular name for backward compatibility)

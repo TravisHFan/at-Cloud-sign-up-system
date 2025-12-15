@@ -129,8 +129,8 @@ describe("Publish necessary fields enforcement", () => {
       .send({
         title: "In Person Missing Location",
         type: "Webinar",
-        date: "2025-12-12",
-        endDate: "2025-12-12",
+        date: "2026-06-15",
+        endDate: "2026-06-15",
         time: "09:00",
         endTime: "10:00",
         ...publishFieldsForFormat("In-person", "inperson"),
@@ -162,8 +162,8 @@ describe("Publish necessary fields enforcement", () => {
       .send({
         title: "Hybrid Partial",
         type: "Conference",
-        date: "2025-12-13",
-        endDate: "2025-12-13",
+        date: "2026-06-16",
+        endDate: "2026-06-16",
         time: "09:00",
         endTime: "10:00",
         ...publishFieldsForFormat("Hybrid Participation", "hybrid"),
