@@ -128,7 +128,8 @@ export class BaseApiClient {
         if (
           response.status === 400 &&
           data?.errors &&
-          Array.isArray(data.errors)
+          Array.isArray(data.errors) &&
+          data.errors.length > 0
         ) {
           const errorMessages = (data.errors as unknown[])
             .map((err: unknown) => {
@@ -147,19 +148,33 @@ export class BaseApiClient {
                   msg?: string;
                   message?: string;
                 };
-                const field = e.path || e.param || "field";
-                const message = e.msg || e.message || "validation error";
-                return `${field}: ${message}`;
+                const field = e.path || e.param || "";
+                const message = e.msg || e.message || "invalid value";
+                // Return just the message if it's descriptive, otherwise include field
+                if (message.toLowerCase().includes(field.toLowerCase())) {
+                  return message;
+                }
+                // Capitalize field name for display
+                const displayField = field
+                  .replace(/([A-Z])/g, " $1")
+                  .replace(/^./, (s) => s.toUpperCase())
+                  .trim();
+                return displayField ? `${displayField}: ${message}` : message;
               }
-              return "validation error";
+              return "";
             })
-            .join("; ");
+            .filter(Boolean);
+
+          // Format as newline-separated for better readability in modal
+          const formattedErrors = errorMessages.join("\n");
           const err = new Error(
-            `${data.message || "Validation failed"}: ${errorMessages}`
+            formattedErrors || data.message || "Validation failed"
           ) as Error & {
             status?: number;
+            validationErrors?: string[];
           };
           err.status = response.status;
+          err.validationErrors = errorMessages;
           throw err;
         }
 

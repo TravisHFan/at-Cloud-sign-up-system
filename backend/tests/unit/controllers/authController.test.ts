@@ -187,7 +187,9 @@ describe("AuthController", () => {
         };
 
         vi.mocked(User).mockImplementation(() => mockUser as any);
-        vi.mocked(AuthEmailService.sendVerificationEmail).mockResolvedValue(true);
+        vi.mocked(AuthEmailService.sendVerificationEmail).mockResolvedValue(
+          true
+        );
         vi.mocked(CachePatterns.invalidateUserCache).mockResolvedValue(
           undefined
         );
@@ -257,7 +259,9 @@ describe("AuthController", () => {
         };
 
         vi.mocked(User).mockImplementation(() => mockUser as any);
-        vi.mocked(AuthEmailService.sendVerificationEmail).mockResolvedValue(true);
+        vi.mocked(AuthEmailService.sendVerificationEmail).mockResolvedValue(
+          true
+        );
         vi.mocked(
           AutoEmailNotificationService.sendAtCloudRoleChangeNotification
         ).mockResolvedValue({
@@ -317,7 +321,9 @@ describe("AuthController", () => {
         };
 
         vi.mocked(User).mockImplementation(() => mockFemaleUser as any);
-        vi.mocked(AuthEmailService.sendVerificationEmail).mockResolvedValue(true);
+        vi.mocked(AuthEmailService.sendVerificationEmail).mockResolvedValue(
+          true
+        );
 
         await AuthController.register(
           mockRequest as Request,
@@ -564,7 +570,9 @@ describe("AuthController", () => {
         };
 
         vi.mocked(User).mockImplementation(() => mockUser as any);
-        vi.mocked(AuthEmailService.sendVerificationEmail).mockResolvedValue(false); // Email fails
+        vi.mocked(AuthEmailService.sendVerificationEmail).mockResolvedValue(
+          false
+        ); // Email fails
 
         // Act
         await AuthController.register(
@@ -604,7 +612,9 @@ describe("AuthController", () => {
         };
 
         vi.mocked(User).mockImplementation(() => mockUser as any);
-        vi.mocked(AuthEmailService.sendVerificationEmail).mockResolvedValue(true);
+        vi.mocked(AuthEmailService.sendVerificationEmail).mockResolvedValue(
+          true
+        );
         vi.mocked(
           AutoEmailNotificationService.sendAtCloudRoleChangeNotification
         ).mockRejectedValue(new Error("Notification service down"));
@@ -664,7 +674,7 @@ describe("AuthController", () => {
         expect(mockJson).toHaveBeenCalledWith(
           expect.objectContaining({
             success: false,
-            message: "Validation failed",
+            message: "username: Username too short",
             meta: expect.objectContaining({
               timestamp: expect.any(String),
             }),
@@ -1300,7 +1310,9 @@ describe("AuthController", () => {
       };
 
       vi.mocked(User.findOne).mockResolvedValue(mockUser as any);
-      vi.mocked(AuthEmailService.sendPasswordResetEmail).mockResolvedValue(true);
+      vi.mocked(AuthEmailService.sendPasswordResetEmail).mockResolvedValue(
+        true
+      );
       vi.mocked(
         UnifiedMessageController.createTargetedSystemMessage
       ).mockResolvedValue({
@@ -1392,7 +1404,9 @@ describe("AuthController", () => {
       };
 
       vi.mocked(User.findOne).mockResolvedValue(mockUser as any);
-      vi.mocked(AuthEmailService.sendPasswordResetEmail).mockResolvedValue(false); // Email fails
+      vi.mocked(AuthEmailService.sendPasswordResetEmail).mockResolvedValue(
+        false
+      ); // Email fails
 
       // Act
       await AuthController.forgotPassword(
@@ -1427,7 +1441,9 @@ describe("AuthController", () => {
       };
 
       vi.mocked(User.findOne).mockResolvedValue(mockUser as any);
-      vi.mocked(AuthEmailService.sendPasswordResetEmail).mockResolvedValue(true);
+      vi.mocked(AuthEmailService.sendPasswordResetEmail).mockResolvedValue(
+        true
+      );
       vi.mocked(
         UnifiedMessageController.createTargetedSystemMessage
       ).mockRejectedValue(new Error("Message service down"));
@@ -1489,9 +1505,9 @@ describe("AuthController", () => {
       };
 
       mockRequest.user = mockUser as any;
-      vi.mocked(AuthEmailService.sendPasswordResetSuccessEmail).mockResolvedValue(
-        true
-      );
+      vi.mocked(
+        AuthEmailService.sendPasswordResetSuccessEmail
+      ).mockResolvedValue(true);
       vi.mocked(
         UnifiedMessageController.createTargetedSystemMessage
       ).mockResolvedValue({
@@ -1518,10 +1534,9 @@ describe("AuthController", () => {
       expect(mockUser.passwordResetExpires).toBeUndefined();
       expect(mockUser.save).toHaveBeenCalled();
       expect(CachePatterns.invalidateUserCache).toHaveBeenCalledWith("user123");
-      expect(AuthEmailService.sendPasswordResetSuccessEmail).toHaveBeenCalledWith(
-        "test@example.com",
-        "Test"
-      );
+      expect(
+        AuthEmailService.sendPasswordResetSuccessEmail
+      ).toHaveBeenCalledWith("test@example.com", "Test");
     });
 
     it("should reject reset with missing passwords", async () => {
@@ -1926,7 +1941,9 @@ describe("AuthController", () => {
       };
 
       vi.mocked(User.findOne).mockResolvedValue(mockUser as any);
-      vi.mocked(AuthEmailService.sendVerificationEmail).mockResolvedValue(false);
+      vi.mocked(AuthEmailService.sendVerificationEmail).mockResolvedValue(
+        false
+      );
 
       // Act
       await AuthController.resendVerification(
@@ -2106,9 +2123,9 @@ describe("AuthController", () => {
       // Mock bcrypt hash for new password
       vi.mocked(bcrypt.hash).mockResolvedValue("hashedNewPassword" as never);
 
-      vi.mocked(AuthEmailService.sendPasswordChangeRequestEmail).mockResolvedValue(
-        true
-      );
+      vi.mocked(
+        AuthEmailService.sendPasswordChangeRequestEmail
+      ).mockResolvedValue(true);
       vi.mocked(
         UnifiedMessageController.createTargetedSystemMessage
       ).mockResolvedValue({
@@ -2135,7 +2152,9 @@ describe("AuthController", () => {
         "CurrentPassword123!",
         "hashedCurrentPassword"
       );
-      expect(AuthEmailService.sendPasswordChangeRequestEmail).toHaveBeenCalled();
+      expect(
+        AuthEmailService.sendPasswordChangeRequestEmail
+      ).toHaveBeenCalled();
       expect(
         UnifiedMessageController.createTargetedSystemMessage
       ).toHaveBeenCalled();
@@ -2299,9 +2318,9 @@ describe("AuthController", () => {
       const updatedUser = { ...mockUser, password: "hashedNewPassword" };
       vi.mocked(User.findById).mockResolvedValue(updatedUser as any);
 
-      vi.mocked(AuthEmailService.sendPasswordResetSuccessEmail).mockResolvedValue(
-        true
-      );
+      vi.mocked(
+        AuthEmailService.sendPasswordResetSuccessEmail
+      ).mockResolvedValue(true);
       vi.mocked(
         UnifiedMessageController.createTargetedSystemMessage
       ).mockResolvedValue({

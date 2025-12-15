@@ -597,7 +597,7 @@ describe("RegistrationController", () => {
         expect(jsonMock).toHaveBeenCalledWith(
           expect.objectContaining({
             success: false,
-            message: "Validation failed",
+            message: "email: Invalid email format",
             statusCode: 400,
           })
         );

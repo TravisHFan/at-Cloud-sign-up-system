@@ -272,6 +272,16 @@ export default class RegistrationController {
         name?: string;
         errors?: Record<string, { message?: string }>;
       };
+      if (valErr?.name === "ValidationError" && valErr.errors) {
+        // Extract detailed field-level error messages from Mongoose ValidationError
+        const fieldErrors = Object.entries(valErr.errors)
+          .map(([field, err]) => `${field}: ${err.message || "Invalid value"}`)
+          .join("; ");
+        res
+          .status(400)
+          .json(createErrorResponse(fieldErrors || "Validation failed", 400));
+        return;
+      }
       if (valErr?.name === "ValidationError") {
         res.status(400).json(createErrorResponse("Validation failed", 400));
         return;
