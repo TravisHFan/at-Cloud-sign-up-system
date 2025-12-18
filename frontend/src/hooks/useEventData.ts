@@ -810,12 +810,20 @@ export function useEventData({
               publish: fresh.publish ?? prev?.publish,
               publicSlug: fresh.publicSlug ?? prev?.publicSlug,
               publishedAt: fresh.publishedAt ?? prev?.publishedAt,
+              // Preserve pricing and program data (critical for UI sections)
+              pricing: fresh.pricing ?? prev?.pricing,
+              programLabels: fresh.programLabels ?? prev?.programLabels,
+              // Auto-unpublish tracking
               autoUnpublishedAt:
                 (fresh as unknown as { autoUnpublishedAt?: string | null })
                   .autoUnpublishedAt ?? prev?.autoUnpublishedAt,
               autoUnpublishedReason:
                 (fresh as unknown as { autoUnpublishedReason?: string | null })
                   .autoUnpublishedReason ?? prev?.autoUnpublishedReason,
+              unpublishScheduledAt:
+                fresh.unpublishScheduledAt ?? prev?.unpublishScheduledAt,
+              unpublishWarningFields:
+                fresh.unpublishWarningFields ?? prev?.unpublishWarningFields,
             };
             // Detect auto-unpublish (published -> unpublished) with reason
             try {
