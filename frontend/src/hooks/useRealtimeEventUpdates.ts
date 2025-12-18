@@ -100,6 +100,19 @@ type BackendEventLike = {
   workshopGroupTopics?: EventData["workshopGroupTopics"];
   flyerUrl?: string;
   secondaryFlyerUrl?: string;
+  // Paid events
+  pricing?: { isFree: boolean; price?: number };
+  // Programs integration
+  programLabels?: string[];
+  // Publishing fields
+  publish?: boolean;
+  publicSlug?: string;
+  publishedAt?: string;
+  // Auto-unpublish tracking
+  autoUnpublishedAt?: string | null;
+  autoUnpublishedReason?: string | null;
+  unpublishScheduledAt?: string | null;
+  unpublishWarningFields?: string[];
 };
 
 // Hook parameters
@@ -253,11 +266,7 @@ export function useRealtimeEventUpdates({
       })();
 
       if (maybeEvent) {
-        const e = maybeEvent as BackendEventLike & {
-          publish?: boolean;
-          publicSlug?: string;
-          publishedAt?: string;
-        };
+        const e = maybeEvent as BackendEventLike;
         setEvent((prev) => {
           const convertedEvent: EventData = {
             id: e.id || (e._id as string),
@@ -346,6 +355,17 @@ export function useRealtimeEventUpdates({
             publish: e.publish ?? prev?.publish,
             publicSlug: e.publicSlug ?? prev?.publicSlug,
             publishedAt: e.publishedAt ?? prev?.publishedAt,
+            // Preserve pricing and program data (critical for UI sections)
+            pricing: e.pricing ?? prev?.pricing,
+            programLabels: e.programLabels ?? prev?.programLabels,
+            // Preserve auto-unpublish tracking
+            autoUnpublishedAt: e.autoUnpublishedAt ?? prev?.autoUnpublishedAt,
+            autoUnpublishedReason:
+              e.autoUnpublishedReason ?? prev?.autoUnpublishedReason,
+            unpublishScheduledAt:
+              e.unpublishScheduledAt ?? prev?.unpublishScheduledAt,
+            unpublishWarningFields:
+              e.unpublishWarningFields ?? prev?.unpublishWarningFields,
           };
           return convertedEvent;
         });
@@ -505,11 +525,7 @@ export function useRealtimeEventUpdates({
       try {
         const fresh = (await eventService.getEvent(
           eventId
-        )) as unknown as BackendEventLike & {
-          publish?: boolean;
-          publicSlug?: string;
-          publishedAt?: string;
-        };
+        )) as unknown as BackendEventLike;
         if (isComponentMounted) {
           setEvent((prev) => {
             const viewerScopedEvent: EventData = {
@@ -598,12 +614,18 @@ export function useRealtimeEventUpdates({
               publish: fresh.publish ?? prev?.publish,
               publicSlug: fresh.publicSlug ?? prev?.publicSlug,
               publishedAt: fresh.publishedAt ?? prev?.publishedAt,
+              // Preserve pricing and program data (critical for UI sections)
+              pricing: fresh.pricing ?? prev?.pricing,
+              programLabels: fresh.programLabels ?? prev?.programLabels,
+              // Auto-unpublish tracking
               autoUnpublishedAt:
-                (fresh as unknown as { autoUnpublishedAt?: string | null })
-                  .autoUnpublishedAt ?? prev?.autoUnpublishedAt,
+                fresh.autoUnpublishedAt ?? prev?.autoUnpublishedAt,
               autoUnpublishedReason:
-                (fresh as unknown as { autoUnpublishedReason?: string | null })
-                  .autoUnpublishedReason ?? prev?.autoUnpublishedReason,
+                fresh.autoUnpublishedReason ?? prev?.autoUnpublishedReason,
+              unpublishScheduledAt:
+                fresh.unpublishScheduledAt ?? prev?.unpublishScheduledAt,
+              unpublishWarningFields:
+                fresh.unpublishWarningFields ?? prev?.unpublishWarningFields,
             };
             // Detect auto-unpublish (published -> unpublished) with reason
             try {

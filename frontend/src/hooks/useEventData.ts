@@ -716,11 +716,7 @@ export function useEventData({
       try {
         const fresh = (await eventService.getEvent(
           id
-        )) as unknown as BackendEventLike & {
-          publish?: boolean;
-          publicSlug?: string;
-          publishedAt?: string;
-        };
+        )) as unknown as BackendEventLike;
         if (isComponentMounted) {
           setEvent((prev) => {
             const viewerScopedEvent: EventData = {
