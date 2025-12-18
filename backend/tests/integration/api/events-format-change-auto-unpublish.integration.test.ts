@@ -64,15 +64,15 @@ describe("Auto-unpublish on format change introducing new missing necessary fiel
     expect(res.status).toBe(200);
   }
 
-  it("auto-unpublishes when changing In-person -> Hybrid Participation without adding virtual fields", async () => {
+  it("schedules unpublish when changing In-person -> Hybrid Participation without adding virtual fields", async () => {
     const spy = vi
       .spyOn(
-        EmailService as unknown as { sendEventAutoUnpublishNotification: any },
-        "sendEventAutoUnpublishNotification"
+        EmailService as unknown as {
+          sendEventUnpublishWarningNotification: any;
+        },
+        "sendEventUnpublishWarningNotification"
       )
       .mockResolvedValue(true);
-    const domainSpy = vi.fn();
-    domainEvents.once(EVENT_AUTO_UNPUBLISHED, domainSpy);
 
     const create = await request(app)
       .post("/api/events")
@@ -106,12 +106,19 @@ describe("Auto-unpublish on format change introducing new missing necessary fiel
       .set("Authorization", `Bearer ${token}`)
       .send({ format: "Hybrid Participation" });
     expect(update.status).toBe(200);
-    expect(update.body.data.event.publish).toBe(false);
-    expect(update.body.data.event.autoUnpublishedReason).toBe(
-      "MISSING_REQUIRED_FIELDS"
-    );
-    // Notification hook (if implemented) should have been invoked
+    // Event stays published during grace period
+    expect(update.body.data.event.publish).toBe(true);
+    // Scheduled unpublish should be set ~48 hours from now
+    expect(update.body.data.event.unpublishScheduledAt).toBeTruthy();
+    // Warning fields should contain the missing virtual fields
+    const warningFields = update.body.data.event.unpublishWarningFields || [];
+    expect(
+      warningFields.includes("zoomLink") ||
+        warningFields.includes("meetingId") ||
+        warningFields.includes("passcode")
+    ).toBe(true);
+    // Warning notification should have been sent
     expect(spy.mock.calls.length).toBe(1);
-    expect(domainSpy).toHaveBeenCalledOnce();
+    // Domain event should NOT be emitted during grace period (only on actual unpublish)
   });
 });

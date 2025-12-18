@@ -73,6 +73,9 @@ export interface EventWithRegistrationData {
   // Auto-unpublish tracking
   autoUnpublishedAt?: Date | null;
   autoUnpublishedReason?: string | null;
+  // 48-hour grace period tracking
+  unpublishScheduledAt?: Date | null;
+  unpublishWarningFields?: string[];
   // Pricing (Paid Events Feature - Phase 6)
   pricing?: {
     isFree?: boolean;

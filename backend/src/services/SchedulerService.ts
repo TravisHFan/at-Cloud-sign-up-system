@@ -1,6 +1,7 @@
 import { Logger } from "./LoggerService";
 import { MessageCleanupService } from "./MessageCleanupService";
 import { PromoCodeCleanupService } from "./promoCodeCleanupService";
+import { AutoUnpublishService } from "./event/AutoUnpublishService";
 
 const logger = Logger.getInstance().child("SchedulerService");
 
@@ -44,6 +45,9 @@ export class SchedulerService {
 
     // Schedule promo code cleanup - runs daily at 3:00 AM
     this.schedulePromoCodeCleanup();
+
+    // Schedule auto-unpublish execution - runs every 15 minutes
+    this.scheduleAutoUnpublishExecution();
 
     logger.info("Scheduler started successfully");
   }
@@ -178,6 +182,50 @@ export class SchedulerService {
     } catch (error) {
       logger.error(
         "Failed to execute scheduled promo code cleanup",
+        error instanceof Error ? error : new Error(String(error))
+      );
+      // Don't throw - we want the scheduler to continue running
+    }
+  }
+
+  /**
+   * Schedule auto-unpublish execution - runs every 15 minutes to check for events
+   * whose 48-hour grace period has expired and should be unpublished.
+   */
+  private static scheduleAutoUnpublishExecution(): void {
+    logger.info("Auto-unpublish execution scheduled: every 15 minutes");
+
+    // Run every 15 minutes (900000 ms)
+    const interval = setInterval(() => {
+      this.executeAutoUnpublish();
+    }, 15 * 60 * 1000);
+
+    this.intervals.push(interval);
+
+    // Also run once after a short delay on startup
+    setTimeout(() => {
+      this.executeAutoUnpublish();
+    }, 30000); // 30 seconds after startup
+  }
+
+  /**
+   * Execute auto-unpublish for events past their 48-hour grace period
+   */
+  private static async executeAutoUnpublish(): Promise<void> {
+    try {
+      const { unpublishedCount, eventIds } =
+        await AutoUnpublishService.executeScheduledUnpublishes();
+
+      if (unpublishedCount > 0) {
+        logger.info(
+          `Auto-unpublish executed: ${unpublishedCount} events unpublished`,
+          undefined,
+          { eventIds }
+        );
+      }
+    } catch (error) {
+      logger.error(
+        "Failed to execute scheduled auto-unpublish",
         error instanceof Error ? error : new Error(String(error))
       );
       // Don't throw - we want the scheduler to continue running

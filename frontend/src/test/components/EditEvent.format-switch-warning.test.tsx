@@ -134,7 +134,9 @@ describe("EditEvent format switch predictive warning", () => {
     await waitFor(() => {
       const warning = screen.getByTestId("format-switch-warning");
       expect(warning).toBeInTheDocument();
-      expect(warning).toHaveTextContent(/will unpublish/i);
+      expect(warning).toHaveTextContent(
+        /automatically unpublished after 48 hours/i
+      );
       // Scoped check for Location inside the warning banner (avoid label/validation duplicates)
       expect(warning).toHaveTextContent(/Location/i);
     });

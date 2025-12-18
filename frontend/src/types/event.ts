@@ -105,6 +105,9 @@ export interface EventData {
   // Auto-unpublish tracking (mirrors backend fields)
   autoUnpublishedAt?: string | null;
   autoUnpublishedReason?: string | null;
+  // 48-hour grace period tracking
+  unpublishScheduledAt?: string | null; // When unpublish is scheduled (null = not scheduled)
+  unpublishWarningFields?: string[]; // Fields that triggered the grace period warning
 
   // Management properties
   createdBy:

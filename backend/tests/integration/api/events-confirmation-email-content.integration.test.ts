@@ -107,8 +107,8 @@ describe("Guest confirmation email content varies by format", () => {
     const { eventId, roleId } = await createAndPublish(token, {
       title: "Online Confirm",
       type: "Webinar",
-      date: "2025-12-15",
-      endDate: "2025-12-15",
+      date: "2026-01-15",
+      endDate: "2026-01-15",
       time: "09:00",
       endTime: "10:00",
       format: "Online",
@@ -155,8 +155,8 @@ describe("Guest confirmation email content varies by format", () => {
     const { eventId, roleId } = await createAndPublish(token, {
       title: "In-person Confirm",
       type: "Conference",
-      date: "2025-12-16",
-      endDate: "2025-12-16",
+      date: "2026-01-16",
+      endDate: "2026-01-16",
       time: "09:00",
       endTime: "10:00",
       format: "In-person",
@@ -200,8 +200,8 @@ describe("Guest confirmation email content varies by format", () => {
     const { eventId, roleId } = await createAndPublish(token, {
       title: "Hybrid Confirm",
       type: "Conference",
-      date: "2025-12-17",
-      endDate: "2025-12-17",
+      date: "2026-01-17",
+      endDate: "2026-01-17",
       time: "09:00",
       endTime: "10:00",
       format: "Hybrid Participation",

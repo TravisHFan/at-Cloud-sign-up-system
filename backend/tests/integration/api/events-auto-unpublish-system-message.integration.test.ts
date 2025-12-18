@@ -64,7 +64,7 @@ describe("Auto-unpublish system message emission", () => {
     expect(res.status).toBe(200);
   }
 
-  it("creates exactly one system message on auto-unpublish and none on subsequent benign edits", async () => {
+  it("creates exactly one system message on grace-period warning and none on subsequent benign edits", async () => {
     const create = await request(app)
       .post("/api/events")
       .set("Authorization", `Bearer ${token}`)
@@ -94,24 +94,26 @@ describe("Auto-unpublish system message emission", () => {
     });
     await publishEvent(eventId);
 
-    // Trigger auto-unpublish (remove meetingId)
+    // Trigger grace period warning (remove meetingId)
     const update = await request(app)
       .put(`/api/events/${eventId}`)
       .set("Authorization", `Bearer ${token}`)
       .send({ meetingId: "" });
     expect(update.status).toBe(200);
-    expect(update.body.data.event.publish).toBe(false);
-    expect(update.body.data.event.autoUnpublishedReason).toBe(
-      "MISSING_REQUIRED_FIELDS"
+    // With 48-hour grace period, event stays published
+    expect(update.body.data.event.publish).toBe(true);
+    expect(update.body.data.event.unpublishScheduledAt).toBeTruthy();
+    expect(update.body.data.event.unpublishWarningFields).toContain(
+      "meetingId"
     );
 
-    // Verify one system message with expected metadata
+    // Verify one system message with expected metadata (warning message)
     const messages = await Message.find({
       "metadata.eventId": eventId,
-      "metadata.reason": "MISSING_REQUIRED_FIELDS",
+      "metadata.reason": "GRACE_PERIOD_WARNING",
     });
     expect(messages.length).toBe(1);
-    expect(messages[0].title).toContain("Event Auto-Unpublished");
+    expect(messages[0].title).toContain("Action Required");
     expect(messages[0].metadata?.missing).toBeTruthy();
     expect(Array.isArray(messages[0].metadata?.missing)).toBe(true);
     expect((messages[0].metadata as any).missing.length).toBeGreaterThan(0);
@@ -124,7 +126,7 @@ describe("Auto-unpublish system message emission", () => {
     expect(second.status).toBe(200);
     const messagesAfter = await Message.find({
       "metadata.eventId": eventId,
-      "metadata.reason": "MISSING_REQUIRED_FIELDS",
+      "metadata.reason": "GRACE_PERIOD_WARNING",
     });
     expect(messagesAfter.length).toBe(1);
   });

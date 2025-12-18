@@ -435,7 +435,7 @@ export class UpdateController {
       res.status(200).json({
         success: true,
         message: autoUnpublished
-          ? "Event updated and automatically unpublished due to missing necessary fields."
+          ? "Event updated. Warning: Missing required fields for publishing. Event will be automatically unpublished in 48 hours if not corrected."
           : "Event updated successfully!",
         data: { event: eventResponse },
       });

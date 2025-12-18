@@ -96,7 +96,7 @@ describe("Auto-unpublish when all roles become non-public", () => {
     }
   });
 
-  it("should auto-unpublish when all roles are changed to not openToPublic", async () => {
+  it("should schedule unpublish with 48-hour grace period when all roles are changed to not openToPublic", async () => {
     // Verify event is initially published
     const initialEvent = await Event.findById(eventId);
     expect(initialEvent?.publish).toBe(true);
@@ -121,14 +121,15 @@ describe("Auto-unpublish when all roles become non-public", () => {
       })
       .expect(200);
 
-    // Verify the event was auto-unpublished
+    // With 48-hour grace period, event stays published but has scheduled unpublish
     expect(res.body.success).toBe(true);
-    expect(res.body.data.event.publish).toBe(false);
-    expect(res.body.data.event.autoUnpublishedReason).toBe(
-      "MISSING_REQUIRED_FIELDS"
-    );
-    expect(res.body.data.event.autoUnpublishedAt).toBeTruthy();
-    expect(res.body.message).toContain("automatically unpublished");
+    expect(res.body.data.event.publish).toBe(true);
+    expect(res.body.data.event.unpublishScheduledAt).toBeTruthy();
+    expect(res.body.data.event.unpublishWarningFields).toContain("roles");
+    // Should NOT be unpublished yet
+    expect(res.body.data.event.autoUnpublishedAt).toBeFalsy();
+    expect(res.body.data.event.autoUnpublishedReason).toBeFalsy();
+    expect(res.body.message).toContain("automatically unpublished in 48 hours");
 
     // Verify all roles are now not open to public
     const updatedEvent = await Event.findById(eventId);
@@ -139,10 +140,13 @@ describe("Auto-unpublish when all roles become non-public", () => {
 
   it("should remain published if at least one role stays openToPublic", async () => {
     // Re-publish the event with two roles (one public, one private)
+    // Also clear grace period fields from previous test
     await Event.findByIdAndUpdate(eventId, {
       publish: true,
       autoUnpublishedReason: null,
       autoUnpublishedAt: null,
+      unpublishScheduledAt: null,
+      unpublishWarningFields: undefined,
       roles: [
         {
           id: "role-1",

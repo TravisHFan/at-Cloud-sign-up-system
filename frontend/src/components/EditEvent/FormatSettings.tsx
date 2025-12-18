@@ -85,7 +85,7 @@ const FormatSettings: React.FC<FormatSettingsProps> = ({
                 <span className="inline-block bg-amber-400 text-amber-900 px-1.5 py-0.5 rounded text-xs uppercase tracking-wide">
                   Warning
                 </span>
-                Changing format will unpublish this event
+                48-Hour Grace Period Starts
               </div>
               <div>
                 The selected format <strong>{selectedFormat}</strong> requires
@@ -93,8 +93,9 @@ const FormatSettings: React.FC<FormatSettingsProps> = ({
                 {formatWarningMissing
                   .map((f) => PUBLISH_FIELD_LABELS[f] || f)
                   .join(", ")}
-                . The event will be <strong>unpublished</strong> until they are
-                added.
+                . The event will be{" "}
+                <strong>automatically unpublished after 48 hours</strong> if
+                these fields are not added.
               </div>
             </div>
           )}

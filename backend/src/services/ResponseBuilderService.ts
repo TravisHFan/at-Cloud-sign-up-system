@@ -418,6 +418,13 @@ export class ResponseBuilderService {
         autoUnpublishedReason:
           (event as { autoUnpublishedReason?: string | null })
             .autoUnpublishedReason || null,
+        // 48-hour grace period fields
+        unpublishScheduledAt:
+          (event as { unpublishScheduledAt?: Date | null })
+            .unpublishScheduledAt || null,
+        unpublishWarningFields:
+          (event as { unpublishWarningFields?: string[] })
+            .unpublishWarningFields || undefined,
         requirements: event.requirements,
         materials: event.materials,
         // Pricing (Paid Events Feature - Phase 6)

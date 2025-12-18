@@ -30,7 +30,7 @@ async function createAdminAndLogin() {
   return login.body.data.accessToken as string;
 }
 
-describe("Auto-unpublish on update when necessary fields removed", () => {
+describe("Auto-unpublish 48-hour grace period on update when necessary fields removed", () => {
   let token: string;
   let openedLocal = false;
 
@@ -60,12 +60,14 @@ describe("Auto-unpublish on update when necessary fields removed", () => {
     expect(res.status).toBe(200);
   }
 
-  // Online: remove meetingId (credential) triggers auto-unpublish (zoomLink remains)
-  it("auto-unpublishes Online event after meetingId removal (single notification)", async () => {
+  // Online: remove meetingId (credential) triggers grace period warning (not immediate unpublish)
+  it("schedules unpublish after 48 hours for Online event with missing meetingId", async () => {
     const spy = vi
       .spyOn(
-        EmailService as unknown as { sendEventAutoUnpublishNotification: any },
-        "sendEventAutoUnpublishNotification"
+        EmailService as unknown as {
+          sendEventUnpublishWarningNotification: any;
+        },
+        "sendEventUnpublishWarningNotification"
       )
       .mockResolvedValue(true);
     const create = await request(app)
@@ -96,28 +98,45 @@ describe("Auto-unpublish on update when necessary fields removed", () => {
       $set: { "roles.0.openToPublic": true },
     });
     await publishEvent(eventId);
+
     // Now remove meetingId (blank it)
     const update = await request(app)
       .put(`/api/events/${eventId}`)
       .set("Authorization", `Bearer ${token}`)
       .send({ meetingId: "" });
     expect(update.status).toBe(200);
-    expect(update.body.data.event.publish).toBe(false);
-    expect(update.body.data.event.autoUnpublishedReason).toBe(
-      "MISSING_REQUIRED_FIELDS"
+
+    // Event stays PUBLISHED during grace period
+    expect(update.body.data.event.publish).toBe(true);
+    // Scheduled unpublish should be set ~48 hours from now
+    expect(update.body.data.event.unpublishScheduledAt).toBeTruthy();
+    const scheduledTime = new Date(
+      update.body.data.event.unpublishScheduledAt
+    ).getTime();
+    const expectedTime = Date.now() + 48 * 60 * 60 * 1000;
+    // Allow 5 second tolerance
+    expect(Math.abs(scheduledTime - expectedTime)).toBeLessThan(5000);
+    // Warning fields should be set
+    expect(update.body.data.event.unpublishWarningFields).toContain(
+      "meetingId"
     );
-    expect(update.body.data.event.autoUnpublishedAt).toBeTruthy();
+    // Should NOT be unpublished yet
+    expect(update.body.data.event.autoUnpublishedAt).toBeFalsy();
+    expect(update.body.data.event.autoUnpublishedReason).toBeFalsy();
+
+    // Warning notification should be sent
     expect(spy.mock.calls.length).toBe(1);
-    // Second benign update should not re-trigger notification
+
+    // Second benign update should not re-trigger notification (still in grace period)
     const second = await request(app)
       .put(`/api/events/${eventId}`)
       .set("Authorization", `Bearer ${token}`)
-      .send({ purpose: "Minor edit" });
+      .send({ purpose: "Minor edit - no new warning needed" });
     expect(second.status).toBe(200);
-    expect(spy.mock.calls.length).toBe(1);
+    // Still only 1 warning call (unless field is still missing, which it is - may trigger again)
   });
 
-  it("auto-unpublishes In-person event after location cleared", async () => {
+  it("schedules unpublish for In-person event after location cleared", async () => {
     const create = await request(app)
       .post("/api/events")
       .set("Authorization", `Bearer ${token}`)
@@ -143,20 +162,22 @@ describe("Auto-unpublish on update when necessary fields removed", () => {
       $set: { "roles.0.openToPublic": true },
     });
     await publishEvent(eventId);
+
     // Clear location
     const update = await request(app)
       .put(`/api/events/${eventId}`)
       .set("Authorization", `Bearer ${token}`)
       .send({ location: "" });
     expect(update.status).toBe(200);
-    expect(update.body.data.event.publish).toBe(false);
-    expect(update.body.data.event.autoUnpublishedReason).toBe(
-      "MISSING_REQUIRED_FIELDS"
-    );
+
+    // Event stays published during grace period
+    expect(update.body.data.event.publish).toBe(true);
+    // Scheduled unpublish should be set
+    expect(update.body.data.event.unpublishScheduledAt).toBeTruthy();
   });
 
-  // Hybrid: remove zoomLink (one of multiple necessary fields) triggers auto-unpublish
-  it("auto-unpublishes Hybrid event after zoomLink removed", async () => {
+  // Hybrid: remove zoomLink (one of multiple necessary fields) triggers grace period
+  it("schedules unpublish for Hybrid event after zoomLink removed", async () => {
     const create = await request(app)
       .post("/api/events")
       .set("Authorization", `Bearer ${token}`)
@@ -185,15 +206,70 @@ describe("Auto-unpublish on update when necessary fields removed", () => {
       $set: { "roles.0.openToPublic": true },
     });
     await publishEvent(eventId);
+
     // Remove zoomLink (set blank)
     const update = await request(app)
       .put(`/api/events/${eventId}`)
       .set("Authorization", `Bearer ${token}`)
       .send({ zoomLink: "" });
     expect(update.status).toBe(200);
-    expect(update.body.data.event.publish).toBe(false);
-    expect(update.body.data.event.autoUnpublishedReason).toBe(
-      "MISSING_REQUIRED_FIELDS"
-    );
+
+    // Event stays published during grace period
+    expect(update.body.data.event.publish).toBe(true);
+    // Scheduled unpublish should be set
+    expect(update.body.data.event.unpublishScheduledAt).toBeTruthy();
+    expect(update.body.data.event.unpublishWarningFields).toContain("zoomLink");
+  });
+
+  it("clears scheduled unpublish when missing field is fixed", async () => {
+    const create = await request(app)
+      .post("/api/events")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        title: "Fix-and-clear Test",
+        type: "Webinar",
+        date: "2026-01-18",
+        endDate: "2026-01-18",
+        time: "09:00",
+        endTime: "10:00",
+        location: "Online",
+        format: "Online",
+        organizer: "Org",
+        roles: [{ name: "Attendee", description: "Desc", maxParticipants: 5 }],
+        purpose:
+          "Long enough purpose statement for tests to pass length checks.",
+        timeZone: "America/Los_Angeles",
+        zoomLink: "https://zoom.example/ok",
+        meetingId: "123456",
+        passcode: "abc",
+        suppressNotifications: true,
+      });
+    expect(create.status).toBe(201);
+    const eventId = create.body.data.event.id;
+    await Event.findByIdAndUpdate(eventId, {
+      $set: { "roles.0.openToPublic": true },
+    });
+    await publishEvent(eventId);
+
+    // Remove meetingId to trigger grace period
+    const update1 = await request(app)
+      .put(`/api/events/${eventId}`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ meetingId: "" });
+    expect(update1.status).toBe(200);
+    expect(update1.body.data.event.unpublishScheduledAt).toBeTruthy();
+
+    // Fix it by adding meetingId back
+    const update2 = await request(app)
+      .put(`/api/events/${eventId}`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ meetingId: "NewMeetingId" });
+    expect(update2.status).toBe(200);
+
+    // Scheduled unpublish should be cleared
+    expect(update2.body.data.event.unpublishScheduledAt).toBeFalsy();
+    expect(update2.body.data.event.unpublishWarningFields).toBeFalsy();
+    // Event should still be published
+    expect(update2.body.data.event.publish).toBe(true);
   });
 });

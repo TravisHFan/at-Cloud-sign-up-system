@@ -133,6 +133,96 @@ export class EventEmailService {
       return false;
     }
   }
+
+  /**
+   * Send warning email about 48-hour grace period before auto-unpublish.
+   * Event is still published but will be unpublished if fields aren't filled in 48 hours.
+   */
+  static async sendEventUnpublishWarningNotification(params: {
+    eventId: string;
+    title: string;
+    format?: string;
+    missingFields?: string[];
+    recipients?: string[];
+  }): Promise<boolean> {
+    try {
+      const frontend = process.env.FRONTEND_URL || "http://localhost:5173";
+      const manageUrl = `${frontend}/events/${params.eventId}/edit`;
+      const missingFields = params.missingFields || [];
+      const missingHuman = missingFields.length
+        ? missingFields.join(", ")
+        : "(unspecified)";
+      const to = (
+        params.recipients && params.recipients.length
+          ? params.recipients
+          : [process.env.FALLBACK_ADMIN_EMAIL || "atcloudministry@gmail.com"]
+      ).join(",");
+      const subject = `⚠️ [URGENT] Event Will Be Unpublished in 48 Hours – ${params.title}`;
+      const html = `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;line-height:1.5;color:#333;">
+<h2 style="margin:0 0 12px;color:#dc2626;">⚠️ Action Required Within 48 Hours</h2>
+<p>The event <strong>${
+        params.title
+      }</strong> is missing required field(s) for the <em>${
+        params.format || "current"
+      }</em> format and <strong>will be automatically unpublished in 48 hours</strong> if not corrected.</p>
+<p style="background:#fef2f2;padding:10px 14px;border:1px solid #fca5a5;border-radius:6px;"><strong>Missing Field(s):</strong> ${missingHuman}</p>
+<p><strong>What to do:</strong> Add the missing information before the deadline to keep your event publicly visible.</p>
+<p><a href="${manageUrl}" style="display:inline-block;background:#dc2626;color:#fff;text-decoration:none;padding:10px 18px;border-radius:4px;font-weight:bold;">Fix Now – Keep Event Published</a></p>
+<p style="font-size:12px;color:#666;margin-top:24px;">Event ID: ${
+        params.eventId
+      }</p>
+</body></html>`;
+      const text = `URGENT: Event '${params.title}' will be auto-unpublished in 48 hours. Missing: ${missingHuman}. Fix now: ${manageUrl}`;
+      return this.sendEmail({ to, subject, html, text });
+    } catch (err) {
+      try {
+        log.error("sendEventUnpublishWarningNotification failed", err as Error);
+      } catch {}
+      return false;
+    }
+  }
+
+  /**
+   * Send notification when event is actually unpublished after 48-hour grace period expired.
+   */
+  static async sendEventActualUnpublishNotification(params: {
+    eventId: string;
+    title: string;
+    format?: string;
+    missingFields?: string[];
+    recipients?: string[];
+  }): Promise<boolean> {
+    try {
+      const frontend = process.env.FRONTEND_URL || "http://localhost:5173";
+      const manageUrl = `${frontend}/events/${params.eventId}/edit`;
+      const missingFields = params.missingFields || [];
+      const missingHuman = missingFields.length
+        ? missingFields.join(", ")
+        : "(unspecified)";
+      const to = (
+        params.recipients && params.recipients.length
+          ? params.recipients
+          : [process.env.FALLBACK_ADMIN_EMAIL || "atcloudministry@gmail.com"]
+      ).join(",");
+      const subject = `Event Unpublished – ${params.title}`;
+      const html = `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;line-height:1.5;color:#333;">
+<h2 style="margin:0 0 12px;color:#dc2626;">Event Unpublished</h2>
+<p>The 48-hour grace period has expired. The event <strong>${params.title}</strong> has been <strong>automatically unpublished</strong> because the required field(s) were not provided.</p>
+<p style="background:#fef2f2;padding:10px 14px;border:1px solid #fca5a5;border-radius:6px;"><strong>Missing Field(s):</strong> ${missingHuman}</p>
+<p><strong>Next Step:</strong> Provide the missing information and publish again to make your event publicly visible.</p>
+<p><a href="${manageUrl}" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:10px 18px;border-radius:4px;">Fix & Re-Publish</a></p>
+<p style="font-size:12px;color:#666;margin-top:24px;">Event ID: ${params.eventId}</p>
+</body></html>`;
+      const text = `Event '${params.title}' has been unpublished (grace period expired). Missing: ${missingHuman}. Fix and re-publish: ${manageUrl}`;
+      return this.sendEmail({ to, subject, html, text });
+    } catch (err) {
+      try {
+        log.error("sendEventActualUnpublishNotification failed", err as Error);
+      } catch {}
+      return false;
+    }
+  }
+
   static async sendEventNotificationEmail(
     email: string,
     name: string,

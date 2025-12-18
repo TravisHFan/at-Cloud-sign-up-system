@@ -78,15 +78,15 @@ describe("Format transition publish validation behavior", () => {
     expect(res.status).toBe(200);
   }
 
-  it("Online → Hybrid (missing newly-required location) auto-unpublishes", async () => {
+  it("Online → Hybrid (missing newly-required location) schedules unpublish with 48-hour grace period", async () => {
     const create = await request(app)
       .post("/api/events")
       .set("Authorization", `Bearer ${token}`)
       .send({
         title: "Online To Hybrid Missing Location",
         type: "Webinar",
-        date: "2025-12-15",
-        endDate: "2025-12-15",
+        date: "2026-01-15",
+        endDate: "2026-01-15",
         time: "09:00",
         endTime: "10:00",
         location: "Online", // acceptable placeholder while still Online
@@ -108,17 +108,28 @@ describe("Format transition publish validation behavior", () => {
     });
     await publishEvent(eventId);
 
-    // Transition to Hybrid Participation BUT clear location (now required) -> should auto-unpublish
+    // Transition to Hybrid Participation BUT clear location (now required)
+    // -> should stay published but schedule unpublish for 48 hours later
     const update = await request(app)
       .put(`/api/events/${eventId}`)
       .set("Authorization", `Bearer ${token}`)
       .send({ format: "Hybrid Participation", location: "" });
     expect(update.status).toBe(200);
-    expect(update.body.data.event.publish).toBe(false);
-    expect(update.body.data.event.autoUnpublishedReason).toBe(
-      "MISSING_REQUIRED_FIELDS"
-    );
-    expect(update.body.data.event.autoUnpublishedAt).toBeTruthy();
+    // With 48-hour grace period, event stays published
+    expect(update.body.data.event.publish).toBe(true);
+    // Scheduled unpublish should be set ~48 hours from now
+    expect(update.body.data.event.unpublishScheduledAt).toBeTruthy();
+    const scheduledTime = new Date(
+      update.body.data.event.unpublishScheduledAt
+    ).getTime();
+    const expectedTime = Date.now() + 48 * 60 * 60 * 1000;
+    // Allow 5 second tolerance
+    expect(Math.abs(scheduledTime - expectedTime)).toBeLessThan(5000);
+    // Warning fields should include location
+    expect(update.body.data.event.unpublishWarningFields).toContain("location");
+    // Should NOT be unpublished yet (no immediate unpublish)
+    expect(update.body.data.event.autoUnpublishedAt).toBeFalsy();
+    expect(update.body.data.event.autoUnpublishedReason).toBeFalsy();
   });
 
   it("Hybrid → In-person (removing virtual fields) stays published if location present", async () => {
@@ -128,8 +139,8 @@ describe("Format transition publish validation behavior", () => {
       .send({
         title: "Hybrid To In-person Keeps Publish",
         type: "Conference",
-        date: "2025-12-16",
-        endDate: "2025-12-16",
+        date: "2026-01-16",
+        endDate: "2026-01-16",
         time: "11:00",
         endTime: "12:00",
         location: "Main Hall",

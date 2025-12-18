@@ -244,6 +244,32 @@ export class EmailService {
     return EventEmailService.sendEventAutoUnpublishNotification(params);
   }
 
+  /**
+   * Send warning about 48-hour grace period before auto-unpublish.
+   */
+  static async sendEventUnpublishWarningNotification(params: {
+    eventId: string;
+    title: string;
+    format?: string;
+    missingFields?: string[];
+    recipients?: string[];
+  }): Promise<boolean> {
+    return EventEmailService.sendEventUnpublishWarningNotification(params);
+  }
+
+  /**
+   * Send notification when event is actually unpublished after grace period expired.
+   */
+  static async sendEventActualUnpublishNotification(params: {
+    eventId: string;
+    title: string;
+    format?: string;
+    missingFields?: string[];
+    recipients?: string[];
+  }): Promise<boolean> {
+    return EventEmailService.sendEventActualUnpublishNotification(params);
+  }
+
   static async sendGuestConfirmationEmail(params: {
     guestEmail: string;
     guestName: string;

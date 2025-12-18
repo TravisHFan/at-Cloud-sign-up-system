@@ -9,6 +9,8 @@ vi.mock("../../../../src/utils/validatePublish", () => ({
 vi.mock("../../../../src/services/infrastructure/EmailServiceFacade", () => ({
   EmailService: {
     sendEventAutoUnpublishNotification: vi.fn().mockResolvedValue(undefined),
+    sendEventUnpublishWarningNotification: vi.fn().mockResolvedValue(undefined),
+    sendEventActualUnpublishNotification: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -22,6 +24,7 @@ vi.mock("../../../../src/services/domainEvents", () => ({
 vi.mock("../../../../src/controllers/unifiedMessageController", () => ({
   UnifiedMessageController: {
     createTargetedSystemMessage: vi.fn().mockResolvedValue(undefined),
+    createSystemMessage: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -35,6 +38,9 @@ vi.mock("../../../../src/models", () => ({
   User: {
     findOne: vi.fn().mockReturnThis(),
     select: vi.fn().mockResolvedValue(null),
+  },
+  Event: {
+    find: vi.fn().mockResolvedValue([]),
   },
 }));
 
@@ -68,7 +74,7 @@ describe("AutoUnpublishService", () => {
   });
 
   describe("checkAndApplyAutoUnpublish", () => {
-    it("auto-unpublishes when required fields are missing", async () => {
+    it("schedules unpublish with 48-hour grace period when required fields are missing", async () => {
       (
         validatePublish.getMissingNecessaryFieldsForPublish as any
       ).mockReturnValue(["zoomLink", "location"]);
@@ -79,13 +85,23 @@ describe("AutoUnpublishService", () => {
         event as any
       );
 
-      expect(result.autoUnpublished).toBe(true);
+      expect(result.autoUnpublished).toBe(true); // indicates warning was issued
       expect(result.missingFields).toEqual(["zoomLink", "location"]);
-      expect(event.publish).toBe(false);
-      expect((event as any).autoUnpublishedAt).toBeInstanceOf(Date);
-      expect((event as any).autoUnpublishedReason).toBe(
-        "MISSING_REQUIRED_FIELDS"
-      );
+      // Event stays published during grace period
+      expect(event.publish).toBe(true);
+      // Should schedule unpublish ~48 hours from now
+      expect((event as any).unpublishScheduledAt).toBeInstanceOf(Date);
+      const scheduledTime = (event as any).unpublishScheduledAt.getTime();
+      const expectedTime = Date.now() + 48 * 60 * 60 * 1000;
+      // Allow 1 second tolerance
+      expect(Math.abs(scheduledTime - expectedTime)).toBeLessThan(1000);
+      expect((event as any).unpublishWarningFields).toEqual([
+        "zoomLink",
+        "location",
+      ]);
+      // Should NOT set autoUnpublishedAt/Reason yet (that happens on actual unpublish)
+      expect((event as any).autoUnpublishedAt).toBeUndefined();
+      expect((event as any).autoUnpublishedReason).toBeUndefined();
     });
 
     it("does not auto-unpublish when no fields are missing", async () => {
@@ -104,7 +120,7 @@ describe("AutoUnpublishService", () => {
       expect(event.publish).toBe(true);
     });
 
-    it("clears previous autoUnpublishedReason when republished with no missing fields", async () => {
+    it("clears scheduled unpublish and previous autoUnpublishedReason when republished with no missing fields", async () => {
       (
         validatePublish.getMissingNecessaryFieldsForPublish as any
       ).mockReturnValue([]);
@@ -112,6 +128,8 @@ describe("AutoUnpublishService", () => {
       const event = {
         ...baseEvent,
         autoUnpublishedReason: "MISSING_REQUIRED_FIELDS",
+        unpublishScheduledAt: new Date(),
+        unpublishWarningFields: ["zoomLink"],
       } as any;
 
       const result = await AutoUnpublishService.checkAndApplyAutoUnpublish(
@@ -120,6 +138,8 @@ describe("AutoUnpublishService", () => {
 
       expect(result.autoUnpublished).toBe(false);
       expect((event as any).autoUnpublishedReason).toBeNull();
+      expect((event as any).unpublishScheduledAt).toBeNull();
+      expect((event as any).unpublishWarningFields).toBeUndefined();
     });
 
     it("logs warning and does not throw if validatePublish import fails", async () => {
@@ -161,7 +181,7 @@ describe("AutoUnpublishService", () => {
         ...overrides,
       } as unknown as Request);
 
-    it("sends email to all organizers and emits domain event", async () => {
+    it("sends warning email to all organizers (no domain event during grace period)", async () => {
       (EmailRecipientUtils.getEventAllOrganizers as any).mockResolvedValue([
         { email: "a@example.com" },
         { email: "b@example.com" },
@@ -184,8 +204,9 @@ describe("AutoUnpublishService", () => {
         makeReq()
       );
 
+      // Should call the WARNING notification, not the auto-unpublish notification
       expect(
-        EmailService.sendEventAutoUnpublishNotification
+        EmailService.sendEventUnpublishWarningNotification
       ).toHaveBeenCalledWith(
         expect.objectContaining({
           eventId: event.id,
@@ -196,23 +217,15 @@ describe("AutoUnpublishService", () => {
         })
       );
 
-      expect(domainEvents.emit).toHaveBeenCalledWith(
-        EVENT_AUTO_UNPUBLISHED,
-        expect.objectContaining({
-          eventId: event.id,
-          title: event.title,
-          format: "zoom",
-          missingFields,
-          reason: "MISSING_REQUIRED_FIELDS",
-        })
-      );
+      // Domain event should NOT be emitted during grace period warning
+      expect(domainEvents.emit).not.toHaveBeenCalled();
 
       expect(
         UnifiedMessageController.createTargetedSystemMessage
       ).toHaveBeenCalled();
     });
 
-    it("sends system message to all organizers when their user records are found", async () => {
+    it("sends system message to all organizers with grace period warning", async () => {
       (EmailRecipientUtils.getEventAllOrganizers as any).mockResolvedValue([
         { email: "a@example.com" },
         { email: "b@example.com" },
@@ -220,11 +233,9 @@ describe("AutoUnpublishService", () => {
 
       (User.findOne as any).mockImplementation(
         ({ email }: { email: string }) => ({
-          select: vi
-            .fn()
-            .mockResolvedValue({
-              _id: email === "a@example.com" ? "user-a" : "user-b",
-            }),
+          select: vi.fn().mockResolvedValue({
+            _id: email === "a@example.com" ? "user-a" : "user-b",
+          }),
         })
       );
 
@@ -245,7 +256,7 @@ describe("AutoUnpublishService", () => {
         UnifiedMessageController.createTargetedSystemMessage
       ).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: expect.stringContaining("Event Auto-Unpublished"),
+          title: expect.stringContaining("Action Required"),
         }),
         ["user-a", "user-b"],
         expect.objectContaining({ id: "user-1" })
@@ -271,7 +282,7 @@ describe("AutoUnpublishService", () => {
       );
 
       expect(
-        EmailService.sendEventAutoUnpublishNotification
+        EmailService.sendEventUnpublishWarningNotification
       ).toHaveBeenCalledWith(
         expect.objectContaining({
           eventId: event.id,
@@ -318,7 +329,7 @@ describe("AutoUnpublishService", () => {
     it("does not throw even if outer notification flow fails", async () => {
       // Force EmailService import usage to throw when called
       (
-        EmailService.sendEventAutoUnpublishNotification as any
+        EmailService.sendEventUnpublishWarningNotification as any
       ).mockImplementation(() => {
         throw new Error("email failure");
       });

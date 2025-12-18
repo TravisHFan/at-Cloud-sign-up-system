@@ -74,8 +74,8 @@ describe("Public registration metrics", () => {
       .send({
         title: "Metrics Event",
         type: "Webinar",
-        date: "2025-12-15",
-        endDate: "2025-12-15",
+        date: "2026-01-15",
+        endDate: "2026-01-15",
         time: "10:00",
         endTime: "11:00",
         location: "Online",

@@ -61,6 +61,10 @@ export interface IEvent extends Document {
   // Auto-unpublish tracking
   autoUnpublishedAt?: Date | null;
   autoUnpublishedReason?: string | null;
+  // 48-hour grace period: scheduled unpublish time (null = not scheduled)
+  unpublishScheduledAt?: Date | null;
+  // Fields that triggered the grace period warning (for notifications/UI)
+  unpublishWarningFields?: string[];
 
   // Statistics (calculated fields)
   signedUp: number; // Total number of role signups across all roles
@@ -398,6 +402,17 @@ const eventSchema: Schema = new Schema(
       trim: true,
       maxlength: [100, "autoUnpublishedReason cannot exceed 100 characters"],
       default: null,
+    },
+    // 48-hour grace period: scheduled unpublish time
+    unpublishScheduledAt: {
+      type: Date,
+      default: null,
+      index: true, // indexed for scheduler queries
+    },
+    // Fields that triggered the grace period warning
+    unpublishWarningFields: {
+      type: [String],
+      default: undefined,
     },
 
     // Statistics
