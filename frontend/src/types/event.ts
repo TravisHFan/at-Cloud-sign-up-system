@@ -141,6 +141,7 @@ export const PUBLISH_FIELD_LABELS: Record<string, string> = {
   meetingId: "Meeting ID",
   passcode: "Passcode",
   location: "Location",
+  roles: "At least one public role",
 };
 
 export function getMissingNecessaryFieldsForPublishFrontend(
@@ -158,6 +159,16 @@ export function getMissingNecessaryFieldsForPublishFrontend(
       missing.push(f);
     }
   }
+
+  // Check if at least one role is open to public
+  const roles = event.roles || [];
+  const hasPublicRole = roles.some(
+    (r) => (r as { openToPublic?: boolean }).openToPublic
+  );
+  if (!hasPublicRole) {
+    missing.push("roles");
+  }
+
   return missing;
 }
 

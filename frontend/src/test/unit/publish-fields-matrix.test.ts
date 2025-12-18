@@ -4,6 +4,17 @@ import {
   getMissingNecessaryFieldsForPublishFrontend,
   buildPublishReadinessMessage,
 } from "../../types/event";
+import type { EventRole } from "../../types/event";
+
+// Helper to create a minimal valid public role for testing
+const publicRole: EventRole = {
+  id: "role-1",
+  name: "Participant",
+  description: "Test role",
+  maxParticipants: 10,
+  currentSignups: [],
+  openToPublic: true,
+};
 
 describe("Publish necessary fields matrix (frontend mirror)", () => {
   it("has expected formats and field sets", () => {
@@ -25,6 +36,7 @@ describe("Publish necessary fields matrix (frontend mirror)", () => {
       format: "Online",
       zoomLink: " ",
       meetingId: "ABC",
+      roles: [publicRole],
     });
     expect(missing.sort()).toEqual(["zoomLink", "passcode"].sort());
   });
@@ -33,7 +45,17 @@ describe("Publish necessary fields matrix (frontend mirror)", () => {
     const msg = buildPublishReadinessMessage({
       format: "In-person",
       location: "",
+      roles: [publicRole],
     });
     expect(msg).toContain("Location");
+  });
+
+  it("detects missing public role", () => {
+    const missing = getMissingNecessaryFieldsForPublishFrontend({
+      format: "In-person",
+      location: "Test Location",
+      roles: [], // No roles
+    });
+    expect(missing).toContain("roles");
   });
 });

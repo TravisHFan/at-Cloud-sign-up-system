@@ -304,6 +304,7 @@ export default function EditEvent() {
         zoomLink: currentZoomLink,
         meetingId: currentMeetingId,
         passcode: currentPasscode,
+        roles: eventData.roles, // Preserve roles for accurate validation
       } as Partial<EventData>;
       const missing = getMissingNecessaryFieldsForPublishFrontend(synthetic);
       // Only count as new missing those required by new format regardless of whether they were required previously

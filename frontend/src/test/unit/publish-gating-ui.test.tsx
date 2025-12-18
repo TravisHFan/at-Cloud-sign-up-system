@@ -2,6 +2,17 @@ import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { PublishGateBanner } from "../../components/publish/PublishGateBanner";
 import { PublishButton } from "../../components/publish/PublishButton";
+import type { EventRole } from "../../types/event";
+
+// Helper to create a minimal valid public role for testing
+const publicRole: EventRole = {
+  id: "role-1",
+  name: "Participant",
+  description: "Test role",
+  maxParticipants: 10,
+  currentSignups: [],
+  openToPublic: true,
+};
 
 // Basic smoke tests for gating components
 
@@ -9,7 +20,13 @@ describe("Publish gating UI components", () => {
   it("renders banner with missing fields list", () => {
     render(
       <PublishGateBanner
-        event={{ format: "Online", zoomLink: "", meetingId: "", passcode: "" }}
+        event={{
+          format: "Online",
+          zoomLink: "",
+          meetingId: "",
+          passcode: "",
+          roles: [publicRole],
+        }}
       />
     );
     const banner = screen.getByTestId("publish-gate-banner");
@@ -22,7 +39,7 @@ describe("Publish gating UI components", () => {
   it("disables publish button and shows hint when missing fields", () => {
     render(
       <PublishButton
-        event={{ format: "In-person", location: "" }}
+        event={{ format: "In-person", location: "", roles: [publicRole] }}
         onPublish={() => {}}
       />
     );
@@ -41,6 +58,7 @@ describe("Publish gating UI components", () => {
           zoomLink: "https://zoom.example/hybrid",
           meetingId: "MEET1",
           passcode: "CODE",
+          roles: [publicRole],
         }}
         onPublish={() => {}}
       />

@@ -75,6 +75,16 @@ vi.mock("../../services/api", () => ({
   },
 }));
 
+// Helper for a minimal public role
+const publicRole = {
+  id: "role-1",
+  name: "Participant",
+  description: "Test role",
+  maxParticipants: 10,
+  currentSignups: [],
+  openToPublic: true,
+};
+
 // Provide baseline published Online event missing location so switching to Hybrid triggers warning
 const baseEvent = {
   id: "e1",
@@ -86,7 +96,7 @@ const baseEvent = {
   endTime: "11:00",
   timeZone: "America/New_York",
   organizer: "u1",
-  roles: [],
+  roles: [publicRole],
   signedUp: 0,
   totalSlots: 0,
   createdBy: { id: "u1" },
