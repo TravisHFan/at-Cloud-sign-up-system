@@ -2,6 +2,7 @@
 // This complements tests/config/setup.ts and integrationDBSetup.ts.
 // If future consolidation desired, those can be merged here; for now we keep non-breaking.
 import mongoose from "mongoose";
+import http from "http";
 
 // Disable HTTP proxies for supertest/local requests
 // Prevents "Parse Error: Expected HTTP/" when proxy env vars are set
@@ -18,6 +19,11 @@ for (const key of [
 }
 // Explicitly disable proxying local addresses
 process.env.NO_PROXY = "localhost,127.0.0.1,::1";
+
+// Configure Node's global HTTP agent to prevent connection pool issues
+// that cause "Parse Error: Expected HTTP/" in rapid test execution
+http.globalAgent.keepAlive = false; // Disable keep-alive to prevent stale connections
+http.globalAgent.maxSockets = Infinity; // Allow unlimited parallel connections
 
 // Optional eager connection if VITEST_EAGER_DB=true (mostly for local developer speed on repeated runs)
 if (process.env.VITEST_EAGER_DB === "true") {
