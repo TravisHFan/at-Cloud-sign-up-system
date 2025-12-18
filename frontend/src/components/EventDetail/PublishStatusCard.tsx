@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { PublishGateBanner } from "../publish/PublishGateBanner";
+import { GracePeriodBanner } from "../publish/GracePeriodBanner";
 import PublishReadinessInline from "./PublishReadinessInline";
 import PublishActionButton from "./PublishActionButton";
 import { useToastReplacement } from "../../contexts/NotificationModalContext";
@@ -28,6 +29,9 @@ function PublishStatusCard({
   return (
     <div className="mb-6">
       {!event.publish && <PublishGateBanner event={event} className="mb-4" />}
+      {event.publish && event.unpublishScheduledAt && (
+        <GracePeriodBanner event={event} className="mb-4" />
+      )}
       <div className="border rounded-lg p-4 bg-white shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
