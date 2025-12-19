@@ -1,34 +1,6 @@
 import { Request, Response } from "express";
 import { EmailService } from "../services/infrastructure/EmailServiceFacade";
-
-// Response helper utilities (following the pattern from userController)
-class ResponseHelper {
-  static success(
-    res: Response,
-    message?: string,
-    data?: unknown,
-    statusCode: number = 200
-  ): void {
-    const payload: Record<string, unknown> = { success: true };
-    if (message) payload.message = message;
-    if (typeof data !== "undefined") payload.data = data as unknown;
-    res.status(statusCode).json(payload);
-  }
-
-  static badRequest(res: Response, message: string): void {
-    res.status(400).json({
-      success: false,
-      message,
-    });
-  }
-
-  static internalServerError(res: Response, message: string): void {
-    res.status(500).json({
-      success: false,
-      message,
-    });
-  }
-}
+import { ResponseHelper } from "../utils/responseHelper";
 
 export class FeedbackController {
   /**
@@ -270,10 +242,14 @@ export class FeedbackController {
         );
       }
 
-      return ResponseHelper.success(res, "Feedback submitted successfully", {
-        submitted: true,
-        timestamp: new Date().toISOString(),
-      });
+      return ResponseHelper.success(
+        res,
+        {
+          submitted: true,
+          timestamp: new Date().toISOString(),
+        },
+        "Feedback submitted successfully"
+      );
     } catch (error: unknown) {
       console.error("Feedback submission error:", error);
       return ResponseHelper.internalServerError(

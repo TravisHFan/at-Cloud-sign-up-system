@@ -46,17 +46,8 @@ export type UserDocLike = {
   save: () => Promise<void>;
 };
 
-// Local helper to normalize IDs to string without using `any`
-export const toIdString = (val: unknown): string => {
-  if (typeof val === "string") return val;
-  if (
-    val &&
-    typeof (val as { toString?: () => string }).toString === "function"
-  ) {
-    return (val as { toString: () => string }).toString();
-  }
-  return String(val ?? "");
-};
+// Re-export from shared utility for backwards compatibility
+export { toIdString } from "../../utils/idUtils";
 
 // Interface for registration request (matches frontend signUpSchema)
 export interface RegisterRequest {

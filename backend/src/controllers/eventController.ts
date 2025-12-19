@@ -3,6 +3,7 @@ import { Event, User, IEvent } from "../models";
 import mongoose, { FilterQuery, Types } from "mongoose";
 import { CachePatterns } from "../services";
 import { toInstantFromWallClock } from "../utils/event/timezoneUtils";
+import { toIdString } from "../utils/idUtils";
 
 /**
  * Capacity semantics (important):
@@ -29,20 +30,8 @@ export class EventController {
     );
   }
   // Safely convert various ID-like values (ObjectId, string, etc.) to string
-  public static toIdString(val: unknown): string {
-    if (typeof val === "string") return val;
-    if (
-      val &&
-      typeof (val as { toString?: () => string }).toString === "function"
-    ) {
-      try {
-        return (val as { toString: () => string }).toString();
-      } catch {
-        // fall through to String(val)
-      }
-    }
-    return String(val);
-  }
+  // Re-exported from shared utility for backwards compatibility
+  public static toIdString = toIdString;
 
   // Determine if a new timespan overlaps with any existing event timespan.
   // Made public for use by EventConflictController and other internal methods
