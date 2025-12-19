@@ -15,9 +15,9 @@ export default function DashboardLayout() {
     return <LoadingSpinner />;
   }
 
-  // Redirect to login if user is not authenticated
+  // Redirect to login if user is not authenticated, preserving original destination
   if (!currentUser) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   const user = currentUser;

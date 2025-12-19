@@ -8,13 +8,21 @@ import {
   __resetSessionPromptFlag,
 } from "../../services/session";
 
-// Mock useNavigate
+// Mock useNavigate and useLocation
 const mockNavigate = vi.fn();
+const mockLocation = {
+  pathname: "/dashboard/event/123",
+  search: "",
+  hash: "",
+  state: null,
+  key: "test",
+};
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual("react-router-dom");
   return {
     ...actual,
     useNavigate: () => mockNavigate,
+    useLocation: () => mockLocation,
   };
 });
 
@@ -74,8 +82,10 @@ describe("SessionExpiredModal", () => {
     const loginButton = screen.getByRole("button", { name: "Login" });
     await user.click(loginButton);
 
-    // Verify navigation was called
-    expect(mockNavigate).toHaveBeenCalledWith("/login");
+    // Verify navigation was called with state to preserve original destination
+    expect(mockNavigate).toHaveBeenCalledWith("/login", {
+      state: { from: mockLocation },
+    });
   });
 
   it("only shows modal once even if handleSessionExpired is called multiple times", async () => {

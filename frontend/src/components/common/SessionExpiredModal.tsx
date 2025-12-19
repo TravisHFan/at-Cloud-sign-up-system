@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { onSessionExpired } from "../../services/session";
 import AlertModal from "./AlertModal";
 
@@ -10,6 +10,7 @@ import AlertModal from "./AlertModal";
 export default function SessionExpiredModal() {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     // Register listener for session expiration events
@@ -22,8 +23,8 @@ export default function SessionExpiredModal() {
 
   const handleClose = () => {
     setIsOpen(false);
-    // Navigate to login page after closing modal
-    navigate("/login");
+    // Navigate to login page, preserving original destination so user returns after login
+    navigate("/login", { state: { from: location } });
   };
 
   return (
