@@ -121,7 +121,6 @@ export function useProgramCreation() {
   ): Promise<void> => {
     try {
       setIsSubmitting(true);
-      console.log("Form data:", data);
 
       // Prepare program payload
       const payload: ProgramPayload = {
@@ -160,12 +159,9 @@ export function useProgramCreation() {
       // Add unified mentors for all program types
       payload.mentors = mentors.map(transformMentor);
 
-      console.log("Creating program with payload:", payload);
-
       // Create the program via API
       await programService.createProgram(payload);
 
-      console.log("Program created successfully");
       navigate("/dashboard/programs");
     } catch (error) {
       console.error("Error creating program:", error);

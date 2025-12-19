@@ -414,7 +414,6 @@ export function normalizeEventDate(dateInput: string): string {
       dayNum >= 1 &&
       dayNum <= 31
     ) {
-      console.log("✅ normalizeEventDate output (already valid):", cleanInput);
       return cleanInput;
     }
   }
@@ -424,7 +423,6 @@ export function normalizeEventDate(dateInput: string): string {
   if (slashMatch) {
     const [, month, day, year] = slashMatch;
     const result = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-    console.log("✅ normalizeEventDate output (from MM/DD/YYYY):", result);
     return result;
   }
 
@@ -436,7 +434,6 @@ export function normalizeEventDate(dateInput: string): string {
       2,
       "0"
     )}`;
-    console.log("✅ normalizeEventDate output (from MM-DD-YYYY):", result);
     return result;
   }
 
@@ -447,18 +444,12 @@ export function normalizeEventDate(dateInput: string): string {
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, "0");
       const day = String(date.getDate()).padStart(2, "0");
-      const result = `${year}-${month}-${day}`;
-      console.log(
-        "✅ normalizeEventDate output (from Date constructor):",
-        result
-      );
-      return result;
+      return `${year}-${month}-${day}`;
     }
-  } catch (error) {
-    console.warn("❌ Failed to normalize date:", cleanInput, error);
+  } catch {
+    // Failed to normalize date
   }
 
-  console.warn("❌ Could not normalize date:", cleanInput);
   return "";
 }
 
@@ -484,17 +475,12 @@ export function getTodayDateString(): string {
 export function handleDateInputChange(inputValue: string): string {
   if (!inputValue) return "";
 
-  console.log("📅 Date input change:", inputValue);
-
   // HTML date inputs always return YYYY-MM-DD format
   // We should preserve this exactly to avoid any timezone conversion
   if (/^\d{4}-\d{2}-\d{2}$/.test(inputValue)) {
-    console.log("✅ Date input preserved:", inputValue);
     return inputValue;
   }
 
   // If somehow we get a different format, normalize it
-  const normalized = normalizeEventDate(inputValue);
-  console.log("🔄 Date input normalized:", normalized);
-  return normalized;
+  return normalizeEventDate(inputValue);
 }

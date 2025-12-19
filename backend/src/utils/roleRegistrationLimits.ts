@@ -65,9 +65,3 @@ export function getMaxRolesDescription(
 
   return `maximum is ${limit}`;
 }
-
-/**
- * Legacy constant for email-only guests (backward compatibility).
- * This represents the limit for unauthenticated guests.
- */
-export const GUEST_MAX_ROLES_PER_EVENT = 1 as const;
