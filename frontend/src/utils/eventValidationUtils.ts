@@ -1,9 +1,6 @@
-export interface FieldValidation {
-  isValid: boolean;
-  message: string;
-  color: string;
-  firstInvalidField?: string; // Name of the first invalid field (for navigation)
-}
+// Re-export FieldValidation from shared types for backwards compatibility
+export type { FieldValidation } from "./validation/types";
+import type { FieldValidation } from "./validation/types";
 
 export interface EventValidationState {
   title: FieldValidation;

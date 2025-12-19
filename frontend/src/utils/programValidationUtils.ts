@@ -1,10 +1,7 @@
 import { isValidProgramType } from "../constants/programTypes";
-
-export interface FieldValidation {
-  isValid: boolean;
-  message: string;
-  color: string;
-}
+// Re-export FieldValidation from shared types for backwards compatibility
+export type { FieldValidation } from "./validation/types";
+import type { FieldValidation } from "./validation/types";
 
 export interface ProgramValidationState {
   programType: FieldValidation;
