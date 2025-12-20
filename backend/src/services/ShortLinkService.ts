@@ -147,22 +147,50 @@ export class ShortLinkService {
       throw new Error("Event has no public roles");
     }
 
-    // Find existing link for this event that hasn't passed its expiry date
-    // (ignore isExpired flag - we'll restore it if event is now published)
+    // Calculate correct expiry based on current event end time + timezone
+    const correctExpiresAt = ShortLinkService.computeExpiry({
+      endDate: (event as unknown as { endDate?: string }).endDate,
+      endTime: (event as unknown as { endTime?: string }).endTime,
+      date: (event as unknown as { date?: string }).date,
+      time: (event as unknown as { time?: string }).time,
+      timeZone: (event as unknown as { timeZone?: string }).timeZone,
+    });
+
+    // Check if the correct expiry is in the past (event has truly ended)
+    if (correctExpiresAt.getTime() <= Date.now()) {
+      throw new Error("Event has ended");
+    }
+
+    // Find existing link for this event (regardless of stored expiresAt - we'll fix it)
     const existing = await ShortLink.findOne({
       eventId: event._id,
-      expiresAt: { $gt: new Date() },
     });
     if (existing) {
-      // If link was marked expired (due to unpublish), restore it now that event is published again
+      // Always update expiresAt to the correct value (fixes timezone bugs in old links)
+      let needsSave = false;
+      const oldExpiresAt = existing.expiresAt;
+      if (oldExpiresAt?.getTime() !== correctExpiresAt.getTime()) {
+        existing.expiresAt = correctExpiresAt;
+        needsSave = true;
+        log.info("Short link expiresAt corrected", undefined, {
+          key: existing.key,
+          eventId: event._id.toString(),
+          oldExpiresAt: oldExpiresAt?.toISOString(),
+          newExpiresAt: correctExpiresAt.toISOString(),
+        });
+      }
+      // Restore if it was marked expired (due to unpublish)
       if (existing.isExpired) {
         existing.isExpired = false;
         existing.targetSlug = event.publicSlug; // Update slug in case it changed
-        await existing.save();
+        needsSave = true;
         log.info("Short link restored on republish", undefined, {
           key: existing.key,
           eventId: event._id.toString(),
         });
+      }
+      if (needsSave) {
+        await existing.save();
       }
       return { created: false, shortLink: existing };
     }
@@ -185,19 +213,13 @@ export class ShortLinkService {
     } else {
       key = await generateUniqueShortKey();
     }
-    const expiresAt = ShortLinkService.computeExpiry({
-      endDate: (event as unknown as { endDate?: string }).endDate,
-      endTime: (event as unknown as { endTime?: string }).endTime,
-      date: (event as unknown as { date?: string }).date,
-      time: (event as unknown as { time?: string }).time,
-    });
 
     const shortLink = await ShortLink.create({
       key,
       eventId: event._id,
       targetSlug: event.publicSlug,
       createdBy: new Types.ObjectId(userId),
-      expiresAt,
+      expiresAt: correctExpiresAt,
       isExpired: false,
     });
 
@@ -206,7 +228,7 @@ export class ShortLinkService {
       const evicted = shortLinkCache.set(key, {
         slug: shortLink.targetSlug,
         eventId: shortLink.eventId.toString(),
-        expiresAtMs: expiresAt.getTime(),
+        expiresAtMs: correctExpiresAt.getTime(),
       });
       updateEntriesGauge();
       recordEvictions(evicted);
@@ -215,7 +237,7 @@ export class ShortLinkService {
     log.info("Short link created", undefined, {
       key,
       eventId: event._id.toString(),
-      expiresAt: expiresAt.toISOString(),
+      expiresAt: correctExpiresAt.toISOString(),
     });
 
     return { created: true, shortLink };
