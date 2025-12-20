@@ -106,7 +106,8 @@ export class ShortLinkService {
   }
 
   /**
-   * Get existing active short link for event (idempotent) or create a new one.
+   * Get existing short link for event (idempotent) or create a new one.
+   * If an existing link was marked expired due to unpublish, restore it.
    * Validates publish status & at least one public role.
    */
   static async getOrCreateForEvent(
@@ -136,13 +137,23 @@ export class ShortLinkService {
       throw new Error("Event has no public roles");
     }
 
-    // Idempotent: return existing active (not expired) link if present (ignoring provided custom key)
+    // Find existing link for this event that hasn't passed its expiry date
+    // (ignore isExpired flag - we'll restore it if event is now published)
     const existing = await ShortLink.findOne({
       eventId: event._id,
-      isExpired: false,
       expiresAt: { $gt: new Date() },
     });
     if (existing) {
+      // If link was marked expired (due to unpublish), restore it now that event is published again
+      if (existing.isExpired) {
+        existing.isExpired = false;
+        existing.targetSlug = event.publicSlug; // Update slug in case it changed
+        await existing.save();
+        log.info("Short link restored on republish", undefined, {
+          key: existing.key,
+          eventId: event._id.toString(),
+        });
+      }
       return { created: false, shortLink: existing };
     }
 
@@ -276,14 +287,16 @@ export class ShortLinkService {
     return { status: "expired" };
   }
 
-  /** Mark all links for an event expired (e.g. on unpublish) */
+  /** Mark all links for an event as temporarily expired (e.g. on unpublish).
+   * Does NOT change expiresAt - the link can be restored on republish.
+   */
   static async expireAllForEvent(eventId: string): Promise<number> {
     if (!Types.ObjectId.isValid(eventId)) return 0;
     const res = await ShortLink.updateMany(
       { eventId: new Types.ObjectId(eventId), isExpired: false },
-      { $set: { isExpired: true, expiresAt: new Date() } }
+      { $set: { isExpired: true } }
     );
-    log.info("Expired short links for event", undefined, {
+    log.info("Marked short links as expired for event (unpublish)", undefined, {
       eventId,
       modified: res.modifiedCount,
     });

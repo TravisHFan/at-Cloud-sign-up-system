@@ -104,8 +104,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
 
           {status?.state === "expired" && (
             <div className="rounded bg-amber-50 p-2 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-              This short link has expired. You can close and reopen to attempt a
-              new one (regeneration planned in future).
+              This short link has expired (event has ended).
             </div>
           )}
         </div>
