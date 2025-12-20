@@ -3,6 +3,7 @@ import ShortLink, { IShortLink } from "../models/ShortLink";
 import Event from "../models/Event";
 import { generateUniqueShortKey } from "../utils/shortLinkKey";
 import { createLogger } from "./LoggerService";
+import { findUtcInstantFromLocal } from "../shared/time/timezoneSearch";
 import LruCache from "../utils/lru";
 import {
   shortLinkCacheHitCounter,
@@ -86,20 +87,29 @@ const RESERVED_KEYS = loadReserved();
 export class ShortLinkService {
   /**
    * Compute expiry for a short link: use event end date/time if possible, otherwise default +30 days.
+   * Properly converts local event time to UTC using the event's timezone.
    */
   static computeExpiry(event: {
     endDate?: string;
     endTime?: string;
     date?: string;
     time?: string;
+    timeZone?: string;
   }): Date {
     try {
       if (event?.endDate && event?.endTime) {
-        const iso = `${event.endDate}T${event.endTime}:00Z`; // assume stored as wall clock w/out TZ; treat as UTC fallback
-        const d = new Date(iso);
-        if (!isNaN(d.getTime())) return d;
+        // Use the shared timezone-aware conversion to get proper UTC instant
+        const utcInstant = findUtcInstantFromLocal({
+          date: event.endDate,
+          time: event.endTime,
+          timeZone: event.timeZone, // If no timeZone, treats as local
+        });
+        if (utcInstant && !isNaN(utcInstant.getTime())) {
+          return utcInstant;
+        }
       }
     } catch {}
+    // Fallback: 30 days from now
     const d = new Date();
     d.setDate(d.getDate() + 30);
     return d;
@@ -120,7 +130,7 @@ export class ShortLinkService {
     }
 
     const event = await Event.findById(eventId).select(
-      "publish publicSlug roles date endDate time endTime"
+      "publish publicSlug roles date endDate time endTime timeZone"
     );
     if (!event) {
       throw new Error("Event not found");
