@@ -1,9 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import {
-  ensureShortLink,
-  getShortLinkStatus,
-  clearShortLinkCaches,
-} from "../services/shortLinks";
+import { ensureShortLink, clearShortLinkCaches } from "../services/shortLinks";
 import type { ShortLinkRecord, ShortLinkStatus } from "../services/shortLinks";
 
 interface State {
@@ -36,16 +32,6 @@ export function useShortLink(eventId?: string) {
     return p;
   }, [eventId]);
 
-  const refreshStatus = useCallback(async () => {
-    if (!state.record) return;
-    try {
-      const status = await getShortLinkStatus(state.record.key);
-      setState((s) => ({ ...s, status }));
-    } catch (e) {
-      setState((s) => ({ ...s, error: (e as Error).message }));
-    }
-  }, [state.record]);
-
   const copy = useCallback(() => {
     if (!state.record) return false;
     try {
@@ -69,7 +55,6 @@ export function useShortLink(eventId?: string) {
   return {
     ...state,
     load,
-    refreshStatus,
     copy,
     resetCaches,
     hasActive: state.status?.state === "active",

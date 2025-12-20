@@ -16,7 +16,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
   isOpen,
   onClose,
 }) => {
-  const { load, record, status, loading, error, copy, copied, refreshStatus } =
+  const { load, record, status, loading, error, copy, copied } =
     useShortLink(eventId);
   const firstFocusable = useRef<HTMLButtonElement | null>(null);
 
@@ -108,13 +108,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
             </div>
           )}
         </div>
-        <div className="flex justify-end gap-2 border-t border-gray-200 px-4 py-2 dark:border-gray-700">
-          <button
-            onClick={() => refreshStatus()}
-            className="rounded border border-gray-300 px-3 py-1 text-xs hover:bg-gray-100 focus:outline-none focus:ring dark:border-gray-600 dark:hover:bg-gray-700"
-          >
-            Refresh
-          </button>
+        <div className="flex justify-end border-t border-gray-200 px-4 py-2 dark:border-gray-700">
           <button
             onClick={onClose}
             className="rounded bg-gray-800 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700 focus:outline-none focus:ring dark:bg-gray-600 dark:hover:bg-gray-500"
