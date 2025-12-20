@@ -57,19 +57,3 @@ export function getMaxRolesPerEvent(role: UserRole): number {
 export function hasUnlimitedRoles(role: UserRole): boolean {
   return getMaxRolesPerEvent(role) === Infinity;
 }
-
-/**
- * Returns a human-readable description of the role limit.
- *
- * @param role - The user's role level
- * @returns A descriptive string
- */
-export function getRoleLimitDescription(role: UserRole): string {
-  const limit = getMaxRolesPerEvent(role);
-
-  if (limit === Infinity) {
-    return "unlimited roles";
-  }
-
-  return `${limit} role${limit !== 1 ? "s" : ""}`;
-}
