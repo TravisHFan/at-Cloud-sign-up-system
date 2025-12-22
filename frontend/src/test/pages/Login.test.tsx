@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Routes, Route } from "react-router-dom";
 import "@testing-library/jest-dom/vitest";
 import Login from "../../pages/Login";
 
@@ -8,20 +8,30 @@ import Login from "../../pages/Login";
 vi.mock("../../hooks/useLogin");
 vi.mock("../../hooks/useForgotPassword");
 vi.mock("../../hooks/useAuthForm");
+vi.mock("../../hooks/useAuth");
 
 import { useLogin } from "../../hooks/useLogin";
 import { useForgotPassword } from "../../hooks/useForgotPassword";
 import { useAuthForm } from "../../hooks/useAuthForm";
+import { useAuth } from "../../hooks/useAuth";
 
 const mockedUseLogin = useLogin as unknown as ReturnType<typeof vi.fn>;
 const mockedUseForgotPassword = useForgotPassword as unknown as ReturnType<
   typeof vi.fn
 >;
 const mockedUseAuthForm = useAuthForm as unknown as ReturnType<typeof vi.fn>;
+const mockedUseAuth = useAuth as unknown as ReturnType<typeof vi.fn>;
 
 describe("Login page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    sessionStorage.clear();
+
+    // Default: not authenticated
+    mockedUseAuth.mockReturnValue({
+      currentUser: null,
+      isLoading: false,
+    } as any);
 
     mockedUseLogin.mockReturnValue({
       isSubmitting: false,
@@ -171,6 +181,78 @@ describe("Login page", () => {
       });
       expect(showLoginForm).toHaveBeenCalled();
       expect(resetLoginAttempts).toHaveBeenCalled();
+    });
+  });
+
+  describe("authenticated user redirect", () => {
+    it("redirects authenticated user to /dashboard by default", () => {
+      mockedUseAuth.mockReturnValue({
+        currentUser: { id: "user1", username: "testuser" },
+        isLoading: false,
+      } as any);
+
+      render(
+        <MemoryRouter initialEntries={["/login"]}>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/dashboard" element={<div>Dashboard Page</div>} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      expect(screen.getByText("Dashboard Page")).toBeInTheDocument();
+    });
+
+    it("redirects authenticated user to ?redirect param if present", () => {
+      mockedUseAuth.mockReturnValue({
+        currentUser: { id: "user1", username: "testuser" },
+        isLoading: false,
+      } as any);
+
+      render(
+        <MemoryRouter initialEntries={["/login?redirect=/dashboard/event/123"]}>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route
+              path="/dashboard/event/:id"
+              element={<div>Event Detail Page</div>}
+            />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      expect(screen.getByText("Event Detail Page")).toBeInTheDocument();
+    });
+
+    it("clears sessionStorage returnUrl when authenticated user is present", () => {
+      // Set up the mock - authenticated user
+      mockedUseAuth.mockReturnValue({
+        currentUser: { id: "user1", username: "testuser" },
+        isLoading: false,
+      } as any);
+
+      // Set the returnUrl before rendering
+      window.sessionStorage.setItem("returnUrl", "/dashboard/donate");
+      expect(window.sessionStorage.getItem("returnUrl")).toBe(
+        "/dashboard/donate"
+      );
+
+      render(
+        <MemoryRouter initialEntries={["/login"]}>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/dashboard/donate" element={<div>Donate Page</div>} />
+            <Route path="/dashboard" element={<div>Dashboard Page</div>} />
+            <Route path="*" element={<div>Not Found</div>} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      // The key behavior: sessionStorage should be cleared after Login processes it
+      // Note: Due to the nature of React rendering, the component may go to either
+      // the returnUrl destination OR the default dashboard. The important thing
+      // is that the sessionStorage gets cleaned up.
+      expect(window.sessionStorage.getItem("returnUrl")).toBeNull();
     });
   });
 });
