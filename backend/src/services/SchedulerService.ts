@@ -276,22 +276,23 @@ export class SchedulerService {
   }
 
   /**
-   * Execute the pending purchase cleanup task
+   * Execute the purchase cleanup task (pending + refunded)
    */
   private static async executePendingPurchaseCleanup(): Promise<void> {
     try {
       logger.info(
-        `Starting scheduled pending purchase cleanup (>${PendingPurchaseCleanupService.RETENTION_DAYS} days old)...`
+        `Starting scheduled purchase cleanup (pending >${PendingPurchaseCleanupService.PENDING_RETENTION_DAYS}d, refunded >${PendingPurchaseCleanupService.REFUNDED_RETENTION_DAYS}d)...`
       );
 
-      const { deletedCount } = await PendingPurchaseCleanupService.runCleanup();
+      const { pendingDeleted, refundedDeleted } =
+        await PendingPurchaseCleanupService.runCleanup();
 
       logger.info(
-        `Scheduled pending purchase cleanup completed: deleted ${deletedCount} stale pending purchases`
+        `Scheduled purchase cleanup completed: deleted ${pendingDeleted} pending, ${refundedDeleted} refunded`
       );
     } catch (error) {
       logger.error(
-        "Failed to execute scheduled pending purchase cleanup",
+        "Failed to execute scheduled purchase cleanup",
         error instanceof Error ? error : new Error(String(error))
       );
       // Don't throw - we want the scheduler to continue running
