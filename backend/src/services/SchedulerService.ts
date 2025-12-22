@@ -1,6 +1,7 @@
 import { Logger } from "./LoggerService";
 import { MessageCleanupService } from "./MessageCleanupService";
 import { PromoCodeCleanupService } from "./promoCodeCleanupService";
+import { PendingPurchaseCleanupService } from "./PendingPurchaseCleanupService";
 import { AutoUnpublishService } from "./event/AutoUnpublishService";
 
 const logger = Logger.getInstance().child("SchedulerService");
@@ -11,6 +12,7 @@ const logger = Logger.getInstance().child("SchedulerService");
  * Currently scheduled tasks:
  * - Message cleanup: Runs daily at 2:00 AM to remove old/deleted messages
  * - Promo code cleanup: Runs daily at 3:00 AM to remove old used/expired promo codes
+ * - Pending purchase cleanup: Runs daily at 4:00 AM to remove stale pending purchases (>15 days)
  *
  * Design:
  * - Simple setInterval-based scheduler (can be replaced with node-cron if needed)
@@ -45,6 +47,9 @@ export class SchedulerService {
 
     // Schedule promo code cleanup - runs daily at 3:00 AM
     this.schedulePromoCodeCleanup();
+
+    // Schedule pending purchase cleanup - runs daily at 4:00 AM
+    this.schedulePendingPurchaseCleanup();
 
     // Schedule auto-unpublish execution - runs every 15 minutes
     this.scheduleAutoUnpublishExecution();
@@ -226,6 +231,67 @@ export class SchedulerService {
     } catch (error) {
       logger.error(
         "Failed to execute scheduled auto-unpublish",
+        error instanceof Error ? error : new Error(String(error))
+      );
+      // Don't throw - we want the scheduler to continue running
+    }
+  }
+
+  /**
+   * Schedule pending purchase cleanup to run daily at 4:00 AM
+   */
+  private static schedulePendingPurchaseCleanup(): void {
+    // Calculate time until next 4:00 AM
+    const now = new Date();
+    const next4AM = new Date();
+    next4AM.setHours(4, 0, 0, 0);
+
+    // If 4 AM has passed today, schedule for tomorrow
+    if (next4AM <= now) {
+      next4AM.setDate(next4AM.getDate() + 1);
+    }
+
+    const timeUntilNext4AM = next4AM.getTime() - now.getTime();
+
+    logger.info(
+      `Pending purchase cleanup scheduled for ${next4AM.toISOString()} (in ${Math.round(
+        timeUntilNext4AM / 1000 / 60
+      )} minutes)`
+    );
+
+    // Initial execution at 4 AM
+    const initialTimeout = setTimeout(() => {
+      this.executePendingPurchaseCleanup();
+
+      // Then repeat every 24 hours
+      const dailyInterval = setInterval(() => {
+        this.executePendingPurchaseCleanup();
+      }, 24 * 60 * 60 * 1000); // 24 hours in milliseconds
+
+      this.intervals.push(dailyInterval);
+    }, timeUntilNext4AM);
+
+    // Store the initial timeout (not an interval, but we track it for cleanup)
+    this.intervals.push(initialTimeout as unknown as NodeJS.Timeout);
+  }
+
+  /**
+   * Execute the pending purchase cleanup task
+   */
+  private static async executePendingPurchaseCleanup(): Promise<void> {
+    try {
+      logger.info(
+        `Starting scheduled pending purchase cleanup (>${PendingPurchaseCleanupService.RETENTION_DAYS} days old)...`
+      );
+
+      const { deletedCount } = await PendingPurchaseCleanupService.runCleanup();
+
+      logger.info(
+        `Scheduled pending purchase cleanup completed: deleted ${deletedCount} stale pending purchases`
+      );
+    } catch (error) {
+      logger.error(
+        "Failed to execute scheduled pending purchase cleanup",
         error instanceof Error ? error : new Error(String(error))
       );
       // Don't throw - we want the scheduler to continue running
