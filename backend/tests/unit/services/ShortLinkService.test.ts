@@ -73,6 +73,7 @@ describe("ShortLinkService", () => {
       eventId,
       targetSlug: "my-event",
       expiresAt: new Date(Date.now() + 3600_000),
+      save: vi.fn().mockResolvedValue(undefined), // Mock save method for auto-correction path
     };
     (ShortLink as any)._store.findOneValue = existing; // set mock findOne return value
 
