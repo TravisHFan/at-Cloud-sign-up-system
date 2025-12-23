@@ -12,7 +12,7 @@ vi.mock("../../../../src/models", () => ({
 
 import { PromoCode } from "../../../../src/models";
 
-interface MockRequest extends Partial<Request> {
+interface MockRequest {
   params: Record<string, string>;
   user?: {
     id: string;
@@ -27,7 +27,7 @@ describe("UsageHistoryController", () => {
   let mockRes: Partial<Response>;
   let statusMock: ReturnType<typeof vi.fn>;
   let jsonMock: ReturnType<typeof vi.fn>;
-  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+  let consoleErrorSpy: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -38,8 +38,8 @@ describe("UsageHistoryController", () => {
     statusMock = vi.fn().mockReturnValue({ json: jsonMock });
 
     mockRes = {
-      status: statusMock,
-      json: jsonMock,
+      status: statusMock as any,
+      json: jsonMock as any,
     };
 
     mockReq = {

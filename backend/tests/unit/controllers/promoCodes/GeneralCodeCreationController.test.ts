@@ -12,7 +12,7 @@ vi.mock("../../../../src/models", () => ({
 
 import { PromoCode } from "../../../../src/models";
 
-interface MockRequest extends Partial<Request> {
+interface MockRequest {
   body: Record<string, unknown>;
   user?: {
     _id: string;
@@ -28,7 +28,7 @@ describe("GeneralCodeCreationController", () => {
   let mockRes: Partial<Response>;
   let statusMock: ReturnType<typeof vi.fn>;
   let jsonMock: ReturnType<typeof vi.fn>;
-  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+  let consoleErrorSpy: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -39,8 +39,8 @@ describe("GeneralCodeCreationController", () => {
     statusMock = vi.fn().mockReturnValue({ json: jsonMock });
 
     mockRes = {
-      status: statusMock,
-      json: jsonMock,
+      status: statusMock as any,
+      json: jsonMock as any,
     };
 
     mockReq = {

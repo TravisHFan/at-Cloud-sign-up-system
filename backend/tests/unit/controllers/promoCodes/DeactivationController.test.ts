@@ -19,7 +19,7 @@ vi.mock("../../../../src/controllers/unifiedMessageController", () => ({
 import PromoCode from "../../../../src/models/PromoCode";
 import { EmailService } from "../../../../src/services";
 
-interface MockRequest extends Partial<Request> {
+interface MockRequest {
   params: Record<string, string>;
   user?: {
     id: string;
@@ -40,9 +40,9 @@ describe("DeactivationController", () => {
   let mockRes: Partial<Response>;
   let statusMock: ReturnType<typeof vi.fn>;
   let jsonMock: ReturnType<typeof vi.fn>;
-  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
-  let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
-  let consoleLogSpy: ReturnType<typeof vi.spyOn>;
+  let consoleErrorSpy: any;
+  let consoleWarnSpy: any;
+  let consoleLogSpy: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -55,8 +55,8 @@ describe("DeactivationController", () => {
     statusMock = vi.fn().mockReturnValue({ json: jsonMock });
 
     mockRes = {
-      status: statusMock,
-      json: jsonMock,
+      status: statusMock as any,
+      json: jsonMock as any,
     };
 
     mockReq = {

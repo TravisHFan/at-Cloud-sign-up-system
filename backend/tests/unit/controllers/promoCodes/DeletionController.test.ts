@@ -16,7 +16,7 @@ vi.mock("../../../../src/services/LoggerService", () => ({
 
 import PromoCode from "../../../../src/models/PromoCode";
 
-interface MockRequest extends Partial<Request> {
+interface MockRequest {
   params: Record<string, string>;
   user?: {
     id: string;
@@ -39,8 +39,8 @@ describe("DeletionController", () => {
     statusMock = vi.fn().mockReturnValue({ json: jsonMock });
 
     mockRes = {
-      status: statusMock,
-      json: jsonMock,
+      status: statusMock as any,
+      json: jsonMock as any,
     };
 
     mockReq = {

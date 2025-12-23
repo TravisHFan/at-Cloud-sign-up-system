@@ -16,7 +16,7 @@ vi.mock("../../../../src/models", () => ({
 
 import { PromoCode, User } from "../../../../src/models";
 
-interface MockRequest extends Partial<Request> {
+interface MockRequest {
   query: Record<string, string>;
   user?: {
     _id: string;
@@ -31,7 +31,7 @@ describe("AdminListController", () => {
   let mockRes: Partial<Response>;
   let statusMock: ReturnType<typeof vi.fn>;
   let jsonMock: ReturnType<typeof vi.fn>;
-  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+  let consoleErrorSpy: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -42,8 +42,8 @@ describe("AdminListController", () => {
     statusMock = vi.fn().mockReturnValue({ json: jsonMock });
 
     mockRes = {
-      status: statusMock,
-      json: jsonMock,
+      status: statusMock as any,
+      json: jsonMock as any,
     };
 
     mockReq = {
