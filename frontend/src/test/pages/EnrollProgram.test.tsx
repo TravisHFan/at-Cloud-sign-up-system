@@ -328,4 +328,87 @@ describe("EnrollProgram Component", () => {
     // Note: Early bird text check removed as it's fragile in test environment
     // The price check above already validates that the discount isn't applied
   });
+
+  it("should apply early bird discount on the deadline date (end of day inclusive)", async () => {
+    // Bug fix test: Early bird deadline should include the full deadline day
+    // When deadline is Dec 26, users should still get discount on Dec 26
+    const today = new Date();
+    today.setHours(12, 0, 0, 0); // Noon today
+
+    mockProgramService.getById.mockResolvedValueOnce({
+      ...mockProgram,
+      earlyBirdDeadline: today.toISOString(), // Deadline is today
+    });
+
+    const { default: EnrollProgram } = await import(
+      "../../pages/EnrollProgram"
+    );
+    const { NotificationProvider } = await import(
+      "../../contexts/NotificationModalContext"
+    );
+
+    render(
+      <NotificationProvider>
+        <MemoryRouter initialEntries={["/dashboard/programs/prog1/enroll"]}>
+          <Routes>
+            <Route
+              path="/dashboard/programs/:id/enroll"
+              element={<EnrollProgram />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </NotificationProvider>
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Advanced Leadership Training/i)
+      ).toBeInTheDocument();
+    });
+
+    // Should show early bird price: 19 - 4 = 15 (deadline is today, should still apply)
+    const prices = screen.getAllByText(/\$15\.00/);
+    expect(prices.length).toBeGreaterThan(0);
+  });
+
+  it("should display remaining class rep slots (limit - count), not total limit", async () => {
+    // Bug fix test: Class rep slots should show remaining, not total
+    mockProgramService.getById.mockResolvedValueOnce({
+      ...mockProgram,
+      classRepLimit: 5, // Total limit
+      classRepCount: 2, // Already used
+    });
+
+    const { default: EnrollProgram } = await import(
+      "../../pages/EnrollProgram"
+    );
+    const { NotificationProvider } = await import(
+      "../../contexts/NotificationModalContext"
+    );
+
+    render(
+      <NotificationProvider>
+        <MemoryRouter initialEntries={["/dashboard/programs/prog1/enroll"]}>
+          <Routes>
+            <Route
+              path="/dashboard/programs/:id/enroll"
+              element={<EnrollProgram />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </NotificationProvider>
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Advanced Leadership Training/i)
+      ).toBeInTheDocument();
+    });
+
+    // Should show "3 slots remaining" (5 - 2 = 3), NOT "5 slots remaining"
+    await waitFor(() => {
+      const slotsText = screen.getByText(/3.*slots.*remaining|3.*available/i);
+      expect(slotsText).toBeInTheDocument();
+    });
+  });
 });

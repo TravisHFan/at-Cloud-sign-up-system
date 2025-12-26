@@ -27,8 +27,8 @@ describe("ResponseHelper", () => {
     jsonMock = vi.fn();
     statusMock = vi.fn().mockReturnValue({ json: jsonMock });
     mockRes = {
-      status: statusMock,
-      json: jsonMock,
+      status: statusMock as unknown as Response["status"],
+      json: jsonMock as unknown as Response["json"],
     };
   });
 
@@ -49,7 +49,11 @@ describe("ResponseHelper", () => {
     });
 
     it("should send success response with message", () => {
-      ResponseHelper.success(mockRes as Response, undefined, "Operation successful");
+      ResponseHelper.success(
+        mockRes as Response,
+        undefined,
+        "Operation successful"
+      );
 
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith({
@@ -174,7 +178,10 @@ describe("ResponseHelper", () => {
     });
 
     it("should send 403 Forbidden response with custom message", () => {
-      ResponseHelper.forbidden(mockRes as Response, "You cannot access this resource");
+      ResponseHelper.forbidden(
+        mockRes as Response,
+        "You cannot access this resource"
+      );
 
       expect(statusMock).toHaveBeenCalledWith(403);
       expect(jsonMock).toHaveBeenCalledWith({
@@ -241,7 +248,10 @@ describe("ResponseHelper", () => {
     });
 
     it("should send 500 response with custom message", () => {
-      ResponseHelper.internalServerError(mockRes as Response, "Service unavailable");
+      ResponseHelper.internalServerError(
+        mockRes as Response,
+        "Service unavailable"
+      );
 
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith({
