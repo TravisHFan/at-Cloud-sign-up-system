@@ -289,16 +289,22 @@ describe("Program Participants API", () => {
     });
 
     it("should allow admin to unenroll from class rep", async () => {
-      // First unenroll from mentee, then enroll as class rep
-      await request(app)
+      // First unenroll from mentee (set by beforeEach)
+      const unenrollMentee = await request(app)
         .delete(`/api/programs/${programId}/admin-enroll`)
         .set("Authorization", `Bearer ${adminToken}`);
+      expect(unenrollMentee.status).toBe(200);
 
-      await request(app)
+      // Then enroll as class rep
+      const enrollClassRep = await request(app)
         .post(`/api/programs/${programId}/admin-enroll`)
         .set("Authorization", `Bearer ${adminToken}`)
         .send({ enrollAs: "classRep" });
+      // Accept both 201 (new enrollment) and 200 (already enrolled)
+      expect([200, 201]).toContain(enrollClassRep.status);
+      expect(enrollClassRep.body.success).toBe(true);
 
+      // Now unenroll from class rep
       const response = await request(app)
         .delete(`/api/programs/${programId}/admin-enroll`)
         .set("Authorization", `Bearer ${adminToken}`);

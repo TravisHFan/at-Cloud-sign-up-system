@@ -34,10 +34,10 @@ export default defineConfig({
       thresholds: disableCoverageThresholds
         ? undefined
         : {
-            lines: 85,
-            statements: 85,
-            functions: 85,
-            branches: 80,
+            lines: 90,
+            statements: 90,
+            functions: 90,
+            branches: 85,
           },
       exclude: [
         "node_modules/",

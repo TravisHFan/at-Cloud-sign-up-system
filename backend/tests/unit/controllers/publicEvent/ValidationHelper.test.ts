@@ -279,6 +279,231 @@ describe("ValidationHelper - Unit Tests", () => {
     });
   });
 
+  describe("validateConsent", () => {
+    it("should return true when termsAccepted is true", () => {
+      const consent = { termsAccepted: true };
+
+      const result = ValidationHelper.validateConsent(
+        consent,
+        "event-slug",
+        "role-123",
+        mockLog,
+        mockReq as Request,
+        mockRes as Response
+      );
+
+      expect(result).toBe(true);
+      expect(statusMock).not.toHaveBeenCalled();
+    });
+
+    it("should return false and send 400 when termsAccepted is false", () => {
+      const consent = { termsAccepted: false };
+
+      const result = ValidationHelper.validateConsent(
+        consent,
+        "event-slug",
+        "role-123",
+        mockLog,
+        mockReq as Request,
+        mockRes as Response
+      );
+
+      expect(result).toBe(false);
+      expect(statusMock).toHaveBeenCalledWith(400);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: false,
+        message: "termsAccepted must be true",
+      });
+    });
+
+    it("should return false when consent is undefined", () => {
+      const result = ValidationHelper.validateConsent(
+        undefined,
+        "event-slug",
+        "role-123",
+        mockLog,
+        mockReq as Request,
+        mockRes as Response
+      );
+
+      expect(result).toBe(false);
+      expect(statusMock).toHaveBeenCalledWith(400);
+    });
+
+    it("should return false when consent object is empty", () => {
+      const result = ValidationHelper.validateConsent(
+        {},
+        "event-slug",
+        "role-123",
+        mockLog,
+        mockReq as Request,
+        mockRes as Response
+      );
+
+      expect(result).toBe(false);
+      expect(statusMock).toHaveBeenCalledWith(400);
+    });
+
+    it("should include slug and roleId in warning metadata", () => {
+      ValidationHelper.validateConsent(
+        { termsAccepted: false },
+        "important-event",
+        "volunteer-role",
+        mockLog,
+        mockReq as Request,
+        mockRes as Response
+      );
+
+      expect(mockLog.warn).toHaveBeenCalledWith(
+        "Public registration validation failure",
+        undefined,
+        expect.objectContaining({
+          reason: "missing_consent",
+          slug: "important-event",
+          roleId: "volunteer-role",
+        })
+      );
+    });
+  });
+
+  describe("validateRole", () => {
+    it("should return true when targetRole exists", () => {
+      const targetRole = { id: "role-123", name: "Volunteer" };
+
+      const result = ValidationHelper.validateRole(
+        targetRole,
+        "role-123",
+        "event-slug",
+        mockLog,
+        mockReq as Request,
+        mockRes as Response
+      );
+
+      expect(result).toBe(true);
+      expect(statusMock).not.toHaveBeenCalled();
+    });
+
+    it("should return false and send 400 when targetRole is undefined", () => {
+      const result = ValidationHelper.validateRole(
+        undefined,
+        "role-123",
+        "event-slug",
+        mockLog,
+        mockReq as Request,
+        mockRes as Response
+      );
+
+      expect(result).toBe(false);
+      expect(statusMock).toHaveBeenCalledWith(400);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: false,
+        message: "Role not found",
+      });
+    });
+
+    it("should include slug and roleId in warning metadata", () => {
+      ValidationHelper.validateRole(
+        undefined,
+        "nonexistent-role",
+        "important-event",
+        mockLog,
+        mockReq as Request,
+        mockRes as Response
+      );
+
+      expect(mockLog.warn).toHaveBeenCalledWith(
+        "Public registration validation failure",
+        undefined,
+        expect.objectContaining({
+          reason: "role_not_found",
+          slug: "important-event",
+          roleId: "nonexistent-role",
+        })
+      );
+    });
+  });
+
+  describe("validateRolePublic", () => {
+    it("should return true when role is open to public", () => {
+      const targetRole = {
+        id: "role-123",
+        name: "Participant",
+        openToPublic: true,
+      };
+
+      const result = ValidationHelper.validateRolePublic(
+        targetRole,
+        "role-123",
+        "event-slug",
+        mockLog,
+        mockReq as Request,
+        mockRes as Response
+      );
+
+      expect(result).toBe(true);
+      expect(statusMock).not.toHaveBeenCalled();
+    });
+
+    it("should return false and send 400 when role is not open to public", () => {
+      const targetRole = { id: "role-123", name: "Staff", openToPublic: false };
+
+      const result = ValidationHelper.validateRolePublic(
+        targetRole,
+        "role-123",
+        "event-slug",
+        mockLog,
+        mockReq as Request,
+        mockRes as Response
+      );
+
+      expect(result).toBe(false);
+      expect(statusMock).toHaveBeenCalledWith(400);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: false,
+        message: "Role is not open to public registration",
+      });
+    });
+
+    it("should return false when openToPublic is undefined", () => {
+      const targetRole = { id: "role-123", name: "Staff" };
+
+      const result = ValidationHelper.validateRolePublic(
+        targetRole,
+        "role-123",
+        "event-slug",
+        mockLog,
+        mockReq as Request,
+        mockRes as Response
+      );
+
+      expect(result).toBe(false);
+      expect(statusMock).toHaveBeenCalledWith(400);
+    });
+
+    it("should include slug and roleId in warning metadata", () => {
+      const targetRole = { id: "role-123", name: "Staff", openToPublic: false };
+
+      ValidationHelper.validateRolePublic(
+        targetRole,
+        "role-123",
+        "important-event",
+        mockLog,
+        mockReq as Request,
+        mockRes as Response
+      );
+
+      expect(mockLog.warn).toHaveBeenCalledWith(
+        "Public registration validation failure",
+        undefined,
+        expect.objectContaining({
+          reason: "role_not_open",
+          slug: "important-event",
+          roleId: "role-123",
+        })
+      );
+    });
+  });
+
   describe("Edge cases", () => {
     it("should handle req.ip as undefined gracefully", () => {
       // Create new request without ip defined

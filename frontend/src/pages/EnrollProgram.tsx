@@ -20,6 +20,7 @@ interface Program {
   classRepDiscount?: number;
   earlyBirdDiscount?: number;
   classRepLimit?: number;
+  classRepCount?: number; // Current number of Class Rep purchases
   earlyBirdDeadline?: string;
 }
 
@@ -57,9 +58,14 @@ export default function EnrollProgram() {
   });
 
   // Calculate if early bird discount applies
-  const isEarlyBird = program?.earlyBirdDeadline
-    ? new Date() <= new Date(program.earlyBirdDeadline)
-    : false;
+  // Use end of deadline day (23:59:59.999) so the deadline date itself is included
+  const isEarlyBird = (() => {
+    if (!program?.earlyBirdDeadline) return false;
+    const deadline = new Date(program.earlyBirdDeadline);
+    // Set to end of the deadline day (23:59:59.999 in local time)
+    deadline.setHours(23, 59, 59, 999);
+    return new Date() <= deadline;
+  })();
 
   // Calculate final price
   const calculatePrice = () => {
@@ -162,10 +168,19 @@ export default function EnrollProgram() {
 
         // Check Class Rep slots
         if (data.classRepLimit && data.classRepLimit > 0) {
-          // In a real implementation, we'd call an API to get the current count
-          // For now, we'll assume it's available
-          setClassRepSlotsAvailable(true);
-          setClassRepCountInfo(`${data.classRepLimit} slots available`);
+          const currentCount = data.classRepCount || 0;
+          const remainingSlots = data.classRepLimit - currentCount;
+          if (remainingSlots > 0) {
+            setClassRepSlotsAvailable(true);
+            setClassRepCountInfo(
+              `${remainingSlots} slot${
+                remainingSlots !== 1 ? "s" : ""
+              } available`
+            );
+          } else {
+            setClassRepSlotsAvailable(false);
+            setClassRepCountInfo("No slots available");
+          }
         }
 
         // Fetch available promo codes for this program

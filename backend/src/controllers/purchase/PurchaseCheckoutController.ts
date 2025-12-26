@@ -251,11 +251,15 @@ class PurchaseCheckoutController {
           let isEarlyBird = false;
 
           // Check if Early Bird period is active
+          // Use end of deadline day (23:59:59.999) so the deadline date itself is included
           const now = new Date();
-          const earlyBirdActive =
-            program.earlyBirdDeadline &&
-            program.earlyBirdDiscount &&
-            now <= new Date(program.earlyBirdDeadline);
+          let earlyBirdActive = false;
+          if (program.earlyBirdDeadline && program.earlyBirdDiscount) {
+            const deadline = new Date(program.earlyBirdDeadline);
+            // Set to end of the deadline day (23:59:59.999)
+            deadline.setHours(23, 59, 59, 999);
+            earlyBirdActive = now <= deadline;
+          }
 
           // Apply Class Rep discount if selected
           if (isClassRep && program.classRepDiscount) {
