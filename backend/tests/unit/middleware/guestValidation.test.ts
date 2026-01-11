@@ -12,6 +12,8 @@ import {
   validateGuestUniqueness,
   validateGuestRateLimit,
   GUEST_MAX_ROLES_PER_EVENT,
+  __resetGuestRateLimitStore,
+  __setGuestRateLimitNowProvider,
 } from "../../../src/middleware/guestValidation";
 
 // Create a mock GuestRegistration model
@@ -182,6 +184,41 @@ describe("guestValidation middleware", () => {
       expect(
         typeof result.message === "string" || result.message === undefined
       ).toBe(true);
+    });
+
+    it("should block after exceeding rate limit (5 attempts)", () => {
+      // Reset the store and use a fixed time provider
+      __resetGuestRateLimitStore();
+      const fixedNow = Date.now();
+      __setGuestRateLimitNowProvider(() => fixedNow);
+
+      const rateLimitIp = "10.0.0.1";
+      const rateLimitEmail = "ratelimit@example.com";
+
+      // First 5 attempts should pass
+      for (let i = 0; i < 5; i++) {
+        const result = validateGuestRateLimit(rateLimitIp, rateLimitEmail);
+        expect(result.isValid).toBe(true);
+      }
+
+      // 6th attempt should fail
+      const blocked = validateGuestRateLimit(rateLimitIp, rateLimitEmail);
+      expect(blocked.isValid).toBe(false);
+      expect(blocked.message).toMatch(/Too many registration attempts/);
+
+      // Cleanup: restore default time provider
+      __setGuestRateLimitNowProvider(null);
+    });
+
+    it("should reset __nowProvider when passed null", () => {
+      // Test the null fallback branch
+      __setGuestRateLimitNowProvider(() => 1234567890);
+      __setGuestRateLimitNowProvider(null); // Should reset to Date.now()
+
+      // After reset, the provider should work with the real time
+      __resetGuestRateLimitStore();
+      const result = validateGuestRateLimit("test-ip", "test@example.com");
+      expect(result.isValid).toBe(true);
     });
   });
 

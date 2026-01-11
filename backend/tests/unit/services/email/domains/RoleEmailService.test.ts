@@ -178,6 +178,34 @@ describe("RoleEmailService - Role Email Operations", () => {
       // Assert
       expect(result).toBe(false);
     });
+
+    it("should use FRONTEND_URL fallback when env variable is not set", async () => {
+      // Arrange
+      delete process.env.FRONTEND_URL;
+      const email = "user@example.com";
+      const userData = {
+        firstName: "John",
+        lastName: "Doe",
+        oldRole: "Participant",
+        newRole: "Leader",
+      };
+      const changedBy = {
+        firstName: "Admin",
+        lastName: "User",
+        role: "Super Admin",
+      };
+
+      // Act
+      await RoleEmailService.sendPromotionNotificationToUser(
+        email,
+        userData,
+        changedBy
+      );
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain("http://localhost:5173");
+    });
   });
 
   describe("sendPromotionNotificationToAdmins", () => {
@@ -319,6 +347,68 @@ describe("RoleEmailService - Role Email Operations", () => {
       expect(emailCall.html).toContain("Jane Smith");
       expect(emailCall.html).toContain("Leader");
     });
+
+    it("should use FRONTEND_URL fallback when env variable is not set", async () => {
+      // Arrange
+      delete process.env.FRONTEND_URL;
+      const userEmail = "user@example.com";
+      const userData = {
+        _id: "user789",
+        firstName: "John",
+        lastName: "Doe",
+        email: "john@example.com",
+        oldRole: "Leader",
+        newRole: "Participant",
+      };
+      const changedBy = {
+        firstName: "Admin",
+        lastName: "User",
+        email: "admin@example.com",
+        role: "Super Admin",
+      };
+
+      // Act
+      await RoleEmailService.sendDemotionNotificationToUser(
+        userEmail,
+        userData,
+        changedBy
+      );
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain("http://localhost:5173");
+    });
+
+    it("should handle missing firstName/lastName with empty string fallback", async () => {
+      // Arrange
+      const userEmail = "user@example.com";
+      const userData = {
+        _id: "user789",
+        firstName: "",
+        lastName: "",
+        email: "john@example.com",
+        oldRole: "Leader",
+        newRole: "Participant",
+      };
+      const changedBy = {
+        firstName: "",
+        lastName: "",
+        email: "admin@example.com",
+        role: "Super Admin",
+      };
+
+      // Act
+      const result = await RoleEmailService.sendDemotionNotificationToUser(
+        userEmail,
+        userData,
+        changedBy
+      );
+
+      // Assert
+      expect(result).toBe(true);
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall).toBeDefined();
+    });
   });
 
   describe("sendDemotionNotificationToAdmins", () => {
@@ -412,6 +502,27 @@ describe("RoleEmailService - Role Email Operations", () => {
       // Assert
       const emailCall = mockTransporter.sendMail.mock.calls[0][0];
       expect(emailCall.html).toContain("Leader");
+    });
+
+    it("should use FRONTEND_URL fallback when env variable is not set", async () => {
+      // Arrange
+      delete process.env.FRONTEND_URL;
+      const userEmail = "user@example.com";
+      const userData = {
+        _id: "user123",
+        firstName: "John",
+        lastName: "Doe",
+        email: "john@example.com",
+        oldRoleInAtCloud: "Participant",
+        newRoleInAtCloud: "Class Rep",
+      };
+
+      // Act
+      await RoleEmailService.sendAtCloudRoleChangeToUser(userEmail, userData);
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain("http://localhost:5173");
     });
   });
 
@@ -560,6 +671,29 @@ describe("RoleEmailService - Role Email Operations", () => {
       const emailCall = mockTransporter.sendMail.mock.calls[0][0];
       expect(emailCall.html).toContain("Leader");
     });
+
+    it("should use FRONTEND_URL fallback when env variable is not set", async () => {
+      // Arrange
+      delete process.env.FRONTEND_URL;
+      const userData = {
+        firstName: "Test",
+        lastName: "User",
+        email: "test@example.com",
+        roleInAtCloud: "Class Rep",
+      };
+
+      // Act
+      const result = await RoleEmailService.sendAtCloudRoleAssignedToAdmins(
+        "admin@example.com",
+        "Admin",
+        userData
+      );
+
+      // Assert
+      expect(result).toBe(true);
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain("localhost:5173");
+    });
   });
 
   describe("sendAtCloudRoleRemovedToAdmins", () => {
@@ -615,6 +749,29 @@ describe("RoleEmailService - Role Email Operations", () => {
       const emailCall = mockTransporter.sendMail.mock.calls[0][0];
       expect(emailCall.html).toContain("Leader");
       expect(emailCall.html).toContain("removed");
+    });
+
+    it("should use FRONTEND_URL fallback when env variable is not set", async () => {
+      // Arrange
+      delete process.env.FRONTEND_URL;
+      const userData = {
+        firstName: "Test",
+        lastName: "User",
+        email: "test@example.com",
+        previousRoleInAtCloud: "Class Rep",
+      };
+
+      // Act
+      const result = await RoleEmailService.sendAtCloudRoleRemovedToAdmins(
+        "admin@example.com",
+        "Admin",
+        userData
+      );
+
+      // Assert
+      expect(result).toBe(true);
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain("localhost:5173");
     });
   });
 

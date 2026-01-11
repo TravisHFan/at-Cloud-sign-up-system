@@ -347,6 +347,31 @@ describe("GuestEmailService - Guest Email Operations", () => {
       expect(mockTransporter.sendMail).toHaveBeenCalledOnce();
       expect(console.error).toHaveBeenCalled();
     });
+
+    it("should use FRONTEND_URL fallback when env variable is not set", async () => {
+      // Arrange
+      delete process.env.FRONTEND_URL;
+      const params = {
+        guestEmail: "guest@example.com",
+        guestName: "Test Guest",
+        event: {
+          title: "Test Event",
+          date: new Date("2025-09-01"),
+          time: "10:00 AM",
+        },
+        role: { name: "Participant" },
+        registrationId: "REG-FALLBACK",
+        manageToken: "TOKEN-123",
+      };
+
+      // Act
+      const result = await GuestEmailService.sendGuestConfirmationEmail(params);
+
+      // Assert
+      expect(result).toBe(true);
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain("localhost:5173");
+    });
   });
 
   describe("sendGuestDeclineNotification", () => {

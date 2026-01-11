@@ -17,14 +17,23 @@ vi.mock("../../../src/models/Registration", () => ({
   },
 }));
 
+vi.mock("../../../src/models/GuestRegistration", () => ({
+  default: {
+    find: vi.fn(),
+  },
+}));
+
 describe("EmailRecipientUtils", () => {
   let User: any;
   let Registration: any;
+  let GuestRegistration: any;
 
   beforeEach(async () => {
     // Import mocked modules within async beforeEach to avoid top-level await
     User = (await import("../../../src/models/User")).default as any;
     Registration = (await import("../../../src/models/Registration"))
+      .default as any;
+    GuestRegistration = (await import("../../../src/models/GuestRegistration"))
       .default as any;
     vi.clearAllMocks();
   });
@@ -464,5 +473,302 @@ describe("EmailRecipientUtils", () => {
     expect(res).toEqual([
       { email: "only@x.com", firstName: "", lastName: "", _id: "u9" },
     ]);
+  });
+
+  describe("getEventGuests", () => {
+    it("returns guests with valid emails", async () => {
+      (GuestRegistration.find as any).mockResolvedValueOnce([
+        { email: "guest1@example.com", fullName: "John Doe" },
+        { email: "guest2@example.com", fullName: "Jane Smith" },
+      ]);
+
+      const res = await EmailRecipientUtils.getEventGuests("event123");
+
+      expect(GuestRegistration.find).toHaveBeenCalledWith({
+        eventId: "event123",
+        status: "active",
+      });
+      expect(res).toEqual([
+        { email: "guest1@example.com", firstName: "John", lastName: "Doe" },
+        { email: "guest2@example.com", firstName: "Jane", lastName: "Smith" },
+      ]);
+    });
+
+    it("returns empty array when no guests found", async () => {
+      (GuestRegistration.find as any).mockResolvedValueOnce([]);
+
+      const res = await EmailRecipientUtils.getEventGuests("event456");
+
+      expect(res).toEqual([]);
+    });
+
+    it("skips guests with invalid emails (null)", async () => {
+      (GuestRegistration.find as any).mockResolvedValueOnce([
+        { email: null, fullName: "Invalid Guest" },
+        { email: "valid@example.com", fullName: "Valid Guest" },
+      ]);
+
+      const res = await EmailRecipientUtils.getEventGuests("event789");
+
+      expect(res).toEqual([
+        { email: "valid@example.com", firstName: "Valid", lastName: "Guest" },
+      ]);
+    });
+
+    it("skips guests with emails missing @ symbol", async () => {
+      (GuestRegistration.find as any).mockResolvedValueOnce([
+        { email: "notanemail", fullName: "Bad Email" },
+        { email: "good@test.com", fullName: "Good Email" },
+      ]);
+
+      const res = await EmailRecipientUtils.getEventGuests("event999");
+
+      expect(res).toEqual([
+        { email: "good@test.com", firstName: "Good", lastName: "Email" },
+      ]);
+    });
+
+    it("skips guests with non-string emails", async () => {
+      (GuestRegistration.find as any).mockResolvedValueOnce([
+        { email: 123, fullName: "Number Email" },
+        { email: "string@test.com", fullName: "String Email" },
+      ]);
+
+      const res = await EmailRecipientUtils.getEventGuests("event111");
+
+      expect(res).toEqual([
+        { email: "string@test.com", firstName: "String", lastName: "Email" },
+      ]);
+    });
+
+    it("handles fullName with single word (no last name)", async () => {
+      (GuestRegistration.find as any).mockResolvedValueOnce([
+        { email: "single@test.com", fullName: "SingleName" },
+      ]);
+
+      const res = await EmailRecipientUtils.getEventGuests("event222");
+
+      expect(res).toEqual([
+        { email: "single@test.com", firstName: "SingleName", lastName: "" },
+      ]);
+    });
+
+    it("handles fullName with multiple words (multi-part last name)", async () => {
+      (GuestRegistration.find as any).mockResolvedValueOnce([
+        { email: "multi@test.com", fullName: "Mary Jane Van Dyke" },
+      ]);
+
+      const res = await EmailRecipientUtils.getEventGuests("event333");
+
+      expect(res).toEqual([
+        {
+          email: "multi@test.com",
+          firstName: "Mary",
+          lastName: "Jane Van Dyke",
+        },
+      ]);
+    });
+
+    it("handles empty or null fullName", async () => {
+      (GuestRegistration.find as any).mockResolvedValueOnce([
+        { email: "empty@test.com", fullName: "" },
+        { email: "null@test.com", fullName: null },
+        { email: "undef@test.com" },
+      ]);
+
+      const res = await EmailRecipientUtils.getEventGuests("event444");
+
+      expect(res).toEqual([
+        { email: "empty@test.com", firstName: "", lastName: "" },
+        { email: "null@test.com", firstName: "", lastName: "" },
+        { email: "undef@test.com", firstName: "", lastName: "" },
+      ]);
+    });
+
+    it("trims whitespace from fullName", async () => {
+      (GuestRegistration.find as any).mockResolvedValueOnce([
+        { email: "space@test.com", fullName: "  John   Doe  " },
+      ]);
+
+      const res = await EmailRecipientUtils.getEventGuests("event555");
+
+      expect(res).toEqual([
+        { email: "space@test.com", firstName: "John", lastName: "Doe" },
+      ]);
+    });
+  });
+
+  describe("getEventAllOrganizers", () => {
+    it("returns main organizer and co-organizers", async () => {
+      // Main organizer query: findOne -> select (returns resolved value)
+      User.select
+        .mockResolvedValueOnce({
+          _id: { toString: () => "main1" },
+          email: "main@test.com",
+          firstName: "Main",
+          lastName: "Org",
+        })
+        // Co-organizers query: find -> select (returns array)
+        .mockResolvedValueOnce([
+          {
+            _id: { toString: () => "co1" },
+            email: "co1@test.com",
+            firstName: "Co",
+            lastName: "One",
+          },
+        ]);
+
+      const res = await EmailRecipientUtils.getEventAllOrganizers({
+        createdBy: "main1",
+        organizerDetails: [{ userId: "main1" }, { userId: "co1" }],
+      } as any);
+
+      expect(res).toHaveLength(2);
+      expect(res[0]).toMatchObject({
+        email: "main@test.com",
+        firstName: "Main",
+        lastName: "Org",
+      });
+      expect(res[1]).toMatchObject({
+        email: "co1@test.com",
+        firstName: "Co",
+        lastName: "One",
+      });
+    });
+
+    it("returns only main organizer when no co-organizers exist", async () => {
+      User.select.mockResolvedValueOnce({
+        _id: { toString: () => "solo1" },
+        email: "solo@test.com",
+        firstName: "Solo",
+        lastName: "Leader",
+      });
+
+      const res = await EmailRecipientUtils.getEventAllOrganizers({
+        createdBy: "solo1",
+        organizerDetails: [],
+      } as any);
+
+      expect(res).toHaveLength(1);
+      expect(res[0]).toMatchObject({
+        email: "solo@test.com",
+        firstName: "Solo",
+        lastName: "Leader",
+      });
+    });
+
+    it("returns only main organizer when organizerDetails is undefined", async () => {
+      User.select.mockResolvedValueOnce({
+        _id: { toString: () => "onlyMain" },
+        email: "only@test.com",
+        firstName: "Only",
+        lastName: "Main",
+      });
+
+      const res = await EmailRecipientUtils.getEventAllOrganizers({
+        createdBy: "onlyMain",
+      } as any);
+
+      expect(res).toHaveLength(1);
+      expect(res[0]).toMatchObject({ email: "only@test.com" });
+    });
+
+    it("returns empty when main organizer not found and no co-organizers", async () => {
+      User.select.mockResolvedValueOnce(null);
+
+      const res = await EmailRecipientUtils.getEventAllOrganizers({
+        createdBy: "missing1",
+        organizerDetails: [],
+      } as any);
+
+      expect(res).toEqual([]);
+    });
+
+    it("returns only co-organizers when main organizer is inactive/not found", async () => {
+      // Main organizer query returns null
+      User.select
+        .mockResolvedValueOnce(null)
+        // Co-organizers query returns valid users
+        .mockResolvedValueOnce([
+          {
+            _id: { toString: () => "active-co" },
+            email: "active-co@test.com",
+            firstName: "Active",
+            lastName: "Co",
+          },
+        ]);
+
+      const res = await EmailRecipientUtils.getEventAllOrganizers({
+        createdBy: "inactive-main",
+        organizerDetails: [
+          { userId: "inactive-main" },
+          { userId: "active-co" },
+        ],
+      } as any);
+
+      expect(res).toHaveLength(1);
+      expect(res[0]).toMatchObject({
+        email: "active-co@test.com",
+        firstName: "Active",
+        lastName: "Co",
+      });
+    });
+
+    it("handles null mainOrganizerId when createdBy cannot be extracted", async () => {
+      const res = await EmailRecipientUtils.getEventAllOrganizers({
+        createdBy: null,
+        organizerDetails: [],
+      } as any);
+
+      expect(res).toEqual([]);
+      expect(User.findOne).not.toHaveBeenCalled();
+    });
+
+    it("handles co-organizers with null/undefined userIds", async () => {
+      User.select
+        .mockResolvedValueOnce({
+          _id: { toString: () => "main2" },
+          email: "main2@test.com",
+          firstName: "Main",
+          lastName: "Two",
+        })
+        .mockResolvedValueOnce([
+          {
+            _id: { toString: () => "valid-co" },
+            email: "valid-co@test.com",
+            firstName: "Valid",
+            lastName: "Co",
+          },
+        ]);
+
+      const res = await EmailRecipientUtils.getEventAllOrganizers({
+        createdBy: "main2",
+        organizerDetails: [
+          { userId: "main2" },
+          { userId: null },
+          { userId: undefined },
+          { userId: "valid-co" },
+        ],
+      } as any);
+
+      expect(res).toHaveLength(2);
+    });
+  });
+
+  describe("edge cases for extractIdString helper", () => {
+    it("getEventCoOrganizers handles createdBy with _id as string", async () => {
+      User.select.mockResolvedValueOnce([
+        { _id: "co99", email: "co99@x.com", firstName: "Co", lastName: "99" },
+      ]);
+      await EmailRecipientUtils.getEventCoOrganizers({
+        createdBy: { _id: "mainStringId" },
+        organizerDetails: [{ userId: "mainStringId" }, { userId: "co99" }],
+      } as any);
+      expect(User.find).toHaveBeenCalledWith({
+        _id: { $in: ["co99"] },
+        isActive: true,
+        isVerified: true,
+      });
+    });
   });
 });

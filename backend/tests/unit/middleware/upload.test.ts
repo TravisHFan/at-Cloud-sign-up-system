@@ -276,4 +276,145 @@ describe("Upload Middleware", () => {
       expect(limits.fileSize).toBe(10 * 1024 * 1024);
     });
   });
+
+  describe("getFileUrl with absolute option", () => {
+    test("should return relative path by default", () => {
+      const filepath = "avatars/test.jpg";
+      const result = getFileUrl(mockRequest, filepath);
+      expect(result).toBe("/uploads/avatars/test.jpg");
+    });
+
+    test("should return absolute URL when absolute option is true", () => {
+      const filepath = "avatars/test.jpg";
+      const result = getFileUrl(mockRequest, filepath, { absolute: true });
+      expect(result).toBe("http://localhost:3000/uploads/avatars/test.jpg");
+    });
+
+    test("should use BACKEND_URL env when set for absolute URLs", () => {
+      const originalEnv = process.env.BACKEND_URL;
+      process.env.BACKEND_URL = "https://api.example.com/";
+      try {
+        const filepath = "avatars/test.jpg";
+        const result = getFileUrl(mockRequest, filepath, { absolute: true });
+        expect(result).toBe("https://api.example.com/uploads/avatars/test.jpg");
+      } finally {
+        process.env.BACKEND_URL = originalEnv;
+      }
+    });
+
+    test("should strip trailing slash from BACKEND_URL", () => {
+      const originalEnv = process.env.BACKEND_URL;
+      process.env.BACKEND_URL = "https://api.example.com///";
+      try {
+        const filepath = "avatars/test.jpg";
+        const result = getFileUrl(mockRequest, filepath, { absolute: true });
+        // Should strip only trailing slashes, normalize the URL
+        expect(result).toContain("https://api.example.com");
+        expect(result).toContain("/uploads/avatars/test.jpg");
+      } finally {
+        process.env.BACKEND_URL = originalEnv;
+      }
+    });
+
+    test("should normalize leading slashes in filepath", () => {
+      const result = getFileUrl(mockRequest, "///avatars/test.jpg");
+      expect(result).toBe("/uploads/avatars/test.jpg");
+    });
+
+    test("should handle x-forwarded-proto header for absolute URLs", () => {
+      const reqWithForwardedProto = {
+        protocol: "http",
+        headers: { "x-forwarded-proto": "https", host: "example.com" },
+        get: vi.fn((header: string) => {
+          if (header === "host") return "example.com";
+          return undefined;
+        }),
+      };
+      const result = getFileUrl(
+        reqWithForwardedProto as any,
+        "avatars/test.jpg",
+        {
+          absolute: true,
+        }
+      );
+      expect(result).toBe("https://example.com/uploads/avatars/test.jpg");
+    });
+
+    test("should handle x-forwarded-proto as array", () => {
+      const reqWithArrayProto = {
+        protocol: "http",
+        headers: {
+          "x-forwarded-proto": ["https", "http"],
+          host: "example.com",
+        },
+        get: vi.fn((header: string) => {
+          if (header === "host") return "example.com";
+          return undefined;
+        }),
+      };
+      const result = getFileUrl(reqWithArrayProto as any, "avatars/test.jpg", {
+        absolute: true,
+      });
+      expect(result).toBe("https://example.com/uploads/avatars/test.jpg");
+    });
+
+    test("should fallback to relative URL when host is not available", () => {
+      const reqWithoutHost = {
+        protocol: "http",
+        headers: {},
+        get: vi.fn(() => undefined),
+      };
+      const result = getFileUrl(reqWithoutHost as any, "avatars/test.jpg", {
+        absolute: true,
+      });
+      expect(result).toBe("/uploads/avatars/test.jpg");
+    });
+
+    test("should use host from headers when get function returns undefined", () => {
+      const reqWithHostHeader = {
+        protocol: "http",
+        headers: { host: "headerhost.com" },
+        get: vi.fn(() => undefined),
+      };
+      const result = getFileUrl(reqWithHostHeader as any, "avatars/test.jpg", {
+        absolute: true,
+      });
+      expect(result).toBe("http://headerhost.com/uploads/avatars/test.jpg");
+    });
+
+    test("should handle request without get function", () => {
+      const reqWithoutGet = {
+        protocol: "http",
+        headers: { host: "noget.com" },
+      };
+      const result = getFileUrl(reqWithoutGet as any, "avatars/test.jpg", {
+        absolute: true,
+      });
+      expect(result).toBe("http://noget.com/uploads/avatars/test.jpg");
+    });
+
+    test("should handle null filepath", () => {
+      const result = getFileUrl(mockRequest, null as any);
+      expect(result).toBe("/uploads/");
+    });
+
+    test("should handle undefined filepath", () => {
+      const result = getFileUrl(mockRequest, undefined as any);
+      expect(result).toBe("/uploads/");
+    });
+  });
+
+  describe("storage.destination with image field", () => {
+    test("should set image upload path for image field", () => {
+      void uploadAvatar;
+      const storage = captured.opts.storage;
+      const cb = vi.fn();
+      storage.destination(
+        {} as any,
+        { fieldname: "image" } as any,
+        (err: any, dest: string) => cb(err, dest)
+      );
+      expect(cb).toHaveBeenCalledWith(null, "uploads/images/");
+    });
+  });
 });

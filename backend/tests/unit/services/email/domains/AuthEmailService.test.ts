@@ -527,5 +527,23 @@ describe("AuthEmailService - Authentication Email Operations", () => {
       // Transporter should only be created once
       expect(nodemailer.createTransport).toHaveBeenCalledTimes(1);
     });
+
+    it("should fallback to localhost URL when FRONTEND_URL is not set", async () => {
+      // Arrange - clear FRONTEND_URL to trigger fallback
+      delete process.env.FRONTEND_URL;
+
+      // Act
+      await AuthEmailService.sendVerificationEmail(
+        "test@example.com",
+        "Test",
+        "test-token-123"
+      );
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      // Should use fallback localhost URL
+      expect(emailCall.html).toContain("http://localhost:5173");
+      expect(emailCall.html).toContain("/verify-email/test-token-123");
+    });
   });
 });

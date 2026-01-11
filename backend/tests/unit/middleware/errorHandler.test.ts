@@ -254,6 +254,21 @@ describe("ErrorHandlerMiddleware", () => {
         },
       });
     });
+
+    it("should handle error without keyValue property", () => {
+      const error = { code: 11000, name: "MongoError" }; // No keyValue
+      const result = ErrorHandlerMiddleware.handleDuplicateKeyError(error);
+
+      expect(result).toEqual({
+        success: false,
+        message:
+          "Duplicate value for field: unknown. Please use another value.",
+        statusCode: 400,
+        meta: {
+          timestamp: expect.any(String),
+        },
+      });
+    });
   });
 
   describe("handleCastError", () => {

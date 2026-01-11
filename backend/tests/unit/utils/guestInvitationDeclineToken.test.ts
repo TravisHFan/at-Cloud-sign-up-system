@@ -365,4 +365,39 @@ describe("guestInvitationDeclineToken", () => {
       }
     });
   });
+
+  describe("edge cases - manual exp check", () => {
+    it("should reject token where jwt.verify passes but manual exp check fails", () => {
+      // jwt.verify with ignoreExpiration: true would let expired tokens through
+      // but our manual check should still catch them
+      // We mock jwt.verify to simulate this edge case
+      const expiredPayload: GuestInvitationDeclineTokenPayload = {
+        registrationId: "expired-reg",
+        type: "guestInvitationDecline",
+        exp: Math.floor(Date.now() / 1000) - 60, // 1 minute ago
+      };
+
+      // Create a token and manually decode it to bypass jwt.verify's expiration check
+      const originalVerify = jwt.verify;
+      const token = jwt.sign(
+        expiredPayload,
+        process.env.GUEST_INVITATION_DECLINE_SECRET!
+      );
+
+      // Mock jwt.verify to return the expired payload without throwing
+      vi.spyOn(jwt, "verify").mockReturnValueOnce(
+        expiredPayload as unknown as string
+      );
+
+      try {
+        const result = verifyGuestInvitationDeclineToken(token);
+        expect(result.valid).toBe(false);
+        if (!result.valid) {
+          expect(result.reason).toBe("expired");
+        }
+      } finally {
+        vi.restoreAllMocks();
+      }
+    });
+  });
 });

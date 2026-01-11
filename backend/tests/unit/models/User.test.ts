@@ -476,6 +476,19 @@ describe("User Model", () => {
 
         compareSpy.mockRestore();
       });
+
+      it("should throw error when password field is not stored", async () => {
+        const userWithoutPassword = new User({
+          ...userData,
+          password: undefined,
+        });
+        // Force password to be undefined after construction
+        (userWithoutPassword as any).password = undefined;
+
+        await expect(
+          userWithoutPassword.comparePassword("anypassword")
+        ).rejects.toThrow("Password comparison failed");
+      });
     });
 
     describe("generateEmailVerificationToken", () => {

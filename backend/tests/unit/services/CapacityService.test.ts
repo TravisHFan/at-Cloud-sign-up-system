@@ -47,7 +47,7 @@ const validEventId = "656565656565656565656565";
 
 describe("CapacityService", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
   });
 
   it("getRoleOccupancy returns users, guests, total and capacity from maxParticipants", async () => {
@@ -123,5 +123,89 @@ describe("CapacityService", () => {
     });
     expect(occ).toEqual({ users: 2, guests: 0, total: 2, capacity: 6 });
     expect(CapacityService.isRoleFull(occ)).toBe(false);
+  });
+
+  it("returns users=0 when countDocuments throws an error", async () => {
+    mockCountDocuments.mockRejectedValueOnce(new Error("DB error"));
+    mockCountActiveGuests.mockResolvedValueOnce(2);
+    mockFindEventById.mockResolvedValueOnce({
+      roles: [{ id: "r1", name: "Role", maxParticipants: 10 }],
+    });
+
+    const occ = await CapacityService.getRoleOccupancy(validEventId, "r1");
+    expect(occ).toEqual({ users: 0, guests: 2, total: 2, capacity: 10 });
+  });
+
+  it("returns guests=0 when countActiveRegistrations throws an error", async () => {
+    mockCountDocuments.mockResolvedValueOnce(3);
+    mockCountActiveGuests.mockRejectedValueOnce(new Error("DB error"));
+    mockFindEventById.mockResolvedValueOnce({
+      roles: [{ id: "r1", name: "Role", maxParticipants: 10 }],
+    });
+
+    const occ = await CapacityService.getRoleOccupancy(validEventId, "r1");
+    expect(occ).toEqual({ users: 3, guests: 0, total: 3, capacity: 10 });
+  });
+
+  it("returns capacity=null when Event.findById throws an error", async () => {
+    mockCountDocuments.mockResolvedValueOnce(2);
+    mockCountActiveGuests.mockResolvedValueOnce(1);
+    mockFindEventById.mockRejectedValueOnce(new Error("DB error"));
+
+    const occ = await CapacityService.getRoleOccupancy(validEventId, "r1");
+    expect(occ).toEqual({ users: 2, guests: 1, total: 3, capacity: null });
+  });
+
+  it("returns capacity=null when role is not found in event", async () => {
+    mockCountDocuments.mockResolvedValueOnce(2);
+    mockCountActiveGuests.mockResolvedValueOnce(1);
+    mockFindEventById.mockResolvedValueOnce({
+      roles: [{ id: "other-role", name: "Other Role", maxParticipants: 10 }],
+    });
+
+    const occ = await CapacityService.getRoleOccupancy(validEventId, "r1");
+    expect(occ).toEqual({ users: 2, guests: 1, total: 3, capacity: null });
+  });
+
+  it("returns capacity=null when event has no roles", async () => {
+    mockCountDocuments.mockResolvedValueOnce(2);
+    mockCountActiveGuests.mockResolvedValueOnce(1);
+    mockFindEventById.mockResolvedValueOnce({ roles: undefined });
+
+    const occ = await CapacityService.getRoleOccupancy(validEventId, "r1");
+    expect(occ).toEqual({ users: 2, guests: 1, total: 3, capacity: null });
+  });
+
+  it("handles non-finite capacity by returning null", async () => {
+    mockCountDocuments.mockResolvedValueOnce(2);
+    mockCountActiveGuests.mockResolvedValueOnce(1);
+    mockFindEventById.mockResolvedValueOnce({
+      roles: [{ id: "r1", name: "Role", maxParticipants: "not-a-number" }],
+    });
+
+    const occ = await CapacityService.getRoleOccupancy(validEventId, "r1");
+    expect(occ).toEqual({ users: 2, guests: 1, total: 3, capacity: null });
+  });
+
+  it("handles string eventId that is not a valid ObjectId", async () => {
+    mockCountDocuments.mockResolvedValueOnce(1);
+    mockCountActiveGuests.mockResolvedValueOnce(1);
+    mockFindEventById.mockResolvedValueOnce({
+      roles: [{ id: "r1", name: "Role", maxParticipants: 10 }],
+    });
+
+    const occ = await CapacityService.getRoleOccupancy("invalid-id", "r1");
+    expect(occ).toEqual({ users: 1, guests: 1, total: 2, capacity: 10 });
+  });
+
+  it("handles null/undefined counts by defaulting to 0", async () => {
+    mockCountDocuments.mockResolvedValueOnce(null);
+    mockCountActiveGuests.mockResolvedValueOnce(undefined);
+    mockFindEventById.mockResolvedValueOnce({
+      roles: [{ id: "r1", name: "Role", maxParticipants: 10 }],
+    });
+
+    const occ = await CapacityService.getRoleOccupancy(validEventId, "r1");
+    expect(occ).toEqual({ users: 0, guests: 0, total: 0, capacity: 10 });
   });
 });

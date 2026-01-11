@@ -118,4 +118,15 @@ describe("notificationConfig more branches", () => {
     expect(last).toBeDefined();
     expect(last.reason).toBe("Runtime update");
   });
+
+  it("ConfigManager.updateConfig returns false when intermediate path is not an object", async () => {
+    const mod = await importFresh();
+    // timeouts.email is a number (5000), not an object, so trying to traverse deeper should fail
+    const ok = mod.ConfigManager.updateConfig(
+      "timeouts.email.extra",
+      123,
+      "test"
+    );
+    expect(ok).toBe(false);
+  });
 });

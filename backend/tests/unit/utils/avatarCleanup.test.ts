@@ -105,6 +105,82 @@ describe("avatarCleanup", () => {
       expect(fs.unlinkSync).not.toHaveBeenCalled();
     });
 
+    describe("uploads directory resolution", () => {
+      const originalEnv = process.env;
+
+      beforeEach(() => {
+        process.env = { ...originalEnv };
+      });
+
+      afterEach(() => {
+        process.env = originalEnv;
+      });
+
+      it("should use UPLOAD_DESTINATION when set", async () => {
+        process.env.UPLOAD_DESTINATION = "/custom/upload/path/";
+        vi.mocked(path.basename).mockReturnValue("test.jpg");
+        vi.mocked(path.join).mockReturnValue(
+          "/custom/upload/path/avatars/test.jpg"
+        );
+        vi.mocked(fs.existsSync).mockReturnValue(true);
+        vi.mocked(fs.unlinkSync).mockReturnValue(undefined);
+
+        const result = await deleteOldAvatarFile("/uploads/avatars/test.jpg");
+
+        expect(result).toBe(true);
+        expect(path.join).toHaveBeenCalledWith(
+          "/custom/upload/path",
+          "avatars"
+        );
+      });
+
+      it("should strip trailing slash from UPLOAD_DESTINATION", async () => {
+        process.env.UPLOAD_DESTINATION = "/data/uploads/";
+        vi.mocked(path.basename).mockReturnValue("avatar.png");
+        vi.mocked(path.join).mockReturnValue(
+          "/data/uploads/avatars/avatar.png"
+        );
+        vi.mocked(fs.existsSync).mockReturnValue(true);
+        vi.mocked(fs.unlinkSync).mockReturnValue(undefined);
+
+        const result = await deleteOldAvatarFile("/uploads/avatars/avatar.png");
+
+        expect(result).toBe(true);
+        // Verify trailing slash was stripped
+        expect(path.join).toHaveBeenCalledWith("/data/uploads", "avatars");
+      });
+
+      it("should use production path when NODE_ENV is production and no UPLOAD_DESTINATION", async () => {
+        delete process.env.UPLOAD_DESTINATION;
+        process.env.NODE_ENV = "production";
+        vi.mocked(path.basename).mockReturnValue("prod.jpg");
+        vi.mocked(path.join).mockReturnValue("/uploads/avatars/prod.jpg");
+        vi.mocked(fs.existsSync).mockReturnValue(true);
+        vi.mocked(fs.unlinkSync).mockReturnValue(undefined);
+
+        const result = await deleteOldAvatarFile("/uploads/avatars/prod.jpg");
+
+        expect(result).toBe(true);
+      });
+
+      it("should use local path when NODE_ENV is not production and no UPLOAD_DESTINATION", async () => {
+        delete process.env.UPLOAD_DESTINATION;
+        process.env.NODE_ENV = "test";
+        vi.mocked(path.basename).mockReturnValue("local.jpg");
+        vi.mocked(path.join).mockReturnValue(
+          "/mock/app/root/uploads/avatars/local.jpg"
+        );
+        vi.mocked(fs.existsSync).mockReturnValue(true);
+        vi.mocked(fs.unlinkSync).mockReturnValue(undefined);
+
+        const result = await deleteOldAvatarFile("/uploads/avatars/local.jpg");
+
+        expect(result).toBe(true);
+        // Should use process.cwd() for local development
+        expect(path.join).toHaveBeenCalled();
+      });
+    });
+
     it("should successfully delete existing uploaded avatar file", async () => {
       // Set up mocks for successful deletion
       vi.mocked(path.basename).mockReturnValue("user_123.jpg");
@@ -212,6 +288,29 @@ describe("avatarCleanup", () => {
       );
     });
 
+    it("should handle unexpected errors in cleanupOldAvatar with logging", async () => {
+      // The outer catch block in cleanupOldAvatar catches errors from console.log
+      // or the deleteOldAvatarFile call. Since deleteOldAvatarFile has its own try/catch,
+      // we need to verify the error logging pattern at both levels.
+      // When path.basename throws, it's caught by deleteOldAvatarFile's catch and returns false.
+      vi.mocked(path.basename).mockImplementation(() => {
+        throw new Error("Unexpected system error");
+      });
+
+      const result = await cleanupOldAvatar(
+        "user789",
+        "/uploads/avatars/problem.jpg"
+      );
+
+      // The function should return false when an error occurs
+      expect(result).toBe(false);
+      // Error is caught by deleteOldAvatarFile and logged there
+      expect(consoleSpy.error).toHaveBeenCalledWith(
+        "Error deleting avatar file:",
+        expect.any(Error)
+      );
+    });
+
     describe("integration scenarios", () => {
       it("should handle typical avatar update workflow", async () => {
         const userId = "user123";
@@ -268,6 +367,29 @@ describe("avatarCleanup", () => {
         expect(fs.existsSync).toHaveBeenCalledTimes(1);
         expect(fs.unlinkSync).toHaveBeenCalledTimes(1);
       });
+    });
+
+    it("should catch and log errors when console.log throws inside cleanupOldAvatar", async () => {
+      // This tests the outer try/catch in cleanupOldAvatar (lines 103-114)
+      // by making console.log throw an error
+
+      // Temporarily restore the console.log mock to throw
+      consoleSpy.log.mockImplementation(() => {
+        throw new Error("Logging system failure");
+      });
+
+      const result = await cleanupOldAvatar(
+        "user999",
+        "/uploads/avatars/test.jpg"
+      );
+
+      // Should return false when error is caught
+      expect(result).toBe(false);
+      // The error should be logged via console.error
+      expect(consoleSpy.error).toHaveBeenCalledWith(
+        "Error cleaning up old avatar for user user999:",
+        expect.any(Error)
+      );
     });
   });
 });

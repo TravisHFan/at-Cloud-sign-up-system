@@ -323,6 +323,61 @@ describe("UserEmailService - User Account Email Operations", () => {
       // Assert
       expect(result).toBe(false);
     });
+
+    it("should fallback to email when target has no name", async () => {
+      // Arrange - target with no firstName or lastName
+      const target = {
+        firstName: undefined,
+        lastName: undefined,
+        email: "noname@example.com",
+      };
+      const actor = {
+        firstName: "Admin",
+        lastName: "User",
+        email: "admin@example.com",
+        role: "Admin",
+      };
+
+      // Act
+      const result = await UserEmailService.sendUserReactivatedAlertToAdmin(
+        "supervisor@example.com",
+        "Supervisor",
+        target,
+        actor
+      );
+
+      // Assert
+      expect(result).toBe(true);
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      // Subject should use email as fallback name
+      expect(emailCall.subject).toContain("noname@example.com");
+    });
+
+    it("should fallback to email when actor has no name", async () => {
+      // Arrange - actor with no firstName or lastName
+      const target = {
+        firstName: "Target",
+        lastName: "User",
+        email: "target@example.com",
+      };
+      const actor = {
+        email: "noname-actor@example.com",
+        role: "Admin",
+      };
+
+      // Act
+      await UserEmailService.sendUserReactivatedAlertToAdmin(
+        "supervisor@example.com",
+        "Supervisor",
+        target,
+        actor
+      );
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      // HTML should use actor email as fallback name
+      expect(emailCall.html).toContain("noname-actor@example.com");
+    });
   });
 
   describe("sendUserDeletedAlertToAdmin", () => {
@@ -446,6 +501,61 @@ describe("UserEmailService - User Account Email Operations", () => {
 
       // Assert
       expect(result).toBe(false);
+    });
+
+    it("should fallback to email when target has no name", async () => {
+      // Arrange - target with empty firstName and lastName
+      const target = {
+        firstName: "",
+        lastName: "",
+        email: "unnamed@example.com",
+      };
+      const actor = {
+        firstName: "Admin",
+        lastName: "User",
+        email: "admin@example.com",
+        role: "Admin",
+      };
+
+      // Act
+      const result = await UserEmailService.sendUserDeletedAlertToAdmin(
+        "security@example.com",
+        "Security Admin",
+        target,
+        actor
+      );
+
+      // Assert
+      expect(result).toBe(true);
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      // Subject should use email as fallback name
+      expect(emailCall.subject).toContain("unnamed@example.com");
+    });
+
+    it("should fallback to email when actor has no name", async () => {
+      // Arrange - actor with no firstName or lastName
+      const target = {
+        firstName: "Deleted",
+        lastName: "User",
+        email: "deleted@example.com",
+      };
+      const actor = {
+        email: "noname-actor@example.com",
+        role: "Super Admin",
+      };
+
+      // Act
+      await UserEmailService.sendUserDeletedAlertToAdmin(
+        "security@example.com",
+        "Security Admin",
+        target,
+        actor
+      );
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      // HTML should use actor email as fallback name
+      expect(emailCall.html).toContain("noname-actor@example.com");
     });
   });
 
@@ -572,6 +682,29 @@ describe("UserEmailService - User Account Email Operations", () => {
 
       // Assert
       expect(result).toBe(false);
+    });
+
+    it("should fallback to localhost URL when FRONTEND_URL is not set", async () => {
+      // Arrange - Remove FRONTEND_URL to test fallback
+      delete process.env.FRONTEND_URL;
+      const userData = {
+        firstName: "Test",
+        lastName: "Leader",
+        email: "test@example.com",
+        roleInAtCloud: "Pastor",
+      };
+
+      // Act
+      await UserEmailService.sendNewAtCloudLeaderSignupToAdmins(
+        "admin@example.com",
+        "Admin",
+        userData
+      );
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain("http://localhost:5173");
+      expect(emailCall.html).toContain("/admin/users");
     });
   });
 

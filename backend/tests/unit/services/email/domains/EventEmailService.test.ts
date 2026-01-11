@@ -191,6 +191,28 @@ describe("EventEmailService - Event Email Operations", () => {
       // Assert
       expect(result).toBe(false);
     });
+
+    it("should use FRONTEND_URL fallback when env variable is not set", async () => {
+      // Arrange
+      delete process.env.FRONTEND_URL;
+      const email = "organizer@example.com";
+      const name = "Test User";
+      const eventData = {
+        title: "Test Event",
+        date: "2025-12-31",
+        time: "12:00",
+        endTime: "13:00",
+        organizer: "Admin",
+        format: "in-person" as const,
+      };
+
+      // Act
+      await EventEmailService.sendEventCreatedEmail(email, name, eventData);
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain("http://localhost:5173");
+    });
   });
 
   describe("sendEventNotificationEmail", () => {
@@ -246,6 +268,27 @@ describe("EventEmailService - Event Email Operations", () => {
       expect(emailCall.html).toContain("Weekend Retreat");
       expect(emailCall.html).toContain("December");
       expect(emailCall.html).toContain("2025");
+    });
+
+    it("should use FRONTEND_URL fallback when env variable is not set", async () => {
+      // Arrange
+      delete process.env.FRONTEND_URL;
+      const payload = {
+        eventTitle: "Test Event",
+        date: "2025-12-15",
+        time: "14:00",
+      };
+
+      // Act
+      await EventEmailService.sendEventNotificationEmail(
+        "test@example.com",
+        "Test User",
+        payload
+      );
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain("localhost:5173");
     });
   });
 
@@ -395,6 +438,29 @@ describe("EventEmailService - Event Email Operations", () => {
       expect(emailCall.html).toContain("Online Session");
       expect(emailCall.html).toContain("online");
     });
+
+    it("should use FRONTEND_URL fallback when env variable is not set", async () => {
+      // Arrange
+      delete process.env.FRONTEND_URL;
+      const eventData = {
+        title: "Test Reminder Event",
+        date: "2025-12-15",
+        time: "14:00",
+        location: "Test Location",
+        format: "in-person" as const,
+      };
+
+      // Act
+      await EventEmailService.sendEventReminderEmail(
+        "test@example.com",
+        "Test User",
+        eventData,
+        "24h"
+      );
+
+      // Assert - method should complete successfully with fallback URL
+      expect(mockTransporter.sendMail).toHaveBeenCalledOnce();
+    });
   });
 
   describe("sendEventReminderEmailBulk", () => {
@@ -466,6 +532,36 @@ describe("EventEmailService - Event Email Operations", () => {
       expect(emailCall.html).toContain("Big Conference");
       expect(emailCall.html).toContain("Main");
     });
+
+    it("should handle empty firstName and lastName with fallback", async () => {
+      // Arrange
+      const assignedUser = {
+        firstName: "",
+        lastName: "",
+      };
+      const assignedBy = {
+        firstName: "",
+        lastName: "",
+      };
+      const eventData = {
+        title: "Test Event",
+        date: "2025-12-20",
+        time: "09:00",
+        location: "Room 1",
+      };
+
+      // Act
+      const result = await EventEmailService.sendCoOrganizerAssignedEmail(
+        "coorg@example.com",
+        assignedUser,
+        eventData,
+        assignedBy
+      );
+
+      // Assert
+      expect(result).toBe(true);
+      expect(mockTransporter.sendMail).toHaveBeenCalledOnce();
+    });
   });
 
   describe("sendEventRoleAssignedEmail", () => {
@@ -506,6 +602,41 @@ describe("EventEmailService - Event Email Operations", () => {
       expect(emailCall.to).toBe("participant@example.com");
       expect(emailCall.html).toContain("Facilitator");
       expect(emailCall.html).toContain("Workshop");
+    });
+
+    it("should use FRONTEND_URL fallback when env variable is not set", async () => {
+      // Arrange
+      delete process.env.FRONTEND_URL;
+      const data = {
+        event: {
+          id: "event123",
+          title: "Test Event",
+          date: "2025-12-15",
+          time: "14:00",
+          format: "in-person" as const,
+          location: "Room 1",
+        },
+        user: {
+          firstName: "Test",
+          lastName: "User",
+        },
+        roleName: "Participant",
+        actor: {
+          firstName: "Admin",
+          lastName: "User",
+        },
+      };
+
+      // Act
+      const result = await EventEmailService.sendEventRoleAssignedEmail(
+        "test@example.com",
+        data
+      );
+
+      // Assert
+      expect(result).toBe(true);
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain("localhost:5173");
     });
   });
 
@@ -684,6 +815,50 @@ describe("EventEmailService - Event Email Operations", () => {
       expect(emailCall.subject).toContain("Unpublished");
       expect(emailCall.html).toContain("Past Event");
       expect(emailCall.html).toContain("date");
+    });
+
+    it("should use FRONTEND_URL fallback when env variable is not set", async () => {
+      // Arrange
+      delete process.env.FRONTEND_URL;
+      const params = {
+        eventId: "event-fallback-123",
+        title: "Test Event",
+        format: "in-person",
+        missingFields: ["location"],
+        recipients: ["test@example.com"],
+      };
+
+      // Act
+      const result = await EventEmailService.sendEventAutoUnpublishNotification(
+        params
+      );
+
+      // Assert
+      expect(result).toBe(true);
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain("localhost:5173");
+    });
+
+    it("should use FALLBACK_ADMIN_EMAIL when recipients is empty", async () => {
+      // Arrange
+      delete process.env.FALLBACK_ADMIN_EMAIL;
+      const params = {
+        eventId: "event-no-recipients",
+        title: "Test Event",
+        format: "in-person",
+        missingFields: ["location"],
+        recipients: [], // Empty recipients
+      };
+
+      // Act
+      const result = await EventEmailService.sendEventAutoUnpublishNotification(
+        params
+      );
+
+      // Assert
+      expect(result).toBe(true);
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.to).toBe("atcloudministry@gmail.com");
     });
   });
 

@@ -1040,4 +1040,165 @@ describe("Auth Middleware", () => {
       });
     });
   });
+
+  describe("authenticateOptional", () => {
+    let authenticateOptional: any;
+
+    beforeEach(async () => {
+      const authModule = await import("../../../src/middleware/auth");
+      authenticateOptional = authModule.authenticateOptional;
+    });
+
+    it("should proceed without user when no auth header provided", async () => {
+      const req: any = { headers: {} };
+      const res: any = {};
+      const next = vi.fn();
+
+      await authenticateOptional(req, res, next);
+
+      expect(next).toHaveBeenCalled();
+      expect(req.user).toBeUndefined();
+    });
+
+    it("should proceed without user when auth header doesn't start with Bearer", async () => {
+      const req: any = { headers: { authorization: "Basic abc123" } };
+      const res: any = {};
+      const next = vi.fn();
+
+      await authenticateOptional(req, res, next);
+
+      expect(next).toHaveBeenCalled();
+      expect(req.user).toBeUndefined();
+    });
+
+    it("should proceed without user when token is empty", async () => {
+      const req: any = { headers: { authorization: "Bearer " } };
+      const res: any = {};
+      const next = vi.fn();
+
+      await authenticateOptional(req, res, next);
+
+      expect(next).toHaveBeenCalled();
+      expect(req.user).toBeUndefined();
+    });
+
+    it("should attach user when valid token is provided", async () => {
+      const mockUser = {
+        _id: "user123",
+        role: "Participant",
+        isActive: true,
+        isVerified: true,
+      };
+
+      // Mock token verification to return valid payload
+      vi.spyOn(TokenService, "verifyAccessToken").mockReturnValue({
+        userId: "user123",
+        email: "test@example.com",
+        role: "Participant",
+      });
+
+      (User.findById as any).mockReturnValue({
+        select: vi.fn().mockResolvedValue(mockUser),
+      });
+
+      const req: any = { headers: { authorization: "Bearer validtoken123" } };
+      const res: any = {};
+      const next = vi.fn();
+
+      await authenticateOptional(req, res, next);
+
+      expect(next).toHaveBeenCalled();
+      expect(req.user).toBe(mockUser);
+      expect(req.userId).toBe("user123");
+      expect(req.userRole).toBe("Participant");
+    });
+
+    it("should proceed without user when user not found", async () => {
+      vi.spyOn(TokenService, "verifyAccessToken").mockReturnValue({
+        userId: "user123",
+        email: "test@example.com",
+        role: "Participant",
+      });
+
+      (User.findById as any).mockReturnValue({
+        select: vi.fn().mockResolvedValue(null),
+      });
+
+      const req: any = { headers: { authorization: "Bearer validtoken123" } };
+      const res: any = {};
+      const next = vi.fn();
+
+      await authenticateOptional(req, res, next);
+
+      expect(next).toHaveBeenCalled();
+      expect(req.user).toBeUndefined();
+    });
+
+    it("should proceed without user when user is not active", async () => {
+      vi.spyOn(TokenService, "verifyAccessToken").mockReturnValue({
+        userId: "user123",
+        email: "test@example.com",
+        role: "Participant",
+      });
+
+      (User.findById as any).mockReturnValue({
+        select: vi.fn().mockResolvedValue({
+          _id: "user123",
+          role: "Participant",
+          isActive: false,
+          isVerified: true,
+        }),
+      });
+
+      const req: any = { headers: { authorization: "Bearer validtoken123" } };
+      const res: any = {};
+      const next = vi.fn();
+
+      await authenticateOptional(req, res, next);
+
+      expect(next).toHaveBeenCalled();
+      expect(req.user).toBeUndefined();
+    });
+
+    it("should proceed without user when user is not verified", async () => {
+      vi.spyOn(TokenService, "verifyAccessToken").mockReturnValue({
+        userId: "user123",
+        email: "test@example.com",
+        role: "Participant",
+      });
+
+      (User.findById as any).mockReturnValue({
+        select: vi.fn().mockResolvedValue({
+          _id: "user123",
+          role: "Participant",
+          isActive: true,
+          isVerified: false,
+        }),
+      });
+
+      const req: any = { headers: { authorization: "Bearer validtoken123" } };
+      const res: any = {};
+      const next = vi.fn();
+
+      await authenticateOptional(req, res, next);
+
+      expect(next).toHaveBeenCalled();
+      expect(req.user).toBeUndefined();
+    });
+
+    it("should proceed without user when token verification fails", async () => {
+      vi.spyOn(TokenService, "verifyAccessToken").mockImplementation(() => {
+        throw new Error("Invalid token");
+      });
+
+      const req: any = { headers: { authorization: "Bearer invalidtoken" } };
+      const res: any = {};
+      const next = vi.fn();
+
+      await authenticateOptional(req, res, next);
+
+      expect(next).toHaveBeenCalled();
+      expect(req.user).toBeUndefined();
+    });
+  });
 });

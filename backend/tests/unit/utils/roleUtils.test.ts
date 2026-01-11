@@ -171,4 +171,62 @@ describe("roleUtils", () => {
     expect(RoleUtils.isValidRole(ROLES.LEADER)).toBe(true);
     expect(RoleUtils.isValidRole("Unknown" as any)).toBe(false);
   });
+
+  it("getRoleHierarchyIndex returns correct indices", () => {
+    expect(RoleUtils.getRoleHierarchyIndex(ROLES.PARTICIPANT)).toBe(0);
+    expect(RoleUtils.getRoleHierarchyIndex(ROLES.GUEST_EXPERT)).toBe(1);
+    expect(RoleUtils.getRoleHierarchyIndex(ROLES.LEADER)).toBe(2);
+    expect(RoleUtils.getRoleHierarchyIndex(ROLES.ADMINISTRATOR)).toBe(3);
+    expect(RoleUtils.getRoleHierarchyIndex(ROLES.SUPER_ADMIN)).toBe(4);
+    // Unknown role returns 0 (not -1)
+    expect(RoleUtils.getRoleHierarchyIndex("Unknown" as any)).toBe(0);
+  });
+
+  it("getRolePermissions returns permissions for all standard roles", () => {
+    const superAdminPerms = RoleUtils.getRolePermissions(ROLES.SUPER_ADMIN);
+    expect(superAdminPerms).toContain("Full system access");
+    expect(superAdminPerms.length).toBeGreaterThan(0);
+
+    const adminPerms = RoleUtils.getRolePermissions(ROLES.ADMINISTRATOR);
+    expect(adminPerms).toContain("Manage users (except Super Admins)");
+    expect(adminPerms.length).toBeGreaterThan(0);
+
+    const leaderPerms = RoleUtils.getRolePermissions(ROLES.LEADER);
+    expect(leaderPerms).toContain("Create and manage own events");
+    expect(leaderPerms.length).toBeGreaterThan(0);
+
+    const guestExpertPerms = RoleUtils.getRolePermissions(ROLES.GUEST_EXPERT);
+    expect(guestExpertPerms).toContain("Register for events");
+    expect(guestExpertPerms.length).toBeGreaterThan(0);
+
+    const participantPerms = RoleUtils.getRolePermissions(ROLES.PARTICIPANT);
+    expect(participantPerms).toContain("Register for events");
+    expect(participantPerms.length).toBeGreaterThan(0);
+
+    // Unknown role returns fallback message
+    const unknownPerms = RoleUtils.getRolePermissions("Unknown" as any);
+    expect(unknownPerms).toEqual(["No permissions defined"]);
+  });
+
+  it("getRoleDisplayName returns correct display names", () => {
+    expect(RoleUtils.getRoleDisplayName(ROLES.SUPER_ADMIN)).toBe("Super Admin");
+    expect(RoleUtils.getRoleDisplayName(ROLES.ADMINISTRATOR)).toBe(
+      "Administrator"
+    );
+    expect(RoleUtils.getRoleDisplayName(ROLES.LEADER)).toBe("Leader");
+    expect(RoleUtils.getRoleDisplayName(ROLES.GUEST_EXPERT)).toBe(
+      "Guest Expert"
+    );
+    expect(RoleUtils.getRoleDisplayName(ROLES.PARTICIPANT)).toBe("Participant");
+  });
+
+  it("canPromoteUser returns false when Admin tries to promote to Admin", () => {
+    expect(
+      RoleUtils.canPromoteUser(
+        ROLES.ADMINISTRATOR,
+        ROLES.PARTICIPANT,
+        ROLES.ADMINISTRATOR
+      )
+    ).toBe(false);
+  });
 });

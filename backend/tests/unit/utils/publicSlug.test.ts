@@ -25,4 +25,12 @@ describe("generateUniquePublicSlug", () => {
     const slug = await generateUniquePublicSlug("Collision Event");
     expect(slug.startsWith("collision-event-")).toBe(true);
   });
+  it("uses 'event' as base when title produces empty slug", async () => {
+    const mockFindOne = vi.fn().mockResolvedValueOnce(null);
+    (Event as any).findOne = () => ({ select: () => mockFindOne() });
+    // Title with only special characters that get stripped
+    const slug = await generateUniquePublicSlug("!!!@@@###");
+    expect(slug.startsWith("event-")).toBe(true);
+    expect(slug.length).toBeLessThanOrEqual(60);
+  });
 });

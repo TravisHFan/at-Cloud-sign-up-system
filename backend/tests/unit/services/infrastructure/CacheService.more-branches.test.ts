@@ -373,3 +373,30 @@ describe("CacheService - timer restart branch", () => {
     }
   });
 });
+
+describe("CachePatterns - getEventListingOrdering", () => {
+  beforeEach(async () => {
+    await cacheService.clear();
+  });
+
+  it("caches event listing ordering via getOrSet", async () => {
+    const fetchFn = vi.fn().mockResolvedValue(["event1", "event2", "event3"]);
+
+    const result = await CachePatterns.getEventListingOrdering(
+      "event-listing:test-query",
+      fetchFn
+    );
+
+    expect(result).toEqual(["event1", "event2", "event3"]);
+    expect(fetchFn).toHaveBeenCalledOnce();
+
+    // Second call should use cache
+    const result2 = await CachePatterns.getEventListingOrdering(
+      "event-listing:test-query",
+      fetchFn
+    );
+
+    expect(result2).toEqual(["event1", "event2", "event3"]);
+    expect(fetchFn).toHaveBeenCalledOnce(); // Still only once
+  });
+});

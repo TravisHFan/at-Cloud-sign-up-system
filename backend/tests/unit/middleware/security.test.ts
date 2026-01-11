@@ -533,5 +533,53 @@ describe("Security Middleware", () => {
       expect(mockRequest.body.mixed).toBe("    ");
       expect(mockNext).toHaveBeenCalled();
     });
+
+    it("should allow HTML but still strip script tags for feedback message field", () => {
+      // This tests the allowHtml path when path includes /feedback and key is message
+      mockRequest = {
+        ...mockRequest,
+        body: {
+          message:
+            '<p>Hello</p><script>alert("xss")</script><strong>World</strong>',
+          subject: '<script>alert("xss")</script>Subject',
+        },
+        path: "/api/feedback",
+        get: vi.fn(),
+        connection: { remoteAddress: "127.0.0.1" } as any,
+      };
+
+      xssProtection(mockRequest as Request, mockResponse as Response, mockNext);
+
+      // message field should keep HTML but strip script tags
+      expect(mockRequest.body.message).toBe(
+        "<p>Hello</p><strong>World</strong>"
+      );
+      // subject field should have scripts stripped (not in allowlist)
+      expect(mockRequest.body.subject).toBe("Subject");
+      expect(mockNext).toHaveBeenCalled();
+    });
+
+    it("should handle nested object in allowHtml field", () => {
+      // When allowHtml is true for a field, but the value is an object not string
+      mockRequest = {
+        ...mockRequest,
+        body: {
+          message: {
+            content: '<p>Nested</p><script>alert("xss")</script>Content',
+            title: '<script>alert("xss")</script>Title',
+          },
+        },
+        path: "/api/feedback",
+        get: vi.fn(),
+        connection: { remoteAddress: "127.0.0.1" } as any,
+      };
+
+      xssProtection(mockRequest as Request, mockResponse as Response, mockNext);
+
+      // Even nested objects should have scripts stripped
+      expect(mockRequest.body.message.content).toBe("<p>Nested</p>Content");
+      expect(mockRequest.body.message.title).toBe("Title");
+      expect(mockNext).toHaveBeenCalled();
+    });
   });
 });

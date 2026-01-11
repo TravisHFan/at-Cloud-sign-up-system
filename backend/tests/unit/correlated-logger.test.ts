@@ -79,4 +79,31 @@ describe("CorrelatedLogger", () => {
     expect(infoOut).toContain("/ok - 200 (5ms)");
     expect(warnOut).toContain("/bad - 404 (2ms)");
   });
+
+  it("logSystemEvent logs INFO for success=true and ERROR for success=false", () => {
+    const reqLike = { headers: {}, method: "GET", path: "/" } as any;
+    const clog = CorrelatedLogger.fromRequest(reqLike, "Sys");
+
+    // Success case (INFO)
+    clog.logSystemEvent("DatabaseSync", true, { records: 100 });
+    expect(infoSpy).toHaveBeenCalledTimes(1);
+    const infoOut = infoSpy.mock.calls[0][0] as string;
+    expect(infoOut).toContain("System event: DatabaseSync completed");
+
+    // Failure case (ERROR)
+    clog.logSystemEvent("CacheFlush", false, { error: "connection timeout" });
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    const errOut = errorSpy.mock.calls[0][0] as string;
+    expect(errOut).toContain("System event: CacheFlush failed");
+  });
+
+  it("logSystemEvent uses default success=true when not provided", () => {
+    const reqLike = { headers: {}, method: "GET", path: "/" } as any;
+    const clog = CorrelatedLogger.fromRequest(reqLike, "Default");
+
+    clog.logSystemEvent("Startup");
+    expect(infoSpy).toHaveBeenCalledTimes(1);
+    const out = infoSpy.mock.calls[0][0] as string;
+    expect(out).toContain("completed");
+  });
 });

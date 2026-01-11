@@ -57,7 +57,7 @@ describe("ShortLinkService", () => {
       publish: true,
       publicSlug: "my-event",
       roles: [{ openToPublic: true }],
-      endDate: "2025-12-31",
+      endDate: "2099-12-31",
       endTime: "23:59",
       ...overrides,
     };

@@ -431,6 +431,28 @@ describe("Message Model", () => {
       expect(typeof obj.userStates).toBe("object");
       expect(obj.userStates[userId]).toBeDefined();
     });
+
+    it("should hide creator in JSON when hideCreator is true", () => {
+      const message = new Message({
+        ...createValidMessageData(),
+        hideCreator: true,
+      });
+      const json = message.toJSON();
+
+      expect(json.hideCreator).toBe(true);
+      expect(json.creator).toBeUndefined();
+    });
+
+    it("should include creator in JSON when hideCreator is false or undefined", () => {
+      const message = new Message({
+        ...createValidMessageData(),
+        hideCreator: false,
+      });
+      const json = message.toJSON();
+
+      expect(json.creator).toBeDefined();
+      expect(json.creator.firstName).toBe("John");
+    });
   });
 
   describe("Static Methods", () => {

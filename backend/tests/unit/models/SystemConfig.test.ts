@@ -324,6 +324,20 @@ describe("SystemConfig Model", () => {
 
       expect(result.value.expiryDays).toBe(365);
     });
+
+    it("should throw when findOneAndUpdate returns null", async () => {
+      const validConfig: IBundleDiscountConfig = {
+        enabled: true,
+        discountAmount: 5000,
+        expiryDays: 30,
+      };
+
+      vi.spyOn(SystemConfig, "findOneAndUpdate").mockResolvedValueOnce(null);
+
+      await expect(
+        SystemConfig.updateBundleDiscountConfig(validConfig, "admin")
+      ).rejects.toThrow("Failed to update bundle discount configuration");
+    });
   });
 
   describe("initializeDefaults", () => {

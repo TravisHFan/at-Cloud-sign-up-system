@@ -685,6 +685,102 @@ describe("Event Model", () => {
     });
   });
 
+  describe("timeZone Validation", () => {
+    const baseEvent = {
+      title: "TZ Test Event",
+      type: "Meeting",
+      date: "2030-12-25",
+      time: "10:00",
+      endTime: "12:00",
+      location: "Test Location",
+      organizer: "Test Organizer",
+      format: "In-person",
+      createdBy: new mongoose.Types.ObjectId(),
+      roles: [{ id: "1", name: "Attendee", maxParticipants: 10 }],
+    };
+
+    it("should accept valid IANA timezone", () => {
+      const event = new Event({
+        ...baseEvent,
+        timeZone: "America/Los_Angeles",
+      });
+      const error = event.validateSync();
+      expect(error?.errors?.timeZone).toBeUndefined();
+    });
+
+    it("should accept timezone with sublocation", () => {
+      const event = new Event({
+        ...baseEvent,
+        timeZone: "America/Indiana/Indianapolis",
+      });
+      const error = event.validateSync();
+      expect(error?.errors?.timeZone).toBeUndefined();
+    });
+
+    it("should accept empty/undefined timezone", () => {
+      const event = new Event({ ...baseEvent, timeZone: "" });
+      const error = event.validateSync();
+      expect(error?.errors?.timeZone).toBeUndefined();
+    });
+
+    it("should reject invalid timezone format", () => {
+      const event = new Event({ ...baseEvent, timeZone: "Invalid" });
+      const error = event.validateSync();
+      expect(error?.errors?.timeZone).toBeDefined();
+    });
+  });
+
+  describe("Pricing Validation", () => {
+    const baseEvent = {
+      title: "Pricing Test Event",
+      type: "Webinar",
+      date: "2030-12-25",
+      time: "10:00",
+      endTime: "12:00",
+      location: "Test Location",
+      organizer: "Test Organizer",
+      format: "Online",
+      createdBy: new mongoose.Types.ObjectId(),
+      roles: [{ id: "1", name: "Attendee", maxParticipants: 10 }],
+    };
+
+    it("should accept free event with isFree=true and no price", () => {
+      const event = new Event({
+        ...baseEvent,
+        pricing: { isFree: true },
+      });
+      const error = event.validateSync();
+      expect(error?.errors?.["pricing.price"]).toBeUndefined();
+    });
+
+    it("should accept paid event with isFree=false and price >= 1", () => {
+      const event = new Event({
+        ...baseEvent,
+        pricing: { isFree: false, price: 25 },
+      });
+      const error = event.validateSync();
+      expect(error?.errors?.["pricing.price"]).toBeUndefined();
+    });
+
+    it("should reject paid event without price", async () => {
+      const event = new Event({
+        ...baseEvent,
+        pricing: { isFree: false },
+      });
+      // Use async validate() to trigger full validation including custom validators
+      await expect(event.validate()).rejects.toThrow();
+    });
+
+    it("should reject free event with a price set", () => {
+      const event = new Event({
+        ...baseEvent,
+        pricing: { isFree: true, price: 10 },
+      });
+      const error = event.validateSync();
+      expect(error?.errors?.["pricing.price"]).toBeDefined();
+    });
+  });
+
   afterEach(() => {
     console.log("✅ Event model test environment cleaned up");
   });

@@ -237,6 +237,49 @@ describe("PromoCodeEmailService - Promo Code Email Operations", () => {
       expect(emailCall.html).toContain("REWARD10");
       expect(emailCall.html).toContain("10");
     });
+
+    it("should fallback to localhost URL when FRONTEND_URL is not set", async () => {
+      // Arrange - Remove FRONTEND_URL to test fallback
+      delete process.env.FRONTEND_URL;
+      const params = {
+        recipientEmail: "test@example.com",
+        recipientName: "Test User",
+        promoCode: "TEST20",
+        discountPercent: 20,
+        allowedPrograms: "Leadership Training",
+        expiresAt: "2025-12-31",
+        createdBy: "Admin User",
+        codeType: "staff" as const,
+      };
+
+      // Act
+      await PromoCodeEmailService.sendStaffPromoCodeEmail(params);
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain("http://localhost:3000");
+    });
+
+    it("should fallback to 'All programs' when allowedPrograms is not set", async () => {
+      // Arrange - No allowedPrograms in params
+      const params = {
+        recipientEmail: "test@example.com",
+        recipientName: "Test User",
+        promoCode: "ALLPROG20",
+        discountPercent: 20,
+        expiresAt: "2025-12-31",
+        createdBy: "Admin User",
+        codeType: "staff" as const,
+      };
+
+      // Act
+      await PromoCodeEmailService.sendStaffPromoCodeEmail(params);
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain("All programs");
+      expect(emailCall.text).toContain("All programs");
+    });
   });
 
   describe("sendPromoCodeDeactivatedEmail", () => {
@@ -327,6 +370,25 @@ describe("PromoCodeEmailService - Promo Code Email Operations", () => {
 
       // Assert
       expect(result).toBe(false);
+    });
+
+    it("should fallback to localhost URL when FRONTEND_URL is not set", async () => {
+      // Arrange - Remove FRONTEND_URL to test fallback
+      delete process.env.FRONTEND_URL;
+      const params = {
+        recipientEmail: "user@example.com",
+        recipientName: "User",
+        promoCode: "DEACT20",
+        discountPercent: 20,
+        deactivatedBy: "Admin",
+      };
+
+      // Act
+      await PromoCodeEmailService.sendPromoCodeDeactivatedEmail(params);
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain("http://localhost:3000");
     });
   });
 
@@ -437,6 +499,25 @@ describe("PromoCodeEmailService - Promo Code Email Operations", () => {
 
       // Assert
       expect(result).toBe(false);
+    });
+
+    it("should fallback to localhost URL when FRONTEND_URL is not set", async () => {
+      // Arrange - Remove FRONTEND_URL to test fallback
+      delete process.env.FRONTEND_URL;
+      const params = {
+        recipientEmail: "user@example.com",
+        recipientName: "User",
+        promoCode: "REACT20",
+        discountPercent: 20,
+        reactivatedBy: "Admin",
+      };
+
+      // Act
+      await PromoCodeEmailService.sendPromoCodeReactivatedEmail(params);
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain("http://localhost:3000");
     });
   });
 

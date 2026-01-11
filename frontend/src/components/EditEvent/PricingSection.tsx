@@ -121,7 +121,7 @@ export default function PricingSection({
               />
               <div>
                 <span className="text-sm font-medium text-gray-900 group-hover:text-blue-600">
-                  Free Event
+                  Free Event, or included with a paid Program
                 </span>
                 <p className="text-xs text-gray-500 mt-0.5">
                   No ticket purchase required. All users can register directly,

@@ -58,7 +58,7 @@ import {
   EVENT_AUTO_UNPUBLISHED,
 } from "../../../../src/services/domainEvents";
 import { UnifiedMessageController } from "../../../../src/controllers/unifiedMessageController";
-import { User } from "../../../../src/models";
+import { User, Event } from "../../../../src/models";
 import * as validatePublish from "../../../../src/utils/validatePublish";
 
 // Minimal IEvent-like shape for tests
@@ -348,6 +348,199 @@ describe("AutoUnpublishService", () => {
           makeReq()
         )
       ).resolves.toBeUndefined();
+    });
+  });
+
+  describe("executeScheduledUnpublishes", () => {
+    it("returns empty results when no events need unpublishing", async () => {
+      (Event.find as any).mockResolvedValue([]);
+
+      const result = await AutoUnpublishService.executeScheduledUnpublishes();
+
+      expect(result.unpublishedCount).toBe(0);
+      expect(result.eventIds).toEqual([]);
+    });
+
+    it("unpublishes events with expired grace period", async () => {
+      const mockEvent = {
+        id: "event-expired",
+        title: "Expired Event",
+        publish: true,
+        unpublishScheduledAt: new Date(Date.now() - 1000), // Past
+        unpublishWarningFields: ["location"],
+        save: vi.fn().mockResolvedValue(undefined),
+      };
+
+      (Event.find as any).mockResolvedValue([mockEvent]);
+      (EmailRecipientUtils.getEventAllOrganizers as any).mockResolvedValue([
+        { email: "org@example.com" },
+      ]);
+      (User.findOne as any).mockReturnValue({
+        select: vi.fn().mockResolvedValue({ _id: "user-org" }),
+      });
+
+      const result = await AutoUnpublishService.executeScheduledUnpublishes();
+
+      expect(result.unpublishedCount).toBe(1);
+      expect(result.eventIds).toContain("event-expired");
+      expect(mockEvent.publish).toBe(false);
+      expect(mockEvent.autoUnpublishedAt).toBeInstanceOf(Date);
+      expect(mockEvent.autoUnpublishedReason).toBe("MISSING_REQUIRED_FIELDS");
+      expect(mockEvent.unpublishScheduledAt).toBeNull();
+      expect(mockEvent.save).toHaveBeenCalled();
+      expect(
+        EmailService.sendEventActualUnpublishNotification
+      ).toHaveBeenCalled();
+    });
+
+    it("continues processing when one event fails to unpublish", async () => {
+      const mockEventSuccess = {
+        id: "event-success",
+        title: "Success Event",
+        publish: true,
+        unpublishScheduledAt: new Date(Date.now() - 1000),
+        unpublishWarningFields: ["zoomLink"],
+        save: vi.fn().mockResolvedValue(undefined),
+      };
+
+      const mockEventFail = {
+        id: "event-fail",
+        title: "Fail Event",
+        publish: true,
+        unpublishScheduledAt: new Date(Date.now() - 1000),
+        unpublishWarningFields: ["location"],
+        save: vi.fn().mockRejectedValue(new Error("save failed")),
+      };
+
+      (Event.find as any).mockResolvedValue([mockEventFail, mockEventSuccess]);
+      (EmailRecipientUtils.getEventAllOrganizers as any).mockResolvedValue([]);
+
+      const result = await AutoUnpublishService.executeScheduledUnpublishes();
+
+      // Should only count the successful one
+      expect(result.unpublishedCount).toBe(1);
+      expect(result.eventIds).toEqual(["event-success"]);
+    });
+
+    it("handles find query failure gracefully", async () => {
+      (Event.find as any).mockRejectedValue(new Error("DB error"));
+
+      const result = await AutoUnpublishService.executeScheduledUnpublishes();
+
+      expect(result.unpublishedCount).toBe(0);
+      expect(result.eventIds).toEqual([]);
+    });
+
+    it("emits domain event after actual unpublish", async () => {
+      const mockEvent = {
+        id: "event-domain",
+        title: "Domain Event Test",
+        publish: true,
+        format: "zoom",
+        unpublishScheduledAt: new Date(Date.now() - 1000),
+        unpublishWarningFields: ["zoomLink"],
+        save: vi.fn().mockResolvedValue(undefined),
+      };
+
+      (Event.find as any).mockResolvedValue([mockEvent]);
+      (EmailRecipientUtils.getEventAllOrganizers as any).mockResolvedValue([]);
+
+      await AutoUnpublishService.executeScheduledUnpublishes();
+
+      // Domain event should be emitted during actual unpublish
+      expect(domainEvents.emit).toHaveBeenCalledWith(
+        EVENT_AUTO_UNPUBLISHED,
+        expect.objectContaining({
+          eventId: "event-domain",
+          title: "Domain Event Test",
+          format: "zoom",
+          missingFields: ["zoomLink"],
+          reason: "MISSING_REQUIRED_FIELDS",
+        })
+      );
+    });
+
+    it("creates targeted system message for organizers after actual unpublish", async () => {
+      const mockEvent = {
+        id: "event-system-msg",
+        title: "System Message Test",
+        publish: true,
+        unpublishScheduledAt: new Date(Date.now() - 1000),
+        unpublishWarningFields: ["meetingId", "passcode"],
+        save: vi.fn().mockResolvedValue(undefined),
+      };
+
+      (Event.find as any).mockResolvedValue([mockEvent]);
+      (EmailRecipientUtils.getEventAllOrganizers as any).mockResolvedValue([
+        { email: "org1@example.com" },
+        { email: "org2@example.com" },
+      ]);
+      (User.findOne as any).mockImplementation(({ email }) => ({
+        select: vi.fn().mockResolvedValue({
+          _id: email === "org1@example.com" ? "user-org1" : "user-org2",
+        }),
+      }));
+
+      await AutoUnpublishService.executeScheduledUnpublishes();
+
+      expect(
+        UnifiedMessageController.createTargetedSystemMessage
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: expect.stringContaining("Event Unpublished"),
+          content: expect.stringContaining("48-hour grace period has expired"),
+          type: "error",
+          priority: "high",
+        }),
+        ["user-org1", "user-org2"]
+      );
+    });
+  });
+
+  describe("checkAndApplyAutoUnpublish - edge cases", () => {
+    it("does not reset unpublish schedule on subsequent edits with missing fields", async () => {
+      (
+        validatePublish.getMissingNecessaryFieldsForPublish as any
+      ).mockReturnValue(["zoomLink"]);
+
+      // Event already has a scheduled unpublish time
+      const existingScheduleTime = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
+      const event = {
+        ...baseEvent,
+        unpublishScheduledAt: existingScheduleTime,
+        unpublishWarningFields: ["location"],
+      } as any;
+
+      const result = await AutoUnpublishService.checkAndApplyAutoUnpublish(
+        event as any
+      );
+
+      // Should NOT issue new warning (autoUnpublished = false) since schedule already exists
+      expect(result.autoUnpublished).toBe(false);
+      // Schedule should NOT be reset - keep original time
+      expect((event as any).unpublishScheduledAt).toBe(existingScheduleTime);
+      // But warning fields should be updated
+      expect((event as any).unpublishWarningFields).toEqual(["zoomLink"]);
+    });
+
+    it("skips check for unpublished events", async () => {
+      (
+        validatePublish.getMissingNecessaryFieldsForPublish as any
+      ).mockReturnValue(["zoomLink"]);
+
+      const event = {
+        ...baseEvent,
+        publish: false, // Unpublished event
+      } as any;
+
+      const result = await AutoUnpublishService.checkAndApplyAutoUnpublish(
+        event as any
+      );
+
+      expect(result.autoUnpublished).toBe(false);
+      expect(result.missingFields).toEqual([]);
+      // getMissingNecessaryFieldsForPublish should not be called for unpublished events
+      // (check happens inside publish block)
     });
   });
 });

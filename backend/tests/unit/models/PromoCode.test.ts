@@ -889,4 +889,428 @@ describe("PromoCode Model - Unit Tests", () => {
       });
     });
   });
+
+  // ============================================================================
+  // INSTANCE METHOD: canBeUsedForEvent()
+  // ============================================================================
+
+  describe("canBeUsedForEvent()", () => {
+    describe("General validation rules", () => {
+      it("returns invalid if personal code is already used", () => {
+        const code = new PromoCode({
+          code: "EVENTUSED",
+          type: "staff_access",
+          discountPercent: 100,
+          ownerId: new mongoose.Types.ObjectId(),
+          isActive: true,
+          isUsed: true,
+          createdBy: "admin",
+        });
+
+        const result = code.canBeUsedForEvent(new mongoose.Types.ObjectId());
+
+        expect(result.valid).toBe(false);
+        expect(result.reason).toContain("already been used");
+      });
+
+      it("returns valid if general code is already used (reusable)", () => {
+        const code = new PromoCode({
+          code: "EVENTGEN",
+          type: "staff_access",
+          discountPercent: 100,
+          isGeneral: true,
+          description: "Reusable General Code",
+          isActive: true,
+          isUsed: true,
+          createdBy: "admin",
+        });
+
+        const result = code.canBeUsedForEvent(new mongoose.Types.ObjectId());
+
+        expect(result.valid).toBe(true);
+      });
+
+      it("returns invalid if code is not active", () => {
+        const code = new PromoCode({
+          code: "EVENTINACT",
+          type: "staff_access",
+          discountPercent: 100,
+          ownerId: new mongoose.Types.ObjectId(),
+          isActive: false,
+          isUsed: false,
+          createdBy: "admin",
+        });
+
+        const result = code.canBeUsedForEvent(new mongoose.Types.ObjectId());
+
+        expect(result.valid).toBe(false);
+        expect(result.reason).toContain("no longer active");
+      });
+
+      it("returns invalid if code is expired", () => {
+        const code = new PromoCode({
+          code: "EVENTEXP",
+          type: "staff_access",
+          discountPercent: 100,
+          ownerId: new mongoose.Types.ObjectId(),
+          isActive: true,
+          isUsed: false,
+          expiresAt: new Date("2020-01-01"),
+          createdBy: "admin",
+        });
+
+        const result = code.canBeUsedForEvent(new mongoose.Types.ObjectId());
+
+        expect(result.valid).toBe(false);
+        expect(result.reason).toContain("expired");
+      });
+
+      it("returns invalid if code applicableToType is 'program'", () => {
+        const code = new PromoCode({
+          code: "PROGONLY",
+          type: "staff_access",
+          discountPercent: 100,
+          ownerId: new mongoose.Types.ObjectId(),
+          isActive: true,
+          isUsed: false,
+          applicableToType: "program",
+          createdBy: "admin",
+        });
+
+        const result = code.canBeUsedForEvent(new mongoose.Types.ObjectId());
+
+        expect(result.valid).toBe(false);
+        expect(result.reason).toContain("only valid for programs");
+      });
+
+      it("returns valid if code applicableToType is 'event'", () => {
+        const code = new PromoCode({
+          code: "EVENTOK",
+          type: "staff_access",
+          discountPercent: 100,
+          ownerId: new mongoose.Types.ObjectId(),
+          isActive: true,
+          isUsed: false,
+          applicableToType: "event",
+          createdBy: "admin",
+        });
+
+        const result = code.canBeUsedForEvent(new mongoose.Types.ObjectId());
+
+        expect(result.valid).toBe(true);
+      });
+
+      it("returns valid if code applicableToType is undefined (general codes)", () => {
+        const code = new PromoCode({
+          code: "GENERIC",
+          type: "staff_access",
+          discountPercent: 100,
+          isGeneral: true,
+          description: "No type restriction",
+          isActive: true,
+          isUsed: false,
+          createdBy: "admin",
+        });
+
+        const result = code.canBeUsedForEvent(new mongoose.Types.ObjectId());
+
+        expect(result.valid).toBe(true);
+      });
+    });
+
+    describe("Bundle discount validation", () => {
+      it("returns invalid if bundle code is used on the event that generated it", () => {
+        const excludedEventId = new mongoose.Types.ObjectId();
+        const code = new PromoCode({
+          code: "BUNDLEEVT",
+          type: "bundle_discount",
+          discountAmount: 5000,
+          ownerId: new mongoose.Types.ObjectId(),
+          isActive: true,
+          isUsed: false,
+          excludedEventId: excludedEventId,
+          createdBy: "system",
+        });
+
+        const result = code.canBeUsedForEvent(excludedEventId);
+
+        expect(result.valid).toBe(false);
+        expect(result.reason).toContain("event that generated it");
+      });
+
+      it("returns valid if bundle code is used on a different event", () => {
+        const excludedEventId = new mongoose.Types.ObjectId();
+        const differentEventId = new mongoose.Types.ObjectId();
+        const code = new PromoCode({
+          code: "BUNDLEOK",
+          type: "bundle_discount",
+          discountAmount: 5000,
+          ownerId: new mongoose.Types.ObjectId(),
+          isActive: true,
+          isUsed: false,
+          excludedEventId: excludedEventId,
+          createdBy: "system",
+        });
+
+        const result = code.canBeUsedForEvent(differentEventId);
+
+        expect(result.valid).toBe(true);
+      });
+    });
+
+    describe("Event restrictions (allowedEventIds)", () => {
+      it("returns invalid if event is not in allowedEventIds", () => {
+        const allowedEvent1 = new mongoose.Types.ObjectId();
+        const allowedEvent2 = new mongoose.Types.ObjectId();
+        const notAllowedEvent = new mongoose.Types.ObjectId();
+        const code = new PromoCode({
+          code: "RESTRICT",
+          type: "staff_access",
+          discountPercent: 100,
+          ownerId: new mongoose.Types.ObjectId(),
+          isActive: true,
+          isUsed: false,
+          allowedEventIds: [allowedEvent1, allowedEvent2],
+          createdBy: "admin",
+        });
+
+        const result = code.canBeUsedForEvent(notAllowedEvent);
+
+        expect(result.valid).toBe(false);
+        expect(result.reason).toContain("not valid for this event");
+      });
+
+      it("returns valid if event is in allowedEventIds", () => {
+        const allowedEvent1 = new mongoose.Types.ObjectId();
+        const allowedEvent2 = new mongoose.Types.ObjectId();
+        const code = new PromoCode({
+          code: "ALLOWED",
+          type: "staff_access",
+          discountPercent: 100,
+          ownerId: new mongoose.Types.ObjectId(),
+          isActive: true,
+          isUsed: false,
+          allowedEventIds: [allowedEvent1, allowedEvent2],
+          createdBy: "admin",
+        });
+
+        const result = code.canBeUsedForEvent(allowedEvent2);
+
+        expect(result.valid).toBe(true);
+      });
+
+      it("returns valid if allowedEventIds is empty (all events allowed)", () => {
+        const anyEventId = new mongoose.Types.ObjectId();
+        const code = new PromoCode({
+          code: "ALLALLOWED",
+          type: "staff_access",
+          discountPercent: 100,
+          ownerId: new mongoose.Types.ObjectId(),
+          isActive: true,
+          isUsed: false,
+          allowedEventIds: [],
+          createdBy: "admin",
+        });
+
+        const result = code.canBeUsedForEvent(anyEventId);
+
+        expect(result.valid).toBe(true);
+      });
+    });
+  });
+
+  // ============================================================================
+  // INSTANCE METHOD: markAsUsedForEvent()
+  // ============================================================================
+
+  describe("markAsUsedForEvent()", () => {
+    describe("Personal codes (isGeneral=false)", () => {
+      it("sets isUsed=true and records event usage details", async () => {
+        const code = new PromoCode({
+          code: "EVTPERS",
+          type: "staff_access",
+          discountPercent: 100,
+          ownerId: new mongoose.Types.ObjectId(),
+          isGeneral: false,
+          isActive: true,
+          isUsed: false,
+          applicableToType: "event",
+          createdBy: "admin",
+        });
+
+        const saveSpy = vi.spyOn(code, "save").mockResolvedValue(code);
+
+        const eventId = new mongoose.Types.ObjectId();
+        const userId = new mongoose.Types.ObjectId();
+
+        await code.markAsUsedForEvent(
+          eventId,
+          userId,
+          "John Doe",
+          "john@example.com",
+          "Test Event"
+        );
+
+        expect(code.isUsed).toBe(true);
+        expect(code.usedAt).toBeInstanceOf(Date);
+        expect(code.usedForEventId).toEqual(eventId);
+        expect(code.usageHistory).toHaveLength(0);
+        expect(saveSpy).toHaveBeenCalled();
+      });
+
+      it("works without optional user details for events", async () => {
+        const code = new PromoCode({
+          code: "EVTPERS2",
+          type: "bundle_discount",
+          discountAmount: 5000,
+          ownerId: new mongoose.Types.ObjectId(),
+          isGeneral: false,
+          isActive: true,
+          isUsed: false,
+          createdBy: "system",
+        });
+
+        const saveSpy = vi.spyOn(code, "save").mockResolvedValue(code);
+
+        const eventId = new mongoose.Types.ObjectId();
+
+        await code.markAsUsedForEvent(eventId);
+
+        expect(code.isUsed).toBe(true);
+        expect(code.usedAt).toBeInstanceOf(Date);
+        expect(code.usedForEventId).toEqual(eventId);
+        expect(saveSpy).toHaveBeenCalled();
+      });
+    });
+
+    describe("General codes (isGeneral=true)", () => {
+      it("initializes usageHistory when undefined for event usage", async () => {
+        const code = new PromoCode({
+          code: "EVTGEN0",
+          type: "staff_access",
+          discountPercent: 100,
+          isGeneral: true,
+          description: "General Staff Code - No History",
+          isActive: true,
+          isUsed: false,
+          // usageHistory NOT set - should be initialized
+          createdBy: "admin",
+        });
+
+        const saveSpy = vi.spyOn(code, "save").mockResolvedValue(code);
+
+        const eventId = new mongoose.Types.ObjectId();
+        const userId = new mongoose.Types.ObjectId();
+
+        await code.markAsUsedForEvent(
+          eventId,
+          userId,
+          "Init User",
+          "init@example.com",
+          "Init Event"
+        );
+
+        expect(code.usageHistory).toBeDefined();
+        expect(code.usageHistory).toHaveLength(1);
+        expect(code.usageHistory![0].eventId).toEqual(eventId);
+        expect(saveSpy).toHaveBeenCalled();
+      });
+
+      it("appends to usageHistory with eventId instead of programId", async () => {
+        const code = new PromoCode({
+          code: "EVTGEN1",
+          type: "staff_access",
+          discountPercent: 100,
+          isGeneral: true,
+          description: "General Staff Code for Events",
+          isActive: true,
+          isUsed: false,
+          usageHistory: [],
+          createdBy: "admin",
+        });
+
+        const saveSpy = vi.spyOn(code, "save").mockResolvedValue(code);
+
+        const eventId = new mongoose.Types.ObjectId();
+        const userId = new mongoose.Types.ObjectId();
+
+        await code.markAsUsedForEvent(
+          eventId,
+          userId,
+          "Jane Smith",
+          "jane@example.com",
+          "Event Title"
+        );
+
+        expect(code.isUsed).toBe(false);
+        expect(code.usageHistory).toHaveLength(1);
+        expect(code.usageHistory![0].eventId).toEqual(eventId);
+        expect(code.usageHistory![0].eventTitle).toBe("Event Title");
+        expect(code.usageHistory![0].userId).toEqual(userId);
+        expect(code.usageHistory![0].userName).toBe("Jane Smith");
+        expect(code.usageHistory![0].userEmail).toBe("jane@example.com");
+        expect(code.usageHistory![0].usedAt).toBeInstanceOf(Date);
+        expect(saveSpy).toHaveBeenCalled();
+      });
+
+      it("throws error for general code without required user info", async () => {
+        const code = new PromoCode({
+          code: "EVTGEN2",
+          type: "staff_access",
+          discountPercent: 100,
+          isGeneral: true,
+          description: "General Code Missing Info",
+          isActive: true,
+          isUsed: false,
+          createdBy: "admin",
+        });
+
+        const eventId = new mongoose.Types.ObjectId();
+
+        await expect(code.markAsUsedForEvent(eventId)).rejects.toThrow(
+          /User information.*required/
+        );
+      });
+
+      it("tracks multiple usages for general codes", async () => {
+        const code = new PromoCode({
+          code: "EVTGEN3",
+          type: "staff_access",
+          discountPercent: 100,
+          isGeneral: true,
+          description: "Multi-use General Code",
+          isActive: true,
+          isUsed: false,
+          usageHistory: [
+            {
+              userId: new mongoose.Types.ObjectId(),
+              userName: "First User",
+              userEmail: "first@example.com",
+              usedAt: new Date("2024-01-01"),
+              eventId: new mongoose.Types.ObjectId(),
+              eventTitle: "First Event",
+            },
+          ],
+          createdBy: "admin",
+        });
+
+        vi.spyOn(code, "save").mockResolvedValue(code);
+
+        const eventId = new mongoose.Types.ObjectId();
+        const userId = new mongoose.Types.ObjectId();
+
+        await code.markAsUsedForEvent(
+          eventId,
+          userId,
+          "Second User",
+          "second@example.com",
+          "Second Event"
+        );
+
+        expect(code.usageHistory).toHaveLength(2);
+        expect(code.usageHistory![1].userName).toBe("Second User");
+        expect(code.usageHistory![1].eventTitle).toBe("Second Event");
+      });
+    });
+  });
 });
