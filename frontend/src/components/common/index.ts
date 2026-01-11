@@ -11,3 +11,10 @@ export { default as EventDeletionModal } from "./EventDeletionModal";
 export { default as NotificationDropdown } from "./NotificationDropdown";
 export { default as EventList } from "./EventList";
 export { default as Footer } from "./Footer";
+export { default as EmailParticipantsModal } from "./EmailParticipantsModal";
+export type {
+  EmailModalState,
+  EventRecipientOptions,
+  ProgramRecipientOptions,
+  RecipientOptions,
+} from "./EmailParticipantsModal";

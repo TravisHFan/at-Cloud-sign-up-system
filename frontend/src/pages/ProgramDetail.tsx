@@ -14,6 +14,8 @@ import ProgramMentors from "../components/ProgramDetail/ProgramMentors";
 import ProgramEventsList from "../components/ProgramDetail/ProgramEventsList";
 import ProgramPricing from "../components/ProgramDetail/ProgramPricing";
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import { EmailParticipantsModal } from "../components/common";
+import { useProgramEmailModal } from "../hooks/useProgramEmailModal";
 import type { ProgramType } from "../constants/programTypes";
 
 type Program = {
@@ -66,6 +68,16 @@ export default function ProgramDetail({
   // Listen for real-time avatar updates to refresh mentor avatars
   const avatarUpdateCounter = useAvatarUpdates();
 
+  // Email modal hook for sending emails to program participants
+  const {
+    emailModal,
+    setEmailModal,
+    emailEditorRef,
+    applyEditorCommand,
+    openModal: openEmailModal,
+    closeModal: closeEmailModal,
+  } = useProgramEmailModal();
+
   const [program, setProgram] = useState<Program | null>(null);
   const [events, setEvents] = useState<EventData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,6 +108,7 @@ export default function ProgramDetail({
   const [accessReason, setAccessReason] = useState<
     "admin" | "mentor" | "free" | "purchased" | "not_purchased" | null
   >(null);
+  const [isCurrentUserClassRep, setIsCurrentUserClassRep] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -166,6 +179,30 @@ export default function ProgramDetail({
       cancelled = true;
     };
   }, [id]);
+
+  // Check if current user is a class rep of this program (for email permission)
+  useEffect(() => {
+    if (!id || !currentUser?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const participants = await programService.getParticipants(id);
+        if (cancelled) return;
+        // Check if current user is in the classReps list
+        const isClassRep =
+          participants.classReps?.some((cr) => {
+            const userId = cr.user?.id || cr.user?._id;
+            return userId === currentUser.id;
+          }) ?? false;
+        setIsCurrentUserClassRep(isClassRep);
+      } catch (error) {
+        console.error("Failed to check class rep status:", error);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id, currentUser?.id]);
 
   // Connect to WebSocket for real-time updates
   useEffect(() => {
@@ -448,7 +485,19 @@ export default function ProgramDetail({
           // Leaders can only create events in programs they have access to
           (hasRole(["Leader"]) && hasAccess === true)
         }
+        canEmail={
+          // Super Admin and Administrator can always email participants
+          hasRole(["Administrator", "Super Admin"]) ||
+          // Leaders can email if they are a Mentor or Class Rep of this program
+          (hasRole(["Leader"]) &&
+            ((program.mentors?.some(
+              (mentor: { userId: string }) => mentor.userId === currentUser?.id
+            ) ??
+              false) ||
+              isCurrentUserClassRep))
+        }
         onDelete={openDelete}
+        onEmailParticipants={openEmailModal}
       />
 
       <ProgramIntroSection
@@ -568,6 +617,115 @@ export default function ProgramDetail({
         }}
         onEventClick={(eventId) => navigate(`/dashboard/event/${eventId}`)}
         getEventStatus={getEventStatus}
+      />
+
+      {/* Email Participants Modal */}
+      <EmailParticipantsModal
+        isOpen={emailModal.open}
+        title={program.title}
+        emailModal={emailModal}
+        setEmailModal={setEmailModal}
+        emailEditorRef={emailEditorRef}
+        applyEditorCommand={applyEditorCommand}
+        onSend={async () => {
+          const subject = emailModal.subject.trim();
+          const bodyHtml = emailModal.bodyHtml.trim();
+
+          if (!subject || !bodyHtml) {
+            notification.error("Subject and message are required.", {
+              title: "Missing Fields",
+            });
+            return;
+          }
+
+          try {
+            setEmailModal((m) => ({ ...m, sending: true }));
+            const res = await programService.sendProgramEmails(id!, {
+              subject,
+              bodyHtml,
+              includeMentors: emailModal.recipients.includeMentors,
+              includeClassReps: emailModal.recipients.includeClassReps,
+              includeMentees: emailModal.recipients.includeMentees,
+            });
+
+            const count: number =
+              typeof res.recipientCount === "number"
+                ? res.recipientCount
+                : typeof res.sent === "number"
+                ? res.sent
+                : 0;
+
+            notification.success(
+              count > 0
+                ? `Email sent to ${count} recipient${count === 1 ? "" : "s"}.`
+                : "No recipients found for this program.",
+              { title: "Email Sent" }
+            );
+
+            closeEmailModal();
+          } catch (e: unknown) {
+            const message =
+              e instanceof Error ? e.message : "Failed to send emails.";
+            notification.error(message, { title: "Send Failed" });
+            setEmailModal((m) => ({ ...m, sending: false }));
+          }
+        }}
+        onClose={closeEmailModal}
+        renderRecipientOptions={() => (
+          <>
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                checked={emailModal.recipients.includeMentors}
+                onChange={(e) =>
+                  setEmailModal((m) => ({
+                    ...m,
+                    recipients: {
+                      ...m.recipients,
+                      includeMentors: e.target.checked,
+                    },
+                  }))
+                }
+              />
+              Include Mentors
+            </label>
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                checked={emailModal.recipients.includeClassReps}
+                onChange={(e) =>
+                  setEmailModal((m) => ({
+                    ...m,
+                    recipients: {
+                      ...m.recipients,
+                      includeClassReps: e.target.checked,
+                    },
+                  }))
+                }
+              />
+              Include Class Representatives
+            </label>
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                checked={emailModal.recipients.includeMentees}
+                onChange={(e) =>
+                  setEmailModal((m) => ({
+                    ...m,
+                    recipients: {
+                      ...m.recipients,
+                      includeMentees: e.target.checked,
+                    },
+                  }))
+                }
+              />
+              Include Mentees
+            </label>
+          </>
+        )}
       />
     </div>
   );

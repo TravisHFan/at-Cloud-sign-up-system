@@ -455,4 +455,180 @@ export class EmailRecipientUtils {
 
     return recipients;
   }
+
+  /**
+   * Get program participants (mentors, class reps, mentees) for email notifications
+   * @param programId - The program ID
+   * @param options - Which participant groups to include
+   */
+  static async getProgramParticipants(
+    programId: string,
+    options: {
+      includeMentors?: boolean;
+      includeClassReps?: boolean;
+      includeMentees?: boolean;
+    } = {}
+  ): Promise<
+    Array<{
+      email: string;
+      firstName: string;
+      lastName: string;
+      _id?: string;
+      role: "mentor" | "classRep" | "mentee";
+    }>
+  > {
+    // Import models dynamically to avoid circular dependencies
+    const Program = (await import("../models/Program")).default;
+    const Purchase = (await import("../models/Purchase")).default;
+
+    const {
+      includeMentors = true,
+      includeClassReps = true,
+      includeMentees = true,
+    } = options;
+
+    const recipients: Array<{
+      email: string;
+      firstName: string;
+      lastName: string;
+      _id?: string;
+      role: "mentor" | "classRep" | "mentee";
+    }> = [];
+
+    const program = await Program.findById(programId);
+    if (!program) return recipients;
+
+    // Get mentors if requested
+    if (includeMentors && program.mentors && program.mentors.length > 0) {
+      const mentorUserIds = program.mentors
+        .map((m: { userId?: unknown }) => m.userId)
+        .filter(Boolean);
+
+      if (mentorUserIds.length > 0) {
+        const mentors = await User.find({
+          _id: { $in: mentorUserIds },
+          isActive: true,
+          isVerified: true,
+          emailNotifications: true,
+        }).select("_id email firstName lastName");
+
+        for (const mentor of mentors) {
+          if (mentor.email) {
+            recipients.push({
+              email: mentor.email,
+              firstName: mentor.firstName || "",
+              lastName: mentor.lastName || "",
+              _id: mentor._id.toString(),
+              role: "mentor",
+            });
+          }
+        }
+      }
+    }
+
+    // Get paid participants (class reps and mentees) from purchases
+    const purchases = await Purchase.find({
+      programId: programId,
+      status: "completed",
+    }).populate<{
+      userId: {
+        _id: mongoose.Types.ObjectId;
+        firstName: string;
+        lastName: string;
+        email: string;
+        isActive: boolean;
+        isVerified: boolean;
+        emailNotifications: boolean;
+      };
+    }>(
+      "userId",
+      "_id firstName lastName email isActive isVerified emailNotifications"
+    );
+
+    for (const purchase of purchases) {
+      const user = purchase.userId;
+      if (!user || !user.email) continue;
+
+      // Check user preferences
+      if (!user.isActive || !user.isVerified || !user.emailNotifications)
+        continue;
+
+      const isClassRep = purchase.isClassRep === true;
+
+      if (isClassRep && includeClassReps) {
+        recipients.push({
+          email: user.email,
+          firstName: user.firstName || "",
+          lastName: user.lastName || "",
+          _id: user._id.toString(),
+          role: "classRep",
+        });
+      } else if (!isClassRep && includeMentees) {
+        recipients.push({
+          email: user.email,
+          firstName: user.firstName || "",
+          lastName: user.lastName || "",
+          _id: user._id.toString(),
+          role: "mentee",
+        });
+      }
+    }
+
+    // Get admin enrollments (mentees and class reps enrolled by admin)
+    if (includeMentees && program.adminEnrollments?.mentees?.length) {
+      const adminMentees = await User.find({
+        _id: { $in: program.adminEnrollments.mentees },
+        isActive: true,
+        isVerified: true,
+        emailNotifications: true,
+      }).select("_id email firstName lastName");
+
+      for (const user of adminMentees) {
+        if (user.email) {
+          // Avoid duplicates (might already be in paid mentees)
+          const exists = recipients.some(
+            (r) => r.email.toLowerCase() === user.email.toLowerCase()
+          );
+          if (!exists) {
+            recipients.push({
+              email: user.email,
+              firstName: user.firstName || "",
+              lastName: user.lastName || "",
+              _id: user._id.toString(),
+              role: "mentee",
+            });
+          }
+        }
+      }
+    }
+
+    if (includeClassReps && program.adminEnrollments?.classReps?.length) {
+      const adminClassReps = await User.find({
+        _id: { $in: program.adminEnrollments.classReps },
+        isActive: true,
+        isVerified: true,
+        emailNotifications: true,
+      }).select("_id email firstName lastName");
+
+      for (const user of adminClassReps) {
+        if (user.email) {
+          // Avoid duplicates
+          const exists = recipients.some(
+            (r) => r.email.toLowerCase() === user.email.toLowerCase()
+          );
+          if (!exists) {
+            recipients.push({
+              email: user.email,
+              firstName: user.firstName || "",
+              lastName: user.lastName || "",
+              _id: user._id.toString(),
+              role: "classRep",
+            });
+          }
+        }
+      }
+    }
+
+    return recipients;
+  }
 }

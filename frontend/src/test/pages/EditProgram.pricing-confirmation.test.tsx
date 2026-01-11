@@ -40,7 +40,7 @@ vi.mock("../../hooks/useAuth", () => ({
       id: "user1",
       firstName: "Test",
       lastName: "User",
-      systemAuthorizationLevel: "Admin",
+      role: "Super Admin", // Must be "Super Admin" or "Administrator" to edit programs
     },
   }),
 }));
@@ -85,9 +85,9 @@ const mockProgram = {
   programType: "EMBA Mentor Circles",
   hostedBy: "@Cloud Marketplace Ministry",
   period: {
-    startYear: "2025",
+    startYear: "2026",
     startMonth: "01",
-    endYear: "2025",
+    endYear: "2026",
     endMonth: "12",
   },
   introduction: "Test introduction",

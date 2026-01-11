@@ -80,9 +80,14 @@ describe("Co-Organizer Notification Debug", () => {
     });
 
     // 3. Create Event with Co-Organizer
+    // Use a future date (30 days from now)
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 30);
+    const futureDateString = futureDate.toISOString().split("T")[0];
+
     const eventData = {
       title: "Co-Organizer Test Event",
-      date: "2025-12-25",
+      date: futureDateString,
       time: "10:00",
       endTime: "12:00",
       location: "Test Location",

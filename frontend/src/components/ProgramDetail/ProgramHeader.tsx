@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import EditButton from "../common/EditButton";
 import { Icon } from "../common";
-import { PlusIcon } from "@heroicons/react/24/outline";
+import { PlusIcon, EnvelopeIcon } from "@heroicons/react/24/outline";
 import type { ProgramType } from "../../constants/programTypes";
 
 interface ProgramHeaderProps {
@@ -17,7 +17,9 @@ interface ProgramHeaderProps {
   canEdit: boolean;
   canDelete: boolean;
   canCreateEvent: boolean;
+  canEmail: boolean;
   onDelete: () => void;
+  onEmailParticipants?: () => void;
 }
 
 /**
@@ -26,7 +28,7 @@ interface ProgramHeaderProps {
  * Displays the program's header section including:
  * - Back navigation button
  * - Program title
- * - Action buttons (Edit, Delete, Create Event)
+ * - Action buttons (Edit, Delete, Create Event, Email Participants)
  * - Program details (type, period) with icons
  *
  * Extracted from ProgramDetail.tsx (Phase 6.5.1)
@@ -39,7 +41,9 @@ export default function ProgramHeader({
   canEdit,
   canDelete,
   canCreateEvent,
+  canEmail,
   onDelete,
+  onEmailParticipants,
 }: ProgramHeaderProps) {
   const navigate = useNavigate();
 
@@ -80,7 +84,7 @@ export default function ProgramHeader({
       </div>
 
       {/* Action Buttons Row */}
-      <div className="flex items-center space-x-3 mb-4">
+      <div className="flex items-center space-x-3 mb-4 flex-wrap gap-y-2">
         {canEdit && (
           <EditButton
             onClick={() => navigate(`/dashboard/programs/${programId}/edit`)}
@@ -103,6 +107,15 @@ export default function ProgramHeader({
           >
             <PlusIcon className="h-4 w-4 mr-1.5" />
             Create New Event
+          </button>
+        )}
+        {canEmail && onEmailParticipants && (
+          <button
+            onClick={onEmailParticipants}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+          >
+            <EnvelopeIcon className="h-4 w-4 mr-1.5" />
+            Email Participants
           </button>
         )}
       </div>

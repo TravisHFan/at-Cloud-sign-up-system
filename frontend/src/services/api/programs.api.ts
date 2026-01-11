@@ -229,6 +229,40 @@ class ProgramsApiClient extends BaseApiClient {
     });
     return (res as { data?: unknown }).data;
   }
+
+  async sendProgramEmails(
+    id: string,
+    payload: {
+      subject: string;
+      bodyHtml: string;
+      bodyText?: string;
+      includeMentors?: boolean;
+      includeClassReps?: boolean;
+      includeMentees?: boolean;
+    }
+  ): Promise<{ recipientCount: number; sent?: number }> {
+    type EmailResult = { recipientCount: number; sent?: number };
+    const response = await this.request<EmailResult>(`/programs/${id}/email`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+
+    const isEmailResult = (v: unknown): v is EmailResult =>
+      !!v &&
+      typeof v === "object" &&
+      ("recipientCount" in (v as Record<string, unknown>) ||
+        "sent" in (v as Record<string, unknown>));
+
+    const payloadData: unknown = response.data ?? null;
+    if (isEmailResult(payloadData)) {
+      return payloadData;
+    }
+    if (isEmailResult(response as unknown)) {
+      return response as unknown as EmailResult;
+    }
+    // Default fallback
+    return { recipientCount: 0, sent: 0 };
+  }
 }
 
 // Export singleton instance
@@ -257,6 +291,10 @@ export const programsService = {
     programsApiClient.adminEnrollProgram(id, enrollAs),
   adminUnenrollProgram: (id: string) =>
     programsApiClient.adminUnenrollProgram(id),
+  sendProgramEmails: (
+    id: string,
+    payload: Parameters<typeof programsApiClient.sendProgramEmails>[1]
+  ) => programsApiClient.sendProgramEmails(id, payload),
 
   // Backward compatibility aliases
   list: (params?: Parameters<typeof programsApiClient.listPrograms>[0]) =>
