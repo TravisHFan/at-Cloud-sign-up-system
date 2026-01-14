@@ -862,6 +862,98 @@ describe("EventEmailService - Event Email Operations", () => {
     });
   });
 
+  describe("sendEventUnpublishWarningNotification", () => {
+    it("should send warning notification with FRONTEND_URL fallback", async () => {
+      // Arrange
+      delete process.env.FRONTEND_URL;
+      const params = {
+        eventId: "event-warn-123",
+        title: "Warning Event",
+        format: "in-person",
+        missingFields: ["location", "date"],
+        recipients: ["organizer@example.com"],
+      };
+
+      // Act
+      const result =
+        await EventEmailService.sendEventUnpublishWarningNotification(params);
+
+      // Assert
+      expect(result).toBe(true);
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain("localhost:5173");
+      expect(emailCall.subject).toContain("URGENT");
+      expect(emailCall.html).toContain("48 hours");
+    });
+
+    it("should use FALLBACK_ADMIN_EMAIL when recipients is empty", async () => {
+      // Arrange
+      delete process.env.FALLBACK_ADMIN_EMAIL;
+      const params = {
+        eventId: "event-warn-no-recipients",
+        title: "Warning Event",
+        format: "online",
+        missingFields: ["zoomLink"],
+        recipients: [],
+      };
+
+      // Act
+      const result =
+        await EventEmailService.sendEventUnpublishWarningNotification(params);
+
+      // Assert
+      expect(result).toBe(true);
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.to).toBe("atcloudministry@gmail.com");
+    });
+  });
+
+  describe("sendEventActualUnpublishNotification", () => {
+    it("should send actual unpublish notification with FRONTEND_URL fallback", async () => {
+      // Arrange
+      delete process.env.FRONTEND_URL;
+      const params = {
+        eventId: "event-actual-123",
+        title: "Unpublished Event",
+        format: "hybrid",
+        missingFields: ["location", "zoomLink"],
+        recipients: ["organizer@example.com"],
+      };
+
+      // Act
+      const result =
+        await EventEmailService.sendEventActualUnpublishNotification(params);
+
+      // Assert
+      expect(result).toBe(true);
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain("localhost:5173");
+      expect(emailCall.subject).toContain("Unpublished");
+      expect(emailCall.html).toContain("automatically unpublished");
+    });
+
+    it("should use FALLBACK_ADMIN_EMAIL when recipients is empty", async () => {
+      // Arrange
+      delete process.env.FALLBACK_ADMIN_EMAIL;
+      const params = {
+        eventId: "event-actual-no-recipients",
+        title: "Unpublished Event",
+        format: "in-person",
+        missingFields: ["date"],
+        recipients: [],
+      };
+
+      // Act
+      const result =
+        await EventEmailService.sendEventActualUnpublishNotification(params);
+
+      // Assert
+      expect(result).toBe(true);
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.to).toBe("atcloudministry@gmail.com");
+    });
+  });
+
   describe("Integration with EmailTransporter", () => {
     it("should properly initialize EmailTransporter on first use", async () => {
       // Arrange

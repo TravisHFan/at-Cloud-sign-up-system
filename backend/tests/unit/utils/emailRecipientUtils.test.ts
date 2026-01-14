@@ -771,4 +771,577 @@ describe("EmailRecipientUtils", () => {
       });
     });
   });
+
+  describe("getProgramParticipants", () => {
+    let Program: any;
+    let Purchase: any;
+
+    beforeEach(async () => {
+      // Mock Program model
+      vi.doMock("../../../src/models/Program", () => ({
+        default: {
+          findById: vi.fn(),
+        },
+      }));
+
+      // Mock Purchase model
+      vi.doMock("../../../src/models/Purchase", () => ({
+        default: {
+          find: vi.fn().mockReturnThis(),
+          populate: vi.fn(),
+        },
+      }));
+
+      // Re-import mocked modules
+      Program = (await import("../../../src/models/Program")).default as any;
+      Purchase = (await import("../../../src/models/Purchase")).default as any;
+    });
+
+    it("returns empty array when program not found", async () => {
+      Program.findById.mockResolvedValueOnce(null);
+
+      const res = await EmailRecipientUtils.getProgramParticipants(
+        "nonexistent-program-id"
+      );
+
+      expect(res).toEqual([]);
+    });
+
+    it("returns mentors when includeMentors is true", async () => {
+      Program.findById.mockResolvedValueOnce({
+        mentors: [{ userId: "mentor1" }, { userId: "mentor2" }],
+        adminEnrollments: { mentees: [], classReps: [] },
+      });
+
+      User.select.mockResolvedValueOnce([
+        {
+          _id: { toString: () => "mentor1" },
+          email: "mentor1@test.com",
+          firstName: "Mentor",
+          lastName: "One",
+        },
+        {
+          _id: { toString: () => "mentor2" },
+          email: "mentor2@test.com",
+          firstName: "Mentor",
+          lastName: "Two",
+        },
+      ]);
+
+      Purchase.populate.mockResolvedValueOnce([]);
+
+      const res = await EmailRecipientUtils.getProgramParticipants(
+        "program-id",
+        { includeMentors: true, includeClassReps: false, includeMentees: false }
+      );
+
+      expect(res).toHaveLength(2);
+      expect(res[0]).toMatchObject({
+        email: "mentor1@test.com",
+        role: "mentor",
+      });
+      expect(res[1]).toMatchObject({
+        email: "mentor2@test.com",
+        role: "mentor",
+      });
+    });
+
+    it("excludes mentors when includeMentors is false", async () => {
+      Program.findById.mockResolvedValueOnce({
+        mentors: [{ userId: "mentor1" }],
+        adminEnrollments: { mentees: [], classReps: [] },
+      });
+
+      Purchase.populate.mockResolvedValueOnce([]);
+
+      const res = await EmailRecipientUtils.getProgramParticipants(
+        "program-id",
+        {
+          includeMentors: false,
+          includeClassReps: false,
+          includeMentees: false,
+        }
+      );
+
+      expect(res).toHaveLength(0);
+      // User.find should not be called for mentors
+    });
+
+    it("returns class reps from purchases", async () => {
+      Program.findById.mockResolvedValueOnce({
+        mentors: [],
+        adminEnrollments: { mentees: [], classReps: [] },
+      });
+
+      Purchase.populate.mockResolvedValueOnce([
+        {
+          isClassRep: true,
+          userId: {
+            _id: { toString: () => "classrep1" },
+            email: "classrep1@test.com",
+            firstName: "Class",
+            lastName: "Rep",
+            isActive: true,
+            isVerified: true,
+            emailNotifications: true,
+          },
+        },
+      ]);
+
+      const res = await EmailRecipientUtils.getProgramParticipants(
+        "program-id",
+        { includeMentors: false, includeClassReps: true, includeMentees: false }
+      );
+
+      expect(res).toHaveLength(1);
+      expect(res[0]).toMatchObject({
+        email: "classrep1@test.com",
+        role: "classRep",
+      });
+    });
+
+    it("returns mentees from purchases", async () => {
+      Program.findById.mockResolvedValueOnce({
+        mentors: [],
+        adminEnrollments: { mentees: [], classReps: [] },
+      });
+
+      Purchase.populate.mockResolvedValueOnce([
+        {
+          isClassRep: false,
+          userId: {
+            _id: { toString: () => "mentee1" },
+            email: "mentee1@test.com",
+            firstName: "Mentee",
+            lastName: "One",
+            isActive: true,
+            isVerified: true,
+            emailNotifications: true,
+          },
+        },
+      ]);
+
+      const res = await EmailRecipientUtils.getProgramParticipants(
+        "program-id",
+        { includeMentors: false, includeClassReps: false, includeMentees: true }
+      );
+
+      expect(res).toHaveLength(1);
+      expect(res[0]).toMatchObject({
+        email: "mentee1@test.com",
+        role: "mentee",
+      });
+    });
+
+    it("skips users with email notifications disabled", async () => {
+      Program.findById.mockResolvedValueOnce({
+        mentors: [],
+        adminEnrollments: { mentees: [], classReps: [] },
+      });
+
+      Purchase.populate.mockResolvedValueOnce([
+        {
+          isClassRep: false,
+          userId: {
+            _id: { toString: () => "user1" },
+            email: "user1@test.com",
+            firstName: "User",
+            lastName: "One",
+            isActive: true,
+            isVerified: true,
+            emailNotifications: false, // disabled
+          },
+        },
+      ]);
+
+      const res = await EmailRecipientUtils.getProgramParticipants(
+        "program-id",
+        { includeMentees: true }
+      );
+
+      expect(res).toHaveLength(0);
+    });
+
+    it("skips inactive users", async () => {
+      Program.findById.mockResolvedValueOnce({
+        mentors: [],
+        adminEnrollments: { mentees: [], classReps: [] },
+      });
+
+      Purchase.populate.mockResolvedValueOnce([
+        {
+          isClassRep: false,
+          userId: {
+            _id: { toString: () => "user1" },
+            email: "user1@test.com",
+            firstName: "User",
+            lastName: "One",
+            isActive: false, // inactive
+            isVerified: true,
+            emailNotifications: true,
+          },
+        },
+      ]);
+
+      const res = await EmailRecipientUtils.getProgramParticipants(
+        "program-id",
+        { includeMentees: true }
+      );
+
+      expect(res).toHaveLength(0);
+    });
+
+    it("skips unverified users", async () => {
+      Program.findById.mockResolvedValueOnce({
+        mentors: [],
+        adminEnrollments: { mentees: [], classReps: [] },
+      });
+
+      Purchase.populate.mockResolvedValueOnce([
+        {
+          isClassRep: false,
+          userId: {
+            _id: { toString: () => "user1" },
+            email: "user1@test.com",
+            firstName: "User",
+            lastName: "One",
+            isActive: true,
+            isVerified: false, // not verified
+            emailNotifications: true,
+          },
+        },
+      ]);
+
+      const res = await EmailRecipientUtils.getProgramParticipants(
+        "program-id",
+        { includeMentees: true }
+      );
+
+      expect(res).toHaveLength(0);
+    });
+
+    it("skips purchases with null userId", async () => {
+      Program.findById.mockResolvedValueOnce({
+        mentors: [],
+        adminEnrollments: { mentees: [], classReps: [] },
+      });
+
+      Purchase.populate.mockResolvedValueOnce([
+        {
+          isClassRep: false,
+          userId: null,
+        },
+      ]);
+
+      const res = await EmailRecipientUtils.getProgramParticipants(
+        "program-id",
+        { includeMentees: true }
+      );
+
+      expect(res).toHaveLength(0);
+    });
+
+    it("skips purchases with user missing email", async () => {
+      Program.findById.mockResolvedValueOnce({
+        mentors: [],
+        adminEnrollments: { mentees: [], classReps: [] },
+      });
+
+      Purchase.populate.mockResolvedValueOnce([
+        {
+          isClassRep: false,
+          userId: {
+            _id: { toString: () => "user1" },
+            email: null, // no email
+            firstName: "User",
+            lastName: "One",
+            isActive: true,
+            isVerified: true,
+            emailNotifications: true,
+          },
+        },
+      ]);
+
+      const res = await EmailRecipientUtils.getProgramParticipants(
+        "program-id",
+        { includeMentees: true }
+      );
+
+      expect(res).toHaveLength(0);
+    });
+
+    it("includes admin-enrolled mentees", async () => {
+      Program.findById.mockResolvedValueOnce({
+        mentors: [],
+        adminEnrollments: { mentees: ["admin-mentee1"], classReps: [] },
+      });
+
+      Purchase.populate.mockResolvedValueOnce([]);
+
+      User.select.mockResolvedValueOnce([
+        {
+          _id: { toString: () => "admin-mentee1" },
+          email: "adminmentee@test.com",
+          firstName: "Admin",
+          lastName: "Mentee",
+        },
+      ]);
+
+      const res = await EmailRecipientUtils.getProgramParticipants(
+        "program-id",
+        { includeMentors: false, includeClassReps: false, includeMentees: true }
+      );
+
+      expect(res).toHaveLength(1);
+      expect(res[0]).toMatchObject({
+        email: "adminmentee@test.com",
+        role: "mentee",
+      });
+    });
+
+    it("includes admin-enrolled class reps", async () => {
+      Program.findById.mockResolvedValueOnce({
+        mentors: [],
+        adminEnrollments: { mentees: [], classReps: ["admin-classrep1"] },
+      });
+
+      Purchase.populate.mockResolvedValueOnce([]);
+
+      User.select.mockResolvedValueOnce([
+        {
+          _id: { toString: () => "admin-classrep1" },
+          email: "adminclassrep@test.com",
+          firstName: "Admin",
+          lastName: "ClassRep",
+        },
+      ]);
+
+      const res = await EmailRecipientUtils.getProgramParticipants(
+        "program-id",
+        { includeMentors: false, includeClassReps: true, includeMentees: false }
+      );
+
+      expect(res).toHaveLength(1);
+      expect(res[0]).toMatchObject({
+        email: "adminclassrep@test.com",
+        role: "classRep",
+      });
+    });
+
+    it("deduplicates admin-enrolled users already in purchases", async () => {
+      Program.findById.mockResolvedValueOnce({
+        mentors: [],
+        adminEnrollments: { mentees: ["mentee1"], classReps: [] },
+      });
+
+      // Mentee from purchase
+      Purchase.populate.mockResolvedValueOnce([
+        {
+          isClassRep: false,
+          userId: {
+            _id: { toString: () => "mentee1" },
+            email: "mentee1@test.com",
+            firstName: "Mentee",
+            lastName: "One",
+            isActive: true,
+            isVerified: true,
+            emailNotifications: true,
+          },
+        },
+      ]);
+
+      // Same mentee from admin enrollment
+      User.select.mockResolvedValueOnce([
+        {
+          _id: { toString: () => "mentee1" },
+          email: "mentee1@test.com",
+          firstName: "Mentee",
+          lastName: "One",
+        },
+      ]);
+
+      const res = await EmailRecipientUtils.getProgramParticipants(
+        "program-id",
+        { includeMentees: true }
+      );
+
+      // Should only have one entry (deduplicated)
+      expect(res).toHaveLength(1);
+      expect(res[0].email).toBe("mentee1@test.com");
+    });
+
+    it("deduplicates admin class reps already in purchases", async () => {
+      Program.findById.mockResolvedValueOnce({
+        mentors: [],
+        adminEnrollments: { mentees: [], classReps: ["classrep1"] },
+      });
+
+      Purchase.populate.mockResolvedValueOnce([
+        {
+          isClassRep: true,
+          userId: {
+            _id: { toString: () => "classrep1" },
+            email: "classrep1@test.com",
+            firstName: "Class",
+            lastName: "Rep",
+            isActive: true,
+            isVerified: true,
+            emailNotifications: true,
+          },
+        },
+      ]);
+
+      User.select.mockResolvedValueOnce([
+        {
+          _id: { toString: () => "classrep1" },
+          email: "classrep1@test.com",
+          firstName: "Class",
+          lastName: "Rep",
+        },
+      ]);
+
+      const res = await EmailRecipientUtils.getProgramParticipants(
+        "program-id",
+        { includeClassReps: true }
+      );
+
+      expect(res).toHaveLength(1);
+      expect(res[0].email).toBe("classrep1@test.com");
+    });
+
+    it("uses default options (all participant types included)", async () => {
+      Program.findById.mockResolvedValueOnce({
+        mentors: [{ userId: "mentor1" }],
+        adminEnrollments: { mentees: [], classReps: [] },
+      });
+
+      User.select.mockResolvedValueOnce([
+        {
+          _id: { toString: () => "mentor1" },
+          email: "mentor1@test.com",
+          firstName: "Mentor",
+          lastName: "One",
+        },
+      ]);
+
+      Purchase.populate.mockResolvedValueOnce([
+        {
+          isClassRep: false,
+          userId: {
+            _id: { toString: () => "mentee1" },
+            email: "mentee1@test.com",
+            firstName: "Mentee",
+            lastName: "One",
+            isActive: true,
+            isVerified: true,
+            emailNotifications: true,
+          },
+        },
+      ]);
+
+      // Call without options - should use defaults (all true)
+      const res = await EmailRecipientUtils.getProgramParticipants(
+        "program-id"
+      );
+
+      expect(res).toHaveLength(2);
+    });
+
+    it("handles mentor with no email", async () => {
+      Program.findById.mockResolvedValueOnce({
+        mentors: [{ userId: "mentor1" }],
+        adminEnrollments: { mentees: [], classReps: [] },
+      });
+
+      User.select.mockResolvedValueOnce([
+        {
+          _id: { toString: () => "mentor1" },
+          email: null, // no email
+          firstName: "Mentor",
+          lastName: "One",
+        },
+      ]);
+
+      Purchase.populate.mockResolvedValueOnce([]);
+
+      const res = await EmailRecipientUtils.getProgramParticipants(
+        "program-id",
+        { includeMentors: true }
+      );
+
+      expect(res).toHaveLength(0);
+    });
+
+    it("handles admin-enrolled user with no email", async () => {
+      Program.findById.mockResolvedValueOnce({
+        mentors: [],
+        adminEnrollments: { mentees: ["user1"], classReps: [] },
+      });
+
+      Purchase.populate.mockResolvedValueOnce([]);
+
+      User.select.mockResolvedValueOnce([
+        {
+          _id: { toString: () => "user1" },
+          email: null, // no email
+          firstName: "User",
+          lastName: "One",
+        },
+      ]);
+
+      const res = await EmailRecipientUtils.getProgramParticipants(
+        "program-id",
+        { includeMentees: true }
+      );
+
+      expect(res).toHaveLength(0);
+    });
+
+    it("handles program with no mentors array", async () => {
+      Program.findById.mockResolvedValueOnce({
+        // mentors is undefined
+        adminEnrollments: { mentees: [], classReps: [] },
+      });
+
+      Purchase.populate.mockResolvedValueOnce([]);
+
+      const res = await EmailRecipientUtils.getProgramParticipants(
+        "program-id",
+        { includeMentors: true }
+      );
+
+      expect(res).toHaveLength(0);
+    });
+
+    it("handles mentors with null userId values", async () => {
+      Program.findById.mockResolvedValueOnce({
+        mentors: [
+          { userId: null },
+          { userId: undefined },
+          { userId: "mentor1" },
+        ],
+        adminEnrollments: { mentees: [], classReps: [] },
+      });
+
+      User.select.mockResolvedValueOnce([
+        {
+          _id: { toString: () => "mentor1" },
+          email: "mentor1@test.com",
+          firstName: "Mentor",
+          lastName: "One",
+        },
+      ]);
+
+      Purchase.populate.mockResolvedValueOnce([]);
+
+      const res = await EmailRecipientUtils.getProgramParticipants(
+        "program-id",
+        { includeMentors: true, includeClassReps: false, includeMentees: false }
+      );
+
+      // Only mentor1 should be returned (nulls filtered)
+      expect(res).toHaveLength(1);
+      expect(res[0].email).toBe("mentor1@test.com");
+    });
+  });
 });

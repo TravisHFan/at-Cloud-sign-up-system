@@ -2,6 +2,7 @@
  * Unit Tests for Stripe Service - Subscription Management
  *
  * Tests subscription-related functions that were previously uncovered:
+ * - createDonationSubscription
  * - updateDonationSubscription
  * - pauseDonationSubscription
  * - resumeDonationSubscription
@@ -12,6 +13,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import Stripe from "stripe";
 import {
+  createDonationSubscription,
   updateDonationSubscription,
   pauseDonationSubscription,
   resumeDonationSubscription,
@@ -31,6 +33,15 @@ vi.mock("stripe", () => {
     prices: {
       create: vi.fn(),
     },
+    customers: {
+      list: vi.fn(),
+      create: vi.fn(),
+    },
+    checkout: {
+      sessions: {
+        create: vi.fn(),
+      },
+    },
   }));
   return { default: MockStripe };
 });
@@ -40,21 +51,343 @@ describe("Stripe Service - Subscription Management", () => {
   let mockSubscriptionUpdate: ReturnType<typeof vi.fn>;
   let mockSubscriptionCancel: ReturnType<typeof vi.fn>;
   let mockPriceCreate: ReturnType<typeof vi.fn>;
+  let mockCustomersList: ReturnType<typeof vi.fn>;
+  let mockCustomersCreate: ReturnType<typeof vi.fn>;
+  let mockSessionCreate: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     mockSubscriptionRetrieve = vi.fn();
     mockSubscriptionUpdate = vi.fn();
     mockSubscriptionCancel = vi.fn();
     mockPriceCreate = vi.fn();
+    mockCustomersList = vi.fn();
+    mockCustomersCreate = vi.fn();
+    mockSessionCreate = vi.fn();
 
     (stripe.subscriptions as any).retrieve = mockSubscriptionRetrieve;
     (stripe.subscriptions as any).update = mockSubscriptionUpdate;
     (stripe.subscriptions as any).cancel = mockSubscriptionCancel;
     (stripe.prices as any).create = mockPriceCreate;
+    (stripe.customers as any).list = mockCustomersList;
+    (stripe.customers as any).create = mockCustomersCreate;
+    (stripe.checkout as any).sessions = { create: mockSessionCreate };
   });
 
   afterEach(() => {
     vi.clearAllMocks();
+  });
+
+  describe("createDonationSubscription", () => {
+    it("should throw error if amount is less than $1.00 (100 cents)", async () => {
+      await expect(
+        createDonationSubscription({
+          donationId: "don_123",
+          userId: "user_123",
+          userEmail: "test@example.com",
+          userName: "Test User",
+          amount: 50, // Less than 100 cents
+          frequency: "monthly",
+          startDate: new Date(),
+        })
+      ).rejects.toThrow("Donation amount must be at least $1.00");
+    });
+
+    it("should create subscription with monthly frequency", async () => {
+      // Mock customer lookup - no existing customer
+      mockCustomersList.mockResolvedValue({ data: [] });
+      mockCustomersCreate.mockResolvedValue({ id: "cus_new" });
+      mockPriceCreate.mockResolvedValue({ id: "price_monthly" });
+      mockSessionCreate.mockResolvedValue({
+        id: "cs_123",
+        url: "https://checkout.stripe.com/pay/cs_123",
+      });
+
+      const result = await createDonationSubscription({
+        donationId: "don_123",
+        userId: "user_123",
+        userEmail: "test@example.com",
+        userName: "Test User",
+        amount: 5000, // $50.00
+        frequency: "monthly",
+        startDate: new Date(),
+      });
+
+      expect(mockPriceCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          currency: "usd",
+          unit_amount: 5000,
+          recurring: {
+            interval: "month",
+            interval_count: 1,
+          },
+          product_data: {
+            name: "Recurring Ministry Donation",
+          },
+        })
+      );
+      expect(result.checkoutUrl).toBe("https://checkout.stripe.com/pay/cs_123");
+    });
+
+    it("should create subscription with weekly frequency", async () => {
+      mockCustomersList.mockResolvedValue({ data: [] });
+      mockCustomersCreate.mockResolvedValue({ id: "cus_weekly" });
+      mockPriceCreate.mockResolvedValue({ id: "price_weekly" });
+      mockSessionCreate.mockResolvedValue({
+        id: "cs_weekly",
+        url: "https://checkout.stripe.com/pay/cs_weekly",
+      });
+
+      await createDonationSubscription({
+        donationId: "don_weekly",
+        userId: "user_weekly",
+        userEmail: "weekly@example.com",
+        userName: "Weekly User",
+        amount: 1000,
+        frequency: "weekly",
+        startDate: new Date(),
+      });
+
+      expect(mockPriceCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          recurring: {
+            interval: "week",
+            interval_count: 1,
+          },
+        })
+      );
+    });
+
+    it("should create subscription with biweekly frequency", async () => {
+      mockCustomersList.mockResolvedValue({ data: [] });
+      mockCustomersCreate.mockResolvedValue({ id: "cus_biweekly" });
+      mockPriceCreate.mockResolvedValue({ id: "price_biweekly" });
+      mockSessionCreate.mockResolvedValue({
+        id: "cs_biweekly",
+        url: "https://checkout.stripe.com/pay/cs_biweekly",
+      });
+
+      await createDonationSubscription({
+        donationId: "don_biweekly",
+        userId: "user_biweekly",
+        userEmail: "biweekly@example.com",
+        userName: "Biweekly User",
+        amount: 2000,
+        frequency: "biweekly",
+        startDate: new Date(),
+      });
+
+      expect(mockPriceCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          recurring: {
+            interval: "week",
+            interval_count: 2,
+          },
+        })
+      );
+    });
+
+    it("should create subscription with quarterly frequency", async () => {
+      mockCustomersList.mockResolvedValue({ data: [] });
+      mockCustomersCreate.mockResolvedValue({ id: "cus_quarterly" });
+      mockPriceCreate.mockResolvedValue({ id: "price_quarterly" });
+      mockSessionCreate.mockResolvedValue({
+        id: "cs_quarterly",
+        url: "https://checkout.stripe.com/pay/cs_quarterly",
+      });
+
+      await createDonationSubscription({
+        donationId: "don_quarterly",
+        userId: "user_quarterly",
+        userEmail: "quarterly@example.com",
+        userName: "Quarterly User",
+        amount: 10000,
+        frequency: "quarterly",
+        startDate: new Date(),
+      });
+
+      expect(mockPriceCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          recurring: {
+            interval: "month",
+            interval_count: 3,
+          },
+        })
+      );
+    });
+
+    it("should create subscription with annually frequency", async () => {
+      mockCustomersList.mockResolvedValue({ data: [] });
+      mockCustomersCreate.mockResolvedValue({ id: "cus_annually" });
+      mockPriceCreate.mockResolvedValue({ id: "price_annually" });
+      mockSessionCreate.mockResolvedValue({
+        id: "cs_annually",
+        url: "https://checkout.stripe.com/pay/cs_annually",
+      });
+
+      await createDonationSubscription({
+        donationId: "don_annually",
+        userId: "user_annually",
+        userEmail: "annually@example.com",
+        userName: "Annually User",
+        amount: 50000,
+        frequency: "annually",
+        startDate: new Date(),
+      });
+
+      expect(mockPriceCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          recurring: {
+            interval: "year",
+            interval_count: 1,
+          },
+        })
+      );
+    });
+
+    it("should use existing customer if found", async () => {
+      mockCustomersList.mockResolvedValue({
+        data: [{ id: "cus_existing" }],
+      });
+      mockPriceCreate.mockResolvedValue({ id: "price_123" });
+      mockSessionCreate.mockResolvedValue({
+        id: "cs_existing",
+        url: "https://checkout.stripe.com/pay/cs_existing",
+      });
+
+      await createDonationSubscription({
+        donationId: "don_existing",
+        userId: "user_existing",
+        userEmail: "existing@example.com",
+        userName: "Existing User",
+        amount: 5000,
+        frequency: "monthly",
+        startDate: new Date(),
+      });
+
+      // Should not create a new customer
+      expect(mockCustomersCreate).not.toHaveBeenCalled();
+      expect(mockSessionCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          customer: "cus_existing",
+        })
+      );
+    });
+
+    it("should set billing_cycle_anchor for future start dates", async () => {
+      mockCustomersList.mockResolvedValue({ data: [] });
+      mockCustomersCreate.mockResolvedValue({ id: "cus_future" });
+      mockPriceCreate.mockResolvedValue({ id: "price_future" });
+      mockSessionCreate.mockResolvedValue({
+        id: "cs_future",
+        url: "https://checkout.stripe.com/pay/cs_future",
+      });
+
+      // Start date more than 1 hour in the future
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 7); // 1 week from now
+
+      await createDonationSubscription({
+        donationId: "don_future",
+        userId: "user_future",
+        userEmail: "future@example.com",
+        userName: "Future User",
+        amount: 5000,
+        frequency: "monthly",
+        startDate: futureDate,
+      });
+
+      expect(mockSessionCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          subscription_data: expect.objectContaining({
+            billing_cycle_anchor: expect.any(Number),
+          }),
+        })
+      );
+    });
+
+    it("should not set billing_cycle_anchor for immediate start", async () => {
+      mockCustomersList.mockResolvedValue({ data: [] });
+      mockCustomersCreate.mockResolvedValue({ id: "cus_immediate" });
+      mockPriceCreate.mockResolvedValue({ id: "price_immediate" });
+      mockSessionCreate.mockResolvedValue({
+        id: "cs_immediate",
+        url: "https://checkout.stripe.com/pay/cs_immediate",
+      });
+
+      // Start date is now (not 1 hour in future)
+      const now = new Date();
+
+      await createDonationSubscription({
+        donationId: "don_immediate",
+        userId: "user_immediate",
+        userEmail: "immediate@example.com",
+        userName: "Immediate User",
+        amount: 5000,
+        frequency: "monthly",
+        startDate: now,
+      });
+
+      // Subscription data should not have billing_cycle_anchor
+      const callArgs = mockSessionCreate.mock.calls[0][0];
+      expect(callArgs.subscription_data.billing_cycle_anchor).toBeUndefined();
+    });
+
+    it("should include end date in metadata when provided", async () => {
+      mockCustomersList.mockResolvedValue({ data: [] });
+      mockCustomersCreate.mockResolvedValue({ id: "cus_enddate" });
+      mockPriceCreate.mockResolvedValue({ id: "price_enddate" });
+      mockSessionCreate.mockResolvedValue({
+        id: "cs_enddate",
+        url: "https://checkout.stripe.com/pay/cs_enddate",
+      });
+
+      const startDate = new Date();
+      const endDate = new Date();
+      endDate.setFullYear(endDate.getFullYear() + 1);
+
+      await createDonationSubscription({
+        donationId: "don_enddate",
+        userId: "user_enddate",
+        userEmail: "enddate@example.com",
+        userName: "End Date User",
+        amount: 5000,
+        frequency: "monthly",
+        startDate,
+        endDate,
+      });
+
+      expect(mockSessionCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          subscription_data: expect.objectContaining({
+            metadata: expect.objectContaining({
+              endDate: endDate.toISOString(),
+            }),
+          }),
+        })
+      );
+    });
+
+    it("should return empty string for checkoutUrl if session.url is null", async () => {
+      mockCustomersList.mockResolvedValue({ data: [] });
+      mockCustomersCreate.mockResolvedValue({ id: "cus_nourl" });
+      mockPriceCreate.mockResolvedValue({ id: "price_nourl" });
+      mockSessionCreate.mockResolvedValue({
+        id: "cs_nourl",
+        url: null,
+      });
+
+      const result = await createDonationSubscription({
+        donationId: "don_nourl",
+        userId: "user_nourl",
+        userEmail: "nourl@example.com",
+        userName: "No URL User",
+        amount: 5000,
+        frequency: "monthly",
+        startDate: new Date(),
+      });
+
+      expect(result.checkoutUrl).toBe("");
+    });
   });
 
   describe("updateDonationSubscription", () => {

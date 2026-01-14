@@ -4,6 +4,9 @@ import { defineConfig } from "vitest/config";
 const disableCoverageThresholds =
   process.env.VITEST_DISABLE_COVERAGE_THRESHOLDS === "true";
 
+// Integration tests don't have mocked code paths, so coverage thresholds don't apply
+const isIntegrationScope = process.env.VITEST_SCOPE === "integration";
+
 export default defineConfig({
   test: {
     // 30 seconds timeout for integration tests with bcrypt operations
@@ -31,14 +34,15 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov", "html", "json-summary"],
-      thresholds: disableCoverageThresholds
-        ? undefined
-        : {
-            lines: 90,
-            statements: 90,
-            functions: 90,
-            branches: 85,
-          },
+      thresholds:
+        disableCoverageThresholds || isIntegrationScope
+          ? undefined
+          : {
+              lines: 90,
+              statements: 90,
+              functions: 90,
+              branches: 85,
+            },
       exclude: [
         "node_modules/",
         "dist/",

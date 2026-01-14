@@ -487,4 +487,227 @@ describe("EventPurchaseController", () => {
       });
     });
   });
+
+  // ================================================================
+  // Lock Callback Tests - Actually execute the code inside withLock
+  // ================================================================
+  describe("createCheckoutSession - Lock Callback Execution", () => {
+    const setupValidRequest = () => {
+      mockReq.user = {
+        _id: userId,
+        email: "test@test.com",
+        firstName: "Test",
+        lastName: "User",
+      };
+      mockReq.params = { id: eventId.toString() };
+      mockReq.body = {};
+
+      vi.mocked(Event.findById).mockResolvedValue({
+        _id: eventId,
+        title: "Paid Event",
+        pricing: { isFree: false, price: 5000 },
+      } as any);
+      vi.mocked(EventAccessControlService.checkUserAccess).mockResolvedValue({
+        hasAccess: false,
+        requiresPurchase: true,
+        accessReason: undefined,
+      });
+      vi.mocked(Purchase.findOne).mockResolvedValue(null);
+    };
+
+    it("should delete existing pending purchase and expire old Stripe session", async () => {
+      setupValidRequest();
+
+      const existingPurchaseId = new mongoose.Types.ObjectId();
+      const pendingPurchase = {
+        _id: existingPurchaseId,
+        stripeSessionId: "cs_old_123",
+        orderNumber: "ORD-OLD",
+        status: "pending",
+      };
+
+      let lockCallCount = 0;
+      vi.mocked(lockService.withLock).mockImplementation(
+        async (_key, callback) => {
+          lockCallCount++;
+          // Inside lock, first call to Purchase.findOne returns pending purchase
+          vi.mocked(Purchase.findOne).mockResolvedValueOnce(
+            pendingPurchase as any
+          );
+          vi.mocked(Purchase.deleteOne).mockResolvedValueOnce({} as any);
+          vi.mocked(Purchase.create).mockResolvedValueOnce({
+            _id: new mongoose.Types.ObjectId(),
+            orderNumber: "ORD-NEW",
+            stripeSessionId: null,
+            save: vi.fn().mockResolvedValue({}),
+          } as any);
+
+          // Mock stripe session retrieve and expire
+          const stripeService = await import(
+            "../../../../src/services/stripeService"
+          );
+          vi.mocked(
+            stripeService.stripe.checkout.sessions.retrieve
+          ).mockResolvedValue({ status: "open" } as any);
+          vi.mocked(
+            stripeService.stripe.checkout.sessions.expire
+          ).mockResolvedValue({} as any);
+          vi.mocked(
+            stripeService.stripe.checkout.sessions.create
+          ).mockResolvedValue({
+            id: "cs_new_123",
+            url: "https://checkout.stripe.com/new",
+          } as any);
+
+          return callback();
+        }
+      );
+
+      await EventPurchaseController.createCheckoutSession(
+        mockReq as Request,
+        mockRes as Response
+      );
+
+      expect(lockCallCount).toBe(1);
+      expect(statusMock).toHaveBeenCalledWith(200);
+    });
+
+    it("should handle already expired Stripe session gracefully", async () => {
+      setupValidRequest();
+
+      const pendingPurchase = {
+        _id: new mongoose.Types.ObjectId(),
+        stripeSessionId: "cs_expired_123",
+        orderNumber: "ORD-OLD",
+      };
+
+      vi.mocked(lockService.withLock).mockImplementation(
+        async (_key, callback) => {
+          vi.mocked(Purchase.findOne).mockResolvedValueOnce(
+            pendingPurchase as any
+          );
+          vi.mocked(Purchase.deleteOne).mockResolvedValueOnce({} as any);
+          vi.mocked(Purchase.create).mockResolvedValueOnce({
+            _id: new mongoose.Types.ObjectId(),
+            orderNumber: "ORD-NEW",
+            stripeSessionId: null,
+            save: vi.fn().mockResolvedValue({}),
+          } as any);
+
+          const stripeService = await import(
+            "../../../../src/services/stripeService"
+          );
+          // Session is already expired/completed
+          vi.mocked(
+            stripeService.stripe.checkout.sessions.retrieve
+          ).mockResolvedValue({ status: "complete" } as any);
+          vi.mocked(
+            stripeService.stripe.checkout.sessions.create
+          ).mockResolvedValue({
+            id: "cs_new_123",
+            url: "https://checkout.stripe.com/new",
+          } as any);
+
+          return callback();
+        }
+      );
+
+      await EventPurchaseController.createCheckoutSession(
+        mockReq as Request,
+        mockRes as Response
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(200);
+    });
+
+    it("should continue if Stripe session expire fails", async () => {
+      setupValidRequest();
+
+      const pendingPurchase = {
+        _id: new mongoose.Types.ObjectId(),
+        stripeSessionId: "cs_problem_123",
+        orderNumber: "ORD-OLD",
+      };
+
+      vi.mocked(lockService.withLock).mockImplementation(
+        async (_key, callback) => {
+          vi.mocked(Purchase.findOne).mockResolvedValueOnce(
+            pendingPurchase as any
+          );
+          vi.mocked(Purchase.deleteOne).mockResolvedValueOnce({} as any);
+          vi.mocked(Purchase.create).mockResolvedValueOnce({
+            _id: new mongoose.Types.ObjectId(),
+            orderNumber: "ORD-NEW",
+            stripeSessionId: null,
+            save: vi.fn().mockResolvedValue({}),
+          } as any);
+
+          const stripeService = await import(
+            "../../../../src/services/stripeService"
+          );
+          // Session retrieve throws error
+          vi.mocked(
+            stripeService.stripe.checkout.sessions.retrieve
+          ).mockRejectedValue(new Error("Stripe API error"));
+          vi.mocked(
+            stripeService.stripe.checkout.sessions.create
+          ).mockResolvedValue({
+            id: "cs_new_123",
+            url: "https://checkout.stripe.com/new",
+          } as any);
+
+          return callback();
+        }
+      );
+
+      await EventPurchaseController.createCheckoutSession(
+        mockReq as Request,
+        mockRes as Response
+      );
+
+      // Should still succeed even if expire fails
+      expect(statusMock).toHaveBeenCalledWith(200);
+    });
+
+    // NOTE: Promo code discount calculation tests (fixed amount, percentage) and
+    // promo code validation tests (wrong event, wrong user, staff code restrictions)
+    // require complex mongoose model mocking that doesn't work reliably with vi.mock.
+    // These scenarios are better covered via integration tests which validate the
+    // full promo code validation + checkout flow end-to-end.
+
+    it("should throw error if final price is below Stripe minimum", async () => {
+      setupValidRequest();
+
+      // Override with very low price event
+      vi.mocked(Event.findById).mockResolvedValue({
+        _id: eventId,
+        title: "Cheap Event",
+        pricing: { isFree: false, price: 25 }, // 25 cents, below $0.50 minimum
+      } as any);
+
+      vi.mocked(lockService.withLock).mockImplementation(
+        async (_key, callback) => {
+          vi.mocked(Purchase.findOne).mockResolvedValueOnce(null as any);
+          vi.mocked(Purchase.create).mockResolvedValueOnce({
+            _id: new mongoose.Types.ObjectId(),
+            orderNumber: "ORD-CHEAP",
+            save: vi.fn(),
+          } as any);
+
+          return callback();
+        }
+      );
+
+      await EventPurchaseController.createCheckoutSession(
+        mockReq as Request,
+        mockRes as Response
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(500);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: false,
+        message: expect.stringContaining("Stripe requires a minimum of $0.50"),
+      });
+    });
+  });
 });

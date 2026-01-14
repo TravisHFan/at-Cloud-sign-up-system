@@ -27,8 +27,10 @@ vi.mock("../../../src/models", () => ({
   },
   PromoCode: {
     findOne: vi.fn(),
+    findById: vi.fn(),
     create: vi.fn(),
     generateUniqueCode: vi.fn(),
+    deleteOne: vi.fn(),
   },
   User: {
     find: vi.fn(),
@@ -42,6 +44,13 @@ vi.mock("../../../src/models", () => ({
 vi.mock("../../../src/services/infrastructure/EmailServiceFacade");
 vi.mock("../../../src/services/LockService");
 vi.mock("../../../src/services/notifications/TrioNotificationService");
+vi.mock("../../../src/services/email/domains/PurchaseEmailService", () => ({
+  PurchaseEmailService: {
+    sendRefundCompletedEmail: vi.fn().mockResolvedValue(undefined),
+    sendRefundFailedEmail: vi.fn().mockResolvedValue(undefined),
+    sendAdminRefundNotification: vi.fn().mockResolvedValue(undefined),
+  },
+}));
 
 describe("WebhookController", () => {
   let mockReq: Partial<Request>;
@@ -1117,6 +1126,265 @@ describe("WebhookController", () => {
 
         expect(Program.findByIdAndUpdate).not.toHaveBeenCalled();
         expect(statusMock).toHaveBeenCalledWith(200);
+      });
+    });
+
+    describe("charge.refund.updated event handling", () => {
+      let mockRefund: Stripe.Refund;
+      let mockPurchase: any;
+
+      beforeEach(() => {
+        mockReq.headers = { "stripe-signature": "valid_signature" };
+        mockReq.body = "raw_body";
+
+        mockRefund = {
+          id: "re_test_123",
+          status: "succeeded",
+          metadata: {
+            purchaseId: "purchase123",
+            orderNumber: "ORDER-001",
+          },
+        } as unknown as Stripe.Refund;
+
+        mockPurchase = {
+          _id: "purchase123",
+          status: "completed",
+          orderNumber: "ORDER-001",
+          userId: new mongoose.Types.ObjectId(),
+          programId: { title: "Test Program" },
+          finalPrice: 10000,
+          purchaseDate: new Date(),
+          promoCode: null,
+          bundlePromoCode: null,
+          billingInfo: {
+            fullName: "Test User",
+            email: "test@example.com",
+          },
+          save: vi.fn().mockResolvedValue({}),
+          populate: vi.fn().mockReturnThis(),
+        };
+
+        const mockEvent = {
+          type: "charge.refund.updated",
+          data: { object: mockRefund },
+        } as unknown as Stripe.Event;
+
+        vi.mocked(stripeService.constructWebhookEvent).mockReturnValue(
+          mockEvent
+        );
+        vi.mocked(Purchase.findById).mockReturnValue({
+          populate: vi.fn().mockResolvedValue(mockPurchase),
+        } as any);
+        vi.mocked(User.findById).mockResolvedValue({
+          _id: mockPurchase.userId,
+          firstName: "Test",
+          lastName: "User",
+          email: "test@example.com",
+        } as any);
+        vi.mocked(User.find).mockReturnValue({
+          select: vi
+            .fn()
+            .mockResolvedValue([{ _id: new mongoose.Types.ObjectId() }]),
+        } as any);
+        vi.mocked(TrioNotificationService.createTrio).mockResolvedValue(
+          undefined
+        );
+      });
+
+      it("should handle refund succeeded event", async () => {
+        mockRefund.status = "succeeded";
+
+        await WebhookController.handleStripeWebhook(
+          mockReq as Request,
+          mockRes as Response
+        );
+
+        expect(mockPurchase.status).toBe("refunded");
+        expect(mockPurchase.refundedAt).toBeDefined();
+        expect(mockPurchase.save).toHaveBeenCalled();
+        expect(statusMock).toHaveBeenCalledWith(200);
+      });
+
+      it("should recover promo code on successful refund", async () => {
+        mockRefund.status = "succeeded";
+        mockPurchase.promoCode = "PROMO123";
+
+        const mockPromoCode = {
+          code: "PROMO123",
+          isUsed: true,
+          isActive: false,
+          save: vi.fn().mockResolvedValue({}),
+        };
+
+        vi.mocked(PromoCode.findOne).mockResolvedValue(mockPromoCode as any);
+
+        await WebhookController.handleStripeWebhook(
+          mockReq as Request,
+          mockRes as Response
+        );
+
+        expect(mockPromoCode.isUsed).toBe(false);
+        expect(mockPromoCode.isActive).toBe(true);
+        expect(mockPromoCode.save).toHaveBeenCalled();
+      });
+
+      it("should delete bundle promo code on successful refund", async () => {
+        mockRefund.status = "succeeded";
+        mockPurchase.bundlePromoCode = "BUNDLE123";
+
+        const mockBundleCode = {
+          code: "BUNDLE123",
+          isUsed: false,
+        };
+
+        vi.mocked(PromoCode.findOne).mockResolvedValue(mockBundleCode as any);
+        vi.mocked(PromoCode.deleteOne).mockResolvedValue({} as any);
+
+        await WebhookController.handleStripeWebhook(
+          mockReq as Request,
+          mockRes as Response
+        );
+
+        expect(PromoCode.deleteOne).toHaveBeenCalledWith({
+          code: "BUNDLE123",
+        });
+      });
+
+      it("should handle refund failed event", async () => {
+        mockRefund.status = "failed";
+        mockRefund.failure_reason = "insufficient_funds";
+
+        await WebhookController.handleStripeWebhook(
+          mockReq as Request,
+          mockRes as Response
+        );
+
+        expect(mockPurchase.status).toBe("refund_failed");
+        expect(mockPurchase.refundFailureReason).toBe("insufficient_funds");
+        expect(mockPurchase.save).toHaveBeenCalled();
+        expect(statusMock).toHaveBeenCalledWith(200);
+      });
+
+      it("should handle refund pending event", async () => {
+        mockRefund.status = "pending";
+
+        await WebhookController.handleStripeWebhook(
+          mockReq as Request,
+          mockRes as Response
+        );
+
+        // Pending refunds don't change purchase status
+        expect(mockPurchase.status).toBe("completed");
+        expect(mockPurchase.save).not.toHaveBeenCalled();
+        expect(statusMock).toHaveBeenCalledWith(200);
+      });
+
+      it("should handle refund canceled event", async () => {
+        mockRefund.status = "canceled";
+
+        await WebhookController.handleStripeWebhook(
+          mockReq as Request,
+          mockRes as Response
+        );
+
+        expect(mockPurchase.status).toBe("completed");
+        expect(mockPurchase.refundFailureReason).toBe(
+          "Refund was canceled by payment processor"
+        );
+        expect(mockPurchase.save).toHaveBeenCalled();
+        expect(statusMock).toHaveBeenCalledWith(200);
+      });
+
+      it("should handle unknown refund status gracefully", async () => {
+        mockRefund.status = "unknown_status" as any;
+
+        await WebhookController.handleStripeWebhook(
+          mockReq as Request,
+          mockRes as Response
+        );
+
+        // Unknown status should not change purchase
+        expect(mockPurchase.save).not.toHaveBeenCalled();
+        expect(statusMock).toHaveBeenCalledWith(200);
+      });
+
+      it("should handle missing purchaseId in refund metadata", async () => {
+        mockRefund.metadata = {};
+
+        await WebhookController.handleStripeWebhook(
+          mockReq as Request,
+          mockRes as Response
+        );
+
+        expect(Purchase.findById).not.toHaveBeenCalled();
+        expect(statusMock).toHaveBeenCalledWith(200);
+      });
+
+      it("should handle missing purchase for refund", async () => {
+        vi.mocked(Purchase.findById).mockReturnValue({
+          populate: vi.fn().mockResolvedValue(null),
+        } as any);
+
+        await WebhookController.handleStripeWebhook(
+          mockReq as Request,
+          mockRes as Response
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(200);
+      });
+
+      it("should send admin notification on successful refund", async () => {
+        mockRefund.status = "succeeded";
+
+        await WebhookController.handleStripeWebhook(
+          mockReq as Request,
+          mockRes as Response
+        );
+
+        expect(TrioNotificationService.createTrio).toHaveBeenCalledWith(
+          expect.objectContaining({
+            systemMessage: expect.objectContaining({
+              title: "Refund Completed",
+              priority: "high",
+            }),
+          })
+        );
+      });
+
+      it("should continue if promo code recovery fails", async () => {
+        mockRefund.status = "succeeded";
+        mockPurchase.promoCode = "PROMO123";
+
+        vi.mocked(PromoCode.findOne).mockRejectedValue(
+          new Error("Database error")
+        );
+
+        await WebhookController.handleStripeWebhook(
+          mockReq as Request,
+          mockRes as Response
+        );
+
+        // Should still complete successfully
+        expect(mockPurchase.status).toBe("refunded");
+        expect(statusMock).toHaveBeenCalledWith(200);
+      });
+
+      it("should send cancellation alert to admins for canceled refund", async () => {
+        mockRefund.status = "canceled";
+
+        await WebhookController.handleStripeWebhook(
+          mockReq as Request,
+          mockRes as Response
+        );
+
+        expect(TrioNotificationService.createTrio).toHaveBeenCalledWith(
+          expect.objectContaining({
+            systemMessage: expect.objectContaining({
+              title: "⚠️ Refund Canceled (Unusual)",
+              type: "alert",
+            }),
+          })
+        );
       });
     });
   });
