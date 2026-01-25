@@ -45,7 +45,10 @@ export default class UploadAvatarController {
       const oldAvatarUrl = currentUser.avatar;
 
       // Generate new avatar URL with cache-busting timestamp
-      const baseAvatarUrl = getFileUrl(req, `avatars/${req.file.filename}`);
+      // Use absolute URL to ensure images work in production where frontend and backend are separate
+      const baseAvatarUrl = getFileUrl(req, `avatars/${req.file.filename}`, {
+        absolute: true,
+      });
       const avatarUrl = `${baseAvatarUrl}?t=${Date.now()}`;
       console.log(`📸 Avatar upload successful:`);
       console.log(`  - File path: ${req.file.path}`);
@@ -56,7 +59,7 @@ export default class UploadAvatarController {
       const updatedUser = await User.findByIdAndUpdate(
         req.user._id,
         { avatar: avatarUrl },
-        { new: true, select: "-password" }
+        { new: true, select: "-password" },
       );
 
       if (!updatedUser) {
@@ -74,12 +77,12 @@ export default class UploadAvatarController {
         Program.updateMany(
           { "mentors.userId": req.user._id },
           { $set: { "mentors.$[elem].avatar": avatarUrl } },
-          { arrayFilters: [{ "elem.userId": req.user._id }] }
+          { arrayFilters: [{ "elem.userId": req.user._id }] },
         ),
         // Update Message creator
         Message.updateMany(
           { "creator.id": String(req.user._id) },
-          { $set: { "creator.avatar": avatarUrl } }
+          { $set: { "creator.avatar": avatarUrl } },
         ),
       ]);
 
@@ -88,7 +91,7 @@ export default class UploadAvatarController {
         cleanupOldAvatar(String(currentUser._id), oldAvatarUrl).catch(
           (error) => {
             console.error("Failed to cleanup old avatar:", error);
-          }
+          },
         );
       }
 
