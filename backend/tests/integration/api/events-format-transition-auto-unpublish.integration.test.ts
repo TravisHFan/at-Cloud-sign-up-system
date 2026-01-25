@@ -25,13 +25,13 @@ async function createAdminAndLogin() {
     console.error(
       "Registration failed in format transition test",
       registerRes.status,
-      registerRes.body
+      registerRes.body,
     );
   }
   expect(registerRes.status).toBe(201);
   await User.findOneAndUpdate(
     { email: admin.email },
-    { isVerified: true, role: "Administrator" }
+    { isVerified: true, role: "Administrator" },
   );
   const login = await request(app)
     .post("/api/auth/login")
@@ -41,7 +41,7 @@ async function createAdminAndLogin() {
     console.error(
       "Login failed in format transition test",
       login.status,
-      login.body
+      login.body,
     );
   }
   expect(login.status).toBe(200);
@@ -56,7 +56,7 @@ describe("Format transition publish validation behavior", () => {
     if (mongoose.connection.readyState === 0) {
       await mongoose.connect(
         process.env.MONGODB_TEST_URI ||
-          "mongodb://127.0.0.1:27017/atcloud-signup-test"
+          "mongodb://127.0.0.1:27017/atcloud-signup-test",
       );
       openedLocal = true;
     }
@@ -85,8 +85,8 @@ describe("Format transition publish validation behavior", () => {
       .send({
         title: "Online To Hybrid Missing Location",
         type: "Webinar",
-        date: "2026-01-15",
-        endDate: "2026-01-15",
+        date: "2027-06-15",
+        endDate: "2027-06-15",
         time: "09:00",
         endTime: "10:00",
         location: "Online", // acceptable placeholder while still Online
@@ -120,7 +120,7 @@ describe("Format transition publish validation behavior", () => {
     // Scheduled unpublish should be set ~48 hours from now
     expect(update.body.data.event.unpublishScheduledAt).toBeTruthy();
     const scheduledTime = new Date(
-      update.body.data.event.unpublishScheduledAt
+      update.body.data.event.unpublishScheduledAt,
     ).getTime();
     const expectedTime = Date.now() + 48 * 60 * 60 * 1000;
     // Allow 5 second tolerance
@@ -139,8 +139,8 @@ describe("Format transition publish validation behavior", () => {
       .send({
         title: "Hybrid To In-person Keeps Publish",
         type: "Conference",
-        date: "2026-01-16",
-        endDate: "2026-01-16",
+        date: "2027-06-16",
+        endDate: "2027-06-16",
         time: "11:00",
         endTime: "12:00",
         location: "Main Hall",

@@ -718,4 +718,374 @@ describe("DonationService", () => {
       expect(result.endDate).toEqual(new Date("2025-03-01"));
     });
   });
+
+  describe("getAdminDonationStats", () => {
+    it("should return complete donation stats with all metrics", async () => {
+      // Mock aggregate results for all-time stats
+      mockAggregate.mockResolvedValueOnce([
+        {
+          totalRevenue: 100000,
+          totalDonations: 10,
+        },
+      ]);
+
+      // Mock aggregate results for last 30 days stats
+      mockAggregate.mockResolvedValueOnce([
+        {
+          revenue: 20000,
+          donations: 2,
+        },
+      ]);
+
+      // Mock distinct call for unique donors
+      const mockDistinct = vi
+        .fn()
+        .mockResolvedValue(["user1", "user2", "user3"]);
+      const DonationTransaction = await import(
+        "../../../src/models/DonationTransaction"
+      );
+      (DonationTransaction.default as any).distinct = mockDistinct;
+
+      // Mock Donation.find for active recurring donations
+      mockFind.mockReturnValueOnce([
+        {
+          amount: 5000,
+          frequency: "monthly",
+          status: "active",
+          type: "recurring",
+        },
+        {
+          amount: 10000,
+          frequency: "weekly",
+          status: "active",
+          type: "recurring",
+        },
+      ]);
+
+      const result = await DonationService.getAdminDonationStats();
+
+      expect(result.totalRevenue).toBe(100000);
+      expect(result.totalDonations).toBe(10);
+      expect(result.uniqueDonors).toBe(3);
+      expect(result.last30Days.revenue).toBe(20000);
+      expect(result.last30Days.donations).toBe(2);
+      expect(typeof result.activeRecurringRevenue).toBe("number");
+    });
+
+    it("should return zeros when no donations exist", async () => {
+      // Mock empty aggregate results
+      mockAggregate.mockResolvedValueOnce([]);
+      mockAggregate.mockResolvedValueOnce([]);
+
+      // Mock distinct to return empty array
+      const mockDistinct = vi.fn().mockResolvedValue([]);
+      const DonationTransaction = await import(
+        "../../../src/models/DonationTransaction"
+      );
+      (DonationTransaction.default as any).distinct = mockDistinct;
+
+      // Mock empty active recurring donations
+      mockFind.mockReturnValueOnce([]);
+
+      const result = await DonationService.getAdminDonationStats();
+
+      expect(result.totalRevenue).toBe(0);
+      expect(result.totalDonations).toBe(0);
+      expect(result.uniqueDonors).toBe(0);
+      expect(result.last30Days.revenue).toBe(0);
+      expect(result.last30Days.donations).toBe(0);
+      expect(result.activeRecurringRevenue).toBe(0);
+    });
+
+    it("should calculate activeRecurringRevenue with different frequencies", async () => {
+      mockAggregate.mockResolvedValueOnce([
+        { totalRevenue: 0, totalDonations: 0 },
+      ]);
+      mockAggregate.mockResolvedValueOnce([{ revenue: 0, donations: 0 }]);
+
+      const mockDistinct = vi.fn().mockResolvedValue([]);
+      const DonationTransaction = await import(
+        "../../../src/models/DonationTransaction"
+      );
+      (DonationTransaction.default as any).distinct = mockDistinct;
+
+      // Mock active recurring donations with various frequencies
+      mockFind.mockReturnValueOnce([
+        {
+          amount: 1200,
+          frequency: "monthly",
+          status: "active",
+          type: "recurring",
+        },
+        {
+          amount: 1200,
+          frequency: "weekly",
+          status: "active",
+          type: "recurring",
+        },
+        {
+          amount: 1200,
+          frequency: "biweekly",
+          status: "active",
+          type: "recurring",
+        },
+        {
+          amount: 1200,
+          frequency: "quarterly",
+          status: "active",
+          type: "recurring",
+        },
+        {
+          amount: 1200,
+          frequency: "annually",
+          status: "active",
+          type: "recurring",
+        },
+        {
+          amount: 1200,
+          frequency: undefined,
+          status: "active",
+          type: "recurring",
+        }, // defaults to monthly
+      ]);
+
+      const result = await DonationService.getAdminDonationStats();
+
+      // Verify that activeRecurringRevenue is calculated (not 0)
+      expect(result.activeRecurringRevenue).toBeGreaterThan(0);
+    });
+
+    it("should handle unknown frequency by defaulting to multiplier of 1", async () => {
+      mockAggregate.mockResolvedValueOnce([
+        { totalRevenue: 0, totalDonations: 0 },
+      ]);
+      mockAggregate.mockResolvedValueOnce([{ revenue: 0, donations: 0 }]);
+
+      const mockDistinct = vi.fn().mockResolvedValue([]);
+      const DonationTransaction = await import(
+        "../../../src/models/DonationTransaction"
+      );
+      (DonationTransaction.default as any).distinct = mockDistinct;
+
+      // Mock donation with unknown frequency
+      mockFind.mockReturnValueOnce([
+        {
+          amount: 5000,
+          frequency: "unknown-frequency",
+          status: "active",
+          type: "recurring",
+        },
+      ]);
+
+      const result = await DonationService.getAdminDonationStats();
+
+      // Should use multiplier of 1 for unknown frequency
+      expect(result.activeRecurringRevenue).toBe(5000);
+    });
+  });
+
+  describe("getAllDonations", () => {
+    it("should return paginated donations with no filters", async () => {
+      const mockTransactions = [
+        {
+          _id: new Types.ObjectId(),
+          giftDate: new Date("2025-01-15"),
+          userId: {
+            firstName: "John",
+            lastName: "Doe",
+            email: "john@example.com",
+          },
+          type: "one-time",
+          status: "completed",
+          amount: 5000,
+        },
+        {
+          _id: new Types.ObjectId(),
+          giftDate: new Date("2025-01-10"),
+          userId: {
+            firstName: "Jane",
+            lastName: "Smith",
+            email: "jane@example.com",
+          },
+          type: "recurring",
+          status: "completed",
+          amount: 10000,
+        },
+      ];
+
+      // Mock DonationTransaction.find with chained methods
+      const DonationTransaction = await import(
+        "../../../src/models/DonationTransaction"
+      );
+      (DonationTransaction.default as any).find = vi.fn().mockReturnValue({
+        populate: vi.fn().mockReturnValue({
+          sort: vi.fn().mockReturnValue({
+            skip: vi.fn().mockReturnValue({
+              limit: vi.fn().mockReturnValue({
+                lean: vi.fn().mockResolvedValue(mockTransactions),
+              }),
+            }),
+          }),
+        }),
+      });
+      (DonationTransaction.default as any).countDocuments = vi
+        .fn()
+        .mockResolvedValue(2);
+
+      const result = await DonationService.getAllDonations(1, 20, "", "all");
+
+      expect(result.donations).toHaveLength(2);
+      expect(result.pagination.page).toBe(1);
+      expect(result.pagination.limit).toBe(20);
+      expect(result.pagination.total).toBe(2);
+      expect(result.pagination.totalPages).toBe(1);
+    });
+
+    it("should apply status filter when provided", async () => {
+      const DonationTransaction = await import(
+        "../../../src/models/DonationTransaction"
+      );
+
+      const mockFindFn = vi.fn().mockReturnValue({
+        populate: vi.fn().mockReturnValue({
+          sort: vi.fn().mockReturnValue({
+            skip: vi.fn().mockReturnValue({
+              limit: vi.fn().mockReturnValue({
+                lean: vi.fn().mockResolvedValue([]),
+              }),
+            }),
+          }),
+        }),
+      });
+      (DonationTransaction.default as any).find = mockFindFn;
+      (DonationTransaction.default as any).countDocuments = vi
+        .fn()
+        .mockResolvedValue(0);
+
+      await DonationService.getAllDonations(1, 20, "", "completed");
+
+      // Verify that status filter was applied
+      expect(mockFindFn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: "completed",
+        })
+      );
+    });
+
+    it("should apply search filter for user names and email", async () => {
+      // Mock User.find for search
+      const User = await import("../../../src/models/User");
+      (User.default as any).find = vi.fn().mockReturnValue({
+        select: vi.fn().mockResolvedValue([{ _id: new Types.ObjectId() }]),
+      });
+
+      const DonationTransaction = await import(
+        "../../../src/models/DonationTransaction"
+      );
+      const mockFindFn = vi.fn().mockReturnValue({
+        populate: vi.fn().mockReturnValue({
+          sort: vi.fn().mockReturnValue({
+            skip: vi.fn().mockReturnValue({
+              limit: vi.fn().mockReturnValue({
+                lean: vi.fn().mockResolvedValue([]),
+              }),
+            }),
+          }),
+        }),
+      });
+      (DonationTransaction.default as any).find = mockFindFn;
+      (DonationTransaction.default as any).countDocuments = vi
+        .fn()
+        .mockResolvedValue(0);
+
+      await DonationService.getAllDonations(1, 20, "john", "all");
+
+      // Verify that User.find was called with search criteria
+      expect((User.default as any).find).toHaveBeenCalledWith({
+        $or: [
+          { firstName: { $regex: "john", $options: "i" } },
+          { lastName: { $regex: "john", $options: "i" } },
+          { email: { $regex: "john", $options: "i" } },
+        ],
+      });
+    });
+
+    it("should handle partial user data gracefully", async () => {
+      const mockTransactions = [
+        {
+          _id: new Types.ObjectId(),
+          giftDate: new Date("2025-01-15"),
+          userId: {
+            firstName: undefined,
+            lastName: undefined,
+            email: undefined,
+          },
+          type: "one-time",
+          status: "completed",
+          amount: 5000,
+        },
+        {
+          _id: new Types.ObjectId(),
+          giftDate: new Date("2025-01-10"),
+          userId: { firstName: "", lastName: "", email: "" }, // Empty strings
+          type: "recurring",
+          status: "completed",
+          amount: 10000,
+        },
+      ];
+
+      const DonationTransaction = await import(
+        "../../../src/models/DonationTransaction"
+      );
+      (DonationTransaction.default as any).find = vi.fn().mockReturnValue({
+        populate: vi.fn().mockReturnValue({
+          sort: vi.fn().mockReturnValue({
+            skip: vi.fn().mockReturnValue({
+              limit: vi.fn().mockReturnValue({
+                lean: vi.fn().mockResolvedValue(mockTransactions),
+              }),
+            }),
+          }),
+        }),
+      });
+      (DonationTransaction.default as any).countDocuments = vi
+        .fn()
+        .mockResolvedValue(2);
+
+      const result = await DonationService.getAllDonations(1, 20, "", "all");
+
+      // Should use default values for missing user data
+      expect(result.donations[0].user.firstName).toBe("Unknown");
+      expect(result.donations[0].user.lastName).toBe("User");
+      expect(result.donations[0].user.email).toBe("N/A");
+      expect(result.donations[1].user.firstName).toBe("Unknown");
+    });
+
+    it("should calculate pagination correctly", async () => {
+      const DonationTransaction = await import(
+        "../../../src/models/DonationTransaction"
+      );
+      (DonationTransaction.default as any).find = vi.fn().mockReturnValue({
+        populate: vi.fn().mockReturnValue({
+          sort: vi.fn().mockReturnValue({
+            skip: vi.fn().mockReturnValue({
+              limit: vi.fn().mockReturnValue({
+                lean: vi.fn().mockResolvedValue([]),
+              }),
+            }),
+          }),
+        }),
+      });
+      (DonationTransaction.default as any).countDocuments = vi
+        .fn()
+        .mockResolvedValue(50);
+
+      const result = await DonationService.getAllDonations(2, 10, "", "all");
+
+      expect(result.pagination.page).toBe(2);
+      expect(result.pagination.limit).toBe(10);
+      expect(result.pagination.total).toBe(50);
+      expect(result.pagination.totalPages).toBe(5);
+    });
+  });
 });

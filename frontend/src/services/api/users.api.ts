@@ -85,13 +85,15 @@ class UsersApiClient extends BaseApiClient {
    * @returns Updated user object
    */
   async updateProfile(updates: unknown): Promise<AppUser> {
-    const response = await this.request<{ user: AppUser }>("/users/profile", {
+    // Backend returns { success, message, data: { id, username, ... } }
+    // The user object is directly in data, not wrapped in data.user
+    const response = await this.request<AppUser>("/users/profile", {
       method: "PUT",
       body: JSON.stringify(updates),
     });
 
     if (response.data) {
-      return response.data.user;
+      return response.data;
     }
 
     throw new Error(response.message || "Failed to update profile");
@@ -110,7 +112,7 @@ class UsersApiClient extends BaseApiClient {
       phone?: string;
       isAtCloudLeader?: boolean;
       roleInAtCloud?: string;
-    }
+    },
   ): Promise<{
     avatar?: string;
     phone?: string;
@@ -164,7 +166,7 @@ class UsersApiClient extends BaseApiClient {
       {
         method: "PUT",
         body: JSON.stringify({ role }),
-      }
+      },
     );
 
     if (response.data) {
@@ -265,7 +267,7 @@ class UsersApiClient extends BaseApiClient {
    */
   async requestPasswordChange(
     currentPassword: string,
-    newPassword: string
+    newPassword: string,
   ): Promise<{ message: string }> {
     return await this.request("/auth/request-password-change", {
       method: "POST",
@@ -321,7 +323,7 @@ export const usersService = {
   updateProfile: (updates: unknown) => usersApiClient.updateProfile(updates),
   adminEditProfile: (
     userId: string,
-    updates: Parameters<typeof usersApiClient.adminEditProfile>[1]
+    updates: Parameters<typeof usersApiClient.adminEditProfile>[1],
   ) => usersApiClient.adminEditProfile(userId, updates),
 
   // Stats and analytics

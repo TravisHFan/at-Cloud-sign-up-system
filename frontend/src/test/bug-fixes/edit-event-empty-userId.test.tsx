@@ -106,7 +106,7 @@ describe("Bug Fix: Edit Event with empty userId in organizerDetails", () => {
       title: "Test Event",
       type: "Meeting",
       format: "In-person",
-      date: "2026-01-15",
+      date: "2027-06-15",
       time: "10:00",
       endTime: "12:00",
       location: "Conference Room",
@@ -152,7 +152,7 @@ describe("Bug Fix: Edit Event with empty userId in organizerDetails", () => {
             </Routes>
           </MemoryRouter>
         </NotificationProvider>
-      </AuthProvider>
+      </AuthProvider>,
     );
 
     // Wait for event to load
@@ -192,7 +192,7 @@ describe("Bug Fix: Edit Event with empty userId in organizerDetails", () => {
 
     // Ensure no organizers with empty userId were sent
     const hasEmptyUserId = payload.organizerDetails.some(
-      (org: { userId?: string }) => !org.userId || org.userId.trim() === ""
+      (org: { userId?: string }) => !org.userId || org.userId.trim() === "",
     );
     expect(hasEmptyUserId).toBe(false);
   });
@@ -263,7 +263,7 @@ describe("Bug Fix: Edit Event with empty userId in organizerDetails", () => {
             </Routes>
           </MemoryRouter>
         </NotificationProvider>
-      </AuthProvider>
+      </AuthProvider>,
     );
 
     // Wait for event to load
@@ -298,7 +298,7 @@ describe("Bug Fix: Edit Event with empty userId in organizerDetails", () => {
 
     // Should NOT include any organizers with empty userId
     const hasEmptyUserId = payload.organizerDetails.some(
-      (org: { userId?: string }) => !org.userId || org.userId.trim() === ""
+      (org: { userId?: string }) => !org.userId || org.userId.trim() === "",
     );
     expect(hasEmptyUserId).toBe(false);
   });

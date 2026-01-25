@@ -19,7 +19,7 @@ describe("Public Events API - publish validation", () => {
     if (mongoose.connection.readyState === 0) {
       await mongoose.connect(
         process.env.MONGODB_TEST_URI ||
-          "mongodb://127.0.0.1:27017/atcloud-signup-test"
+          "mongodb://127.0.0.1:27017/atcloud-signup-test",
       );
       openedLocal = true;
     }
@@ -50,7 +50,7 @@ describe("Public Events API - publish validation", () => {
     await request(app).post("/api/auth/register").send(adminData);
     await User.findOneAndUpdate(
       { email: adminData.email },
-      { isVerified: true, role: "Administrator" }
+      { isVerified: true, role: "Administrator" },
     );
     const loginRes = await request(app)
       .post("/api/auth/login")
@@ -63,8 +63,8 @@ describe("Public Events API - publish validation", () => {
       .send({
         title: "Validation Event",
         type: "Webinar",
-        date: "2026-01-15",
-        endDate: "2026-01-15",
+        date: "2027-06-15",
+        endDate: "2027-06-15",
         time: "09:00",
         endTime: "10:00",
         ...publishFieldsForFormat("Online", "val"),
@@ -132,7 +132,7 @@ describe("Public Events API - publish validation", () => {
     expect(second.status).toBe(200);
     const afterSecond = (await Event.findById(baseEventId).lean()) as any;
     expect(afterSecond?.publishedAt?.toISOString()).toBe(
-      firstPublishedAt?.toISOString()
+      firstPublishedAt?.toISOString(),
     );
   });
 

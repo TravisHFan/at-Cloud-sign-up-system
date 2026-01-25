@@ -19,7 +19,7 @@ describe("Public Events API - audit logs", () => {
     if (mongoose.connection.readyState === 0) {
       await mongoose.connect(
         process.env.MONGODB_TEST_URI ||
-          "mongodb://127.0.0.1:27017/atcloud-signup-test"
+          "mongodb://127.0.0.1:27017/atcloud-signup-test",
       );
       openedLocal = true;
     }
@@ -53,7 +53,7 @@ describe("Public Events API - audit logs", () => {
     console.log("[audit-test] admin registered");
     await User.findOneAndUpdate(
       { email: adminData.email },
-      { isVerified: true, role: "Administrator" }
+      { isVerified: true, role: "Administrator" },
     );
     console.log("[audit-test] admin elevated");
     const loginRes = await request(app)
@@ -67,8 +67,8 @@ describe("Public Events API - audit logs", () => {
       .send({
         title: "Audit Event",
         type: "Webinar",
-        date: "2026-01-15",
-        endDate: "2026-01-15",
+        date: "2027-06-15",
+        endDate: "2027-06-15",
         time: "10:00",
         endTime: "11:00",
         location: "Online",
@@ -96,7 +96,7 @@ describe("Public Events API - audit logs", () => {
     const createdEvent = createRes.body?.data?.event;
     console.log(
       "[audit-test] createdEvent keys",
-      createdEvent && Object.keys(createdEvent)
+      createdEvent && Object.keys(createdEvent),
     );
     expect(createdEvent).toBeTruthy();
     eventId = createdEvent?.id || createdEvent?._id;

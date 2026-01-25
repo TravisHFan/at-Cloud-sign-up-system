@@ -279,6 +279,43 @@ describe("TokenController", () => {
           })
         );
       });
+
+      it("should use default 7d expire when JWT_REFRESH_EXPIRE is not set", async () => {
+        // Clear the env variable to trigger the fallback
+        delete process.env.JWT_REFRESH_EXPIRE;
+
+        mockReq.cookies = { refreshToken: "valid-refresh-token" };
+
+        vi.mocked(TokenService.verifyRefreshToken).mockReturnValue({
+          userId: userId.toString(),
+        } as any);
+
+        const mockUser = {
+          _id: userId,
+          email: "test@example.com",
+          isActive: true,
+        };
+
+        vi.mocked(User.findById).mockResolvedValue(mockUser as any);
+
+        const newTokens = {
+          accessToken: "new-access-token",
+          refreshToken: "new-refresh-token",
+          accessTokenExpires: new Date(),
+          refreshTokenExpires: new Date(),
+        };
+
+        vi.mocked(TokenService.generateTokenPair).mockReturnValue(newTokens);
+        vi.mocked(TokenService.parseTimeToMs).mockReturnValue(604800000);
+
+        await TokenController.refreshToken(
+          mockReq as Request,
+          mockRes as Response
+        );
+
+        // The fallback "7d" should be passed to parseTimeToMs
+        expect(TokenService.parseTimeToMs).toHaveBeenCalledWith("7d");
+      });
     });
 
     describe("error handling", () => {

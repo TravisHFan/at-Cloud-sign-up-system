@@ -254,6 +254,79 @@ describe("EventAnalyticsController", () => {
           ResponseBuilderService.buildAnalyticsEventData
         ).toHaveBeenCalled();
       });
+
+      it("should handle events with missing optional fields (null/undefined branches)", async () => {
+        vi.mocked(hasPermission).mockReturnValue(true);
+        vi.mocked(Event.aggregate).mockResolvedValue([]);
+        vi.mocked(Registration.aggregate).mockResolvedValue([]);
+
+        // Event with minimal data to test null-coalescing branches
+        const minimalEvent = {
+          _id: "event1",
+          // title is undefined
+          // endDate is undefined
+          // endTime is undefined
+          // createdBy is a string (not object)
+          createdBy: "user123",
+          // roles is undefined
+        };
+
+        vi.mocked(Event.find).mockReturnValue({
+          populate: vi.fn().mockReturnValue({
+            lean: vi.fn().mockResolvedValue([minimalEvent]),
+          }),
+        } as any);
+
+        await EventAnalyticsController.getEventAnalytics(
+          mockReq as any,
+          mockRes as Response
+        );
+
+        expect(
+          ResponseBuilderService.buildAnalyticsEventData
+        ).toHaveBeenCalled();
+        expect(statusMock).toHaveBeenCalledWith(200);
+      });
+
+      it("should handle events with createdBy as object and roles as array", async () => {
+        vi.mocked(hasPermission).mockReturnValue(true);
+        vi.mocked(Event.aggregate).mockResolvedValue([]);
+        vi.mocked(Registration.aggregate).mockResolvedValue([]);
+
+        // Event with full data to test positive branches
+        const fullEvent = {
+          _id: "event2",
+          title: "Full Event",
+          date: "2024-01-15",
+          endDate: "2024-01-16",
+          time: "10:00",
+          endTime: "16:00",
+          location: "Test Location",
+          createdBy: {
+            _id: "user456",
+            username: "testuser",
+            firstName: "Test",
+            lastName: "User",
+          },
+          roles: [{ id: "role1", name: "Attendee", maxParticipants: 50 }],
+        };
+
+        vi.mocked(Event.find).mockReturnValue({
+          populate: vi.fn().mockReturnValue({
+            lean: vi.fn().mockResolvedValue([fullEvent]),
+          }),
+        } as any);
+
+        await EventAnalyticsController.getEventAnalytics(
+          mockReq as any,
+          mockRes as Response
+        );
+
+        expect(
+          ResponseBuilderService.buildAnalyticsEventData
+        ).toHaveBeenCalled();
+        expect(statusMock).toHaveBeenCalledWith(200);
+      });
     });
 
     describe("Error Handling", () => {

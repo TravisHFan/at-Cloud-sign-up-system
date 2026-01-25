@@ -1,8 +1,3 @@
-import { Response } from "express";
-import { createLogger } from "../services/LoggerService";
-
-const log = createLogger("UserController");
-
 // ResponseHelper is now imported from shared utils
 // Kept here for backwards compatibility reference - use import { ResponseHelper } from "../utils/responseHelper"
 

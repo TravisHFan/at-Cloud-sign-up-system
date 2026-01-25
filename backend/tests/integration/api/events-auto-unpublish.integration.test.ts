@@ -22,7 +22,7 @@ async function createAdminAndLogin() {
   await request(app).post("/api/auth/register").send(admin);
   await User.findOneAndUpdate(
     { email: admin.email },
-    { isVerified: true, role: "Administrator" }
+    { isVerified: true, role: "Administrator" },
   );
   const login = await request(app)
     .post("/api/auth/login")
@@ -38,7 +38,7 @@ describe("Auto-unpublish 48-hour grace period on update when necessary fields re
     if (mongoose.connection.readyState === 0) {
       await mongoose.connect(
         process.env.MONGODB_TEST_URI ||
-          "mongodb://127.0.0.1:27017/atcloud-signup-test"
+          "mongodb://127.0.0.1:27017/atcloud-signup-test",
       );
       openedLocal = true;
     }
@@ -67,7 +67,7 @@ describe("Auto-unpublish 48-hour grace period on update when necessary fields re
         EmailService as unknown as {
           sendEventUnpublishWarningNotification: any;
         },
-        "sendEventUnpublishWarningNotification"
+        "sendEventUnpublishWarningNotification",
       )
       .mockResolvedValue(true);
     const create = await request(app)
@@ -76,8 +76,8 @@ describe("Auto-unpublish 48-hour grace period on update when necessary fields re
       .send({
         title: "Online Auto Unpublish",
         type: "Webinar",
-        date: "2026-01-15",
-        endDate: "2026-01-15",
+        date: "2027-06-15",
+        endDate: "2027-06-15",
         time: "09:00",
         endTime: "10:00",
         location: "Online",
@@ -111,14 +111,14 @@ describe("Auto-unpublish 48-hour grace period on update when necessary fields re
     // Scheduled unpublish should be set ~48 hours from now
     expect(update.body.data.event.unpublishScheduledAt).toBeTruthy();
     const scheduledTime = new Date(
-      update.body.data.event.unpublishScheduledAt
+      update.body.data.event.unpublishScheduledAt,
     ).getTime();
     const expectedTime = Date.now() + 48 * 60 * 60 * 1000;
     // Allow 5 second tolerance
     expect(Math.abs(scheduledTime - expectedTime)).toBeLessThan(5000);
     // Warning fields should be set
     expect(update.body.data.event.unpublishWarningFields).toContain(
-      "meetingId"
+      "meetingId",
     );
     // Should NOT be unpublished yet
     expect(update.body.data.event.autoUnpublishedAt).toBeFalsy();
@@ -143,8 +143,8 @@ describe("Auto-unpublish 48-hour grace period on update when necessary fields re
       .send({
         title: "In-person Auto Unpublish",
         type: "Webinar",
-        date: "2026-01-16",
-        endDate: "2026-01-16",
+        date: "2027-06-16",
+        endDate: "2027-06-16",
         time: "09:00",
         endTime: "10:00",
         location: "Hall A",
@@ -184,8 +184,8 @@ describe("Auto-unpublish 48-hour grace period on update when necessary fields re
       .send({
         title: "Hybrid Auto Unpublish",
         type: "Conference",
-        date: "2026-01-17",
-        endDate: "2026-01-17",
+        date: "2027-06-17",
+        endDate: "2027-06-17",
         time: "09:00",
         endTime: "10:00",
         location: "Campus Center",
@@ -228,8 +228,8 @@ describe("Auto-unpublish 48-hour grace period on update when necessary fields re
       .send({
         title: "Fix-and-clear Test",
         type: "Webinar",
-        date: "2026-01-18",
-        endDate: "2026-01-18",
+        date: "2027-06-18",
+        endDate: "2027-06-18",
         time: "09:00",
         endTime: "10:00",
         location: "Online",

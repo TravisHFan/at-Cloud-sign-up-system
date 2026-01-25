@@ -34,7 +34,7 @@ describe("Email Notifications API - Integration Tests", () => {
     if (mongoose.connection.readyState === 0) {
       await mongoose.connect(
         process.env.MONGODB_TEST_URI ||
-          "mongodb://127.0.0.1:27017/atcloud-signup-test"
+          "mongodb://127.0.0.1:27017/atcloud-signup-test",
       );
       openedLocal = true;
     }
@@ -64,10 +64,10 @@ describe("Email Notifications API - Integration Tests", () => {
     if (!adminRegister.body.success) {
       console.log(
         "Admin registration response:",
-        JSON.stringify(adminRegister.body, null, 2)
+        JSON.stringify(adminRegister.body, null, 2),
       );
       throw new Error(
-        `Admin registration failed: ${adminRegister.body.message}`
+        `Admin registration failed: ${adminRegister.body.message}`,
       );
     }
 
@@ -114,7 +114,7 @@ describe("Email Notifications API - Integration Tests", () => {
 
     if (!leaderRegister.body.success) {
       throw new Error(
-        `Leader registration failed: ${leaderRegister.body.message}`
+        `Leader registration failed: ${leaderRegister.body.message}`,
       );
     }
 
@@ -162,7 +162,7 @@ describe("Email Notifications API - Integration Tests", () => {
 
     if (!memberRegister.body.success) {
       throw new Error(
-        `Member registration failed: ${memberRegister.body.message}`
+        `Member registration failed: ${memberRegister.body.message}`,
       );
     }
 
@@ -195,8 +195,8 @@ describe("Email Notifications API - Integration Tests", () => {
       .send({
         title: "Test Event for Email Notifications",
         type: "Conference",
-        date: "2026-01-15",
-        endDate: "2026-01-15",
+        date: "2027-06-15",
+        endDate: "2027-06-15",
         time: "14:00",
         endTime: "15:00",
         location: "Test Location",
@@ -220,7 +220,7 @@ describe("Email Notifications API - Integration Tests", () => {
       throw new Error(
         `Event creation failed: ${eventResponse.status} - ${
           eventResponse.body.message || "Unknown error"
-        } - Details: ${JSON.stringify(eventResponse.body, null, 2)}`
+        } - Details: ${JSON.stringify(eventResponse.body, null, 2)}`,
       );
     }
 
@@ -434,7 +434,7 @@ describe("Email Notifications API - Integration Tests", () => {
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(response.body.message).toContain(
-        "Promotion notification sent with email, system message, and bell notification"
+        "Promotion notification sent with email, system message, and bell notification",
       );
     });
 
@@ -462,7 +462,7 @@ describe("Email Notifications API - Integration Tests", () => {
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(response.body.message).toContain(
-        "Role change notification sent with email, system message, and bell notification"
+        "Role change notification sent with email, system message, and bell notification",
       );
     });
 
@@ -541,7 +541,7 @@ describe("Email Notifications API - Integration Tests", () => {
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(response.body.message).toContain(
-        "@Cloud role change notification sent"
+        "@Cloud role change notification sent",
       );
     });
 
@@ -621,7 +621,7 @@ describe("Email Notifications API - Integration Tests", () => {
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(response.body.message).toContain(
-        "Co-organizer assignment notification sent"
+        "Co-organizer assignment notification sent",
       );
     });
 

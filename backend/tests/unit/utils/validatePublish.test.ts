@@ -343,4 +343,95 @@ describe("validatePublish", () => {
       ).toBe(true);
     });
   });
+
+  describe("STRICT_VALIDATION mode", () => {
+    // NOTE: We import the module fresh after setting environment variable
+    // to test strict validation mode
+
+    it("should enforce purpose minimum length in strict mode", async () => {
+      process.env.PUBLISH_STRICT_VALIDATION = "true";
+
+      // Dynamic import to pick up the new env var
+      const { validateEventForPublish: strictValidate } = await import(
+        "../../../src/utils/validatePublish?strict=1"
+      );
+
+      const event = {
+        format: "In-person",
+        location: "Main Hall",
+        roles: [{ openToPublic: true }],
+        purpose: "Too short",
+        timeZone: "America/New_York",
+      } as unknown as IEvent;
+
+      const result = strictValidate(event);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.code === "TOO_SHORT")).toBe(true);
+      expect(result.errors.some((e) => e.field === "purpose")).toBe(true);
+    });
+
+    it("should enforce timeZone requirement in strict mode", async () => {
+      process.env.PUBLISH_STRICT_VALIDATION = "true";
+
+      const { validateEventForPublish: strictValidate } = await import(
+        "../../../src/utils/validatePublish?strict=2"
+      );
+
+      const event = {
+        format: "In-person",
+        location: "Main Hall",
+        roles: [{ openToPublic: true }],
+        purpose:
+          "This is a sufficiently long purpose that meets the minimum length requirement for strict validation.",
+        timeZone: "",
+      } as unknown as IEvent;
+
+      const result = strictValidate(event);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.field === "timeZone")).toBe(true);
+      expect(result.errors.some((e) => e.code === "MISSING")).toBe(true);
+    });
+
+    it("should pass strict validation with valid purpose and timeZone", async () => {
+      process.env.PUBLISH_STRICT_VALIDATION = "true";
+
+      const { validateEventForPublish: strictValidate } = await import(
+        "../../../src/utils/validatePublish?strict=3"
+      );
+
+      const event = {
+        format: "In-person",
+        location: "Main Hall",
+        roles: [{ openToPublic: true }],
+        purpose:
+          "This is a sufficiently long purpose that meets the minimum length requirement for strict validation.",
+        timeZone: "America/Los_Angeles",
+      } as unknown as IEvent;
+
+      const result = strictValidate(event);
+      expect(result.valid).toBe(true);
+      expect(result.errors).toEqual([]);
+    });
+
+    it("should enforce timeZone when undefined in strict mode", async () => {
+      process.env.PUBLISH_STRICT_VALIDATION = "true";
+
+      const { validateEventForPublish: strictValidate } = await import(
+        "../../../src/utils/validatePublish?strict=4"
+      );
+
+      const event = {
+        format: "In-person",
+        location: "Main Hall",
+        roles: [{ openToPublic: true }],
+        purpose:
+          "This is a sufficiently long purpose for strict validation mode.",
+        // timeZone is undefined
+      } as unknown as IEvent;
+
+      const result = strictValidate(event);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.field === "timeZone")).toBe(true);
+    });
+  });
 });

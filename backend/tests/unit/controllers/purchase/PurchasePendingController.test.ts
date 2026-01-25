@@ -646,5 +646,74 @@ describe("PurchasePendingController", () => {
         `Auto-cleaned 2 redundant pending purchases (already purchased items) for user ${userId}`
       );
     });
+
+    it("should detect and remove redundant pending event purchases", async () => {
+      mockReq.user = {
+        _id: userId,
+      };
+
+      const eventId1 = new mongoose.Types.ObjectId();
+      const redundantPurchaseId = new mongoose.Types.ObjectId();
+
+      vi.mocked(Purchase.deleteMany).mockImplementation(((query: any) => {
+        if (query.status === "pending" && query.createdAt) {
+          return Promise.resolve({ deletedCount: 0 } as any);
+        }
+        if (query._id) {
+          return Promise.resolve({ deletedCount: 1 } as any);
+        }
+        return Promise.resolve({ deletedCount: 0 } as any);
+      }) as any);
+
+      const mockPendingPurchases = [
+        {
+          _id: redundantPurchaseId,
+          userId,
+          eventId: {
+            _id: eventId1,
+            title: "Event A",
+            date: "2024-06-15",
+          },
+          purchaseType: "event",
+          status: "pending",
+          createdAt: new Date(),
+        },
+      ];
+
+      const mockUpdatedPurchases: any[] = [];
+
+      let findCallCount = 0;
+      vi.mocked(Purchase.find).mockImplementation(() => {
+        findCallCount++;
+        const result =
+          findCallCount === 1 ? mockPendingPurchases : mockUpdatedPurchases;
+        return {
+          populate: vi.fn().mockReturnValue({
+            populate: vi.fn().mockReturnValue({
+              sort: vi.fn().mockResolvedValue(result),
+            }),
+          }),
+        } as any;
+      });
+
+      // Mock findOne to indicate event already completed
+      vi.mocked(Purchase.findOne).mockResolvedValue({
+        _id: new mongoose.Types.ObjectId(),
+        status: "completed",
+      } as any);
+
+      await PurchasePendingController.getMyPendingPurchases(
+        mockReq as Request,
+        mockRes as Response
+      );
+
+      expect(Purchase.findOne).toHaveBeenCalledWith({
+        userId: userId,
+        eventId: eventId1,
+        status: "completed",
+      });
+
+      expect(statusMock).toHaveBeenCalledWith(200);
+    });
   });
 });

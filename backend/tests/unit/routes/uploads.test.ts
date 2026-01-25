@@ -39,9 +39,12 @@ const mockGetFileUrl = vi.fn((req: any, path: string, options?: any) => {
 });
 
 vi.mock("../../../src/middleware/upload", () => ({
-  uploadImage: (...args: any[]) => mockUploadImage(...args),
-  uploadAvatar: (...args: any[]) => mockUploadAvatar(...args),
-  getFileUrl: (...args: any[]) => mockGetFileUrl(...args),
+  uploadImage: (req: any, res: any, next: any) =>
+    mockUploadImage(req, res, next),
+  uploadAvatar: (req: any, res: any, next: any) =>
+    mockUploadAvatar(req, res, next),
+  getFileUrl: (req: any, path: string, options?: any) =>
+    mockGetFileUrl(req, path, options),
 }));
 
 // Import router after mocks

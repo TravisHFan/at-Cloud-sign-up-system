@@ -54,6 +54,12 @@ vi.mock("../../../src/utils/roleUtils", () => ({
   PERMISSIONS: {
     VIEW_SYSTEM_ANALYTICS: "view_system_analytics",
   },
+  ROLES: {
+    USER: "User",
+    LEADER: "Leader",
+    ADMIN: "Administrator",
+    SUPER_ADMIN: "Super Admin",
+  },
 }));
 
 vi.mock("../../../src/services/ResponseBuilderService", () => ({
@@ -1194,6 +1200,28 @@ describe("AnalyticsController", () => {
       expect(payload.data.growth.userGrowthRate).toBeCloseTo(100);
       expect(payload.data.growth.eventGrowthRate).toBe(0);
       expect(payload.data.growth.registrationGrowthRate).toBeCloseTo(100);
+    });
+  });
+
+  describe("Facade Method Delegation", () => {
+    // These tests verify that the facade controller methods exist
+    // and are callable. The actual delegation is tested via the
+    // individual controller test files.
+
+    it("should have getProgramAnalytics method", () => {
+      expect(typeof AnalyticsController.getProgramAnalytics).toBe("function");
+    });
+
+    it("should have getDonationAnalytics method", () => {
+      expect(typeof AnalyticsController.getDonationAnalytics).toBe("function");
+    });
+
+    it("should have getFinancialSummary method", () => {
+      expect(typeof AnalyticsController.getFinancialSummary).toBe("function");
+    });
+
+    it("should have getTrends method", () => {
+      expect(typeof AnalyticsController.getTrends).toBe("function");
     });
   });
 });

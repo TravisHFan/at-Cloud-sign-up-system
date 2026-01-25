@@ -134,6 +134,45 @@ describe("Validation Middleware", () => {
       });
       expect(next).not.toHaveBeenCalled();
     });
+
+    it("should log validation diagnostics when TEST_VALIDATION_LOG=1 in test environment", () => {
+      const originalEnv = process.env.TEST_VALIDATION_LOG;
+      process.env.TEST_VALIDATION_LOG = "1";
+
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+
+      const mockErrors = [{ field: "title", msg: "Title required" }];
+      vi.mocked(validationResult).mockReturnValue({
+        isEmpty: () => false,
+        array: () => mockErrors,
+      } as any);
+
+      const req = createMockRequest(
+        {
+          title: "Test",
+          roles: [
+            { name: "Speaker", maxParticipants: 10, description: "Presents" },
+          ],
+        },
+        {},
+        {}
+      ) as Request;
+      (req as any).method = "POST";
+      (req as any).originalUrl = "/api/events";
+
+      const res = createMockResponse() as Response;
+      const next = createMockNext();
+
+      handleValidationErrors(req, res, next);
+
+      expect(consoleSpy).toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(400);
+
+      process.env.TEST_VALIDATION_LOG = originalEnv;
+      consoleSpy.mockRestore();
+    });
   });
 
   describe("Validation Rule Arrays", () => {

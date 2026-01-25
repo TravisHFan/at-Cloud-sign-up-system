@@ -1,5 +1,4 @@
 import { Request, Response } from "express";
-import { ResponseHelper } from "../utils/responseHelper";
 
 /**
  * UserAdminController
@@ -15,9 +14,8 @@ export class UserAdminController {
    * Get user by ID (admin only)
    */
   static async getUserById(req: Request, res: Response): Promise<void> {
-    const { default: UserQueryController } = await import(
-      "./user-admin/UserQueryController"
-    );
+    const { default: UserQueryController } =
+      await import("./user-admin/UserQueryController");
     return UserQueryController.getUserById(req, res);
   }
 
@@ -25,9 +23,8 @@ export class UserAdminController {
    * Get all users (admin only with pagination and filtering)
    */
   static async getAllUsers(req: Request, res: Response): Promise<void> {
-    const { default: UserListingController } = await import(
-      "./user-admin/UserListingController"
-    );
+    const { default: UserListingController } =
+      await import("./user-admin/UserListingController");
     return UserListingController.getAllUsers(req, res);
   }
 
@@ -35,9 +32,8 @@ export class UserAdminController {
    * Update user role (admin only)
    */
   static async updateUserRole(req: Request, res: Response): Promise<void> {
-    const { default: UserRoleController } = await import(
-      "./user-admin/UserRoleController"
-    );
+    const { default: UserRoleController } =
+      await import("./user-admin/UserRoleController");
     return UserRoleController.updateUserRole(req, res);
   }
 
@@ -45,9 +41,8 @@ export class UserAdminController {
    * Deactivate user (admin only)
    */
   static async deactivateUser(req: Request, res: Response): Promise<void> {
-    const { default: UserDeactivationController } = await import(
-      "./user-admin/UserDeactivationController"
-    );
+    const { default: UserDeactivationController } =
+      await import("./user-admin/UserDeactivationController");
     return UserDeactivationController.deactivateUser(req, res);
   }
 
@@ -55,9 +50,8 @@ export class UserAdminController {
    * Reactivate user (admin only)
    */
   static async reactivateUser(req: Request, res: Response): Promise<void> {
-    const { default: UserReactivationController } = await import(
-      "./user-admin/UserReactivationController"
-    );
+    const { default: UserReactivationController } =
+      await import("./user-admin/UserReactivationController");
     return UserReactivationController.reactivateUser(req, res);
   }
 
@@ -66,9 +60,8 @@ export class UserAdminController {
    * WARNING: This permanently removes the user and all associated data
    */
   static async deleteUser(req: Request, res: Response): Promise<void> {
-    const { default: UserDeletionController } = await import(
-      "./user-admin/UserDeletionController"
-    );
+    const { default: UserDeletionController } =
+      await import("./user-admin/UserDeletionController");
     return UserDeletionController.deleteUser(req, res);
   }
 
@@ -78,11 +71,10 @@ export class UserAdminController {
    */
   static async getUserDeletionImpact(
     req: Request,
-    res: Response
+    res: Response,
   ): Promise<void> {
-    const { default: UserDeletionImpactController } = await import(
-      "./user-admin/UserDeletionImpactController"
-    );
+    const { default: UserDeletionImpactController } =
+      await import("./user-admin/UserDeletionImpactController");
     return UserDeletionImpactController.getUserDeletionImpact(req, res);
   }
 
@@ -90,9 +82,8 @@ export class UserAdminController {
    * Admin edit profile - allows Super Admin/Administrator to edit limited fields of other users
    */
   static async adminEditProfile(req: Request, res: Response): Promise<void> {
-    const { default: AdminProfileEditController } = await import(
-      "./user-admin/AdminProfileEditController"
-    );
+    const { default: AdminProfileEditController } =
+      await import("./user-admin/AdminProfileEditController");
     return AdminProfileEditController.adminEditProfile(req, res);
   }
 }

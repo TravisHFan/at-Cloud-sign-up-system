@@ -3,12 +3,16 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import app from "../../../src/app";
 import Event from "../../../src/models/Event";
 import User from "../../../src/models/User";
+import { ensureIntegrationDB } from "../setup/connect";
 
 describe("Event virtual meeting fields", () => {
   let adminToken: string;
   let adminId: string;
 
   beforeAll(async () => {
+    // Ensure database connection is established
+    await ensureIntegrationDB();
+
     // Clean up any existing events to prevent conflicts
     await Event.deleteMany({});
 

@@ -494,6 +494,49 @@ describe("LoginController", () => {
           })
         );
       });
+
+      it("should use default 7d expire when JWT_REFRESH_EXPIRE is not set", async () => {
+        // Clear the env variable to trigger the fallback
+        delete process.env.JWT_REFRESH_EXPIRE;
+
+        mockReq.body = {
+          emailOrUsername: "test@example.com",
+          password: "password123",
+          rememberMe: true,
+        };
+
+        const mockUser = {
+          _id: userId,
+          username: "testuser",
+          email: "test@example.com",
+          role: "Member",
+          isActive: true,
+          isVerified: true,
+          isAccountLocked: vi.fn().mockReturnValue(false),
+          comparePassword: vi.fn().mockResolvedValue(true),
+          resetLoginAttempts: vi.fn().mockResolvedValue(undefined),
+          updateLastLogin: vi.fn().mockResolvedValue(undefined),
+        };
+
+        const mockFindOne = vi.fn().mockReturnValue({
+          select: vi.fn().mockResolvedValue(mockUser),
+        });
+        vi.mocked(User.findOne).mockImplementation(mockFindOne);
+
+        const mockTokens = {
+          accessToken: "access-token-123",
+          refreshToken: "refresh-token-456",
+          accessTokenExpires: new Date(),
+          refreshTokenExpires: new Date(),
+        };
+        vi.mocked(TokenService.generateTokenPair).mockReturnValue(mockTokens);
+        vi.mocked(TokenService.parseTimeToMs).mockReturnValue(604800000);
+
+        await LoginController.login(mockReq as Request, mockRes as Response);
+
+        // The fallback "7d" should be passed to parseTimeToMs
+        expect(TokenService.parseTimeToMs).toHaveBeenCalledWith("7d");
+      });
     });
 
     describe("error handling", () => {

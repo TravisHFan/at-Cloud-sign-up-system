@@ -136,6 +136,16 @@ describe("PendingPurchaseCleanupService", () => {
       );
       expect(timeDiff).toBeLessThan(1000);
     });
+
+    it("should return 0 when deletedCount is undefined for refunded", async () => {
+      const mockDeleteMany = vi.mocked(Purchase.deleteMany);
+      mockDeleteMany.mockResolvedValue({} as never);
+
+      const result =
+        await PendingPurchaseCleanupService.deleteOldRefundedPurchases();
+
+      expect(result).toBe(0);
+    });
   });
 
   describe("runCleanup", () => {

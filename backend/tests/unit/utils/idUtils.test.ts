@@ -32,6 +32,26 @@ describe("idUtils", () => {
       expect(toIdString(obj)).toBe("custom-id");
     });
 
+    it("should handle object with throwing toString - falls through to String(val)", () => {
+      // Create an object where the first toString call throws, but String(val) works
+      // This is tricky because String(val) also calls toString
+      // We need an object where first call throws, subsequent doesn't
+      let callCount = 0;
+      const obj = {
+        toString: () => {
+          callCount++;
+          if (callCount === 1) {
+            throw new Error("First call throws");
+          }
+          return "recovered";
+        },
+      };
+      // First call in the try block throws, catch block falls through
+      // Then String(val) calls toString again, which returns "recovered"
+      const result = toIdString(obj);
+      expect(result).toBe("recovered");
+    });
+
     it("should handle null", () => {
       expect(toIdString(null)).toBe("");
     });

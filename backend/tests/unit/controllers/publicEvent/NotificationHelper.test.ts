@@ -351,5 +351,91 @@ describe("NotificationHelper", () => {
         })
       );
     });
+
+    it("should handle attendee without email (emailHash is null)", async () => {
+      vi.mocked(AuditLog.create).mockResolvedValue({} as any);
+
+      await NotificationHelper.createAuditLog(
+        mockEvent as any,
+        "role1",
+        {}, // No email
+        "guest",
+        false,
+        10,
+        9,
+        "req-789",
+        "172.16.0.0/12",
+        mockLog as any
+      );
+
+      expect(AuditLog.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          emailHash: null, // Should be null when email is undefined
+        })
+      );
+    });
+  });
+
+  describe("sendConfirmationEmail with missing optional fields", () => {
+    it("should handle event without purpose or timeZone", async () => {
+      vi.mocked(EmailService.sendEmail).mockResolvedValue(true);
+
+      const eventWithoutOptionals = {
+        _id: "event456",
+        title: "Minimal Event",
+        date: "2024-07-01",
+        time: "14:00",
+        location: "Virtual",
+        format: "online",
+        roles: [{ id: "role1", name: "Attendee", description: "General" }],
+        // purpose and timeZone are undefined
+      };
+
+      await NotificationHelper.sendConfirmationEmail(
+        eventWithoutOptionals as any,
+        "role1",
+        { email: "test@test.com", name: "Test" },
+        false
+      );
+
+      expect(buildPublicRegistrationConfirmationEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: expect.objectContaining({
+            purpose: "", // Should default to empty string
+            timeZone: "", // Should default to empty string
+          }),
+        })
+      );
+    });
+
+    it("should handle role without description", async () => {
+      vi.mocked(EmailService.sendEmail).mockResolvedValue(true);
+
+      const eventWithMinimalRole = {
+        _id: "event789",
+        title: "Event With Minimal Role",
+        date: "2024-08-01",
+        time: "09:00",
+        location: "Office",
+        format: "in-person",
+        roles: [{ id: "role1", name: "Participant" }], // No description
+      };
+
+      await NotificationHelper.sendConfirmationEmail(
+        eventWithMinimalRole as any,
+        "role1",
+        { email: "test@test.com" },
+        false
+      );
+
+      expect(buildRegistrationICS).toHaveBeenCalledWith(
+        expect.objectContaining({
+          role: expect.objectContaining({
+            name: "Participant",
+            description: "", // Should default to empty string
+          }),
+        })
+      );
+    });
   });
 });

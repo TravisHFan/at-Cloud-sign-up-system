@@ -22,7 +22,7 @@ async function createAdminAndLogin(seed: string) {
   await request(app).post("/api/auth/register").send(admin);
   await User.findOneAndUpdate(
     { email: admin.email },
-    { isVerified: true, role: "Administrator" }
+    { isVerified: true, role: "Administrator" },
   );
   const login = await request(app)
     .post("/api/auth/login")
@@ -32,7 +32,7 @@ async function createAdminAndLogin(seed: string) {
 
 async function createAndPublish(
   token: string,
-  payload: Record<string, unknown>
+  payload: Record<string, unknown>,
 ): Promise<{ eventId: string; roleId: string }> {
   const create = await request(app)
     .post("/api/events")
@@ -81,7 +81,7 @@ describe("Guest confirmation email content varies by format", () => {
   let openedLocal = false;
   const spy = vi.spyOn(
     EmailService as unknown as { sendGuestConfirmationEmail: any },
-    "sendGuestConfirmationEmail"
+    "sendGuestConfirmationEmail",
   );
 
   beforeAll(async () => {
@@ -89,7 +89,7 @@ describe("Guest confirmation email content varies by format", () => {
     if (mongoose.connection.readyState === 0) {
       await mongoose.connect(
         process.env.MONGODB_TEST_URI ||
-          "mongodb://127.0.0.1:27017/atcloud-signup-test"
+          "mongodb://127.0.0.1:27017/atcloud-signup-test",
       );
       openedLocal = true;
     }
@@ -107,8 +107,8 @@ describe("Guest confirmation email content varies by format", () => {
     const { eventId, roleId } = await createAndPublish(token, {
       title: "Online Confirm",
       type: "Webinar",
-      date: "2026-01-15",
-      endDate: "2026-01-15",
+      date: "2027-06-15",
+      endDate: "2027-06-15",
       time: "09:00",
       endTime: "10:00",
       format: "Online",
@@ -135,7 +135,7 @@ describe("Guest confirmation email content varies by format", () => {
     const call = spy.mock.calls.find(
       (c) =>
         (c[0] as GuestConfirmationPayload | undefined)?.guestEmail ===
-        "guest1@example.com"
+        "guest1@example.com",
     );
     expect(call).toBeTruthy();
     const payload = call![0] as GuestConfirmationPayload;
@@ -155,8 +155,8 @@ describe("Guest confirmation email content varies by format", () => {
     const { eventId, roleId } = await createAndPublish(token, {
       title: "In-person Confirm",
       type: "Conference",
-      date: "2026-01-16",
-      endDate: "2026-01-16",
+      date: "2027-06-16",
+      endDate: "2027-06-16",
       time: "09:00",
       endTime: "10:00",
       format: "In-person",
@@ -180,7 +180,7 @@ describe("Guest confirmation email content varies by format", () => {
     const call = spy.mock.calls.find(
       (c) =>
         (c[0] as GuestConfirmationPayload | undefined)?.guestEmail ===
-        "guest2@example.com"
+        "guest2@example.com",
     );
     expect(call).toBeTruthy();
     const payload = call![0] as GuestConfirmationPayload;
@@ -200,8 +200,8 @@ describe("Guest confirmation email content varies by format", () => {
     const { eventId, roleId } = await createAndPublish(token, {
       title: "Hybrid Confirm",
       type: "Conference",
-      date: "2026-01-17",
-      endDate: "2026-01-17",
+      date: "2027-06-17",
+      endDate: "2027-06-17",
       time: "09:00",
       endTime: "10:00",
       format: "Hybrid Participation",
@@ -228,7 +228,7 @@ describe("Guest confirmation email content varies by format", () => {
     const call = spy.mock.calls.find(
       (c) =>
         (c[0] as GuestConfirmationPayload | undefined)?.guestEmail ===
-        "guest3@example.com"
+        "guest3@example.com",
     );
     expect(call).toBeTruthy();
     const payload = call![0] as GuestConfirmationPayload;

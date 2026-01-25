@@ -151,7 +151,7 @@ describe("EditEvent - Field Update Bug Fixes", () => {
       title: "Test Event",
       type: "Effective Communication Workshop",
       format: "Online",
-      date: "2026-01-15",
+      date: "2027-06-15",
       time: "10:00",
       endTime: "12:00",
       roles: [],
@@ -176,7 +176,7 @@ describe("EditEvent - Field Update Bug Fixes", () => {
       title: "Test Event",
       type: "Effective Communication Workshop",
       format: "Online",
-      date: "2026-01-15",
+      date: "2027-06-15",
       time: "10:00",
       endTime: "12:00",
       roles: [],
@@ -194,7 +194,7 @@ describe("EditEvent - Field Update Bug Fixes", () => {
     render(
       <TestWrapper>
         <EditEvent />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     // Wait for form load
@@ -230,7 +230,7 @@ describe("EditEvent - Field Update Bug Fixes", () => {
     render(
       <TestWrapper>
         <EditEvent />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     await waitFor(() => {
@@ -268,7 +268,7 @@ describe("EditEvent - Field Update Bug Fixes", () => {
     render(
       <TestWrapper>
         <EditEvent />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     // Wait for the form to load
@@ -283,7 +283,7 @@ describe("EditEvent - Field Update Bug Fixes", () => {
 
     // Fill in Zoom fields using placeholder text or name attribute
     const zoomLinkInput = screen.getByPlaceholderText(
-      /enter zoom meeting link/i
+      /enter zoom meeting link/i,
     );
     const meetingIdInput = screen.getByPlaceholderText(/enter meeting id/i);
     const passcodeInput = screen.getByPlaceholderText(/enter passcode/i);
@@ -316,7 +316,7 @@ describe("EditEvent - Field Update Bug Fixes", () => {
           zoomLink: "https://zoom.us/j/123456789",
           meetingId: "123 456 789",
           passcode: "secret123",
-        })
+        }),
       );
     });
   });
@@ -328,7 +328,7 @@ describe("EditEvent - Field Update Bug Fixes", () => {
       title: "Hybrid Event",
       type: "Effective Communication Workshop",
       format: "Hybrid Participation",
-      date: "2026-01-15",
+      date: "2027-06-15",
       time: "10:00",
       endTime: "12:00",
       roles: [],
@@ -351,7 +351,7 @@ describe("EditEvent - Field Update Bug Fixes", () => {
     render(
       <TestWrapper>
         <EditEvent />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     // Wait for the form to load
@@ -366,7 +366,7 @@ describe("EditEvent - Field Update Bug Fixes", () => {
 
     // Fill in Zoom fields using placeholder text
     const zoomLinkInput = screen.getByPlaceholderText(
-      /enter zoom meeting link/i
+      /enter zoom meeting link/i,
     );
     const meetingIdInput = screen.getByPlaceholderText(/enter meeting id/i);
     const passcodeInput = screen.getByPlaceholderText(/enter passcode/i);
@@ -399,7 +399,7 @@ describe("EditEvent - Field Update Bug Fixes", () => {
           zoomLink: "https://zoom.us/j/987654321",
           meetingId: "987 654 321",
           passcode: "hybrid123",
-        })
+        }),
       );
     });
   });
@@ -408,7 +408,7 @@ describe("EditEvent - Field Update Bug Fixes", () => {
     render(
       <TestWrapper>
         <EditEvent />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     // Wait for the form to load
@@ -438,7 +438,7 @@ describe("EditEvent - Field Update Bug Fixes", () => {
         "test-event-id",
         expect.objectContaining({
           hostedBy: "", // The form sends empty string, which is fine as long as the field is included
-        })
+        }),
       );
     });
   });
@@ -450,7 +450,7 @@ describe("EditEvent - Field Update Bug Fixes", () => {
       title: "Test Event",
       type: "Effective Communication Workshop",
       format: "Online",
-      date: "2026-01-15",
+      date: "2027-06-15",
       time: "10:00",
       endTime: "12:00",
       roles: [],
@@ -473,13 +473,13 @@ describe("EditEvent - Field Update Bug Fixes", () => {
     render(
       <TestWrapper>
         <EditEvent />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     // Wait for the form to load with existing data
     await waitFor(() => {
       expect(
-        screen.getByDisplayValue("https://zoom.us/j/existing")
+        screen.getByDisplayValue("https://zoom.us/j/existing"),
       ).toBeInTheDocument();
     });
 
@@ -490,7 +490,7 @@ describe("EditEvent - Field Update Bug Fixes", () => {
 
     // Clear Zoom fields using placeholder text
     const zoomLinkInput = screen.getByPlaceholderText(
-      /enter zoom meeting link/i
+      /enter zoom meeting link/i,
     );
     const meetingIdInput = screen.getByPlaceholderText(/enter meeting id/i);
     const passcodeInput = screen.getByPlaceholderText(/enter passcode/i);
@@ -517,7 +517,7 @@ describe("EditEvent - Field Update Bug Fixes", () => {
           zoomLink: "",
           meetingId: "",
           passcode: "",
-        })
+        }),
       );
     });
   });
@@ -529,7 +529,7 @@ describe("EditEvent - Field Update Bug Fixes", () => {
       title: "In-person Event",
       type: "Effective Communication Workshop",
       format: "In-person",
-      date: "2026-01-15",
+      date: "2027-06-15",
       time: "10:00",
       endTime: "12:00",
       roles: [],
@@ -552,7 +552,7 @@ describe("EditEvent - Field Update Bug Fixes", () => {
     render(
       <TestWrapper>
         <EditEvent />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     // Wait for the form to load
@@ -613,7 +613,7 @@ describe("EditEvent - Field Update Bug Fixes", () => {
       title: "Ordered Org Event",
       type: "Conference",
       format: "In-person",
-      date: "2026-01-15",
+      date: "2027-06-15",
       time: "10:00",
       endTime: "12:00",
       createdAt: new Date().toISOString(),
@@ -675,7 +675,7 @@ describe("EditEvent - Field Update Bug Fixes", () => {
     render(
       <TestWrapper>
         <EditEvent />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     // Wait for event to load
@@ -718,7 +718,7 @@ describe("EditEvent - Field Update Bug Fixes", () => {
       title: "Location Switch Event",
       type: "Conference",
       format: "In-person",
-      date: "2026-01-15",
+      date: "2027-06-15",
       time: "10:00",
       endTime: "12:00",
       roles: [],
@@ -741,13 +741,13 @@ describe("EditEvent - Field Update Bug Fixes", () => {
     render(
       <TestWrapper>
         <EditEvent />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     // Wait for form to load
     await waitFor(() => {
       expect(
-        screen.getByDisplayValue("Location Switch Event")
+        screen.getByDisplayValue("Location Switch Event"),
       ).toBeInTheDocument();
     });
 
@@ -758,8 +758,8 @@ describe("EditEvent - Field Update Bug Fixes", () => {
       // @testing-library/dom's within helps search inside a specific element
       // but here we'll check options directly via textContent
       Array.from(el.querySelectorAll("option")).some(
-        (opt) => opt.textContent === "Online"
-      )
+        (opt) => opt.textContent === "Online",
+      ),
     ) as HTMLSelectElement | undefined;
 
     expect(formatSelect).toBeTruthy();
@@ -782,7 +782,7 @@ describe("EditEvent - Field Update Bug Fixes", () => {
         expect.objectContaining({
           format: "Online",
           location: "Online",
-        })
+        }),
       );
     });
   });

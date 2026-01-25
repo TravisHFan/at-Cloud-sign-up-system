@@ -26,7 +26,7 @@ describe("Public registration metrics", () => {
     if (mongoose.connection.readyState === 0) {
       await mongoose.connect(
         process.env.MONGODB_TEST_URI ||
-          "mongodb://127.0.0.1:27017/atcloud-signup-test"
+          "mongodb://127.0.0.1:27017/atcloud-signup-test",
       );
       openedLocal = true;
     }
@@ -60,7 +60,7 @@ describe("Public registration metrics", () => {
     // may default to a Participant role ignoring requested role field.
     await User.findOneAndUpdate(
       { email: admin.email },
-      { isVerified: true, role: "Administrator" }
+      { isVerified: true, role: "Administrator" },
     );
     const login = await request(app)
       .post("/api/auth/login")
@@ -74,8 +74,8 @@ describe("Public registration metrics", () => {
       .send({
         title: "Metrics Event",
         type: "Webinar",
-        date: "2026-01-15",
-        endDate: "2026-01-15",
+        date: "2027-06-15",
+        endDate: "2027-06-15",
         time: "10:00",
         endTime: "11:00",
         location: "Online",
@@ -105,7 +105,7 @@ describe("Public registration metrics", () => {
     const before = await fetchMetrics();
     const attemptsBefore = getCounterValue(
       before,
-      "registration_attempts_total"
+      "registration_attempts_total",
     );
 
     // Missing roleId => validation failure
