@@ -1,7 +1,8 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import EditButton from "../common/EditButton";
 import { Icon } from "../common";
-import { PlusIcon, EnvelopeIcon } from "@heroicons/react/24/outline";
+import { PlusIcon, EnvelopeIcon, ShareIcon } from "@heroicons/react/24/outline";
 import type { ProgramType } from "../../constants/programTypes";
 
 interface ProgramHeaderProps {
@@ -46,6 +47,20 @@ export default function ProgramHeader({
   onEmailParticipants,
 }: ProgramHeaderProps) {
   const navigate = useNavigate();
+  const [shareButtonText, setShareButtonText] = useState("Share");
+
+  const handleShare = async () => {
+    const publicUrl = `${window.location.origin}/pr/${programId}`;
+    try {
+      await navigator.clipboard.writeText(publicUrl);
+      setShareButtonText("Copied!");
+      setTimeout(() => setShareButtonText("Share"), 2000);
+    } catch {
+      // Fallback for browsers that don't support clipboard API
+      setShareButtonText("Copy failed");
+      setTimeout(() => setShareButtonText("Share"), 2000);
+    }
+  };
 
   const periodText = (p?: typeof period) => {
     if (!p) return "";
@@ -85,6 +100,14 @@ export default function ProgramHeader({
 
       {/* Action Buttons Row */}
       <div className="flex items-center space-x-3 mb-4 flex-wrap gap-y-2">
+        {/* Share button - always visible */}
+        <button
+          onClick={handleShare}
+          className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        >
+          <ShareIcon className="h-4 w-4 mr-1.5" />
+          {shareButtonText}
+        </button>
         {canEdit && (
           <EditButton
             onClick={() => navigate(`/dashboard/programs/${programId}/edit`)}

@@ -47,6 +47,7 @@ import AssignmentRejection from "./pages/AssignmentRejection";
 import GuestDecline from "./pages/GuestDecline";
 import PublicEvent from "./pages/PublicEvent";
 import PublicEventsList from "./pages/PublicEventsList";
+import PublicProgram from "./pages/PublicProgram";
 import ShortLinkRedirect from "./pages/ShortLinkRedirect";
 import ConfigureRolesTemplates from "./pages/ConfigureRolesTemplates";
 import CreateRolesTemplate from "./pages/CreateRolesTemplate";
@@ -350,6 +351,8 @@ function App() {
             <Route path="/events" element={<PublicEventsList />} />
             {/* Public published event page (unauthenticated) */}
             <Route path="/p/:slug" element={<PublicEvent />} />
+            {/* Public program page (unauthenticated, auto-public) */}
+            <Route path="/pr/:id" element={<PublicProgram />} />
             {/* SPA fallback for short link resolution (dev / proxy safety) */}
             <Route path="/s/:key" element={<ShortLinkRedirect />} />
           </Routes>

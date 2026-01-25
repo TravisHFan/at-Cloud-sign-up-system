@@ -5,6 +5,21 @@ import { Footer } from "../components/common";
 import { useAuth } from "../hooks/useAuth";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 
+/**
+ * Routes that have public fallbacks for unauthenticated users.
+ * Instead of redirecting to login, these routes redirect to their public versions.
+ */
+const PUBLIC_FALLBACK_ROUTES: Array<{
+  pattern: RegExp;
+  getPublicPath: (match: RegExpMatchArray) => string;
+}> = [
+  {
+    // /dashboard/programs/:id → /pr/:id
+    pattern: /^\/dashboard\/programs\/([a-f0-9]{24})$/i,
+    getPublicPath: (match) => `/pr/${match[1]}`,
+  },
+];
+
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { currentUser, isLoading } = useAuth();
@@ -17,6 +32,14 @@ export default function DashboardLayout() {
 
   // Redirect to login if user is not authenticated, preserving original destination
   if (!currentUser) {
+    // Check if this route has a public fallback
+    for (const { pattern, getPublicPath } of PUBLIC_FALLBACK_ROUTES) {
+      const match = location.pathname.match(pattern);
+      if (match) {
+        return <Navigate to={getPublicPath(match)} replace />;
+      }
+    }
+    // Default: redirect to login with return URL
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
