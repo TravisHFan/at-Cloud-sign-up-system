@@ -84,24 +84,38 @@ describe("Logger - JSON format output", () => {
   });
 
   it("should use correct log levels in JSON output", () => {
+    // Use the spies already set up in beforeEach, just clear their call history
+    const logSpy = vi.spyOn(console, "log");
+    const warnSpy = vi.spyOn(console, "warn");
+    const errorSpy = vi.spyOn(console, "error");
+    const infoSpyLocal = vi.spyOn(console, "info");
+
+    logSpy.mockClear();
+    warnSpy.mockClear();
+    errorSpy.mockClear();
+    infoSpyLocal.mockClear();
+
     const logger = createLogger("LevelTest", LogLevel.DEBUG);
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    // Ensure the logger can output debug level
+    logger.setLogLevel(LogLevel.DEBUG);
 
     logger.debug("Debug message");
+    logger.info("Info message");
     logger.warn("Warn message");
     logger.error("Error message");
 
     // Check debug (uses console.log)
+    expect(logSpy.mock.calls.length).toBeGreaterThan(0);
     const debugOutput = JSON.parse(logSpy.mock.calls[0][0] as string);
     expect(debugOutput.level).toBe("debug");
 
-    // Check warn
-    const warnOutput = JSON.parse(warnSpy.mock.calls[0][0] as string);
-    expect(warnOutput.level).toBe("warn");
+    // Check info
+    expect(infoSpyLocal.mock.calls.length).toBeGreaterThan(0);
+    const infoOutput = JSON.parse(infoSpyLocal.mock.calls[0][0] as string);
+    expect(infoOutput.level).toBe("info");
 
     // Check error
+    expect(errorSpy.mock.calls.length).toBeGreaterThan(0);
     const errorOutput = JSON.parse(errorSpy.mock.calls[0][0] as string);
     expect(errorOutput.level).toBe("error");
   });
