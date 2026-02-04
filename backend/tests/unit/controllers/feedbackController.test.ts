@@ -36,7 +36,7 @@ describe("FeedbackController", () => {
       headers: {},
       protocol: "http",
       get: vi.fn((header: string) =>
-        header === "host" ? "localhost:5001" : undefined
+        header === "host" ? "localhost:5001" : undefined,
       ),
     } as any;
 
@@ -60,7 +60,7 @@ describe("FeedbackController", () => {
 
         await FeedbackController.submitFeedback(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -78,7 +78,7 @@ describe("FeedbackController", () => {
 
         await FeedbackController.submitFeedback(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -96,7 +96,7 @@ describe("FeedbackController", () => {
 
         await FeedbackController.submitFeedback(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -117,7 +117,7 @@ describe("FeedbackController", () => {
 
         await FeedbackController.submitFeedback(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -137,7 +137,7 @@ describe("FeedbackController", () => {
 
         await FeedbackController.submitFeedback(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -154,7 +154,7 @@ describe("FeedbackController", () => {
 
         await FeedbackController.submitFeedback(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -171,7 +171,7 @@ describe("FeedbackController", () => {
 
         await FeedbackController.submitFeedback(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -189,7 +189,7 @@ describe("FeedbackController", () => {
 
         await FeedbackController.submitFeedback(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -209,7 +209,7 @@ describe("FeedbackController", () => {
 
         await FeedbackController.submitFeedback(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -226,7 +226,7 @@ describe("FeedbackController", () => {
 
         await FeedbackController.submitFeedback(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -246,7 +246,7 @@ describe("FeedbackController", () => {
 
         await FeedbackController.submitFeedback(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -261,7 +261,7 @@ describe("FeedbackController", () => {
 
         await FeedbackController.submitFeedback(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -281,7 +281,7 @@ describe("FeedbackController", () => {
 
         await FeedbackController.submitFeedback(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -307,7 +307,7 @@ describe("FeedbackController", () => {
 
         await FeedbackController.submitFeedback(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -318,7 +318,7 @@ describe("FeedbackController", () => {
             subject: "[@Cloud Feedback] BUG: Found a bug",
             contentHtml: expect.stringContaining("user123"),
             contentText: expect.stringContaining("John Doe"),
-          })
+          }),
         );
       });
 
@@ -340,7 +340,7 @@ describe("FeedbackController", () => {
 
         await FeedbackController.submitFeedback(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -362,7 +362,7 @@ describe("FeedbackController", () => {
 
         await FeedbackController.submitFeedback(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -383,7 +383,7 @@ describe("FeedbackController", () => {
 
         await FeedbackController.submitFeedback(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const emailCall = (EmailService.sendGenericNotificationEmail as Mock)
@@ -401,13 +401,13 @@ describe("FeedbackController", () => {
 
         await FeedbackController.submitFeedback(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const emailCall = (EmailService.sendGenericNotificationEmail as Mock)
           .mock.calls[0];
         expect(emailCall[2].subject).toBe(
-          "[@Cloud Feedback] IMPROVEMENT: Test Improvement"
+          "[@Cloud Feedback] IMPROVEMENT: Test Improvement",
         );
       });
     });
@@ -423,7 +423,7 @@ describe("FeedbackController", () => {
 
         await FeedbackController.submitFeedback(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const emailCall = (EmailService.sendGenericNotificationEmail as Mock)
@@ -442,7 +442,7 @@ describe("FeedbackController", () => {
 
         await FeedbackController.submitFeedback(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const emailCall = (EmailService.sendGenericNotificationEmail as Mock)
@@ -461,7 +461,7 @@ describe("FeedbackController", () => {
 
         await FeedbackController.submitFeedback(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const emailCall = (EmailService.sendGenericNotificationEmail as Mock)
@@ -493,11 +493,11 @@ describe("FeedbackController", () => {
 
         await FeedbackController.submitFeedback(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(global.fetch).toHaveBeenCalledWith(
-          "http://example.com/image.png"
+          "http://example.com/image.png",
         );
         const emailCall = (EmailService.sendGenericNotificationEmail as Mock)
           .mock.calls[0];
@@ -528,11 +528,11 @@ describe("FeedbackController", () => {
 
         await FeedbackController.submitFeedback(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(global.fetch).toHaveBeenCalledWith(
-          "http://localhost:5001/uploads/images/test.png"
+          "http://localhost:5001/uploads/images/test.png",
         );
       });
 
@@ -558,11 +558,11 @@ describe("FeedbackController", () => {
 
         await FeedbackController.submitFeedback(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(global.fetch).toHaveBeenCalledWith(
-          "https://example.com/uploads/test.jpg"
+          "https://example.com/uploads/test.jpg",
         );
       });
 
@@ -576,12 +576,12 @@ describe("FeedbackController", () => {
 
         // Mock failed fetch
         (global.fetch as Mock).mockRejectedValueOnce(
-          new Error("Network error")
+          new Error("Network error"),
         );
 
         await FeedbackController.submitFeedback(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -607,7 +607,7 @@ describe("FeedbackController", () => {
 
         await FeedbackController.submitFeedback(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -637,7 +637,7 @@ describe("FeedbackController", () => {
 
         await FeedbackController.submitFeedback(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         // Should only fetch once despite duplicate URLs
@@ -657,7 +657,7 @@ describe("FeedbackController", () => {
 
         await FeedbackController.submitFeedback(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         // Should not try to fetch CID URLs
@@ -683,12 +683,12 @@ describe("FeedbackController", () => {
 
         await FeedbackController.submitFeedback(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const emailCall = (EmailService.sendGenericNotificationEmail as Mock)
           .mock.calls[0];
-        expect(emailCall[2].attachments[0].filename).toContain("feedback");
+        expect(emailCall[2].attachments[0].filename).toBe("feedback.gif");
       });
     });
 
@@ -703,13 +703,13 @@ describe("FeedbackController", () => {
 
         await FeedbackController.submitFeedback(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(EmailService.sendGenericNotificationEmail).toHaveBeenCalledWith(
           "system@example.com",
           "@Cloud System Feedback",
-          expect.any(Object)
+          expect.any(Object),
         );
       });
 
@@ -724,13 +724,13 @@ describe("FeedbackController", () => {
 
         await FeedbackController.submitFeedback(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(EmailService.sendGenericNotificationEmail).toHaveBeenCalledWith(
           "smtp@example.com",
           "@Cloud System Feedback",
-          expect.any(Object)
+          expect.any(Object),
         );
       });
 
@@ -749,14 +749,14 @@ describe("FeedbackController", () => {
 
         await FeedbackController.submitFeedback(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(consoleWarnSpy).toHaveBeenCalledWith(
-          "SYSTEM_EMAIL/SMTP_USER not configured; feedback email suppressed."
+          "SYSTEM_EMAIL/SMTP_USER not configured; feedback email suppressed.",
         );
         expect(
-          EmailService.sendGenericNotificationEmail
+          EmailService.sendGenericNotificationEmail,
         ).not.toHaveBeenCalled();
         expect(statusMock).toHaveBeenCalledWith(200);
 
@@ -775,7 +775,7 @@ describe("FeedbackController", () => {
 
         await FeedbackController.submitFeedback(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -808,7 +808,7 @@ describe("FeedbackController", () => {
 
         await FeedbackController.submitFeedback(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -818,7 +818,7 @@ describe("FeedbackController", () => {
         });
         expect(consoleErrorSpy).toHaveBeenCalledWith(
           "Feedback submission error:",
-          expect.any(Error)
+          expect.any(Error),
         );
 
         consoleErrorSpy.mockRestore();

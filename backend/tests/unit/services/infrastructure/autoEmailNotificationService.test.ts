@@ -50,33 +50,33 @@ describe("AutoEmailNotificationService", () => {
     // Set up spies for RoleEmailService methods
     vi.spyOn(
       RoleEmailService,
-      "sendPromotionNotificationToUser"
+      "sendPromotionNotificationToUser",
     ).mockResolvedValue(true);
     vi.spyOn(
       RoleEmailService,
-      "sendPromotionNotificationToAdmins"
+      "sendPromotionNotificationToAdmins",
     ).mockResolvedValue(true);
     vi.spyOn(
       RoleEmailService,
-      "sendDemotionNotificationToUser"
+      "sendDemotionNotificationToUser",
     ).mockResolvedValue(true);
     vi.spyOn(
       RoleEmailService,
-      "sendDemotionNotificationToAdmins"
+      "sendDemotionNotificationToAdmins",
     ).mockResolvedValue(true);
     vi.spyOn(
       RoleEmailService,
-      "sendAtCloudRoleAssignedToAdmins"
+      "sendAtCloudRoleAssignedToAdmins",
     ).mockResolvedValue(true);
     vi.spyOn(
       RoleEmailService,
-      "sendAtCloudRoleRemovedToAdmins"
+      "sendAtCloudRoleRemovedToAdmins",
     ).mockResolvedValue(true);
 
     // Set up spy for UserEmailService method
     vi.spyOn(
       UserEmailService,
-      "sendNewAtCloudLeaderSignupToAdmins"
+      "sendNewAtCloudLeaderSignupToAdmins",
     ).mockResolvedValue(true);
   });
 
@@ -86,9 +86,8 @@ describe("AutoEmailNotificationService", () => {
 
   describe("Service Structure Validation", () => {
     it("exposes expected static methods", async () => {
-      const serviceModule = await import(
-        "../../../../src/services/infrastructure/autoEmailNotificationService"
-      );
+      const serviceModule =
+        await import("../../../../src/services/infrastructure/autoEmailNotificationService");
       const service = serviceModule.AutoEmailNotificationService;
       expect(typeof service.sendRoleChangeNotification).toBe("function");
       expect(typeof service.sendAtCloudRoleChangeNotification).toBe("function");
@@ -127,21 +126,22 @@ describe("AutoEmailNotificationService", () => {
             lastName: "Y",
             role: "Super Admin",
           },
-        ]
+        ],
       );
-      vi.mocked(RoleEmailService.sendPromotionNotificationToUser).mockResolvedValue(true);
-      vi.mocked(RoleEmailService.sendPromotionNotificationToAdmins).mockResolvedValue(
-        true
-      );
+      vi.mocked(
+        RoleEmailService.sendPromotionNotificationToUser,
+      ).mockResolvedValue(true);
+      vi.mocked(
+        RoleEmailService.sendPromotionNotificationToAdmins,
+      ).mockResolvedValue(true);
       // Dynamic import of User.find().select() will resolve to this list
       __userSelectResult = [
         { _id: "id1", email: "a1@x.com", firstName: "A1", lastName: "X" },
         { _id: "id2", email: "a2@x.com", firstName: "A2", lastName: "Y" },
       ];
 
-      const serviceModule = await import(
-        "../../../../src/services/infrastructure/autoEmailNotificationService"
-      );
+      const serviceModule =
+        await import("../../../../src/services/infrastructure/autoEmailNotificationService");
       const service = serviceModule.AutoEmailNotificationService;
 
       // Act
@@ -171,7 +171,7 @@ describe("AutoEmailNotificationService", () => {
       // user message + admin message
       expect(res.messagesCreated).toBe(2);
       expect(
-        UnifiedMessageController.createTargetedSystemMessage
+        UnifiedMessageController.createTargetedSystemMessage,
       ).toHaveBeenCalledTimes(2);
     });
 
@@ -190,19 +190,20 @@ describe("AutoEmailNotificationService", () => {
             lastName: "Y",
             role: "Super Admin",
           },
-        ]
+        ],
       );
-      vi.mocked(RoleEmailService.sendDemotionNotificationToUser).mockResolvedValue(true);
+      vi.mocked(
+        RoleEmailService.sendDemotionNotificationToUser,
+      ).mockResolvedValue(true);
       // Admin emails reject -> counted as 0
-      vi.mocked(RoleEmailService.sendDemotionNotificationToAdmins).mockRejectedValue(
-        new Error("SMTP down")
-      );
+      vi.mocked(
+        RoleEmailService.sendDemotionNotificationToAdmins,
+      ).mockRejectedValue(new Error("SMTP down"));
       // No admin users found by IDs -> still creates user message; admin message path will return null
       __userSelectResult = [];
 
-      const serviceModule = await import(
-        "../../../../src/services/infrastructure/autoEmailNotificationService"
-      );
+      const serviceModule =
+        await import("../../../../src/services/infrastructure/autoEmailNotificationService");
       const service = serviceModule.AutoEmailNotificationService;
 
       const res = await service.sendRoleChangeNotification({
@@ -243,7 +244,7 @@ describe("AutoEmailNotificationService", () => {
             lastName: "One",
             role: "Administrator",
           },
-        ]
+        ],
       );
       EmailRecipientUtils.getAdminUsers.mockResolvedValue([
         {
@@ -255,13 +256,13 @@ describe("AutoEmailNotificationService", () => {
       ]);
 
       // User email promise never resolves -> will be rejected by timeout race
-      vi.mocked(RoleEmailService.sendPromotionNotificationToUser).mockReturnValue(
-        new Promise(() => {})
-      );
+      vi.mocked(
+        RoleEmailService.sendPromotionNotificationToUser,
+      ).mockReturnValue(new Promise(() => {}));
       // Admin email succeeds
-      vi.mocked(RoleEmailService.sendPromotionNotificationToAdmins).mockResolvedValue(
-        true
-      );
+      vi.mocked(
+        RoleEmailService.sendPromotionNotificationToAdmins,
+      ).mockResolvedValue(true);
 
       // Admin user IDs present for admin message creation
       __userSelectResult = [
@@ -273,9 +274,8 @@ describe("AutoEmailNotificationService", () => {
         },
       ];
 
-      const serviceModule = await import(
-        "../../../../src/services/infrastructure/autoEmailNotificationService"
-      );
+      const serviceModule =
+        await import("../../../../src/services/infrastructure/autoEmailNotificationService");
       const service = serviceModule.AutoEmailNotificationService;
 
       const promise = service.sendRoleChangeNotification({
@@ -312,15 +312,17 @@ describe("AutoEmailNotificationService", () => {
     it("creates only admin message when user message creation fails", async () => {
       // Arrange successful email sending
       EmailRecipientUtils.getSystemAuthorizationChangeRecipients.mockResolvedValue(
-        [{ email: "a1@x.com", firstName: "A1", lastName: "X", role: "Admin" }]
+        [{ email: "a1@x.com", firstName: "A1", lastName: "X", role: "Admin" }],
       );
       EmailRecipientUtils.getAdminUsers.mockResolvedValue([
         { email: "a1@x.com", firstName: "A1", lastName: "X", role: "Admin" },
       ]);
-      vi.mocked(RoleEmailService.sendPromotionNotificationToUser).mockResolvedValue(true);
-      vi.mocked(RoleEmailService.sendPromotionNotificationToAdmins).mockResolvedValue(
-        true
-      );
+      vi.mocked(
+        RoleEmailService.sendPromotionNotificationToUser,
+      ).mockResolvedValue(true);
+      vi.mocked(
+        RoleEmailService.sendPromotionNotificationToAdmins,
+      ).mockResolvedValue(true);
       __userSelectResult = [
         { _id: "id1", email: "a1@x.com", firstName: "A1", lastName: "X" },
       ];
@@ -332,9 +334,8 @@ describe("AutoEmailNotificationService", () => {
         })
         .mockImplementationOnce(() => Promise.resolve({ id: "admin-msg" }));
 
-      const serviceModule = await import(
-        "../../../../src/services/infrastructure/autoEmailNotificationService"
-      );
+      const serviceModule =
+        await import("../../../../src/services/infrastructure/autoEmailNotificationService");
       const service = serviceModule.AutoEmailNotificationService;
 
       const res = await service.sendRoleChangeNotification({
@@ -383,7 +384,9 @@ describe("AutoEmailNotificationService", () => {
       EmailRecipientUtils.getAdminUsers.mockResolvedValue(admins);
 
       // Each admin email resolves true
-      vi.mocked(RoleEmailService.sendAtCloudRoleAssignedToAdmins).mockResolvedValue(true);
+      vi.mocked(
+        RoleEmailService.sendAtCloudRoleAssignedToAdmins,
+      ).mockResolvedValue(true);
 
       // Dynamic import of User.find().select() => materialize admin ids
       __userSelectResult = [
@@ -391,9 +394,8 @@ describe("AutoEmailNotificationService", () => {
         { _id: "id2", email: "a2@x.com", firstName: "A2", lastName: "Y" },
       ];
 
-      const serviceModule = await import(
-        "../../../../src/services/infrastructure/autoEmailNotificationService"
-      );
+      const serviceModule =
+        await import("../../../../src/services/infrastructure/autoEmailNotificationService");
       const service = serviceModule.AutoEmailNotificationService;
 
       const res = await service.sendAtCloudRoleChangeNotification({
@@ -418,10 +420,10 @@ describe("AutoEmailNotificationService", () => {
       expect(res.emailsSent).toBe(2);
       expect(res.messagesCreated).toBe(1);
       expect(
-        RoleEmailService.sendAtCloudRoleAssignedToAdmins
+        RoleEmailService.sendAtCloudRoleAssignedToAdmins,
       ).toHaveBeenCalledTimes(2);
       expect(
-        UnifiedMessageController.createTargetedSystemMessage
+        UnifiedMessageController.createTargetedSystemMessage,
       ).toHaveBeenCalledTimes(1);
     });
 
@@ -434,16 +436,15 @@ describe("AutoEmailNotificationService", () => {
           role: "Administrator",
         },
       ]);
-      vi.mocked(RoleEmailService.sendAtCloudRoleRemovedToAdmins).mockRejectedValue(
-        new Error("SMTP down")
-      );
+      vi.mocked(
+        RoleEmailService.sendAtCloudRoleRemovedToAdmins,
+      ).mockRejectedValue(new Error("SMTP down"));
       __userSelectResult = [
         { _id: "id1", email: "a1@x.com", firstName: "A1", lastName: "X" },
       ];
 
-      const serviceModule = await import(
-        "../../../../src/services/infrastructure/autoEmailNotificationService"
-      );
+      const serviceModule =
+        await import("../../../../src/services/infrastructure/autoEmailNotificationService");
       const service = serviceModule.AutoEmailNotificationService;
 
       const res = await service.sendAtCloudRoleChangeNotification({
@@ -472,15 +473,14 @@ describe("AutoEmailNotificationService", () => {
     it("covers signup path with admin discovery failures; still returns success but no message", async () => {
       // Cause admin discovery during email send to throw
       EmailRecipientUtils.getAdminUsers.mockRejectedValue(
-        new Error("discovery failed")
+        new Error("discovery failed"),
       );
 
       // Also ensure createAtCloudRoleChangeAdminMessage path handles failure internally
       __userSelectResult = [];
 
-      const serviceModule = await import(
-        "../../../../src/services/infrastructure/autoEmailNotificationService"
-      );
+      const serviceModule =
+        await import("../../../../src/services/infrastructure/autoEmailNotificationService");
       const service = serviceModule.AutoEmailNotificationService;
 
       const res = await service.sendAtCloudRoleChangeNotification({
@@ -525,17 +525,16 @@ describe("AutoEmailNotificationService", () => {
         },
       ];
       EmailRecipientUtils.getAdminUsers.mockResolvedValue(admins);
-      vi.mocked(UserEmailService.sendNewAtCloudLeaderSignupToAdmins).mockResolvedValue(
-        true
-      );
+      vi.mocked(
+        UserEmailService.sendNewAtCloudLeaderSignupToAdmins,
+      ).mockResolvedValue(true);
       __userSelectResult = [
         { _id: "id1", email: "a1@x.com", firstName: "A1", lastName: "X" },
         { _id: "id2", email: "a2@x.com", firstName: "A2", lastName: "Y" },
       ];
 
-      const serviceModule = await import(
-        "../../../../src/services/infrastructure/autoEmailNotificationService"
-      );
+      const serviceModule =
+        await import("../../../../src/services/infrastructure/autoEmailNotificationService");
       const service = serviceModule.AutoEmailNotificationService;
 
       const res = await service.sendAtCloudRoleChangeNotification({
@@ -560,10 +559,10 @@ describe("AutoEmailNotificationService", () => {
       expect(res.emailsSent).toBe(2);
       expect(res.messagesCreated).toBe(1);
       expect(
-        UserEmailService.sendNewAtCloudLeaderSignupToAdmins
+        UserEmailService.sendNewAtCloudLeaderSignupToAdmins,
       ).toHaveBeenCalledTimes(2);
       expect(
-        UnifiedMessageController.createTargetedSystemMessage
+        UnifiedMessageController.createTargetedSystemMessage,
       ).toHaveBeenCalledTimes(1);
     });
 
@@ -577,9 +576,9 @@ describe("AutoEmailNotificationService", () => {
           role: "Administrator",
         },
       ]);
-      vi.mocked(UserEmailService.sendNewAtCloudLeaderSignupToAdmins).mockResolvedValue(
-        true
-      );
+      vi.mocked(
+        UserEmailService.sendNewAtCloudLeaderSignupToAdmins,
+      ).mockResolvedValue(true);
       __userSelectResult = [
         { _id: "id1", email: "a1@x.com", firstName: "A1", lastName: "X" },
       ];
@@ -591,9 +590,8 @@ describe("AutoEmailNotificationService", () => {
         throw new Error("fail admin message");
       });
 
-      const serviceModule = await import(
-        "../../../../src/services/infrastructure/autoEmailNotificationService"
-      );
+      const serviceModule =
+        await import("../../../../src/services/infrastructure/autoEmailNotificationService");
       const service = serviceModule.AutoEmailNotificationService;
 
       const res = await service.sendAtCloudRoleChangeNotification({
@@ -618,6 +616,152 @@ describe("AutoEmailNotificationService", () => {
       expect(res.emailsSent).toBe(1);
       // Message creation failed internally -> 0
       expect(res.messagesCreated).toBe(0);
+    });
+  });
+
+  describe("sendAccountStatusChangeAdminNotifications", () => {
+    it("should send reactivated alerts to admins", async () => {
+      vi.spyOn(
+        UserEmailService,
+        "sendUserReactivatedAlertToAdmin",
+      ).mockResolvedValue(true);
+
+      EmailRecipientUtils.getAdminUsers.mockResolvedValue([
+        { email: "admin1@x.com", firstName: "Admin", lastName: "One" },
+        { email: "admin2@x.com", firstName: "Admin", lastName: "Two" },
+      ]);
+
+      const serviceModule =
+        await import("../../../../src/services/infrastructure/autoEmailNotificationService");
+      const service = serviceModule.AutoEmailNotificationService;
+
+      const res = await service.sendAccountStatusChangeAdminNotifications({
+        action: "reactivated",
+        targetUser: {
+          _id: "user1",
+          firstName: "John",
+          lastName: "Doe",
+          email: "john@example.com",
+        },
+        actor: {
+          _id: "actor1",
+          firstName: "Admin",
+          lastName: "User",
+          email: "admin@example.com",
+          role: "Super Admin",
+        },
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.emailsSent).toBe(2);
+      expect(
+        UserEmailService.sendUserReactivatedAlertToAdmin,
+      ).toHaveBeenCalledTimes(2);
+    });
+
+    it("should send deleted alerts to admins", async () => {
+      vi.spyOn(
+        UserEmailService,
+        "sendUserDeletedAlertToAdmin",
+      ).mockResolvedValue(true);
+
+      EmailRecipientUtils.getAdminUsers.mockResolvedValue([
+        { email: "admin1@x.com", firstName: "Admin", lastName: "One" },
+      ]);
+
+      const serviceModule =
+        await import("../../../../src/services/infrastructure/autoEmailNotificationService");
+      const service = serviceModule.AutoEmailNotificationService;
+
+      const res = await service.sendAccountStatusChangeAdminNotifications({
+        action: "deleted",
+        targetUser: {
+          _id: "user1",
+          firstName: "Jane",
+          lastName: "Smith",
+          email: "jane@example.com",
+        },
+        actor: {
+          _id: "actor1",
+          firstName: "Super",
+          lastName: "Admin",
+          email: "superadmin@example.com",
+          role: "Super Admin",
+        },
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.emailsSent).toBe(1);
+      expect(
+        UserEmailService.sendUserDeletedAlertToAdmin,
+      ).toHaveBeenCalledTimes(1);
+    });
+
+    it("should handle email send failures gracefully", async () => {
+      vi.spyOn(
+        UserEmailService,
+        "sendUserDeactivatedAlertToAdmin",
+      ).mockRejectedValue(new Error("Email failed"));
+
+      EmailRecipientUtils.getAdminUsers.mockResolvedValue([
+        { email: "admin1@x.com", firstName: "Admin", lastName: "One" },
+      ]);
+
+      const serviceModule =
+        await import("../../../../src/services/infrastructure/autoEmailNotificationService");
+      const service = serviceModule.AutoEmailNotificationService;
+
+      const res = await service.sendAccountStatusChangeAdminNotifications({
+        action: "deactivated",
+        targetUser: {
+          _id: "user1",
+          firstName: "John",
+          lastName: "Doe",
+          email: "john@example.com",
+        },
+        actor: {
+          _id: "actor1",
+          firstName: "Admin",
+          lastName: "User",
+          email: "admin@example.com",
+          role: "Super Admin",
+        },
+      });
+
+      // Should still succeed overall but with 0 emails sent
+      expect(res.success).toBe(true);
+      expect(res.emailsSent).toBe(0);
+    });
+
+    it("should handle getAdminUsers failure gracefully", async () => {
+      EmailRecipientUtils.getAdminUsers.mockRejectedValue(
+        new Error("DB error"),
+      );
+
+      const serviceModule =
+        await import("../../../../src/services/infrastructure/autoEmailNotificationService");
+      const service = serviceModule.AutoEmailNotificationService;
+
+      const res = await service.sendAccountStatusChangeAdminNotifications({
+        action: "deactivated",
+        targetUser: {
+          _id: "user1",
+          firstName: "John",
+          lastName: "Doe",
+          email: "john@example.com",
+        },
+        actor: {
+          _id: "actor1",
+          firstName: "Admin",
+          lastName: "User",
+          email: "admin@example.com",
+          role: "Admin",
+        },
+      });
+
+      // Should handle gracefully
+      expect(res.success).toBe(true);
+      expect(res.emailsSent).toBe(0);
     });
   });
 });

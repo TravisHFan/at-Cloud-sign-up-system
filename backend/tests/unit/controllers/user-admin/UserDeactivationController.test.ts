@@ -45,7 +45,7 @@ vi.mock(
     AutoEmailNotificationService: {
       sendAccountStatusChangeAdminNotifications: vi.fn().mockResolvedValue({}),
     },
-  })
+  }),
 );
 
 vi.mock("../../../../src/services/infrastructure/EmailServiceFacade", () => ({
@@ -135,7 +135,7 @@ describe("UserDeactivationController", () => {
 
         await UserDeactivationController.deactivateUser(
           mockReq as unknown as import("express").Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(401);
@@ -152,7 +152,7 @@ describe("UserDeactivationController", () => {
 
         await UserDeactivationController.deactivateUser(
           mockReq as unknown as import("express").Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(403);
@@ -171,7 +171,7 @@ describe("UserDeactivationController", () => {
 
         await UserDeactivationController.deactivateUser(
           mockReq as unknown as import("express").Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -190,7 +190,7 @@ describe("UserDeactivationController", () => {
 
         await UserDeactivationController.deactivateUser(
           mockReq as unknown as import("express").Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(403);
@@ -209,7 +209,7 @@ describe("UserDeactivationController", () => {
 
         await UserDeactivationController.deactivateUser(
           mockReq as unknown as import("express").Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(403);
@@ -228,7 +228,7 @@ describe("UserDeactivationController", () => {
 
         await UserDeactivationController.deactivateUser(
           mockReq as unknown as import("express").Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(403);
@@ -247,7 +247,7 @@ describe("UserDeactivationController", () => {
 
         await UserDeactivationController.deactivateUser(
           mockReq as unknown as import("express").Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(404);
@@ -270,7 +270,7 @@ describe("UserDeactivationController", () => {
 
         await UserDeactivationController.deactivateUser(
           mockReq as unknown as import("express").Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(targetUser.isActive).toBe(false);
@@ -290,7 +290,7 @@ describe("UserDeactivationController", () => {
 
         await UserDeactivationController.deactivateUser(
           mockReq as unknown as import("express").Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(AuditLog.create).toHaveBeenCalledWith(
@@ -302,7 +302,7 @@ describe("UserDeactivationController", () => {
               email: "admin@test.com",
             }),
             targetModel: "User",
-          })
+          }),
         );
       });
 
@@ -314,11 +314,11 @@ describe("UserDeactivationController", () => {
 
         await UserDeactivationController.deactivateUser(
           mockReq as unknown as import("express").Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(CachePatterns.invalidateUserCache).toHaveBeenCalledWith(
-          testUserId
+          testUserId,
         );
       });
 
@@ -330,7 +330,7 @@ describe("UserDeactivationController", () => {
 
         await UserDeactivationController.deactivateUser(
           mockReq as unknown as import("express").Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(EmailService.sendAccountDeactivationEmail).toHaveBeenCalledWith(
@@ -338,7 +338,7 @@ describe("UserDeactivationController", () => {
           expect.any(String),
           expect.objectContaining({
             role: "Administrator",
-          })
+          }),
         );
       });
 
@@ -350,7 +350,7 @@ describe("UserDeactivationController", () => {
 
         await UserDeactivationController.deactivateUser(
           mockReq as unknown as import("express").Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(socketService.emitUserUpdate).toHaveBeenCalledWith(
@@ -359,7 +359,7 @@ describe("UserDeactivationController", () => {
             type: "status_changed",
             oldValue: "active",
             newValue: "inactive",
-          })
+          }),
         );
       });
 
@@ -372,7 +372,7 @@ describe("UserDeactivationController", () => {
 
         await UserDeactivationController.deactivateUser(
           mockReq as unknown as import("express").Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -386,7 +386,7 @@ describe("UserDeactivationController", () => {
 
         await UserDeactivationController.deactivateUser(
           mockReq as unknown as import("express").Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -406,7 +406,7 @@ describe("UserDeactivationController", () => {
 
         await UserDeactivationController.deactivateUser(
           mockReq as unknown as import("express").Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         // Should still succeed
@@ -419,16 +419,41 @@ describe("UserDeactivationController", () => {
         const targetUser = createMockUser({ role: ROLES.PARTICIPANT });
         vi.mocked(User.findById).mockResolvedValue(targetUser);
         vi.mocked(EmailService.sendAccountDeactivationEmail).mockRejectedValue(
-          new Error("Email error")
+          new Error("Email error"),
         );
 
         await UserDeactivationController.deactivateUser(
           mockReq as unknown as import("express").Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         // Should still succeed
         expect(statusMock).toHaveBeenCalledWith(200);
+      });
+
+      it("should not fail if admin notifications fail", async () => {
+        vi.mocked(hasPermission).mockReturnValue(true);
+
+        const { AutoEmailNotificationService } =
+          await import("../../../../src/services/infrastructure/autoEmailNotificationService");
+        vi.mocked(
+          AutoEmailNotificationService.sendAccountStatusChangeAdminNotifications,
+        ).mockRejectedValue(new Error("Notification error"));
+
+        const targetUser = createMockUser({ role: ROLES.PARTICIPANT });
+        vi.mocked(User.findById).mockResolvedValue(targetUser);
+
+        await UserDeactivationController.deactivateUser(
+          mockReq as unknown as import("express").Request,
+          mockRes as Response,
+        );
+
+        // Should still succeed
+        expect(statusMock).toHaveBeenCalledWith(200);
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          "Failed to send admin deactivation notifications:",
+          expect.any(Error),
+        );
       });
     });
   });
@@ -443,7 +468,7 @@ describe("UserDeactivationController", () => {
       username: string;
       firstName: string;
       lastName: string;
-    }> = {}
+    }> = {},
   ) {
     return {
       _id: testUserId,

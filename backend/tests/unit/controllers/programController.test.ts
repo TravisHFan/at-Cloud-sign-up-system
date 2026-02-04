@@ -46,7 +46,7 @@ describe("ProgramController", () => {
       params: { id: "program123" },
       query: {},
       user: { _id: "user123", email: "admin@example.com", role: "Super Admin" },
-    } as Partial<Request>;
+    } as unknown as Partial<Request>;
     mockRes = {
       status: vi.fn().mockReturnThis(),
       json: vi.fn(),

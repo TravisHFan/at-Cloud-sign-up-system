@@ -91,7 +91,7 @@ describe("ShortLinkController", () => {
 
         await ShortLinkController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -109,7 +109,7 @@ describe("ShortLinkController", () => {
 
         await ShortLinkController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -138,13 +138,13 @@ describe("ShortLinkController", () => {
 
         await ShortLinkController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(ShortLinkService.getOrCreateForEvent).toHaveBeenCalledWith(
           "event123",
           "user123",
-          undefined
+          undefined,
         );
         expect(statusMock).toHaveBeenCalledWith(201);
         expect(jsonMock).toHaveBeenCalledWith({
@@ -158,7 +158,7 @@ describe("ShortLinkController", () => {
         });
         expect(shortLinkCreatedCounter.inc).toHaveBeenCalled();
         expect(ShortLinkMetricsService.increment).toHaveBeenCalledWith(
-          "created"
+          "created",
         );
       });
 
@@ -179,13 +179,13 @@ describe("ShortLinkController", () => {
 
         await ShortLinkController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(ShortLinkService.getOrCreateForEvent).toHaveBeenCalledWith(
           "event123",
           "user456",
-          undefined
+          undefined,
         );
       });
     });
@@ -208,13 +208,13 @@ describe("ShortLinkController", () => {
 
         await ShortLinkController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(ShortLinkService.getOrCreateForEvent).toHaveBeenCalledWith(
           "event123",
           "000000000000000000000000", // Sentinel ObjectId
-          undefined
+          undefined,
         );
         expect(statusMock).toHaveBeenCalledWith(201);
       });
@@ -238,20 +238,20 @@ describe("ShortLinkController", () => {
 
         await ShortLinkController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(ShortLinkService.getOrCreateForEvent).toHaveBeenCalledWith(
           "event123",
           "user123",
-          "my-event"
+          "my-event",
         );
         expect(jsonMock).toHaveBeenCalledWith(
           expect.objectContaining({
             data: expect.objectContaining({
               key: "my-event",
             }),
-          })
+          }),
         );
       });
     });
@@ -274,7 +274,7 @@ describe("ShortLinkController", () => {
 
         await ShortLinkController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -308,7 +308,7 @@ describe("ShortLinkController", () => {
 
         await ShortLinkController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(jsonMock).toHaveBeenCalledWith(
@@ -316,7 +316,7 @@ describe("ShortLinkController", () => {
             data: expect.objectContaining({
               url: "https://short.example.com/s/abc123",
             }),
-          })
+          }),
         );
       });
 
@@ -337,7 +337,7 @@ describe("ShortLinkController", () => {
 
         await ShortLinkController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(jsonMock).toHaveBeenCalledWith(
@@ -345,7 +345,7 @@ describe("ShortLinkController", () => {
             data: expect.objectContaining({
               url: "https://short.example.com/s/abc123",
             }),
-          })
+          }),
         );
       });
 
@@ -367,7 +367,7 @@ describe("ShortLinkController", () => {
 
         await ShortLinkController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(jsonMock).toHaveBeenCalledWith(
@@ -375,7 +375,7 @@ describe("ShortLinkController", () => {
             data: expect.objectContaining({
               url: "http://localhost:5173/s/abc123",
             }),
-          })
+          }),
         );
       });
 
@@ -398,7 +398,7 @@ describe("ShortLinkController", () => {
 
         await ShortLinkController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(jsonMock).toHaveBeenCalledWith(
@@ -406,7 +406,7 @@ describe("ShortLinkController", () => {
             data: expect.objectContaining({
               url: "http://localhost:5173/s/abc123",
             }),
-          })
+          }),
         );
       });
 
@@ -430,7 +430,7 @@ describe("ShortLinkController", () => {
 
         await ShortLinkController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(jsonMock).toHaveBeenCalledWith(
@@ -438,7 +438,7 @@ describe("ShortLinkController", () => {
             data: expect.objectContaining({
               url: "https://example.com/s/abc123",
             }),
-          })
+          }),
         );
       });
 
@@ -463,7 +463,7 @@ describe("ShortLinkController", () => {
 
         await ShortLinkController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(jsonMock).toHaveBeenCalledWith(
@@ -471,7 +471,7 @@ describe("ShortLinkController", () => {
             data: expect.objectContaining({
               url: "https://example.com/s/abc123",
             }),
-          })
+          }),
         );
       });
     });
@@ -482,12 +482,12 @@ describe("ShortLinkController", () => {
         mockReq.user = { id: "user123" } as any;
 
         vi.mocked(ShortLinkService.getOrCreateForEvent).mockRejectedValue(
-          new Error("Event not found")
+          new Error("Event not found"),
         );
 
         await ShortLinkController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(404);
@@ -505,12 +505,12 @@ describe("ShortLinkController", () => {
         mockReq.user = { id: "user123" } as any;
 
         vi.mocked(ShortLinkService.getOrCreateForEvent).mockRejectedValue(
-          new Error("Custom key invalid: too short")
+          new Error("Custom key invalid: too short"),
         );
 
         await ShortLinkController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -529,12 +529,12 @@ describe("ShortLinkController", () => {
         mockReq.user = { id: "user123" } as any;
 
         vi.mocked(ShortLinkService.getOrCreateForEvent).mockRejectedValue(
-          new Error("Custom key reserved")
+          new Error("Custom key reserved"),
         );
 
         await ShortLinkController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -553,12 +553,12 @@ describe("ShortLinkController", () => {
         mockReq.user = { id: "user123" } as any;
 
         vi.mocked(ShortLinkService.getOrCreateForEvent).mockRejectedValue(
-          new Error("Custom key taken")
+          new Error("Custom key taken"),
         );
 
         await ShortLinkController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(409);
@@ -577,12 +577,12 @@ describe("ShortLinkController", () => {
         mockReq.user = { id: "user123" } as any;
 
         vi.mocked(ShortLinkService.getOrCreateForEvent).mockRejectedValue(
-          new Error("Event not published")
+          new Error("Event not published"),
         );
 
         await ShortLinkController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -600,12 +600,12 @@ describe("ShortLinkController", () => {
         mockReq.user = { id: "user123" } as any;
 
         vi.mocked(ShortLinkService.getOrCreateForEvent).mockRejectedValue(
-          new Error("Event has no public roles")
+          new Error("Event has no public roles"),
         );
 
         await ShortLinkController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -619,12 +619,12 @@ describe("ShortLinkController", () => {
         mockReq.user = { id: "user123" } as any;
 
         vi.mocked(ShortLinkService.getOrCreateForEvent).mockRejectedValue(
-          new Error("Invalid eventId format")
+          new Error("Invalid eventId format"),
         );
 
         await ShortLinkController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -638,12 +638,12 @@ describe("ShortLinkController", () => {
         mockReq.user = { id: "user123" } as any;
 
         vi.mocked(ShortLinkService.getOrCreateForEvent).mockRejectedValue(
-          new Error("Database connection failed")
+          new Error("Database connection failed"),
         );
 
         await ShortLinkController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -653,6 +653,28 @@ describe("ShortLinkController", () => {
         });
         expect(shortLinkCreateFailureCounter.inc).toHaveBeenCalledWith({
           reason: "other",
+        });
+      });
+
+      it("should use fallback message when error.message is not a string", async () => {
+        mockReq.body = { eventId: "event123" };
+        mockReq.user = { id: "user123" } as any;
+
+        // Throw an error-like object with non-string message
+        const weirdError = { message: 12345 };
+        vi.mocked(ShortLinkService.getOrCreateForEvent).mockRejectedValue(
+          weirdError,
+        );
+
+        await ShortLinkController.create(
+          mockReq as Request,
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(jsonMock).toHaveBeenCalledWith({
+          success: false,
+          message: "Failed to create short link",
         });
       });
     });
@@ -665,7 +687,7 @@ describe("ShortLinkController", () => {
 
         await ShortLinkController.resolve(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -682,7 +704,7 @@ describe("ShortLinkController", () => {
 
         const mockEndTimer = vi.fn();
         vi.mocked(shortLinkResolveDuration.startTimer).mockReturnValue(
-          mockEndTimer
+          mockEndTimer,
         );
 
         vi.mocked(ShortLinkService.resolveKey).mockResolvedValue({
@@ -693,7 +715,7 @@ describe("ShortLinkController", () => {
 
         await ShortLinkController.resolve(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(ShortLinkService.resolveKey).toHaveBeenCalledWith("abc123");
@@ -711,7 +733,7 @@ describe("ShortLinkController", () => {
         });
         expect(mockEndTimer).toHaveBeenCalledWith({ status: "active" });
         expect(ShortLinkMetricsService.increment).toHaveBeenCalledWith(
-          "resolved_active"
+          "resolved_active",
         );
       });
     });
@@ -722,7 +744,7 @@ describe("ShortLinkController", () => {
 
         const mockEndTimer = vi.fn();
         vi.mocked(shortLinkResolveDuration.startTimer).mockReturnValue(
-          mockEndTimer
+          mockEndTimer,
         );
 
         vi.mocked(ShortLinkService.resolveKey).mockResolvedValue({
@@ -731,7 +753,7 @@ describe("ShortLinkController", () => {
 
         await ShortLinkController.resolve(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(410);
@@ -745,7 +767,7 @@ describe("ShortLinkController", () => {
         });
         expect(mockEndTimer).toHaveBeenCalledWith({ status: "expired" });
         expect(ShortLinkMetricsService.increment).toHaveBeenCalledWith(
-          "resolved_expired"
+          "resolved_expired",
         );
       });
     });
@@ -756,7 +778,7 @@ describe("ShortLinkController", () => {
 
         const mockEndTimer = vi.fn();
         vi.mocked(shortLinkResolveDuration.startTimer).mockReturnValue(
-          mockEndTimer
+          mockEndTimer,
         );
 
         vi.mocked(ShortLinkService.resolveKey).mockResolvedValue({
@@ -765,7 +787,7 @@ describe("ShortLinkController", () => {
 
         await ShortLinkController.resolve(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(404);
@@ -779,7 +801,7 @@ describe("ShortLinkController", () => {
         });
         expect(mockEndTimer).toHaveBeenCalledWith({ status: "not_found" });
         expect(ShortLinkMetricsService.increment).toHaveBeenCalledWith(
-          "resolved_not_found"
+          "resolved_not_found",
         );
       });
     });
@@ -789,12 +811,12 @@ describe("ShortLinkController", () => {
         mockReq.params = { key: "error123" };
 
         vi.mocked(ShortLinkService.resolveKey).mockRejectedValue(
-          new Error("Database error")
+          new Error("Database error"),
         );
 
         await ShortLinkController.resolve(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);

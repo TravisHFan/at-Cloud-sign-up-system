@@ -54,7 +54,7 @@ describe("FieldNormalizationService.normalizeAndValidate", () => {
       { ...updateData },
       baseEvent,
       "e1",
-      res as any
+      res as any,
     );
 
     expect(result).toBeUndefined();
@@ -62,7 +62,7 @@ describe("FieldNormalizationService.normalizeAndValidate", () => {
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({
         success: false,
-      })
+      }),
     );
   });
 
@@ -81,7 +81,7 @@ describe("FieldNormalizationService.normalizeAndValidate", () => {
       },
       baseEvent,
       "e1",
-      res as any
+      res as any,
     );
 
     expect(result).toBeUndefined();
@@ -90,7 +90,7 @@ describe("FieldNormalizationService.normalizeAndValidate", () => {
       expect.objectContaining({
         success: false,
         data: expect.objectContaining({ conflicts: expect.any(Array) }),
-      })
+      }),
     );
   });
 
@@ -111,7 +111,7 @@ describe("FieldNormalizationService.normalizeAndValidate", () => {
       updateData,
       baseEvent,
       "e1",
-      res as any
+      res as any,
     );
 
     expect(result).toBeDefined();
@@ -139,7 +139,7 @@ describe("FieldNormalizationService.normalizeAndValidate", () => {
       updateData,
       { ...baseEvent, format: "Hybrid" } as any,
       "e1",
-      res as any
+      res as any,
     );
 
     expect(result).toBeDefined();
@@ -161,7 +161,7 @@ describe("FieldNormalizationService.normalizeAndValidate", () => {
       updateData,
       baseEvent,
       "e1",
-      res as any
+      res as any,
     );
 
     expect(result).toBeDefined();
@@ -180,7 +180,7 @@ describe("FieldNormalizationService.normalizeAndValidate", () => {
       updateData,
       baseEvent,
       "e1",
-      res as any
+      res as any,
     );
 
     expect(result).toBeUndefined();
@@ -208,5 +208,108 @@ describe("FieldNormalizationService.prepareUpdateData", () => {
     const updateData = FieldNormalizationService.prepareUpdateData(body);
 
     expect(updateData).toEqual({ title: "Event" });
+  });
+});
+
+describe("FieldNormalizationService - edge cases", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (EventController.findConflictingEvents as any).mockResolvedValue([]);
+  });
+
+  it("normalizes endDate string by trimming whitespace", async () => {
+    const res = makeRes();
+    const updateData: any = {
+      endDate: "  2024-01-01  ",
+    };
+
+    const result = await FieldNormalizationService.normalizeAndValidate(
+      updateData,
+      baseEvent,
+      "e1",
+      res as any,
+    );
+
+    expect(result).toBeDefined();
+    expect(result?.endDate).toBe("2024-01-01");
+  });
+
+  it("handles empty string virtual fields for Online/Hybrid format", async () => {
+    const res = makeRes();
+    const updateData: any = {
+      format: "Hybrid",
+      zoomLink: "   ",
+      meetingId: "",
+      passcode: "  ",
+    };
+
+    const result = await FieldNormalizationService.normalizeAndValidate(
+      updateData,
+      baseEvent,
+      "e1",
+      res as any,
+    );
+
+    expect(result).toBeDefined();
+    // Empty strings after trim become undefined
+    expect(result?.zoomLink).toBeUndefined();
+    expect(result?.meetingId).toBeUndefined();
+    expect(result?.passcode).toBeUndefined();
+  });
+
+  it("handles empty location string for non-Online format", async () => {
+    const res = makeRes();
+    const updateData: any = {
+      format: "Hybrid",
+      location: "   ",
+    };
+
+    const result = await FieldNormalizationService.normalizeAndValidate(
+      updateData,
+      baseEvent,
+      "e1",
+      res as any,
+    );
+
+    expect(result).toBeDefined();
+    // Empty location after trim becomes undefined
+    expect(result?.location).toBeUndefined();
+  });
+
+  it("handles empty timeZone string", async () => {
+    const res = makeRes();
+    const updateData: any = {
+      timeZone: "   ",
+    };
+
+    const result = await FieldNormalizationService.normalizeAndValidate(
+      updateData,
+      baseEvent,
+      "e1",
+      res as any,
+    );
+
+    expect(result).toBeDefined();
+    expect(result?.timeZone).toBeUndefined();
+  });
+
+  it("uses existing event format if format not in updateData", async () => {
+    const res = makeRes();
+    const updateData: any = {
+      // No format provided
+      location: "Test Venue",
+    };
+
+    // Event is Online format
+    const result = await FieldNormalizationService.normalizeAndValidate(
+      updateData,
+      baseEvent,
+      "e1",
+      res as any,
+    );
+
+    expect(result).toBeDefined();
+    // Should use event.format (Online) so location becomes "Online"
+    expect(result?.location).toBe("Online");
   });
 });

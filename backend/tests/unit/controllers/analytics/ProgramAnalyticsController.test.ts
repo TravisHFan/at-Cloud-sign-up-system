@@ -70,7 +70,7 @@ describe("ProgramAnalyticsController", () => {
 
         await ProgramAnalyticsController.getProgramAnalytics(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(401);
@@ -87,7 +87,7 @@ describe("ProgramAnalyticsController", () => {
 
         await ProgramAnalyticsController.getProgramAnalytics(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(403);
@@ -103,7 +103,7 @@ describe("ProgramAnalyticsController", () => {
 
         await ProgramAnalyticsController.getProgramAnalytics(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(403);
@@ -115,7 +115,7 @@ describe("ProgramAnalyticsController", () => {
 
         await ProgramAnalyticsController.getProgramAnalytics(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -127,7 +127,7 @@ describe("ProgramAnalyticsController", () => {
 
         await ProgramAnalyticsController.getProgramAnalytics(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -139,7 +139,7 @@ describe("ProgramAnalyticsController", () => {
 
         await ProgramAnalyticsController.getProgramAnalytics(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -152,7 +152,7 @@ describe("ProgramAnalyticsController", () => {
 
         await ProgramAnalyticsController.getProgramAnalytics(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -207,7 +207,7 @@ describe("ProgramAnalyticsController", () => {
 
         await ProgramAnalyticsController.getProgramAnalytics(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
@@ -264,21 +264,21 @@ describe("ProgramAnalyticsController", () => {
 
         await ProgramAnalyticsController.getProgramAnalytics(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
         const breakdown = response.data.programTypeBreakdown;
 
         const courseStats = breakdown.find(
-          (b: any) => b.programType === "Course"
+          (b: any) => b.programType === "Course",
         );
         expect(courseStats.revenue).toBe(25000);
         expect(courseStats.purchases).toBe(2);
         expect(courseStats.uniqueBuyers).toBe(2);
 
         const workshopStats = breakdown.find(
-          (b: any) => b.programType === "Workshop"
+          (b: any) => b.programType === "Workshop",
         );
         expect(workshopStats.revenue).toBe(5000);
         expect(workshopStats.purchases).toBe(1);
@@ -304,7 +304,7 @@ describe("ProgramAnalyticsController", () => {
 
         await ProgramAnalyticsController.getProgramAnalytics(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
@@ -325,7 +325,7 @@ describe("ProgramAnalyticsController", () => {
 
         await ProgramAnalyticsController.getProgramAnalytics(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -334,6 +334,59 @@ describe("ProgramAnalyticsController", () => {
           message: "Failed to fetch program analytics",
         });
         expect(consoleErrorSpy).toHaveBeenCalled();
+      });
+    });
+
+    describe("Program Mapping", () => {
+      it("should map program IDs to types and titles from database", async () => {
+        const programId1 = "507f1f77bcf86cd799439011";
+        const programId2 = "507f1f77bcf86cd799439012";
+
+        const mockPrograms = [
+          {
+            _id: { toString: () => programId1 },
+            title: "Course A",
+            programType: "Course",
+          },
+          {
+            _id: { toString: () => programId2 },
+            title: "Workshop B",
+            programType: "Workshop",
+          },
+        ];
+
+        const mockPurchases = [
+          {
+            userId: { toString: () => "user1" },
+            programId: { programType: "Course" },
+            finalPrice: 10000,
+            isClassRep: false,
+            promoCode: "",
+            isEarlyBird: false,
+            purchaseDate: new Date(),
+          },
+        ];
+
+        vi.mocked(Program.find).mockReturnValue({
+          select: vi.fn().mockResolvedValue(mockPrograms),
+        } as any);
+        vi.mocked(Purchase.find).mockReturnValue({
+          populate: vi.fn().mockReturnValue({
+            lean: vi.fn().mockResolvedValue(mockPurchases),
+          }),
+        } as any);
+        vi.mocked(Purchase.countDocuments).mockResolvedValue(0);
+        vi.mocked(Purchase.aggregate).mockResolvedValue([]);
+
+        await ProgramAnalyticsController.getProgramAnalytics(
+          mockReq as any,
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(200);
+        const response = jsonMock.mock.calls[0][0];
+        expect(response.success).toBe(true);
+        expect(response.data.totalPurchases).toBe(1);
       });
     });
   });

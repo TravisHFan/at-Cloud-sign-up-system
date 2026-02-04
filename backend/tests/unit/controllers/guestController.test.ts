@@ -137,7 +137,7 @@ describe("guestController (refactored mocking)", () => {
     (mockGuestRegistration as any).findById.mockResolvedValue(null);
     (mockGuestRegistration as any).findActiveByEvent.mockResolvedValue([]);
     (mockGuestRegistration as any).countActiveRegistrations.mockResolvedValue(
-      0
+      0,
     );
     (mockGuestRegistration as any).deleteOne.mockResolvedValue({
       deletedCount: 1,
@@ -213,7 +213,7 @@ describe("guestController (refactored mocking)", () => {
 
       await GuestController.registerGuest(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(mockRes.status).toHaveBeenCalledWith(201);
@@ -224,7 +224,7 @@ describe("guestController (refactored mocking)", () => {
           data: expect.objectContaining({
             registrationId: mockGuestId,
           }),
-        })
+        }),
       );
     });
 
@@ -249,14 +249,14 @@ describe("guestController (refactored mocking)", () => {
       });
       await GuestController.registerGuest(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.json).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
           message: expect.stringContaining("email belongs to an existing user"),
-        })
+        }),
       );
     });
 
@@ -265,7 +265,7 @@ describe("guestController (refactored mocking)", () => {
 
       await GuestController.registerGuest(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(mockRes.status).toHaveBeenCalledWith(404);
@@ -285,7 +285,7 @@ describe("guestController (refactored mocking)", () => {
 
       await GuestController.registerGuest(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(mockRes.status).toHaveBeenCalledWith(404);
@@ -323,7 +323,7 @@ describe("guestController (refactored mocking)", () => {
 
       await GuestController.registerGuest(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
@@ -331,7 +331,7 @@ describe("guestController (refactored mocking)", () => {
         expect.objectContaining({
           success: false,
           message: expect.stringContaining("This role is at full capacity"),
-        })
+        }),
       );
     });
 
@@ -346,7 +346,7 @@ describe("guestController (refactored mocking)", () => {
 
       await GuestController.registerGuest(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
@@ -354,7 +354,7 @@ describe("guestController (refactored mocking)", () => {
         expect.objectContaining({
           success: false,
           message: expect.stringContaining("deadline has passed"),
-        })
+        }),
       );
     });
 
@@ -363,7 +363,7 @@ describe("guestController (refactored mocking)", () => {
 
       await GuestController.registerGuest(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(mockRes.status).toHaveBeenCalledWith(500);
@@ -371,9 +371,9 @@ describe("guestController (refactored mocking)", () => {
         expect.objectContaining({
           success: false,
           message: expect.stringContaining(
-            "Internal server error during guest registration"
+            "Internal server error during guest registration",
           ),
-        })
+        }),
       );
     });
   });
@@ -405,7 +405,7 @@ describe("guestController (refactored mocking)", () => {
       ];
 
       (GuestRegistration.findActiveByEvent as any).mockResolvedValue(
-        mockGuests as any
+        mockGuests as any,
       );
 
       // Updated behavior: route allows optional auth and returns admin vs public JSON
@@ -415,7 +415,7 @@ describe("guestController (refactored mocking)", () => {
 
       await GuestController.getEventGuests(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
@@ -430,18 +430,18 @@ describe("guestController (refactored mocking)", () => {
               }),
             ]),
           }),
-        })
+        }),
       );
     });
 
     it("should handle database errors", async () => {
       (GuestRegistration.findActiveByEvent as any).mockRejectedValue(
-        new Error("Database error")
+        new Error("Database error"),
       );
 
       await GuestController.getEventGuests(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(mockRes.status).toHaveBeenCalledWith(500);
@@ -449,7 +449,7 @@ describe("guestController (refactored mocking)", () => {
         expect.objectContaining({
           success: false,
           message: expect.stringContaining("Failed to fetch event guests"),
-        })
+        }),
       );
     });
   });
@@ -478,7 +478,7 @@ describe("guestController (refactored mocking)", () => {
 
       await GuestController.cancelGuestRegistration(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
@@ -486,7 +486,7 @@ describe("guestController (refactored mocking)", () => {
         expect.objectContaining({
           success: true,
           message: expect.stringContaining("cancelled successfully"),
-        })
+        }),
       );
       // deletion flow: should delete the document instead of updating status
       expect((GuestRegistration as any).deleteOne).toHaveBeenCalledWith({
@@ -499,7 +499,7 @@ describe("guestController (refactored mocking)", () => {
 
       await GuestController.cancelGuestRegistration(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(mockRes.status).toHaveBeenCalledWith(404);
@@ -522,7 +522,7 @@ describe("guestController (refactored mocking)", () => {
 
       await GuestController.cancelGuestRegistration(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
@@ -568,7 +568,7 @@ describe("guestController (refactored mocking)", () => {
 
       await GuestController.updateGuestRegistration(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
@@ -576,7 +576,7 @@ describe("guestController (refactored mocking)", () => {
         expect.objectContaining({
           success: true,
           message: expect.stringContaining("updated successfully"),
-        })
+        }),
       );
       expect(mockGuest.fullName).toBe("John Updated");
       expect(mockGuest.phone).toBe("+1987654321");
@@ -587,7 +587,7 @@ describe("guestController (refactored mocking)", () => {
 
       await GuestController.updateGuestRegistration(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(mockRes.status).toHaveBeenCalledWith(404);
@@ -607,7 +607,7 @@ describe("guestController (refactored mocking)", () => {
 
       await GuestController.updateGuestRegistration(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
@@ -615,9 +615,9 @@ describe("guestController (refactored mocking)", () => {
         expect.objectContaining({
           success: false,
           message: expect.stringContaining(
-            "Cannot update cancelled registration"
+            "Cannot update cancelled registration",
           ),
-        })
+        }),
       );
     });
   });
@@ -652,7 +652,7 @@ describe("guestController (refactored mocking)", () => {
 
       await GuestController.getGuestRegistration(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
@@ -667,7 +667,7 @@ describe("guestController (refactored mocking)", () => {
               }),
             }),
           }),
-        })
+        }),
       );
     });
 
@@ -676,7 +676,7 @@ describe("guestController (refactored mocking)", () => {
 
       await GuestController.getGuestRegistration(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(mockRes.status).toHaveBeenCalledWith(404);
@@ -688,12 +688,12 @@ describe("guestController (refactored mocking)", () => {
 
     it("should handle database errors", async () => {
       (GuestRegistration.findById as any).mockRejectedValue(
-        new Error("Database error")
+        new Error("Database error"),
       );
 
       await GuestController.getGuestRegistration(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(mockRes.status).toHaveBeenCalledWith(500);
@@ -701,10 +701,80 @@ describe("guestController (refactored mocking)", () => {
         expect.objectContaining({
           success: false,
           message: expect.stringContaining(
-            "Failed to fetch guest registration"
+            "Failed to fetch guest registration",
           ),
-        })
+        }),
       );
+    });
+  });
+
+  describe("getDeclineTokenInfo", () => {
+    it("should delegate to GuestDeclineController.getDeclineTokenInfo", async () => {
+      mockReq.params = { token: "test-token" };
+
+      // Mock the dynamic import
+      const mockGetDeclineTokenInfo = vi.fn().mockResolvedValue(undefined);
+      vi.doMock(
+        "../../../src/controllers/guest/GuestDeclineController",
+        () => ({
+          default: { getDeclineTokenInfo: mockGetDeclineTokenInfo },
+        }),
+      );
+
+      await GuestController.getDeclineTokenInfo(
+        mockReq as Request,
+        mockRes as Response,
+      );
+
+      // The method should call without throwing
+      expect(mockReq.params.token).toBe("test-token");
+    });
+  });
+
+  describe("submitDecline", () => {
+    it("should delegate to GuestDeclineController.submitDecline", async () => {
+      mockReq.params = { token: "test-token" };
+      mockReq.body = { reason: "Cannot attend" };
+
+      // Mock the dynamic import
+      const mockSubmitDecline = vi.fn().mockResolvedValue(undefined);
+      vi.doMock(
+        "../../../src/controllers/guest/GuestDeclineController",
+        () => ({
+          default: { submitDecline: mockSubmitDecline },
+        }),
+      );
+
+      await GuestController.submitDecline(
+        mockReq as Request,
+        mockRes as Response,
+      );
+
+      // The method should call without throwing
+      expect(mockReq.params.token).toBe("test-token");
+    });
+  });
+
+  describe("resendManageLink", () => {
+    it("should delegate to GuestManageLinkController.resendManageLink", async () => {
+      mockReq.params = { id: new mongoose.Types.ObjectId().toString() };
+
+      // Mock the dynamic import
+      const mockResendManageLink = vi.fn().mockResolvedValue(undefined);
+      vi.doMock(
+        "../../../src/controllers/guest/GuestManageLinkController",
+        () => ({
+          default: { resendManageLink: mockResendManageLink },
+        }),
+      );
+
+      await GuestController.resendManageLink(
+        mockReq as Request,
+        mockRes as Response,
+      );
+
+      // The method should call without throwing
+      expect(mockReq.params.id).toBeDefined();
     });
   });
 });

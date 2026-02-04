@@ -70,7 +70,7 @@ describe("TrendsAnalyticsController", () => {
 
         await TrendsAnalyticsController.getTrends(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(401);
@@ -87,7 +87,7 @@ describe("TrendsAnalyticsController", () => {
 
         await TrendsAnalyticsController.getTrends(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(403);
@@ -103,7 +103,7 @@ describe("TrendsAnalyticsController", () => {
 
         await TrendsAnalyticsController.getTrends(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(403);
@@ -115,7 +115,7 @@ describe("TrendsAnalyticsController", () => {
 
         await TrendsAnalyticsController.getTrends(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -127,7 +127,7 @@ describe("TrendsAnalyticsController", () => {
 
         await TrendsAnalyticsController.getTrends(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -139,7 +139,7 @@ describe("TrendsAnalyticsController", () => {
 
         await TrendsAnalyticsController.getTrends(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -152,7 +152,7 @@ describe("TrendsAnalyticsController", () => {
 
         await TrendsAnalyticsController.getTrends(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
@@ -165,7 +165,7 @@ describe("TrendsAnalyticsController", () => {
 
         await TrendsAnalyticsController.getTrends(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
@@ -178,7 +178,7 @@ describe("TrendsAnalyticsController", () => {
 
         await TrendsAnalyticsController.getTrends(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
@@ -193,11 +193,58 @@ describe("TrendsAnalyticsController", () => {
 
         await TrendsAnalyticsController.getTrends(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
         expect(response.data.period).toBe("custom");
+      });
+
+      it("should handle custom period with only startDate", async () => {
+        mockReq.query.period = "custom";
+        mockReq.query.startDate = "2024-03-01";
+        // No endDate provided
+        setupEmptyMocks();
+
+        await TrendsAnalyticsController.getTrends(
+          mockReq as any,
+          mockRes as Response,
+        );
+
+        const response = jsonMock.mock.calls[0][0];
+        expect(response.data.period).toBe("custom");
+        expect(response.success).toBe(true);
+      });
+
+      it("should handle custom period with only endDate", async () => {
+        mockReq.query.period = "custom";
+        // No startDate provided - defaults to beginning of time for custom without startDate
+        mockReq.query.endDate = "2024-06-30";
+        setupEmptyMocks();
+
+        await TrendsAnalyticsController.getTrends(
+          mockReq as any,
+          mockRes as Response,
+        );
+
+        const response = jsonMock.mock.calls[0][0];
+        expect(response.data.period).toBe("custom");
+        expect(response.success).toBe(true);
+      });
+
+      it("should fall back to 6months for unknown period", async () => {
+        mockReq.query.period = "unknown_period";
+        setupEmptyMocks();
+
+        await TrendsAnalyticsController.getTrends(
+          mockReq as any,
+          mockRes as Response,
+        );
+
+        const response = jsonMock.mock.calls[0][0];
+        expect(response.data.period).toBe("unknown_period");
+        expect(response.success).toBe(true);
+        // Should use default 6 months range
       });
     });
 
@@ -207,7 +254,7 @@ describe("TrendsAnalyticsController", () => {
 
         await TrendsAnalyticsController.getTrends(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -242,7 +289,7 @@ describe("TrendsAnalyticsController", () => {
 
         await TrendsAnalyticsController.getTrends(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
@@ -260,7 +307,7 @@ describe("TrendsAnalyticsController", () => {
 
         await TrendsAnalyticsController.getTrends(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
@@ -276,29 +323,58 @@ describe("TrendsAnalyticsController", () => {
 
         await TrendsAnalyticsController.getTrends(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
         // All values should be 0 when no data
         expect(response.data.programRevenue.every((v: number) => v === 0)).toBe(
-          true
+          true,
         );
         expect(
-          response.data.donationRevenue.every((v: number) => v === 0)
+          response.data.donationRevenue.every((v: number) => v === 0),
         ).toBe(true);
+      });
+
+      it("should handle trend data for months outside initial map range", async () => {
+        // Mock aggregate returning data for a month that might not be in the pre-initialized map
+        // This tests the || { programRevenue: 0, donationRevenue: 0 } fallback
+        const farFutureYear = 2099;
+        vi.mocked(Purchase.aggregate).mockResolvedValue([
+          {
+            _id: { year: farFutureYear, month: 12 },
+            revenue: 10000,
+            count: 1,
+          },
+        ]);
+        vi.mocked(DonationTransaction.aggregate).mockResolvedValue([
+          {
+            _id: { year: farFutureYear, month: 12 },
+            revenue: 5000,
+            count: 2,
+          },
+        ]);
+
+        await TrendsAnalyticsController.getTrends(
+          mockReq as any,
+          mockRes as Response,
+        );
+
+        const response = jsonMock.mock.calls[0][0];
+        expect(response.success).toBe(true);
+        // The data should still be processed without errors
       });
     });
 
     describe("Error Handling", () => {
       it("should return 500 on database error", async () => {
         vi.mocked(Purchase.aggregate).mockRejectedValue(
-          new Error("Database error")
+          new Error("Database error"),
         );
 
         await TrendsAnalyticsController.getTrends(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -312,12 +388,12 @@ describe("TrendsAnalyticsController", () => {
       it("should return 500 on donation aggregate error", async () => {
         vi.mocked(Purchase.aggregate).mockResolvedValue([]);
         vi.mocked(DonationTransaction.aggregate).mockRejectedValue(
-          new Error("Donation error")
+          new Error("Donation error"),
         );
 
         await TrendsAnalyticsController.getTrends(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);

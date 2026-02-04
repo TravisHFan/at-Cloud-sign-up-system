@@ -112,7 +112,7 @@ describe("ShortLinkService", () => {
       select: vi.fn().mockResolvedValue(mockEvent({ publish: false })),
     });
     await expect(
-      ShortLinkService.getOrCreateForEvent(eventId, userId)
+      ShortLinkService.getOrCreateForEvent(eventId, userId),
     ).rejects.toThrow(/not published/i);
   });
 
@@ -121,7 +121,7 @@ describe("ShortLinkService", () => {
       select: vi.fn().mockResolvedValue(mockEvent({ roles: [] })),
     });
     await expect(
-      ShortLinkService.getOrCreateForEvent(eventId, userId)
+      ShortLinkService.getOrCreateForEvent(eventId, userId),
     ).rejects.toThrow(/no public roles/i);
   });
 
@@ -158,5 +158,34 @@ describe("ShortLinkService", () => {
     (ShortLink.updateMany as any).mockResolvedValue({ modifiedCount: 3 });
     const count = await ShortLinkService.expireAllForEvent(eventId);
     expect(count).toBe(3);
+  });
+
+  it("expireAllForEvent returns 0 for invalid eventId", async () => {
+    const count = await ShortLinkService.expireAllForEvent("invalid-id");
+    expect(count).toBe(0);
+    expect(ShortLink.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("computeExpiry falls back to 30 days when no endDate", () => {
+    const before = Date.now();
+    const expiry = ShortLinkService.computeExpiry({});
+    const after = Date.now();
+    // Should be approximately 30 days from now
+    const minExpected = before + 30 * 24 * 60 * 60 * 1000;
+    const maxExpected = after + 30 * 24 * 60 * 60 * 1000;
+    expect(expiry.getTime()).toBeGreaterThanOrEqual(minExpected - 1000);
+    expect(expiry.getTime()).toBeLessThanOrEqual(maxExpected + 1000);
+  });
+
+  it("computeExpiry uses event endDate/endTime when provided", () => {
+    const expiry = ShortLinkService.computeExpiry({
+      endDate: "2099-12-31",
+      endTime: "23:59",
+      timeZone: "UTC",
+    });
+    // Should be approximately 2099-12-31 23:59 UTC
+    expect(expiry.getFullYear()).toBe(2099);
+    expect(expiry.getUTCMonth()).toBe(11); // December = 11
+    expect(expiry.getUTCDate()).toBe(31);
   });
 });

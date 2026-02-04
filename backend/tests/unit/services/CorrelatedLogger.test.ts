@@ -58,4 +58,28 @@ describe("CorrelatedLogger", () => {
     expect(msg).toContain("u1");
     expect(msg).toContain("GET");
   });
+
+  it("falls back to direct header access when req.get throws", () => {
+    // Create a mock request where req.get() throws but headers object has value
+    const mockReq = {
+      get: (_name: string): string => {
+        throw new Error("get function failed");
+      },
+      headers: {
+        "x-correlation-id": "direct-header-id",
+        "user-agent": "TestAgent/1.0",
+      },
+      path: "/test-path",
+      method: "POST",
+      ip: "192.168.1.1",
+    };
+
+    const clog = CorrelatedLogger.fromRequest(mockReq as any, "TestCtx");
+    clog.info("test message");
+
+    expect(console.info).toHaveBeenCalledTimes(1);
+    const msg = (console.info as any).mock.calls[0][0] as string;
+    // The fallback should read from headers directly
+    expect(msg).toContain("direct-header-id");
+  });
 });

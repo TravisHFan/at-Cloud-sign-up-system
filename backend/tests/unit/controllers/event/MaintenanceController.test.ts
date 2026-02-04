@@ -88,7 +88,7 @@ describe("MaintenanceController", () => {
 
         await MaintenanceController.hasRegistrations(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -105,7 +105,7 @@ describe("MaintenanceController", () => {
 
         await MaintenanceController.hasRegistrations(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(Registration.countDocuments).toHaveBeenCalledWith({
@@ -118,7 +118,7 @@ describe("MaintenanceController", () => {
 
         await MaintenanceController.hasRegistrations(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -135,7 +135,7 @@ describe("MaintenanceController", () => {
 
         await MaintenanceController.hasRegistrations(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
@@ -149,12 +149,12 @@ describe("MaintenanceController", () => {
     describe("error handling", () => {
       it("should handle database errors", async () => {
         vi.mocked(Registration.countDocuments).mockRejectedValue(
-          new Error("Database error")
+          new Error("Database error"),
         );
 
         await MaintenanceController.hasRegistrations(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -173,7 +173,7 @@ describe("MaintenanceController", () => {
 
         await MaintenanceController.getUserEvents(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(401);
@@ -217,7 +217,7 @@ describe("MaintenanceController", () => {
 
         await MaintenanceController.getUserEvents(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(Registration.find).toHaveBeenCalledWith({ userId });
@@ -269,7 +269,7 @@ describe("MaintenanceController", () => {
 
         await MaintenanceController.getUserEvents(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
@@ -317,15 +317,15 @@ describe("MaintenanceController", () => {
 
         await MaintenanceController.getUserEvents(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
         expect(response.data.events[0].registration.roleName).toBe(
-          "Updated Role Name"
+          "Updated Role Name",
         );
         expect(response.data.events[0].registration.roleDescription).toBe(
-          "New description"
+          "New description",
         );
       });
 
@@ -363,12 +363,12 @@ describe("MaintenanceController", () => {
 
         await MaintenanceController.getUserEvents(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
         expect(response.data.events[0].registration.roleName).toBe(
-          "Snapshot Role"
+          "Snapshot Role",
         );
       });
 
@@ -406,7 +406,7 @@ describe("MaintenanceController", () => {
 
         await MaintenanceController.getUserEvents(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(EventController.getEventStatus).toHaveBeenCalledWith(
@@ -414,12 +414,54 @@ describe("MaintenanceController", () => {
           "2024-01-02",
           "10:00",
           "12:00",
-          "America/Los_Angeles"
+          "America/Los_Angeles",
         );
 
         const response = jsonMock.mock.calls[0][0];
         expect(response.data.events[0].eventStatus).toBe("passed");
         expect(response.data.events[0].isPassedEvent).toBe(true);
+      });
+
+      it("should set eventStatus to ongoing for events in progress", async () => {
+        const mockRegistrations = [
+          {
+            _id: new mongoose.Types.ObjectId(),
+            userId: userId,
+            eventId: {
+              _id: eventId,
+              title: "Ongoing Event",
+              date: "2024-01-01",
+              endDate: "2024-01-02",
+              time: "10:00",
+              endTime: "12:00",
+              timeZone: "America/Los_Angeles",
+            },
+            roleId: "role1",
+            registrationDate: new Date(),
+            status: "active",
+            eventSnapshot: {
+              roleName: "Attendee",
+            },
+          },
+        ];
+
+        const mockFind = vi.fn().mockReturnValue({
+          populate: vi.fn().mockReturnValue({
+            sort: vi.fn().mockResolvedValue(mockRegistrations),
+          }),
+        });
+
+        vi.mocked(Registration.find).mockImplementation(mockFind);
+        vi.mocked(EventController.getEventStatus).mockReturnValue("ongoing");
+
+        await MaintenanceController.getUserEvents(
+          mockReq as Request,
+          mockRes as Response,
+        );
+
+        const response = jsonMock.mock.calls[0][0];
+        expect(response.data.events[0].eventStatus).toBe("ongoing");
+        expect(response.data.events[0].isPassedEvent).toBe(false);
       });
 
       it("should handle pagination parameters", async () => {
@@ -454,7 +496,7 @@ describe("MaintenanceController", () => {
 
         await MaintenanceController.getUserEvents(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
@@ -513,7 +555,7 @@ describe("MaintenanceController", () => {
 
         await MaintenanceController.getUserEvents(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
@@ -533,7 +575,7 @@ describe("MaintenanceController", () => {
 
         await MaintenanceController.getUserEvents(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -552,7 +594,7 @@ describe("MaintenanceController", () => {
 
         await MaintenanceController.getCreatedEvents(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(401);
@@ -582,7 +624,7 @@ describe("MaintenanceController", () => {
 
         await MaintenanceController.getCreatedEvents(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(Event.find).toHaveBeenCalledWith({ createdBy: userId });
@@ -602,7 +644,7 @@ describe("MaintenanceController", () => {
 
         await MaintenanceController.getCreatedEvents(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const sortCall = mockFind.mock.results[0].value.sort;
@@ -618,7 +660,7 @@ describe("MaintenanceController", () => {
 
         await MaintenanceController.getCreatedEvents(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
@@ -634,7 +676,7 @@ describe("MaintenanceController", () => {
 
         await MaintenanceController.getCreatedEvents(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -653,7 +695,7 @@ describe("MaintenanceController", () => {
 
         await MaintenanceController.getEventParticipants(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -668,7 +710,7 @@ describe("MaintenanceController", () => {
 
         await MaintenanceController.getEventParticipants(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(401);
@@ -683,7 +725,7 @@ describe("MaintenanceController", () => {
 
         await MaintenanceController.getEventParticipants(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(404);
@@ -713,12 +755,12 @@ describe("MaintenanceController", () => {
 
         await MaintenanceController.getEventParticipants(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(hasPermission).toHaveBeenCalledWith(
           "Member",
-          PERMISSIONS.MODERATE_EVENT_PARTICIPANTS
+          PERMISSIONS.MODERATE_EVENT_PARTICIPANTS,
         );
         expect(statusMock).toHaveBeenCalledWith(200);
       });
@@ -741,12 +783,12 @@ describe("MaintenanceController", () => {
 
         await MaintenanceController.getEventParticipants(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(isEventOrganizer).toHaveBeenCalledWith(
           mockEvent,
-          userId.toString()
+          userId.toString(),
         );
         expect(statusMock).toHaveBeenCalledWith(200);
       });
@@ -764,7 +806,7 @@ describe("MaintenanceController", () => {
 
         await MaintenanceController.getEventParticipants(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(403);
@@ -810,7 +852,7 @@ describe("MaintenanceController", () => {
 
         await MaintenanceController.getEventParticipants(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(Registration.find).toHaveBeenCalledWith({
@@ -820,7 +862,7 @@ describe("MaintenanceController", () => {
         const populateCall = mockFind.mock.results[0].value.populate;
         expect(populateCall).toHaveBeenCalledWith(
           "userId",
-          "username firstName lastName email avatar role"
+          "username firstName lastName email avatar role",
         );
 
         const response = jsonMock.mock.calls[0][0];
@@ -833,12 +875,12 @@ describe("MaintenanceController", () => {
     describe("error handling", () => {
       it("should handle database errors", async () => {
         vi.mocked(Event.findById).mockRejectedValue(
-          new Error("Database error")
+          new Error("Database error"),
         );
 
         await MaintenanceController.getEventParticipants(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);

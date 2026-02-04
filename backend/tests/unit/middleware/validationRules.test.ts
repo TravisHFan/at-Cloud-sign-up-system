@@ -35,7 +35,7 @@ describe("ValidationRules", () => {
     it("should validate username requirements", async () => {
       const validationChains = ValidationRules.userRegistration();
       const usernameValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("username")
+        chain.builder.build().fields.includes("username"),
       );
 
       expect(usernameValidation).toBeDefined();
@@ -44,7 +44,7 @@ describe("ValidationRules", () => {
     it("should validate email format", async () => {
       const validationChains = ValidationRules.userRegistration();
       const emailValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("email")
+        chain.builder.build().fields.includes("email"),
       );
 
       expect(emailValidation).toBeDefined();
@@ -53,7 +53,7 @@ describe("ValidationRules", () => {
     it("should validate password strength requirements", async () => {
       const validationChains = ValidationRules.userRegistration();
       const passwordValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("password")
+        chain.builder.build().fields.includes("password"),
       );
 
       expect(passwordValidation).toBeDefined();
@@ -62,7 +62,7 @@ describe("ValidationRules", () => {
     it("should validate password confirmation", async () => {
       const validationChains = ValidationRules.userRegistration();
       const confirmPasswordValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("confirmPassword")
+        chain.builder.build().fields.includes("confirmPassword"),
       );
 
       expect(confirmPasswordValidation).toBeDefined();
@@ -73,13 +73,13 @@ describe("ValidationRules", () => {
 
       // Check that firstName, lastName, and gender validations exist
       const firstNameValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("firstName")
+        chain.builder.build().fields.includes("firstName"),
       );
       const lastNameValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("lastName")
+        chain.builder.build().fields.includes("lastName"),
       );
       const genderValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("gender")
+        chain.builder.build().fields.includes("gender"),
       );
 
       expect(firstNameValidation).toBeDefined();
@@ -90,7 +90,7 @@ describe("ValidationRules", () => {
     it("should validate isAtCloudLeader boolean field", async () => {
       const validationChains = ValidationRules.userRegistration();
       const leaderValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("isAtCloudLeader")
+        chain.builder.build().fields.includes("isAtCloudLeader"),
       );
 
       expect(leaderValidation).toBeDefined();
@@ -99,7 +99,7 @@ describe("ValidationRules", () => {
     it("should validate roleInAtCloud conditional requirement", async () => {
       const validationChains = ValidationRules.userRegistration();
       const roleValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("roleInAtCloud")
+        chain.builder.build().fields.includes("roleInAtCloud"),
       );
 
       expect(roleValidation).toBeDefined();
@@ -108,7 +108,7 @@ describe("ValidationRules", () => {
     it("should validate phone number format", async () => {
       const validationChains = ValidationRules.userRegistration();
       const phoneValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("phone")
+        chain.builder.build().fields.includes("phone"),
       );
 
       expect(phoneValidation).toBeDefined();
@@ -117,7 +117,7 @@ describe("ValidationRules", () => {
     it("should validate terms acceptance", async () => {
       const validationChains = ValidationRules.userRegistration();
       const termsValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("acceptTerms")
+        chain.builder.build().fields.includes("acceptTerms"),
       );
 
       expect(termsValidation).toBeDefined();
@@ -135,7 +135,7 @@ describe("ValidationRules", () => {
     it("should validate login identifier", async () => {
       const validationChains = ValidationRules.userLogin();
       const identifierValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("emailOrUsername")
+        chain.builder.build().fields.includes("emailOrUsername"),
       );
 
       expect(identifierValidation).toBeDefined();
@@ -144,7 +144,7 @@ describe("ValidationRules", () => {
     it("should validate password", async () => {
       const validationChains = ValidationRules.userLogin();
       const passwordValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("password")
+        chain.builder.build().fields.includes("password"),
       );
 
       expect(passwordValidation).toBeDefined();
@@ -153,7 +153,7 @@ describe("ValidationRules", () => {
     it("should validate remember me option", async () => {
       const validationChains = ValidationRules.userLogin();
       const rememberMeValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("rememberMe")
+        chain.builder.build().fields.includes("rememberMe"),
       );
 
       expect(rememberMeValidation).toBeDefined();
@@ -173,16 +173,16 @@ describe("ValidationRules", () => {
 
       // All fields should be optional for updates
       const usernameValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("username")
+        chain.builder.build().fields.includes("username"),
       );
       const emailValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("email")
+        chain.builder.build().fields.includes("email"),
       );
       const firstNameValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("firstName")
+        chain.builder.build().fields.includes("firstName"),
       );
       const lastNameValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("lastName")
+        chain.builder.build().fields.includes("lastName"),
       );
 
       expect(usernameValidation).toBeDefined();
@@ -194,7 +194,7 @@ describe("ValidationRules", () => {
     it("should validate gender field", async () => {
       const validationChains = ValidationRules.userProfileUpdate();
       const genderValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("gender")
+        chain.builder.build().fields.includes("gender"),
       );
 
       expect(genderValidation).toBeDefined();
@@ -203,7 +203,7 @@ describe("ValidationRules", () => {
     it("should validate phone number", async () => {
       const validationChains = ValidationRules.userProfileUpdate();
       const phoneValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("phone")
+        chain.builder.build().fields.includes("phone"),
       );
 
       expect(phoneValidation).toBeDefined();
@@ -221,7 +221,7 @@ describe("ValidationRules", () => {
     it("should validate event title", async () => {
       const validationChains = ValidationRules.eventCreation();
       const titleValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("title")
+        chain.builder.build().fields.includes("title"),
       );
 
       expect(titleValidation).toBeDefined();
@@ -230,7 +230,7 @@ describe("ValidationRules", () => {
     it("should validate event type", async () => {
       const validationChains = ValidationRules.eventCreation();
       const typeValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("type")
+        chain.builder.build().fields.includes("type"),
       );
 
       expect(typeValidation).toBeDefined();
@@ -239,7 +239,7 @@ describe("ValidationRules", () => {
     it("should validate event date", async () => {
       const validationChains = ValidationRules.eventCreation();
       const dateValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("date")
+        chain.builder.build().fields.includes("date"),
       );
 
       expect(dateValidation).toBeDefined();
@@ -248,10 +248,10 @@ describe("ValidationRules", () => {
     it("should validate event time", async () => {
       const validationChains = ValidationRules.eventCreation();
       const timeValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("time")
+        chain.builder.build().fields.includes("time"),
       );
       const endTimeValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("endTime")
+        chain.builder.build().fields.includes("endTime"),
       );
 
       expect(timeValidation).toBeDefined();
@@ -261,7 +261,7 @@ describe("ValidationRules", () => {
     it("should validate location information", async () => {
       const validationChains = ValidationRules.eventCreation();
       const locationValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("location")
+        chain.builder.build().fields.includes("location"),
       );
 
       expect(locationValidation).toBeDefined();
@@ -270,7 +270,7 @@ describe("ValidationRules", () => {
     it("should validate organizer information", async () => {
       const validationChains = ValidationRules.eventCreation();
       const organizerValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("organizer")
+        chain.builder.build().fields.includes("organizer"),
       );
 
       expect(organizerValidation).toBeDefined();
@@ -279,7 +279,7 @@ describe("ValidationRules", () => {
     it("should validate purpose description", async () => {
       const validationChains = ValidationRules.eventCreation();
       const purposeValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("purpose")
+        chain.builder.build().fields.includes("purpose"),
       );
 
       expect(purposeValidation).toBeDefined();
@@ -288,7 +288,7 @@ describe("ValidationRules", () => {
     it("should validate event format", async () => {
       const validationChains = ValidationRules.eventCreation();
       const formatValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("format")
+        chain.builder.build().fields.includes("format"),
       );
 
       expect(formatValidation).toBeDefined();
@@ -297,7 +297,7 @@ describe("ValidationRules", () => {
     it("should validate roles array", async () => {
       const validationChains = ValidationRules.eventCreation();
       const rolesValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("roles")
+        chain.builder.build().fields.includes("roles"),
       );
 
       expect(rolesValidation).toBeDefined();
@@ -308,13 +308,13 @@ describe("ValidationRules", () => {
 
       // Check for role.name, role.description, role.maxParticipants validations
       const roleNameValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("roles.*.name")
+        chain.builder.build().fields.includes("roles.*.name"),
       );
       const roleDescValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("roles.*.description")
+        chain.builder.build().fields.includes("roles.*.description"),
       );
       const roleMaxValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("roles.*.maxParticipants")
+        chain.builder.build().fields.includes("roles.*.maxParticipants"),
       );
 
       expect(roleNameValidation).toBeDefined();
@@ -334,7 +334,7 @@ describe("ValidationRules", () => {
     it("should validate MongoDB ObjectId format", async () => {
       const validationChains = ValidationRules.mongoId();
       const idValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("id")
+        chain.builder.build().fields.includes("id"),
       );
 
       expect(idValidation).toBeDefined();
@@ -352,7 +352,7 @@ describe("ValidationRules", () => {
     it("should validate page number", async () => {
       const validationChains = ValidationRules.pagination();
       const pageValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("page")
+        chain.builder.build().fields.includes("page"),
       );
 
       expect(pageValidation).toBeDefined();
@@ -361,7 +361,7 @@ describe("ValidationRules", () => {
     it("should validate limit parameter", async () => {
       const validationChains = ValidationRules.pagination();
       const limitValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("limit")
+        chain.builder.build().fields.includes("limit"),
       );
 
       expect(limitValidation).toBeDefined();
@@ -379,7 +379,7 @@ describe("ValidationRules", () => {
     it("should validate search query", async () => {
       const validationChains = ValidationRules.search();
       const queryValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("q")
+        chain.builder.build().fields.includes("q"),
       );
 
       expect(queryValidation).toBeDefined();
@@ -397,7 +397,7 @@ describe("ValidationRules", () => {
 
       // Find username validation
       const usernameValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("username")
+        chain.builder.build().fields.includes("username"),
       );
 
       if (usernameValidation) {
@@ -416,7 +416,7 @@ describe("ValidationRules", () => {
 
       // Find email validation
       const emailValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("email")
+        chain.builder.build().fields.includes("email"),
       );
 
       if (emailValidation) {
@@ -435,7 +435,7 @@ describe("ValidationRules", () => {
 
       // Find password validation
       const passwordValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("password")
+        chain.builder.build().fields.includes("password"),
       );
 
       if (passwordValidation) {
@@ -457,7 +457,7 @@ describe("ValidationRules", () => {
 
       // Find date validation
       const dateValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("date")
+        chain.builder.build().fields.includes("date"),
       );
 
       if (dateValidation) {
@@ -477,7 +477,7 @@ describe("ValidationRules", () => {
 
       // Find endTime validation
       const endTimeValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("endTime")
+        chain.builder.build().fields.includes("endTime"),
       );
 
       if (endTimeValidation) {
@@ -496,7 +496,7 @@ describe("ValidationRules", () => {
       } as Request;
 
       const confirmValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("confirmPassword")
+        chain.builder.build().fields.includes("confirmPassword"),
       );
 
       expect(confirmValidation).toBeDefined();
@@ -516,7 +516,7 @@ describe("ValidationRules", () => {
       } as Request;
 
       const confirmValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("confirmPassword")
+        chain.builder.build().fields.includes("confirmPassword"),
       );
 
       expect(confirmValidation).toBeDefined();
@@ -538,7 +538,7 @@ describe("ValidationRules", () => {
       } as Request;
 
       const dateValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("date")
+        chain.builder.build().fields.includes("date"),
       );
 
       expect(dateValidation).toBeDefined();
@@ -558,13 +558,41 @@ describe("ValidationRules", () => {
       } as Request;
 
       const endTimeValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("endTime")
+        chain.builder.build().fields.includes("endTime"),
       );
 
       expect(endTimeValidation).toBeDefined();
       if (endTimeValidation) {
         const result = await endTimeValidation.run(mockReq);
         expect(result).toBeDefined();
+      }
+    });
+
+    it("should reject endTime before startTime on same day", async () => {
+      const validationChains = ValidationRules.eventCreation();
+      const mockReq = {
+        body: {
+          date: "2025-06-15",
+          endDate: "2025-06-15",
+          time: "14:00",
+          endTime: "13:00", // Invalid: end before start on same day
+        },
+      } as Request;
+
+      const endTimeValidation = validationChains.find((chain) =>
+        chain.builder.build().fields.includes("endTime"),
+      );
+
+      expect(endTimeValidation).toBeDefined();
+      if (endTimeValidation) {
+        const result = await endTimeValidation.run(mockReq);
+        const errors = result.array();
+        expect(
+          errors.some(
+            (e: { msg: string }) =>
+              e.msg === "End time must be after start time",
+          ),
+        ).toBe(true);
       }
     });
   });
@@ -643,7 +671,7 @@ describe("ValidationRules", () => {
 
       // Find roleInAtCloud validation
       const roleValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("roleInAtCloud")
+        chain.builder.build().fields.includes("roleInAtCloud"),
       );
 
       if (roleValidation) {
@@ -662,7 +690,7 @@ describe("ValidationRules", () => {
 
       // Find query validation
       const queryValidation = validationChains.find((chain) =>
-        chain.builder.build().fields.includes("q")
+        chain.builder.build().fields.includes("q"),
       );
 
       if (queryValidation) {

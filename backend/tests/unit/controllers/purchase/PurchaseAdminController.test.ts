@@ -57,7 +57,7 @@ describe("PurchaseAdminController", () => {
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(401);
@@ -75,7 +75,7 @@ describe("PurchaseAdminController", () => {
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(403);
@@ -93,7 +93,7 @@ describe("PurchaseAdminController", () => {
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(403);
@@ -108,12 +108,12 @@ describe("PurchaseAdminController", () => {
       const mockPurchases: any[] = [];
 
       vi.mocked(Purchase.find).mockReturnValue(
-        mockPurchaseFindChain(mockPurchases)
+        mockPurchaseFindChain(mockPurchases),
       );
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -128,12 +128,12 @@ describe("PurchaseAdminController", () => {
       const mockPurchases: any[] = [];
 
       vi.mocked(Purchase.find).mockReturnValue(
-        mockPurchaseFindChain(mockPurchases)
+        mockPurchaseFindChain(mockPurchases),
       );
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -171,12 +171,12 @@ describe("PurchaseAdminController", () => {
       ];
 
       vi.mocked(Purchase.find).mockReturnValue(
-        mockPurchaseFindChain(mockPurchases)
+        mockPurchaseFindChain(mockPurchases),
       );
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -239,12 +239,12 @@ describe("PurchaseAdminController", () => {
       }));
 
       vi.mocked(Purchase.find).mockReturnValue(
-        mockPurchaseFindChain(mockPurchases)
+        mockPurchaseFindChain(mockPurchases),
       );
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -278,12 +278,12 @@ describe("PurchaseAdminController", () => {
       const mockPurchases: any[] = [];
 
       vi.mocked(Purchase.find).mockReturnValue(
-        mockPurchaseFindChain(mockPurchases)
+        mockPurchaseFindChain(mockPurchases),
       );
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(jsonMock.mock.calls[0][0].data.pagination.limit).toBe(100);
@@ -301,12 +301,12 @@ describe("PurchaseAdminController", () => {
       const mockPurchases: any[] = [];
 
       vi.mocked(Purchase.find).mockReturnValue(
-        mockPurchaseFindChain(mockPurchases)
+        mockPurchaseFindChain(mockPurchases),
       );
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(jsonMock.mock.calls[0][0].data.pagination.page).toBe(1);
@@ -324,12 +324,12 @@ describe("PurchaseAdminController", () => {
       const mockPurchases: any[] = [];
 
       vi.mocked(Purchase.find).mockReturnValue(
-        mockPurchaseFindChain(mockPurchases)
+        mockPurchaseFindChain(mockPurchases),
       );
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(jsonMock.mock.calls[0][0].data.pagination.limit).toBe(1);
@@ -358,7 +358,7 @@ describe("PurchaseAdminController", () => {
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(findMock).toHaveBeenCalledWith({ status: "completed" });
@@ -387,7 +387,7 @@ describe("PurchaseAdminController", () => {
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(findMock).toHaveBeenCalledWith({});
@@ -450,12 +450,12 @@ describe("PurchaseAdminController", () => {
       ];
 
       vi.mocked(Purchase.find).mockReturnValue(
-        mockPurchaseFindChain(mockPurchases)
+        mockPurchaseFindChain(mockPurchases),
       );
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       const purchases = jsonMock.mock.calls[0][0].data.purchases;
@@ -520,12 +520,12 @@ describe("PurchaseAdminController", () => {
       ];
 
       vi.mocked(Purchase.find).mockReturnValue(
-        mockPurchaseFindChain(mockPurchases)
+        mockPurchaseFindChain(mockPurchases),
       );
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       const purchases = jsonMock.mock.calls[0][0].data.purchases;
@@ -590,12 +590,12 @@ describe("PurchaseAdminController", () => {
       ];
 
       vi.mocked(Purchase.find).mockReturnValue(
-        mockPurchaseFindChain(mockPurchases)
+        mockPurchaseFindChain(mockPurchases),
       );
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       const purchases = jsonMock.mock.calls[0][0].data.purchases;
@@ -660,12 +660,12 @@ describe("PurchaseAdminController", () => {
       ];
 
       vi.mocked(Purchase.find).mockReturnValue(
-        mockPurchaseFindChain(mockPurchases)
+        mockPurchaseFindChain(mockPurchases),
       );
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       const purchases = jsonMock.mock.calls[0][0].data.purchases;
@@ -730,12 +730,12 @@ describe("PurchaseAdminController", () => {
       ];
 
       vi.mocked(Purchase.find).mockReturnValue(
-        mockPurchaseFindChain(mockPurchases)
+        mockPurchaseFindChain(mockPurchases),
       );
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       const purchases = jsonMock.mock.calls[0][0].data.purchases;
@@ -775,12 +775,12 @@ describe("PurchaseAdminController", () => {
       ];
 
       vi.mocked(Purchase.find).mockReturnValue(
-        mockPurchaseFindChain(mockPurchases)
+        mockPurchaseFindChain(mockPurchases),
       );
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       const purchases = jsonMock.mock.calls[0][0].data.purchases;
@@ -814,12 +814,12 @@ describe("PurchaseAdminController", () => {
       ];
 
       vi.mocked(Purchase.find).mockReturnValue(
-        mockPurchaseFindChain(mockPurchases)
+        mockPurchaseFindChain(mockPurchases),
       );
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       const purchases = jsonMock.mock.calls[0][0].data.purchases;
@@ -855,12 +855,12 @@ describe("PurchaseAdminController", () => {
       ];
 
       vi.mocked(Purchase.find).mockReturnValue(
-        mockPurchaseFindChain(mockPurchases)
+        mockPurchaseFindChain(mockPurchases),
       );
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       const purchases = jsonMock.mock.calls[0][0].data.purchases;
@@ -913,12 +913,12 @@ describe("PurchaseAdminController", () => {
       ];
 
       vi.mocked(Purchase.find).mockReturnValue(
-        mockPurchaseFindChain(mockPurchases)
+        mockPurchaseFindChain(mockPurchases),
       );
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       const purchase = jsonMock.mock.calls[0][0].data.purchases[0];
@@ -964,12 +964,12 @@ describe("PurchaseAdminController", () => {
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(console.error).toHaveBeenCalledWith(
         "Error fetching admin purchases:",
-        dbError
+        dbError,
       );
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith({
@@ -1003,7 +1003,7 @@ describe("PurchaseAdminController", () => {
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(sortMock).toHaveBeenCalledWith({ createdAt: -1 });
@@ -1034,7 +1034,7 @@ describe("PurchaseAdminController", () => {
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(populateMock1).toHaveBeenCalledWith({
@@ -1082,17 +1082,114 @@ describe("PurchaseAdminController", () => {
       ];
 
       vi.mocked(Purchase.find).mockReturnValue(
-        mockPurchaseFindChain(mockPurchases)
+        mockPurchaseFindChain(mockPurchases),
       );
 
       await PurchaseAdminController.getAllPurchasesAdmin(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       // Should return all purchases when search is empty
       const purchases = jsonMock.mock.calls[0][0].data.purchases;
       expect(purchases).toHaveLength(1);
+    });
+
+    it("should format event purchase correctly", async () => {
+      mockReq.user = {
+        _id: userId,
+        role: "Super Admin",
+      };
+
+      const eventId = new mongoose.Types.ObjectId();
+      const mockPurchases = [
+        {
+          _id: new mongoose.Types.ObjectId(),
+          orderNumber: "EVENT-001",
+          userId: {
+            _id: userId,
+            firstName: "Jane",
+            lastName: "Smith",
+            email: "jane@example.com",
+          },
+          programId: null,
+          eventId: {
+            _id: eventId,
+            title: "Test Event",
+          },
+          purchaseType: "event",
+          fullPrice: 50,
+          finalPrice: 50,
+          status: "completed",
+          isClassRep: false,
+          isEarlyBird: false,
+          createdAt: new Date(),
+        },
+      ];
+
+      vi.mocked(Purchase.find).mockReturnValue(
+        mockPurchaseFindChain(mockPurchases),
+      );
+
+      await PurchaseAdminController.getAllPurchasesAdmin(
+        mockReq as Request,
+        mockRes as Response,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(200);
+      const purchases = jsonMock.mock.calls[0][0].data.purchases;
+      expect(purchases[0].purchaseType).toBe("event");
+      expect(purchases[0].event).toEqual({
+        id: eventId,
+        name: "Test Event",
+      });
+      expect(purchases[0].program).toBeUndefined();
+    });
+
+    it("should handle event purchase with missing event title", async () => {
+      mockReq.user = {
+        _id: userId,
+        role: "Super Admin",
+      };
+
+      const eventId = new mongoose.Types.ObjectId();
+      const mockPurchases = [
+        {
+          _id: new mongoose.Types.ObjectId(),
+          orderNumber: "EVENT-002",
+          userId: {
+            _id: userId,
+            firstName: "Test",
+            lastName: "User",
+            email: "test@example.com",
+          },
+          programId: null,
+          eventId: {
+            _id: eventId,
+            title: undefined, // Missing title
+          },
+          purchaseType: "event",
+          fullPrice: 75,
+          finalPrice: 75,
+          status: "completed",
+          isClassRep: false,
+          isEarlyBird: false,
+          createdAt: new Date(),
+        },
+      ];
+
+      vi.mocked(Purchase.find).mockReturnValue(
+        mockPurchaseFindChain(mockPurchases),
+      );
+
+      await PurchaseAdminController.getAllPurchasesAdmin(
+        mockReq as Request,
+        mockRes as Response,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(200);
+      const purchases = jsonMock.mock.calls[0][0].data.purchases;
+      expect(purchases[0].event.name).toBe("Unknown Event");
     });
   });
 });

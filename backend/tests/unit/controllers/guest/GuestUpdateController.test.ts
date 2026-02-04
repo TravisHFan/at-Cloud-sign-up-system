@@ -112,7 +112,7 @@ describe("GuestUpdateController", () => {
 
         await GuestUpdateController.updateGuestRegistration(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -127,12 +127,12 @@ describe("GuestUpdateController", () => {
         delete mockReq.params.id;
         const mockGuest = createMockGuest();
         vi.mocked(GuestRegistration.findById).mockResolvedValue(
-          mockGuest as any
+          mockGuest as any,
         );
 
         await GuestUpdateController.updateGuestRegistration(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(GuestRegistration.findById).toHaveBeenCalledWith(guestId);
@@ -146,7 +146,7 @@ describe("GuestUpdateController", () => {
 
         await GuestUpdateController.updateGuestRegistration(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(404);
@@ -161,12 +161,12 @@ describe("GuestUpdateController", () => {
       it("should return 400 for cancelled registration", async () => {
         const mockGuest = createMockGuest({ status: "cancelled" });
         vi.mocked(GuestRegistration.findById).mockResolvedValue(
-          mockGuest as any
+          mockGuest as any,
         );
 
         await GuestUpdateController.updateGuestRegistration(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -181,12 +181,12 @@ describe("GuestUpdateController", () => {
       it("should update guest registration successfully", async () => {
         const mockGuest = createMockGuest();
         vi.mocked(GuestRegistration.findById).mockResolvedValue(
-          mockGuest as any
+          mockGuest as any,
         );
 
         await GuestUpdateController.updateGuestRegistration(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(mockGuest.fullName).toBe("Updated Guest");
@@ -198,14 +198,14 @@ describe("GuestUpdateController", () => {
           expect.objectContaining({
             success: true,
             message: "Guest registration updated successfully",
-          })
+          }),
         );
       });
 
       it("should trim whitespace from input fields", async () => {
         const mockGuest = createMockGuest();
         vi.mocked(GuestRegistration.findById).mockResolvedValue(
-          mockGuest as any
+          mockGuest as any,
         );
         mockReq.body = {
           fullName: "  Trimmed Name  ",
@@ -214,7 +214,7 @@ describe("GuestUpdateController", () => {
 
         await GuestUpdateController.updateGuestRegistration(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(mockGuest.fullName).toBe("Trimmed Name");
@@ -224,13 +224,13 @@ describe("GuestUpdateController", () => {
       it("should clear phone when empty string provided", async () => {
         const mockGuest = createMockGuest();
         vi.mocked(GuestRegistration.findById).mockResolvedValue(
-          mockGuest as any
+          mockGuest as any,
         );
         mockReq.body = { phone: "" };
 
         await GuestUpdateController.updateGuestRegistration(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(mockGuest.phone).toBeUndefined();
@@ -239,12 +239,12 @@ describe("GuestUpdateController", () => {
       it("should emit socket update after save", async () => {
         const mockGuest = createMockGuest();
         vi.mocked(GuestRegistration.findById).mockResolvedValue(
-          mockGuest as any
+          mockGuest as any,
         );
 
         await GuestUpdateController.updateGuestRegistration(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(socketService.emitEventUpdate).toHaveBeenCalledWith(
@@ -254,14 +254,14 @@ describe("GuestUpdateController", () => {
             eventId: "event123",
             roleId: "role1",
             guestName: "Updated Guest",
-          })
+          }),
         );
       });
 
       it("should succeed even if socket emit fails", async () => {
         const mockGuest = createMockGuest();
         vi.mocked(GuestRegistration.findById).mockResolvedValue(
-          mockGuest as any
+          mockGuest as any,
         );
         vi.mocked(socketService.emitEventUpdate).mockImplementation(() => {
           throw new Error("Socket error");
@@ -269,12 +269,12 @@ describe("GuestUpdateController", () => {
 
         await GuestUpdateController.updateGuestRegistration(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(consoleErrorSpy).toHaveBeenCalledWith(
           "Failed to emit guest update:",
-          expect.any(Error)
+          expect.any(Error),
         );
         expect(statusMock).toHaveBeenCalledWith(200);
       });
@@ -283,12 +283,12 @@ describe("GuestUpdateController", () => {
     describe("Error Handling", () => {
       it("should return 500 on database error", async () => {
         vi.mocked(GuestRegistration.findById).mockRejectedValue(
-          new Error("Database error")
+          new Error("Database error"),
         );
 
         await GuestUpdateController.updateGuestRegistration(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -303,12 +303,12 @@ describe("GuestUpdateController", () => {
         const mockGuest = createMockGuest();
         mockGuest.save.mockRejectedValue(new Error("Save failed"));
         vi.mocked(GuestRegistration.findById).mockResolvedValue(
-          mockGuest as any
+          mockGuest as any,
         );
 
         await GuestUpdateController.updateGuestRegistration(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -316,6 +316,23 @@ describe("GuestUpdateController", () => {
           success: false,
           message: "Failed to update guest registration",
         });
+      });
+
+      it("should handle non-string phone value (e.g., number)", async () => {
+        const mockGuest = createMockGuest();
+        vi.mocked(GuestRegistration.findById).mockResolvedValue(
+          mockGuest as any,
+        );
+        mockReq.body = { phone: 12345 as unknown as string };
+
+        await GuestUpdateController.updateGuestRegistration(
+          mockReq as unknown as Request,
+          mockRes as Response,
+        );
+
+        // Non-string phone triggers the else branch which sets to undefined
+        expect(mockGuest.phone).toBeUndefined();
+        expect(statusMock).toHaveBeenCalledWith(200);
       });
     });
   });

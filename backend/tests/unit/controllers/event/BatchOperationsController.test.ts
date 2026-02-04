@@ -97,7 +97,7 @@ describe("BatchOperationsController", () => {
 
         await BatchOperationsController.updateAllEventStatuses(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(Event.find).toHaveBeenCalledWith({
@@ -139,7 +139,7 @@ describe("BatchOperationsController", () => {
 
         await BatchOperationsController.updateAllEventStatuses(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(EventController.getEventStatus).toHaveBeenCalledTimes(1);
@@ -163,7 +163,7 @@ describe("BatchOperationsController", () => {
 
         await BatchOperationsController.updateAllEventStatuses(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(Event.findByIdAndUpdate).not.toHaveBeenCalled();
@@ -186,7 +186,7 @@ describe("BatchOperationsController", () => {
 
         await BatchOperationsController.updateAllEventStatuses(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(Event.find).toHaveBeenCalledWith({
@@ -205,12 +205,12 @@ describe("BatchOperationsController", () => {
 
         await BatchOperationsController.updateAllEventStatuses(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const selectCall = mockFind.mock.results[0].value.select;
         expect(selectCall).toHaveBeenCalledWith(
-          "_id date endDate time endTime status timeZone"
+          "_id date endDate time endTime status timeZone",
         );
       });
 
@@ -237,7 +237,7 @@ describe("BatchOperationsController", () => {
 
         await BatchOperationsController.updateAllEventStatuses(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(EventController.getEventStatus).toHaveBeenCalledWith(
@@ -245,7 +245,7 @@ describe("BatchOperationsController", () => {
           "2024-01-03",
           "10:00",
           "12:00",
-          "America/Los_Angeles"
+          "America/Los_Angeles",
         );
       });
 
@@ -269,7 +269,7 @@ describe("BatchOperationsController", () => {
 
         await BatchOperationsController.updateAllEventStatuses(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(EventController.getEventStatus).toHaveBeenCalledWith(
@@ -277,7 +277,7 @@ describe("BatchOperationsController", () => {
           "2024-01-01",
           "10:00",
           "12:00",
-          undefined
+          undefined,
         );
       });
     });
@@ -304,11 +304,11 @@ describe("BatchOperationsController", () => {
 
         await BatchOperationsController.updateAllEventStatuses(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(CachePatterns.invalidateEventCache).toHaveBeenCalledWith(
-          event1._id.toString()
+          event1._id.toString(),
         );
         expect(CachePatterns.invalidateAnalyticsCache).toHaveBeenCalled();
       });
@@ -333,7 +333,7 @@ describe("BatchOperationsController", () => {
 
         await BatchOperationsController.updateAllEventStatuses(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(CachePatterns.invalidateEventCache).not.toHaveBeenCalled();
@@ -358,7 +358,7 @@ describe("BatchOperationsController", () => {
 
         await BatchOperationsController.updateAllEventStatuses(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -384,7 +384,40 @@ describe("BatchOperationsController", () => {
 
         await BatchOperationsController.updateAllEventStatuses(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(200);
+      });
+
+      it("should fallback to original query when select chain throws", async () => {
+        const events = [
+          {
+            _id: new mongoose.Types.ObjectId(),
+            date: "2024-01-01",
+            time: "10:00",
+            endTime: "12:00",
+            status: "upcoming",
+          },
+        ];
+
+        // Create a mock where select() returns an object with lean() that throws
+        const mockFind = vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            lean: vi.fn().mockImplementation(() => {
+              throw new Error("lean() failed");
+            }),
+          }),
+        });
+
+        vi.mocked(Event.find).mockImplementation(mockFind);
+        // Fallback uses original findRes, so mock that to resolve to events
+        vi.mocked(Event.find).mockResolvedValue(events as any);
+        vi.mocked(EventController.getEventStatus).mockReturnValue("upcoming");
+
+        await BatchOperationsController.updateAllEventStatuses(
+          mockReq as Request,
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -397,7 +430,7 @@ describe("BatchOperationsController", () => {
 
         await BatchOperationsController.updateAllEventStatuses(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -425,12 +458,12 @@ describe("BatchOperationsController", () => {
         vi.mocked(Event.find).mockImplementation(mockFind);
         vi.mocked(EventController.getEventStatus).mockReturnValue("completed");
         vi.mocked(Event.findByIdAndUpdate).mockRejectedValue(
-          new Error("Update failed")
+          new Error("Update failed"),
         );
 
         await BatchOperationsController.updateAllEventStatuses(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -462,7 +495,7 @@ describe("BatchOperationsController", () => {
 
         await BatchOperationsController.recalculateSignupCounts(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(Event.find).toHaveBeenCalledWith({});
@@ -494,7 +527,7 @@ describe("BatchOperationsController", () => {
 
         await BatchOperationsController.recalculateSignupCounts(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(event1.calculateSignedUp).toHaveBeenCalled();
@@ -519,7 +552,7 @@ describe("BatchOperationsController", () => {
 
         await BatchOperationsController.recalculateSignupCounts(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(Event.findByIdAndUpdate).toHaveBeenCalledWith(event1._id, {
@@ -538,7 +571,7 @@ describe("BatchOperationsController", () => {
 
         await BatchOperationsController.recalculateSignupCounts(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(Event.findByIdAndUpdate).not.toHaveBeenCalled();
@@ -555,7 +588,7 @@ describe("BatchOperationsController", () => {
 
         await BatchOperationsController.recalculateSignupCounts(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(Event.find).toHaveBeenCalledWith({});
@@ -575,11 +608,11 @@ describe("BatchOperationsController", () => {
 
         await BatchOperationsController.recalculateSignupCounts(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(CachePatterns.invalidateEventCache).toHaveBeenCalledWith(
-          event1._id.toString()
+          event1._id.toString(),
         );
         expect(CachePatterns.invalidateAnalyticsCache).toHaveBeenCalled();
       });
@@ -595,7 +628,7 @@ describe("BatchOperationsController", () => {
 
         await BatchOperationsController.recalculateSignupCounts(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(CachePatterns.invalidateEventCache).not.toHaveBeenCalled();
@@ -609,7 +642,7 @@ describe("BatchOperationsController", () => {
 
         await BatchOperationsController.recalculateSignupCounts(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -632,7 +665,7 @@ describe("BatchOperationsController", () => {
 
         await BatchOperationsController.recalculateSignupCounts(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -651,12 +684,12 @@ describe("BatchOperationsController", () => {
 
         vi.mocked(Event.find).mockResolvedValue([event1] as any);
         vi.mocked(Event.findByIdAndUpdate).mockRejectedValue(
-          new Error("Update failed")
+          new Error("Update failed"),
         );
 
         await BatchOperationsController.recalculateSignupCounts(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);

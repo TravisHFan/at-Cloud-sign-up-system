@@ -17,13 +17,15 @@ vi.mock("../../../../src/models", () => ({
     findById: vi.fn(),
   },
   User: {
-    findById: vi.fn(),
+    findById: vi.fn().mockReturnValue({
+      lean: vi.fn().mockResolvedValue(null),
+    }),
   },
 }));
 
 vi.mock("../../../../src/services/infrastructure/EmailServiceFacade", () => ({
   EmailService: {
-    sendGuestDeclineNotification: vi.fn(),
+    sendGuestDeclineNotification: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -31,9 +33,9 @@ vi.mock(
   "../../../../src/services/notifications/TrioNotificationService",
   () => ({
     TrioNotificationService: {
-      createTrio: vi.fn(),
+      createTrio: vi.fn().mockResolvedValue(undefined),
     },
-  })
+  }),
 );
 
 vi.mock("../../../../src/services/infrastructure/SocketService", () => ({
@@ -49,7 +51,10 @@ vi.mock("../../../../src/services/LoggerService", () => ({
   }),
 }));
 
-import { GuestRegistration, Event } from "../../../../src/models";
+import { GuestRegistration, Event, User } from "../../../../src/models";
+import { EmailService } from "../../../../src/services/infrastructure/EmailServiceFacade";
+import { TrioNotificationService } from "../../../../src/services/notifications/TrioNotificationService";
+import { socketService } from "../../../../src/services/infrastructure/SocketService";
 
 interface MockRequest {
   params: Record<string, string>;
@@ -100,7 +105,7 @@ describe("GuestDeclineController", () => {
 
         await GuestDeclineController.getDeclineTokenInfo(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -119,7 +124,7 @@ describe("GuestDeclineController", () => {
 
         await GuestDeclineController.getDeclineTokenInfo(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(410);
@@ -138,7 +143,7 @@ describe("GuestDeclineController", () => {
 
         await GuestDeclineController.getDeclineTokenInfo(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -161,7 +166,7 @@ describe("GuestDeclineController", () => {
 
         await GuestDeclineController.getDeclineTokenInfo(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(404);
@@ -184,7 +189,7 @@ describe("GuestDeclineController", () => {
 
         await GuestDeclineController.getDeclineTokenInfo(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(409);
@@ -208,7 +213,7 @@ describe("GuestDeclineController", () => {
 
         await GuestDeclineController.getDeclineTokenInfo(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(409);
@@ -251,7 +256,7 @@ describe("GuestDeclineController", () => {
 
         await GuestDeclineController.getDeclineTokenInfo(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
@@ -270,7 +275,7 @@ describe("GuestDeclineController", () => {
 
         await GuestDeclineController.getDeclineTokenInfo(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -292,7 +297,7 @@ describe("GuestDeclineController", () => {
 
         await GuestDeclineController.submitDecline(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -311,7 +316,7 @@ describe("GuestDeclineController", () => {
 
         await GuestDeclineController.submitDecline(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(410);
@@ -334,7 +339,7 @@ describe("GuestDeclineController", () => {
 
         await GuestDeclineController.submitDecline(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(404);
@@ -357,7 +362,7 @@ describe("GuestDeclineController", () => {
 
         await GuestDeclineController.submitDecline(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(409);
@@ -400,7 +405,7 @@ describe("GuestDeclineController", () => {
 
         await GuestDeclineController.submitDecline(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(mockDoc.save).toHaveBeenCalled();
@@ -441,11 +446,11 @@ describe("GuestDeclineController", () => {
 
         await GuestDeclineController.submitDecline(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(mockDoc.declineReason).toBe(
-          "I cannot attend due to scheduling conflict"
+          "I cannot attend due to scheduling conflict",
         );
         expect(mockDoc.save).toHaveBeenCalled();
       });
@@ -459,7 +464,7 @@ describe("GuestDeclineController", () => {
 
         await GuestDeclineController.submitDecline(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -467,6 +472,422 @@ describe("GuestDeclineController", () => {
           success: false,
           message: "Server error",
         });
+      });
+    });
+    describe("Notification Flows", () => {
+      it("should send organizer email notification for self-registered guest (no invitedBy)", async () => {
+        mockVerifyToken.mockReturnValue({
+          valid: true,
+          payload: { registrationId: mockRegistrationId },
+        });
+
+        const mockDoc: Record<string, any> = {
+          _id: mockRegistrationId,
+          status: "pending",
+          eventId: mockEventId,
+          fullName: "Test Guest",
+          email: "guest@test.com",
+          roleId: "role123",
+          invitedBy: undefined, // Self-registered
+          eventSnapshot: {
+            title: "Test Event",
+            roleName: "Speaker",
+            date: new Date(),
+          },
+          save: vi.fn().mockResolvedValue(undefined),
+        };
+
+        const mockEvent = {
+          _id: mockEventId,
+          title: "Test Event",
+          date: new Date(),
+          organizerDetails: [
+            { email: "organizer1@test.com" },
+            { email: "organizer2@test.com" },
+          ],
+        };
+
+        vi.mocked(GuestRegistration.findById).mockResolvedValue(mockDoc);
+        vi.mocked(Event.findById).mockResolvedValue(mockEvent);
+
+        await GuestDeclineController.submitDecline(
+          mockReq as any,
+          mockRes as Response,
+        );
+
+        expect(EmailService.sendGuestDeclineNotification).toHaveBeenCalledWith(
+          expect.objectContaining({
+            organizerEmails: ["organizer1@test.com", "organizer2@test.com"],
+            guest: { name: "Test Guest", email: "guest@test.com" },
+          }),
+        );
+      });
+
+      it("should skip organizer notification when guest was invited by authenticated user", async () => {
+        mockVerifyToken.mockReturnValue({
+          valid: true,
+          payload: { registrationId: mockRegistrationId },
+        });
+
+        const mockDoc: Record<string, any> = {
+          _id: mockRegistrationId,
+          status: "pending",
+          eventId: mockEventId,
+          fullName: "Test Guest",
+          email: "guest@test.com",
+          roleId: "role123",
+          invitedBy: "user123", // Was invited by an authenticated user
+          eventSnapshot: {
+            title: "Test Event",
+            roleName: "Speaker",
+          },
+          save: vi.fn().mockResolvedValue(undefined),
+        };
+
+        const mockEvent = {
+          _id: mockEventId,
+          title: "Test Event",
+          organizerDetails: [{ email: "organizer@test.com" }],
+        };
+
+        vi.mocked(GuestRegistration.findById).mockResolvedValue(mockDoc);
+        vi.mocked(Event.findById).mockResolvedValue(mockEvent);
+        vi.mocked(User.findById).mockReturnValue({
+          lean: vi.fn().mockResolvedValue(null), // No user found
+        } as any);
+
+        await GuestDeclineController.submitDecline(
+          mockReq as any,
+          mockRes as Response,
+        );
+
+        // Should NOT call organizer notification
+        expect(
+          EmailService.sendGuestDeclineNotification,
+        ).not.toHaveBeenCalled();
+      });
+
+      it("should emit socket event on decline", async () => {
+        mockVerifyToken.mockReturnValue({
+          valid: true,
+          payload: { registrationId: mockRegistrationId },
+        });
+
+        const mockDoc: Record<string, any> = {
+          _id: mockRegistrationId,
+          status: "pending",
+          eventId: mockEventId,
+          fullName: "Test Guest",
+          email: "guest@test.com",
+          roleId: "role123",
+          eventSnapshot: {
+            title: "Test Event",
+            roleName: "Speaker",
+          },
+          save: vi.fn().mockResolvedValue(undefined),
+        };
+
+        vi.mocked(GuestRegistration.findById).mockResolvedValue(mockDoc);
+        vi.mocked(Event.findById).mockResolvedValue({
+          _id: mockEventId,
+          organizerDetails: [],
+        });
+
+        await GuestDeclineController.submitDecline(
+          mockReq as any,
+          mockRes as Response,
+        );
+
+        expect(socketService.emitEventUpdate).toHaveBeenCalledWith(
+          mockEventId,
+          "guest_declined",
+          { roleId: "role123", guestName: "Test Guest" },
+        );
+      });
+
+      it("should send system notification to inviter user", async () => {
+        mockVerifyToken.mockReturnValue({
+          valid: true,
+          payload: { registrationId: mockRegistrationId },
+        });
+
+        const inviterId = "inviter-user-id-123";
+        const mockDoc: Record<string, any> = {
+          _id: mockRegistrationId,
+          status: "pending",
+          eventId: mockEventId,
+          fullName: "Test Guest",
+          email: "guest@test.com",
+          roleId: "role123",
+          invitedBy: inviterId,
+          eventSnapshot: {
+            title: "Test Event",
+            roleName: "Speaker",
+          },
+          save: vi.fn().mockResolvedValue(undefined),
+        };
+
+        const mockEvent = {
+          _id: mockEventId,
+          title: "Test Event",
+          organizerDetails: [],
+        };
+
+        const mockInviterUser = {
+          _id: inviterId,
+          firstName: "John",
+          lastName: "Doe",
+          username: "johndoe",
+          email: "inviter@test.com",
+          role: "Facilitator",
+        };
+
+        vi.mocked(GuestRegistration.findById).mockResolvedValue(mockDoc);
+        vi.mocked(Event.findById).mockResolvedValue(mockEvent);
+        vi.mocked(User.findById).mockReturnValue({
+          lean: vi.fn().mockResolvedValue(mockInviterUser),
+        } as any);
+
+        await GuestDeclineController.submitDecline(
+          mockReq as any,
+          mockRes as Response,
+        );
+
+        expect(TrioNotificationService.createTrio).toHaveBeenCalledWith(
+          expect.objectContaining({
+            recipients: [inviterId],
+            systemMessage: expect.objectContaining({
+              title: "Guest Invitation Declined",
+              type: "event_role_change",
+            }),
+          }),
+        );
+      });
+
+      it("should use event createdBy as fallback for notification recipient", async () => {
+        mockVerifyToken.mockReturnValue({
+          valid: true,
+          payload: { registrationId: mockRegistrationId },
+        });
+
+        const creatorId = "creator-user-id-456";
+        const mockDoc: Record<string, any> = {
+          _id: mockRegistrationId,
+          status: "pending",
+          eventId: mockEventId,
+          fullName: "Test Guest",
+          email: "guest@test.com",
+          roleId: "role123",
+          invitedBy: undefined, // No inviter
+          eventSnapshot: {
+            title: "Test Event",
+            roleName: "Speaker",
+          },
+          save: vi.fn().mockResolvedValue(undefined),
+        };
+
+        const mockEvent = {
+          _id: mockEventId,
+          title: "Test Event",
+          organizerDetails: [],
+          createdBy: { _id: creatorId }, // Event has a creator
+        };
+
+        const mockCreatorUser = {
+          _id: creatorId,
+          firstName: "Jane",
+          lastName: "Smith",
+          username: "janesmith",
+          email: "creator@test.com",
+          role: "Administrator",
+        };
+
+        vi.mocked(GuestRegistration.findById).mockResolvedValue(mockDoc);
+        vi.mocked(Event.findById).mockResolvedValue(mockEvent);
+        vi.mocked(User.findById).mockReturnValue({
+          lean: vi.fn().mockResolvedValue(mockCreatorUser),
+        } as any);
+
+        await GuestDeclineController.submitDecline(
+          mockReq as any,
+          mockRes as Response,
+        );
+
+        expect(TrioNotificationService.createTrio).toHaveBeenCalledWith(
+          expect.objectContaining({
+            recipients: [creatorId],
+          }),
+        );
+      });
+
+      it("should continue successfully if socket emit fails", async () => {
+        mockVerifyToken.mockReturnValue({
+          valid: true,
+          payload: { registrationId: mockRegistrationId },
+        });
+
+        const mockDoc: Record<string, any> = {
+          _id: mockRegistrationId,
+          status: "pending",
+          eventId: mockEventId,
+          fullName: "Test Guest",
+          email: "guest@test.com",
+          roleId: "role123",
+          eventSnapshot: {
+            title: "Test Event",
+            roleName: "Speaker",
+          },
+          save: vi.fn().mockResolvedValue(undefined),
+        };
+
+        vi.mocked(GuestRegistration.findById).mockResolvedValue(mockDoc);
+        vi.mocked(Event.findById).mockResolvedValue({
+          _id: mockEventId,
+          organizerDetails: [],
+        });
+        vi.mocked(socketService.emitEventUpdate).mockImplementation(() => {
+          throw new Error("Socket error");
+        });
+
+        await GuestDeclineController.submitDecline(
+          mockReq as any,
+          mockRes as Response,
+        );
+
+        // Should still return success
+        const response = jsonMock.mock.calls[0][0];
+        expect(response.success).toBe(true);
+      });
+
+      it("should continue successfully if notification email fails", async () => {
+        mockVerifyToken.mockReturnValue({
+          valid: true,
+          payload: { registrationId: mockRegistrationId },
+        });
+
+        const mockDoc: Record<string, any> = {
+          _id: mockRegistrationId,
+          status: "pending",
+          eventId: mockEventId,
+          fullName: "Test Guest",
+          email: "guest@test.com",
+          roleId: "role123",
+          invitedBy: undefined,
+          eventSnapshot: {
+            title: "Test Event",
+            roleName: "Speaker",
+          },
+          save: vi.fn().mockResolvedValue(undefined),
+        };
+
+        vi.mocked(GuestRegistration.findById).mockResolvedValue(mockDoc);
+        vi.mocked(Event.findById).mockResolvedValue({
+          _id: mockEventId,
+          organizerDetails: [{ email: "org@test.com" }],
+        });
+        vi.mocked(EmailService.sendGuestDeclineNotification).mockRejectedValue(
+          new Error("Email service error"),
+        );
+
+        await GuestDeclineController.submitDecline(
+          mockReq as any,
+          mockRes as Response,
+        );
+
+        // Should still return success
+        const response = jsonMock.mock.calls[0][0];
+        expect(response.success).toBe(true);
+      });
+
+      it("should truncate long decline reason to 500 characters", async () => {
+        mockVerifyToken.mockReturnValue({
+          valid: true,
+          payload: { registrationId: mockRegistrationId },
+        });
+
+        const longReason = "A".repeat(600); // 600 chars, should be truncated to 500
+        mockReq.body = { reason: longReason };
+
+        const mockDoc: Record<string, any> = {
+          _id: mockRegistrationId,
+          status: "pending",
+          eventId: mockEventId,
+          fullName: "Test Guest",
+          email: "guest@test.com",
+          roleId: "role123",
+          eventSnapshot: {
+            title: "Test Event",
+            roleName: "Speaker",
+          },
+          save: vi.fn().mockResolvedValue(undefined),
+        };
+
+        vi.mocked(GuestRegistration.findById).mockResolvedValue(mockDoc);
+        vi.mocked(Event.findById).mockResolvedValue({
+          _id: mockEventId,
+          organizerDetails: [],
+        });
+
+        await GuestDeclineController.submitDecline(
+          mockReq as any,
+          mockRes as Response,
+        );
+
+        expect(mockDoc.declineReason).toBe("A".repeat(500));
+      });
+
+      it("should handle createdBy as string ID", async () => {
+        mockVerifyToken.mockReturnValue({
+          valid: true,
+          payload: { registrationId: mockRegistrationId },
+        });
+
+        const creatorId = "string-creator-id-789";
+        const mockDoc: Record<string, any> = {
+          _id: mockRegistrationId,
+          status: "pending",
+          eventId: mockEventId,
+          fullName: "Test Guest",
+          email: "guest@test.com",
+          roleId: "role123",
+          invitedBy: undefined,
+          eventSnapshot: {
+            title: "Test Event",
+            roleName: "Speaker",
+          },
+          save: vi.fn().mockResolvedValue(undefined),
+        };
+
+        const mockEvent = {
+          _id: mockEventId,
+          title: "Test Event",
+          organizerDetails: [],
+          createdBy: creatorId, // String ID, not object
+        };
+
+        const mockCreatorUser = {
+          _id: creatorId,
+          firstName: "Bob",
+          lastName: "Creator",
+          email: "bob@test.com",
+        };
+
+        vi.mocked(GuestRegistration.findById).mockResolvedValue(mockDoc);
+        vi.mocked(Event.findById).mockResolvedValue(mockEvent);
+        vi.mocked(User.findById).mockReturnValue({
+          lean: vi.fn().mockResolvedValue(mockCreatorUser),
+        } as any);
+
+        await GuestDeclineController.submitDecline(
+          mockReq as any,
+          mockRes as Response,
+        );
+
+        expect(TrioNotificationService.createTrio).toHaveBeenCalledWith(
+          expect.objectContaining({
+            recipients: [creatorId],
+          }),
+        );
       });
     });
   });

@@ -64,7 +64,7 @@ describe("PurchaseCheckoutController", () => {
 
       await PurchaseCheckoutController.createCheckoutSession(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(401);
@@ -88,7 +88,7 @@ describe("PurchaseCheckoutController", () => {
 
       await PurchaseCheckoutController.createCheckoutSession(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -109,7 +109,7 @@ describe("PurchaseCheckoutController", () => {
 
       await PurchaseCheckoutController.createCheckoutSession(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -132,7 +132,7 @@ describe("PurchaseCheckoutController", () => {
 
       await PurchaseCheckoutController.createCheckoutSession(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(404);
@@ -162,7 +162,7 @@ describe("PurchaseCheckoutController", () => {
 
       await PurchaseCheckoutController.createCheckoutSession(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -199,7 +199,7 @@ describe("PurchaseCheckoutController", () => {
 
       await PurchaseCheckoutController.createCheckoutSession(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -243,7 +243,7 @@ describe("PurchaseCheckoutController", () => {
 
       await PurchaseCheckoutController.createCheckoutSession(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -286,7 +286,7 @@ describe("PurchaseCheckoutController", () => {
 
       await PurchaseCheckoutController.createCheckoutSession(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -330,7 +330,7 @@ describe("PurchaseCheckoutController", () => {
 
       await PurchaseCheckoutController.createCheckoutSession(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -367,12 +367,12 @@ describe("PurchaseCheckoutController", () => {
 
       vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
       vi.mocked(Purchase.findOne).mockResolvedValue(
-        mockExistingPurchase as any
+        mockExistingPurchase as any,
       );
 
       await PurchaseCheckoutController.createCheckoutSession(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -404,12 +404,12 @@ describe("PurchaseCheckoutController", () => {
       vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
       vi.mocked(Purchase.findOne).mockResolvedValue(null); // No existing purchase
       vi.mocked(lockService.withLock).mockRejectedValue(
-        new Error("Lock timeout exceeded")
+        new Error("Lock timeout exceeded"),
       );
 
       await PurchaseCheckoutController.createCheckoutSession(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(503);
@@ -453,7 +453,7 @@ describe("PurchaseCheckoutController", () => {
 
       await PurchaseCheckoutController.createCheckoutSession(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -519,7 +519,7 @@ describe("PurchaseCheckoutController", () => {
 
       await PurchaseCheckoutController.createCheckoutSession(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       // Should succeed with full price (no early bird discount)
@@ -534,7 +534,7 @@ describe("PurchaseCheckoutController", () => {
           earlyBirdDiscount: 0,
           isEarlyBird: false,
           finalPrice: 10000,
-        })
+        }),
       );
     });
 
@@ -568,14 +568,14 @@ describe("PurchaseCheckoutController", () => {
 
       await PurchaseCheckoutController.createCheckoutSession(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(500);
       const response = jsonMock.mock.calls[0][0];
       expect(response.message).toBe("Failed to create checkout session.");
       expect(response.error).toContain(
-        "Stripe requires a minimum charge of $0.50"
+        "Stripe requires a minimum charge of $0.50",
       );
     });
 
@@ -630,12 +630,12 @@ describe("PurchaseCheckoutController", () => {
         .mockResolvedValue("ORD-EB-001");
       vi.mocked(Purchase.create).mockResolvedValue(mockPurchase as any);
       vi.mocked(stripeCreateCheckoutSession).mockResolvedValue(
-        mockStripeSession as any
+        mockStripeSession as any,
       );
 
       await PurchaseCheckoutController.createCheckoutSession(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -645,7 +645,7 @@ describe("PurchaseCheckoutController", () => {
           finalPrice: 8500,
           earlyBirdDiscount: 1500,
           isEarlyBird: true,
-        })
+        }),
       );
     });
 
@@ -693,12 +693,12 @@ describe("PurchaseCheckoutController", () => {
         .mockResolvedValue("ORD-001");
       vi.mocked(Purchase.create).mockResolvedValue(mockPurchase as any);
       vi.mocked(stripeCreateCheckoutSession).mockResolvedValue(
-        mockStripeSession as any
+        mockStripeSession as any,
       );
 
       await PurchaseCheckoutController.createCheckoutSession(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -749,7 +749,7 @@ describe("PurchaseCheckoutController", () => {
         .mockResolvedValue("ORD-FAIL-001");
       vi.mocked(Purchase.create).mockResolvedValue(mockPurchase as any);
       vi.mocked(stripeCreateCheckoutSession).mockRejectedValue(
-        new Error("Stripe API error")
+        new Error("Stripe API error"),
       );
       vi.mocked(Purchase.deleteOne).mockResolvedValue({
         deletedCount: 1,
@@ -757,7 +757,7 @@ describe("PurchaseCheckoutController", () => {
 
       await PurchaseCheckoutController.createCheckoutSession(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(Purchase.deleteOne).toHaveBeenCalledWith({ _id: purchaseId });
@@ -779,12 +779,12 @@ describe("PurchaseCheckoutController", () => {
       };
 
       vi.mocked(Program.findById).mockRejectedValue(
-        new Error("Database connection error")
+        new Error("Database connection error"),
       );
 
       await PurchaseCheckoutController.createCheckoutSession(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(500);
@@ -810,7 +810,7 @@ describe("PurchaseCheckoutController", () => {
 
       await PurchaseCheckoutController.createCheckoutSession(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(500);

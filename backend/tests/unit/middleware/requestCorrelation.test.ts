@@ -20,7 +20,7 @@ describe("Request Correlation Middleware", () => {
       get: vi
         .fn()
         .mockImplementation((header: string) =>
-          header === "User-Agent" ? "test-agent" : undefined
+          header === "User-Agent" ? "test-agent" : undefined,
         ) as any,
     };
     mockResponse = {
@@ -36,11 +36,11 @@ describe("Request Correlation Middleware", () => {
     expect((mockRequest as any).correlationId).toBeDefined();
     expect(typeof (mockRequest as any).correlationId).toBe("string");
     expect((mockRequest as any).correlationId).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
     );
     expect(mockResponse.setHeader).toHaveBeenCalledWith(
       "x-correlation-id",
-      (mockRequest as any).correlationId
+      (mockRequest as any).correlationId,
     );
     expect(mockNext).toHaveBeenCalled();
   });
@@ -55,7 +55,23 @@ describe("Request Correlation Middleware", () => {
     expect((mockRequest as any).correlationId).toBe(existingId);
     expect(mockResponse.setHeader).toHaveBeenCalledWith(
       "x-correlation-id",
-      existingId
+      existingId,
+    );
+    expect(mockNext).toHaveBeenCalled();
+  });
+
+  it("should use first value when correlation ID header is an array", () => {
+    const firstId = "first-correlation-id";
+    const secondId = "second-correlation-id";
+    mockRequest.headers = { "x-correlation-id": [firstId, secondId] };
+
+    const middleware = requestCorrelation();
+    middleware(mockRequest as Request, mockResponse as Response, mockNext);
+
+    expect((mockRequest as any).correlationId).toBe(firstId);
+    expect(mockResponse.setHeader).toHaveBeenCalledWith(
+      "x-correlation-id",
+      firstId,
     );
     expect(mockNext).toHaveBeenCalled();
   });
@@ -70,7 +86,7 @@ describe("Request Correlation Middleware", () => {
     expect((mockRequest as any).correlationId).toBe(customId);
     expect(mockResponse.setHeader).toHaveBeenCalledWith(
       "x-custom-trace-id",
-      customId
+      customId,
     );
   });
 
@@ -83,7 +99,7 @@ describe("Request Correlation Middleware", () => {
     expect((mockRequest as any).correlationId).toBe("custom-generated-id");
     expect(mockResponse.setHeader).toHaveBeenCalledWith(
       "x-correlation-id",
-      "custom-generated-id"
+      "custom-generated-id",
     );
   });
 

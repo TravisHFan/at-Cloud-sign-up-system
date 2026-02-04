@@ -43,7 +43,7 @@ vi.mock(
     AutoEmailNotificationService: {
       sendAccountStatusChangeAdminNotifications: vi.fn().mockResolvedValue({}),
     },
-  })
+  }),
 );
 
 vi.mock("../../../../src/services/infrastructure/EmailServiceFacade", () => ({
@@ -129,7 +129,7 @@ describe("UserReactivationController", () => {
 
         await UserReactivationController.reactivateUser(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(401);
@@ -146,7 +146,7 @@ describe("UserReactivationController", () => {
 
         await UserReactivationController.reactivateUser(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(403);
@@ -165,7 +165,7 @@ describe("UserReactivationController", () => {
 
         await UserReactivationController.reactivateUser(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(403);
@@ -184,7 +184,7 @@ describe("UserReactivationController", () => {
 
         await UserReactivationController.reactivateUser(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(403);
@@ -204,7 +204,7 @@ describe("UserReactivationController", () => {
 
         await UserReactivationController.reactivateUser(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(403);
@@ -218,7 +218,7 @@ describe("UserReactivationController", () => {
 
         await UserReactivationController.reactivateUser(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(404);
@@ -241,7 +241,7 @@ describe("UserReactivationController", () => {
 
         await UserReactivationController.reactivateUser(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(targetUser.isActive).toBe(true);
@@ -261,7 +261,7 @@ describe("UserReactivationController", () => {
 
         await UserReactivationController.reactivateUser(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(AuditLog.create).toHaveBeenCalledWith(
@@ -273,7 +273,7 @@ describe("UserReactivationController", () => {
               email: "admin@test.com",
             }),
             targetModel: "User",
-          })
+          }),
         );
       });
 
@@ -285,11 +285,11 @@ describe("UserReactivationController", () => {
 
         await UserReactivationController.reactivateUser(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(CachePatterns.invalidateUserCache).toHaveBeenCalledWith(
-          testUserId
+          testUserId,
         );
       });
 
@@ -301,7 +301,7 @@ describe("UserReactivationController", () => {
 
         await UserReactivationController.reactivateUser(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(EmailService.sendAccountReactivationEmail).toHaveBeenCalledWith(
@@ -309,7 +309,7 @@ describe("UserReactivationController", () => {
           expect.any(String),
           expect.objectContaining({
             role: "Administrator",
-          })
+          }),
         );
       });
 
@@ -321,7 +321,7 @@ describe("UserReactivationController", () => {
 
         await UserReactivationController.reactivateUser(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(socketService.emitUserUpdate).toHaveBeenCalledWith(
@@ -330,7 +330,7 @@ describe("UserReactivationController", () => {
             type: "status_changed",
             oldValue: "inactive",
             newValue: "active",
-          })
+          }),
         );
       });
 
@@ -343,7 +343,7 @@ describe("UserReactivationController", () => {
 
         await UserReactivationController.reactivateUser(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -357,7 +357,7 @@ describe("UserReactivationController", () => {
 
         await UserReactivationController.reactivateUser(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -377,7 +377,7 @@ describe("UserReactivationController", () => {
 
         await UserReactivationController.reactivateUser(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         // Should still succeed
@@ -390,16 +390,41 @@ describe("UserReactivationController", () => {
         const targetUser = createMockUser({ role: ROLES.PARTICIPANT });
         vi.mocked(User.findById).mockResolvedValue(targetUser);
         vi.mocked(EmailService.sendAccountReactivationEmail).mockRejectedValue(
-          new Error("Email error")
+          new Error("Email error"),
         );
 
         await UserReactivationController.reactivateUser(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         // Should still succeed
         expect(statusMock).toHaveBeenCalledWith(200);
+      });
+
+      it("should not fail if admin notifications fail", async () => {
+        vi.mocked(hasPermission).mockReturnValue(true);
+
+        const { AutoEmailNotificationService } =
+          await import("../../../../src/services/infrastructure/autoEmailNotificationService");
+        vi.mocked(
+          AutoEmailNotificationService.sendAccountStatusChangeAdminNotifications,
+        ).mockRejectedValue(new Error("Notification error"));
+
+        const targetUser = createMockUser({ role: ROLES.PARTICIPANT });
+        vi.mocked(User.findById).mockResolvedValue(targetUser);
+
+        await UserReactivationController.reactivateUser(
+          mockReq as any,
+          mockRes as Response,
+        );
+
+        // Should still succeed
+        expect(statusMock).toHaveBeenCalledWith(200);
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          "Failed to send admin reactivation notifications:",
+          expect.any(Error),
+        );
       });
     });
   });
@@ -414,7 +439,7 @@ describe("UserReactivationController", () => {
       username: string;
       firstName: string;
       lastName: string;
-    }> = {}
+    }> = {},
   ) {
     return {
       _id: testUserId,

@@ -60,10 +60,10 @@ describe("RegistrationQueryService", () => {
     // Default guest mocks to zero/empty
     vi.mocked((GuestRegistration as any).aggregate).mockResolvedValue([]);
     vi.mocked(
-      (GuestRegistration as any).countActiveRegistrations
+      (GuestRegistration as any).countActiveRegistrations,
     ).mockResolvedValue(0);
     vi.mocked((GuestRegistration as any).countDocuments).mockResolvedValue(
-      0 as any
+      0 as any,
     );
   });
 
@@ -88,7 +88,7 @@ describe("RegistrationQueryService", () => {
 
       const result = await RegistrationQueryService.getRoleAvailability(
         mockEventId.toString(),
-        "leader"
+        "leader",
       );
 
       expect(result).toEqual({
@@ -122,7 +122,7 @@ describe("RegistrationQueryService", () => {
 
       const result = await RegistrationQueryService.getRoleAvailability(
         mockEventId.toString(),
-        "leader"
+        "leader",
       );
 
       expect(result).toEqual({
@@ -144,7 +144,7 @@ describe("RegistrationQueryService", () => {
 
       const result = await RegistrationQueryService.getRoleAvailability(
         mockEventId.toString(),
-        "leader"
+        "leader",
       );
 
       expect(result).toBeNull();
@@ -169,7 +169,7 @@ describe("RegistrationQueryService", () => {
 
       const result = await RegistrationQueryService.getRoleAvailability(
         mockEventId.toString(),
-        "leader"
+        "leader",
       );
 
       expect(result).toBeNull();
@@ -183,7 +183,7 @@ describe("RegistrationQueryService", () => {
 
       const result = await RegistrationQueryService.getRoleAvailability(
         mockEventId.toString(),
-        "leader"
+        "leader",
       );
 
       expect(result).toBeNull();
@@ -220,7 +220,7 @@ describe("RegistrationQueryService", () => {
       });
 
       const result = await RegistrationQueryService.getEventSignupCounts(
-        mockEventId.toString()
+        mockEventId.toString(),
       );
 
       expect(result).toEqual({
@@ -256,9 +256,8 @@ describe("RegistrationQueryService", () => {
       };
       vi.mocked(Event.findById).mockReturnValue(mockEventQuery as any);
 
-      const result = await RegistrationQueryService.getEventSignupCounts(
-        "invalid-event-id"
-      );
+      const result =
+        await RegistrationQueryService.getEventSignupCounts("invalid-event-id");
 
       expect(result).toBeNull();
     });
@@ -270,7 +269,7 @@ describe("RegistrationQueryService", () => {
       vi.mocked(Event.findById).mockReturnValue(mockEventQuery as any);
 
       const result = await RegistrationQueryService.getEventSignupCounts(
-        mockEventId.toString()
+        mockEventId.toString(),
       );
 
       expect(result).toBeNull();
@@ -302,7 +301,7 @@ describe("RegistrationQueryService", () => {
       vi.mocked(Registration.aggregate).mockResolvedValue(mockRegistrations);
 
       const result = await RegistrationQueryService.getUserSignupInfo(
-        mockUserId.toString()
+        mockUserId.toString(),
       );
 
       expect(result).toEqual({
@@ -327,9 +326,8 @@ describe("RegistrationQueryService", () => {
       };
       vi.mocked(User.findById).mockReturnValue(mockUserQuery as any);
 
-      const result = await RegistrationQueryService.getUserSignupInfo(
-        "invalid-user-id"
-      );
+      const result =
+        await RegistrationQueryService.getUserSignupInfo("invalid-user-id");
 
       expect(result).toBeNull();
     });
@@ -341,10 +339,47 @@ describe("RegistrationQueryService", () => {
       vi.mocked(User.findById).mockReturnValue(mockUserQuery as any);
 
       const result = await RegistrationQueryService.getUserSignupInfo(
-        mockUserId.toString()
+        mockUserId.toString(),
       );
 
       expect(result).toBeNull();
+    });
+
+    it("should use systemAuthorizationLevel when role is not set", async () => {
+      const mockUser = {
+        _id: mockUserId,
+        role: undefined,
+        systemAuthorizationLevel: "Leader",
+      };
+
+      const mockRegistrations = [
+        {
+          eventId: mockEventId,
+          roleId: "leader",
+          eventSnapshot: {
+            title: "Test Event 1",
+            roleName: "Leader",
+          },
+        },
+      ];
+
+      const mockUserQuery = {
+        lean: vi.fn().mockResolvedValue(mockUser),
+      };
+      vi.mocked(User.findById).mockReturnValue(mockUserQuery as any);
+      vi.mocked(Registration.aggregate).mockResolvedValue(mockRegistrations);
+
+      const result = await RegistrationQueryService.getUserSignupInfo(
+        mockUserId.toString(),
+      );
+
+      expect(result).toEqual({
+        userId: mockUserId.toString(),
+        currentSignups: 1,
+        maxAllowedSignups: 2, // Leader gets 2 signups
+        canSignupForMore: true,
+        activeRegistrations: expect.any(Array),
+      });
     });
   });
 
@@ -369,7 +404,7 @@ describe("RegistrationQueryService", () => {
 
       const result = await RegistrationQueryService.getRoleParticipants(
         mockEventId.toString(),
-        "leader"
+        "leader",
       );
 
       expect(result).toEqual([
@@ -391,7 +426,7 @@ describe("RegistrationQueryService", () => {
 
       const result = await RegistrationQueryService.getRoleParticipants(
         mockEventId.toString(),
-        "nonexistent-role"
+        "nonexistent-role",
       );
 
       expect(result).toEqual([]);
@@ -399,12 +434,12 @@ describe("RegistrationQueryService", () => {
 
     it("should handle database errors gracefully", async () => {
       vi.mocked(Registration.aggregate).mockRejectedValue(
-        new Error("Database error")
+        new Error("Database error"),
       );
 
       const result = await RegistrationQueryService.getRoleParticipants(
         mockEventId.toString(),
-        "leader"
+        "leader",
       );
 
       expect(result).toEqual([]);
@@ -428,7 +463,7 @@ describe("RegistrationQueryService", () => {
       const result = await RegistrationQueryService.isUserRegisteredForRole(
         mockUserId.toString(),
         mockEventId.toString(),
-        "leader"
+        "leader",
       );
 
       expect(result).toBe(true);
@@ -443,7 +478,7 @@ describe("RegistrationQueryService", () => {
       const result = await RegistrationQueryService.isUserRegisteredForRole(
         mockUserId.toString(),
         mockEventId.toString(),
-        "leader"
+        "leader",
       );
 
       expect(result).toBe(false);
@@ -458,7 +493,7 @@ describe("RegistrationQueryService", () => {
       const result = await RegistrationQueryService.isUserRegisteredForRole(
         mockUserId.toString(),
         mockEventId.toString(),
-        "leader"
+        "leader",
       );
 
       expect(result).toBe(false);
@@ -485,7 +520,7 @@ describe("RegistrationQueryService", () => {
 
       const result = await RegistrationQueryService.getUserRoleInEvent(
         mockUserId.toString(),
-        mockEventId.toString()
+        mockEventId.toString(),
       );
 
       expect(result).toEqual({
@@ -503,7 +538,7 @@ describe("RegistrationQueryService", () => {
 
       const result = await RegistrationQueryService.getUserRoleInEvent(
         mockUserId.toString(),
-        mockEventId.toString()
+        mockEventId.toString(),
       );
 
       expect(result).toBeNull();
@@ -517,7 +552,7 @@ describe("RegistrationQueryService", () => {
 
       const result = await RegistrationQueryService.getUserRoleInEvent(
         mockUserId.toString(),
-        mockEventId.toString()
+        mockEventId.toString(),
       );
 
       expect(result).toBeNull();
@@ -553,7 +588,7 @@ describe("RegistrationQueryService", () => {
     });
 
     const result = await RegistrationQueryService.getEventSignupCounts(
-      mockEventId.toString()
+      mockEventId.toString(),
     );
 
     expect(result).toEqual({

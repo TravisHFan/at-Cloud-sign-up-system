@@ -81,7 +81,7 @@ describe("GuestTokenCancellationController", () => {
 
         await GuestTokenCancellationController.cancelByToken(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(404);
@@ -108,7 +108,7 @@ describe("GuestTokenCancellationController", () => {
 
       beforeEach(() => {
         vi.mocked(GuestRegistration.findOne).mockResolvedValue(
-          mockGuestRegistration
+          mockGuestRegistration,
         );
         vi.mocked(GuestRegistration.deleteOne).mockResolvedValue({
           deletedCount: 1,
@@ -118,7 +118,7 @@ describe("GuestTokenCancellationController", () => {
       it("should delete guest registration successfully", async () => {
         await GuestTokenCancellationController.cancelByToken(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(GuestRegistration.deleteOne).toHaveBeenCalledWith({
@@ -134,7 +134,7 @@ describe("GuestTokenCancellationController", () => {
       it("should emit socket event for cancellation", async () => {
         await GuestTokenCancellationController.cancelByToken(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(socketService.emitEventUpdate).toHaveBeenCalledWith(
@@ -144,7 +144,7 @@ describe("GuestTokenCancellationController", () => {
             eventId: "event123",
             roleId: "role456",
             guestName: "John Guest",
-          })
+          }),
         );
       });
 
@@ -155,7 +155,7 @@ describe("GuestTokenCancellationController", () => {
 
         await GuestTokenCancellationController.cancelByToken(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -188,7 +188,7 @@ describe("GuestTokenCancellationController", () => {
 
         await GuestTokenCancellationController.cancelByToken(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(GuestRegistration.findOne).toHaveBeenCalledTimes(2);
@@ -202,9 +202,27 @@ describe("GuestTokenCancellationController", () => {
 
         await GuestTokenCancellationController.cancelByToken(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
+        expect(statusMock).toHaveBeenCalledWith(404);
+        expect(jsonMock).toHaveBeenCalledWith({
+          success: false,
+          message: "Invalid or expired link",
+        });
+      });
+
+      it("should return 404 when fallback query throws (catch block)", async () => {
+        vi.mocked(GuestRegistration.findOne)
+          .mockResolvedValueOnce(null) // findByManageToken returns null
+          .mockRejectedValueOnce(new Error("Fallback DB error")); // fallback throws
+
+        await GuestTokenCancellationController.cancelByToken(
+          mockReq as unknown as Request,
+          mockRes as Response,
+        );
+
+        // Should return 404 because the fallback error is caught and ignored
         expect(statusMock).toHaveBeenCalledWith(404);
         expect(jsonMock).toHaveBeenCalledWith({
           success: false,
@@ -216,12 +234,12 @@ describe("GuestTokenCancellationController", () => {
     describe("Error Handling", () => {
       it("should return 500 on database error", async () => {
         vi.mocked(GuestRegistration.findOne).mockRejectedValue(
-          new Error("Database error")
+          new Error("Database error"),
         );
 
         await GuestTokenCancellationController.cancelByToken(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);

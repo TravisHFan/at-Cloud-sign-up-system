@@ -79,7 +79,7 @@ describe("AuditLogController", () => {
 
         await AuditLogController.getAuditLogs(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -92,7 +92,7 @@ describe("AuditLogController", () => {
                 limit: 20,
               }),
             }),
-          })
+          }),
         );
       });
 
@@ -101,7 +101,7 @@ describe("AuditLogController", () => {
 
         await AuditLogController.getAuditLogs(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
@@ -114,7 +114,7 @@ describe("AuditLogController", () => {
 
         await AuditLogController.getAuditLogs(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
@@ -126,7 +126,7 @@ describe("AuditLogController", () => {
 
         await AuditLogController.getAuditLogs(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
@@ -138,7 +138,7 @@ describe("AuditLogController", () => {
 
         await AuditLogController.getAuditLogs(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
@@ -151,7 +151,7 @@ describe("AuditLogController", () => {
 
         await AuditLogController.getAuditLogs(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
@@ -187,11 +187,11 @@ describe("AuditLogController", () => {
 
         await AuditLogController.getAuditLogs(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(AuditLog.find).toHaveBeenCalledWith(
-          expect.objectContaining({ action: "user_login" })
+          expect.objectContaining({ action: "user_login" }),
         );
       });
 
@@ -200,11 +200,11 @@ describe("AuditLogController", () => {
 
         await AuditLogController.getAuditLogs(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(AuditLog.find).toHaveBeenCalledWith(
-          expect.objectContaining({ eventId: "event123" })
+          expect.objectContaining({ eventId: "event123" }),
         );
       });
 
@@ -213,11 +213,11 @@ describe("AuditLogController", () => {
 
         await AuditLogController.getAuditLogs(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(AuditLog.find).toHaveBeenCalledWith(
-          expect.objectContaining({ actorId: "user123" })
+          expect.objectContaining({ actorId: "user123" }),
         );
       });
 
@@ -226,7 +226,7 @@ describe("AuditLogController", () => {
 
         await AuditLogController.getAuditLogs(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const filterCall = (vi.mocked(AuditLog.find).mock.calls[0] as any)[0];
@@ -244,7 +244,7 @@ describe("AuditLogController", () => {
 
         await AuditLogController.getAuditLogs(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(AuditLog.find).toHaveBeenCalledWith({
@@ -262,7 +262,7 @@ describe("AuditLogController", () => {
 
         await AuditLogController.getAuditLogs(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(AuditLog.find).toHaveBeenCalledWith({});
@@ -312,7 +312,7 @@ describe("AuditLogController", () => {
 
         await AuditLogController.getAuditLogs(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
@@ -366,7 +366,7 @@ describe("AuditLogController", () => {
 
         await AuditLogController.getAuditLogs(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
@@ -410,7 +410,7 @@ describe("AuditLogController", () => {
 
         await AuditLogController.getAuditLogs(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
@@ -461,13 +461,69 @@ describe("AuditLogController", () => {
 
         await AuditLogController.getAuditLogs(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
         expect(response.data.auditLogs[0]).toMatchObject({
           eventId: "event456",
           eventTitle: "Test Event",
+          targetModel: "Event",
+          targetId: "event456",
+        });
+      });
+
+      it("should handle targetEvent object without title", async () => {
+        const mockLogs = [
+          {
+            _id: { toString: () => "log123" },
+            action: "event_updated",
+            actor: {
+              id: "user123",
+              role: "Organizer",
+              email: "org@example.com",
+            },
+            targetModel: "Event",
+            targetId: "event456",
+            details: {
+              targetEvent: {
+                // No title property
+                location: "Some Location",
+              },
+            },
+            metadata: {},
+            createdAt: new Date("2025-01-15"),
+          },
+        ];
+
+        const mockFind = vi.fn().mockReturnValue({
+          sort: vi.fn().mockReturnValue({
+            skip: vi.fn().mockReturnValue({
+              limit: vi.fn().mockReturnValue({
+                populate: vi.fn().mockReturnValue({
+                  populate: vi.fn().mockReturnValue({
+                    populate: vi.fn().mockReturnValue({
+                      lean: vi.fn().mockResolvedValue(mockLogs),
+                    }),
+                  }),
+                }),
+              }),
+            }),
+          }),
+        });
+
+        vi.mocked(AuditLog.find).mockImplementation(mockFind as any);
+        vi.mocked(AuditLog.countDocuments).mockResolvedValue(1);
+
+        await AuditLogController.getAuditLogs(
+          mockReq as Request,
+          mockRes as Response,
+        );
+
+        const response = jsonMock.mock.calls[0][0];
+        expect(response.data.auditLogs[0]).toMatchObject({
+          eventId: "event456",
+          eventTitle: null,
           targetModel: "Event",
           targetId: "event456",
         });
@@ -509,7 +565,7 @@ describe("AuditLogController", () => {
 
         await AuditLogController.getAuditLogs(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
@@ -550,7 +606,7 @@ describe("AuditLogController", () => {
 
         await AuditLogController.getAuditLogs(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
@@ -595,7 +651,7 @@ describe("AuditLogController", () => {
 
         await AuditLogController.getAuditLogs(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
@@ -635,7 +691,7 @@ describe("AuditLogController", () => {
       it("should return success response with correct structure", async () => {
         await AuditLogController.getAuditLogs(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -670,7 +726,7 @@ describe("AuditLogController", () => {
 
         await AuditLogController.getAuditLogs(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
@@ -691,7 +747,7 @@ describe("AuditLogController", () => {
 
         await AuditLogController.getAuditLogs(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -710,7 +766,7 @@ describe("AuditLogController", () => {
 
         await AuditLogController.getAuditLogs(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
@@ -731,7 +787,7 @@ describe("AuditLogController", () => {
 
         await AuditLogController.getAuditLogStats(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
@@ -746,7 +802,7 @@ describe("AuditLogController", () => {
 
         await AuditLogController.getAuditLogStats(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
@@ -764,7 +820,7 @@ describe("AuditLogController", () => {
 
         await AuditLogController.getAuditLogStats(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const afterTest = new Date();
@@ -774,7 +830,7 @@ describe("AuditLogController", () => {
         const startDate = new Date(response.data.period.startDate);
 
         expect(startDate.getTime()).toBeGreaterThanOrEqual(
-          beforeTest.getTime()
+          beforeTest.getTime(),
         );
         expect(startDate.getTime()).toBeLessThanOrEqual(afterTest.getTime());
       });
@@ -805,7 +861,7 @@ describe("AuditLogController", () => {
 
         await AuditLogController.getAuditLogStats(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(AuditLog.aggregate).toHaveBeenCalledWith(
@@ -825,7 +881,7 @@ describe("AuditLogController", () => {
             expect.objectContaining({
               $sort: { count: -1 },
             }),
-          ])
+          ]),
         );
 
         const response = jsonMock.mock.calls[0][0];
@@ -839,7 +895,7 @@ describe("AuditLogController", () => {
 
         await AuditLogController.getAuditLogStats(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -856,7 +912,7 @@ describe("AuditLogController", () => {
 
         await AuditLogController.getAuditLogStats(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -882,7 +938,7 @@ describe("AuditLogController", () => {
 
         await AuditLogController.getAuditLogStats(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
@@ -895,12 +951,12 @@ describe("AuditLogController", () => {
     describe("error handling", () => {
       it("should return 500 when aggregation fails", async () => {
         vi.mocked(AuditLog.aggregate).mockRejectedValue(
-          new Error("Aggregation failed")
+          new Error("Aggregation failed"),
         );
 
         await AuditLogController.getAuditLogStats(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -914,12 +970,12 @@ describe("AuditLogController", () => {
       it("should include error message in development mode", async () => {
         process.env.NODE_ENV = "development";
         vi.mocked(AuditLog.aggregate).mockRejectedValue(
-          new Error("Aggregation error")
+          new Error("Aggregation error"),
         );
 
         await AuditLogController.getAuditLogStats(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
@@ -931,12 +987,12 @@ describe("AuditLogController", () => {
       it("should handle countDocuments failure", async () => {
         vi.mocked(AuditLog.aggregate).mockResolvedValue([]);
         vi.mocked(AuditLog.countDocuments).mockRejectedValue(
-          new Error("Count failed")
+          new Error("Count failed"),
         );
 
         await AuditLogController.getAuditLogStats(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);

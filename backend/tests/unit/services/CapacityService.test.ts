@@ -208,4 +208,16 @@ describe("CapacityService", () => {
     const occ = await CapacityService.getRoleOccupancy(validEventId, "r1");
     expect(occ).toEqual({ users: 0, guests: 0, total: 0, capacity: 10 });
   });
+
+  it("handles Infinity user count by falling back to parseInt", async () => {
+    mockCountDocuments.mockResolvedValueOnce(Infinity);
+    mockCountActiveGuests.mockResolvedValueOnce(1);
+    mockFindEventById.mockResolvedValueOnce({
+      roles: [{ id: "r1", name: "Role", maxParticipants: 10 }],
+    });
+
+    const occ = await CapacityService.getRoleOccupancy(validEventId, "r1");
+    // Infinity coerced to string becomes "Infinity", parseInt("Infinity") returns NaN, so || 0
+    expect(occ).toEqual({ users: 0, guests: 1, total: 1, capacity: 10 });
+  });
 });

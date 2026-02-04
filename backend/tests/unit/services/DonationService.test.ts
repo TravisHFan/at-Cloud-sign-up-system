@@ -105,7 +105,7 @@ describe("DonationService", () => {
           type: "one-time",
           status: "pending",
           giftDate: new Date("2025-12-25"),
-        })
+        }),
       );
     });
 
@@ -151,7 +151,7 @@ describe("DonationService", () => {
           startDate: new Date("2025-01-01"),
           remainingOccurrences: 12,
           nextPaymentDate: new Date("2025-01-01"),
-        })
+        }),
       );
     });
 
@@ -162,7 +162,7 @@ describe("DonationService", () => {
           amount: 50, // Less than $1.00 (100 cents)
           type: "one-time" as DonationType,
           giftDate: new Date("2025-12-25"),
-        })
+        }),
       ).rejects.toThrow("Amount must be between $1.00 and $999,999.00");
     });
 
@@ -173,7 +173,7 @@ describe("DonationService", () => {
           amount: 100000000, // More than $999,999.00
           type: "one-time" as DonationType,
           giftDate: new Date("2025-12-25"),
-        })
+        }),
       ).rejects.toThrow("Amount must be between $1.00 and $999,999.00");
     });
 
@@ -183,7 +183,7 @@ describe("DonationService", () => {
           userId: mockUserId,
           amount: 5000,
           type: "one-time" as DonationType,
-        })
+        }),
       ).rejects.toThrow("Gift date is required for one-time donations");
     });
 
@@ -194,7 +194,7 @@ describe("DonationService", () => {
           amount: 10000,
           type: "recurring" as DonationType,
           startDate: new Date("2025-01-01"),
-        })
+        }),
       ).rejects.toThrow("Frequency is required for recurring donations");
     });
 
@@ -205,7 +205,7 @@ describe("DonationService", () => {
           amount: 10000,
           type: "recurring" as DonationType,
           frequency: "monthly" as DonationFrequency,
-        })
+        }),
       ).rejects.toThrow("Start date is required for recurring donations");
     });
 
@@ -218,7 +218,7 @@ describe("DonationService", () => {
           amount: 5000,
           type: "one-time" as DonationType,
           giftDate: new Date("2025-12-25"),
-        })
+        }),
       ).rejects.toThrow("User not found");
     });
 
@@ -252,7 +252,7 @@ describe("DonationService", () => {
       expect(mockCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           stripeCustomerId: "pending",
-        })
+        }),
       );
     });
   });
@@ -279,7 +279,7 @@ describe("DonationService", () => {
         1,
         20,
         "giftDate",
-        "desc"
+        "desc",
       );
 
       expect(result).toEqual({
@@ -315,7 +315,7 @@ describe("DonationService", () => {
         2,
         20,
         "giftDate",
-        "desc"
+        "desc",
       );
 
       expect(result.pending).toEqual([]);
@@ -344,9 +344,8 @@ describe("DonationService", () => {
 
       mockFind.mockResolvedValue(mockDonations);
 
-      const result = await DonationService.getUserScheduledDonations(
-        mockUserId
-      );
+      const result =
+        await DonationService.getUserScheduledDonations(mockUserId);
 
       expect(result).toEqual(mockDonations);
       expect(mockFind).toHaveBeenCalledWith({
@@ -405,7 +404,7 @@ describe("DonationService", () => {
       const result = await DonationService.updateDonation(
         mockDonationId.toString(),
         mockUserId,
-        { amount: 10000 }
+        { amount: 10000 },
       );
 
       expect(mockDonation.amount).toBe(10000);
@@ -418,7 +417,7 @@ describe("DonationService", () => {
       await expect(
         DonationService.updateDonation(mockDonationId.toString(), mockUserId, {
           amount: 10000,
-        })
+        }),
       ).rejects.toThrow("Donation not found");
     });
 
@@ -434,7 +433,7 @@ describe("DonationService", () => {
       await expect(
         DonationService.updateDonation(mockDonationId.toString(), mockUserId, {
           amount: 10000,
-        })
+        }),
       ).rejects.toThrow("Cannot edit completed or cancelled donation");
     });
 
@@ -450,8 +449,130 @@ describe("DonationService", () => {
       await expect(
         DonationService.updateDonation(mockDonationId.toString(), mockUserId, {
           amount: 50, // Too low
-        })
+        }),
       ).rejects.toThrow("Amount must be between $1.00 and $999,999.00");
+    });
+
+    it("should update frequency", async () => {
+      const mockDonation = {
+        _id: mockDonationId,
+        userId: mockUserId,
+        type: "recurring",
+        status: "scheduled",
+        frequency: "monthly",
+        save: mockSave,
+      };
+
+      mockFindOne.mockResolvedValue(mockDonation);
+      mockSave.mockResolvedValue(mockDonation);
+
+      await DonationService.updateDonation(
+        mockDonationId.toString(),
+        mockUserId,
+        { frequency: "weekly" },
+      );
+
+      expect(mockDonation.frequency).toBe("weekly");
+      expect(mockSave).toHaveBeenCalled();
+    });
+
+    it("should update startDate and nextPaymentDate", async () => {
+      const mockDonation = {
+        _id: mockDonationId,
+        userId: mockUserId,
+        type: "recurring",
+        status: "scheduled",
+        startDate: new Date("2025-01-01"),
+        nextPaymentDate: new Date("2025-01-01"),
+        save: mockSave,
+      };
+
+      mockFindOne.mockResolvedValue(mockDonation);
+      mockSave.mockResolvedValue(mockDonation);
+
+      const newStartDate = new Date("2025-02-01");
+      await DonationService.updateDonation(
+        mockDonationId.toString(),
+        mockUserId,
+        { startDate: newStartDate },
+      );
+
+      expect(mockDonation.startDate).toEqual(newStartDate);
+      expect(mockDonation.nextPaymentDate).toEqual(newStartDate);
+      expect(mockSave).toHaveBeenCalled();
+    });
+
+    it("should update giftDate", async () => {
+      const mockDonation = {
+        _id: mockDonationId,
+        userId: mockUserId,
+        type: "one-time",
+        status: "scheduled",
+        giftDate: null,
+        save: mockSave,
+      };
+
+      mockFindOne.mockResolvedValue(mockDonation);
+      mockSave.mockResolvedValue(mockDonation);
+
+      const giftDate = new Date("2025-03-01");
+      await DonationService.updateDonation(
+        mockDonationId.toString(),
+        mockUserId,
+        { giftDate },
+      );
+
+      expect(mockDonation.giftDate).toEqual(giftDate);
+      expect(mockSave).toHaveBeenCalled();
+    });
+
+    it("should update endDate", async () => {
+      const mockDonation = {
+        _id: mockDonationId,
+        userId: mockUserId,
+        type: "recurring",
+        status: "scheduled",
+        endDate: null,
+        save: mockSave,
+      };
+
+      mockFindOne.mockResolvedValue(mockDonation);
+      mockSave.mockResolvedValue(mockDonation);
+
+      const endDate = new Date("2025-12-31");
+      await DonationService.updateDonation(
+        mockDonationId.toString(),
+        mockUserId,
+        { endDate },
+      );
+
+      expect(mockDonation.endDate).toEqual(endDate);
+      expect(mockSave).toHaveBeenCalled();
+    });
+
+    it("should update endAfterOccurrences and remainingOccurrences", async () => {
+      const mockDonation = {
+        _id: mockDonationId,
+        userId: mockUserId,
+        type: "recurring",
+        status: "scheduled",
+        endAfterOccurrences: undefined,
+        remainingOccurrences: undefined,
+        save: mockSave,
+      };
+
+      mockFindOne.mockResolvedValue(mockDonation);
+      mockSave.mockResolvedValue(mockDonation);
+
+      await DonationService.updateDonation(
+        mockDonationId.toString(),
+        mockUserId,
+        { endAfterOccurrences: 12 },
+      );
+
+      expect(mockDonation.endAfterOccurrences).toBe(12);
+      expect(mockDonation.remainingOccurrences).toBe(12);
+      expect(mockSave).toHaveBeenCalled();
     });
   });
 
@@ -485,7 +606,7 @@ describe("DonationService", () => {
       mockFindOne.mockResolvedValue(mockDonation);
 
       await expect(
-        DonationService.holdDonation(mockDonationId.toString(), mockUserId)
+        DonationService.holdDonation(mockDonationId.toString(), mockUserId),
       ).rejects.toThrow("Cannot hold one-time donations");
     });
 
@@ -500,7 +621,7 @@ describe("DonationService", () => {
       mockFindOne.mockResolvedValue(mockDonation);
 
       await expect(
-        DonationService.holdDonation(mockDonationId.toString(), mockUserId)
+        DonationService.holdDonation(mockDonationId.toString(), mockUserId),
       ).rejects.toThrow("Can only hold active donations");
     });
   });
@@ -519,7 +640,7 @@ describe("DonationService", () => {
 
       await DonationService.resumeDonation(
         mockDonationId.toString(),
-        mockUserId
+        mockUserId,
       );
 
       expect(mockDonation.status).toBe("active");
@@ -536,7 +657,7 @@ describe("DonationService", () => {
       mockFindOne.mockResolvedValue(mockDonation);
 
       await expect(
-        DonationService.resumeDonation(mockDonationId.toString(), mockUserId)
+        DonationService.resumeDonation(mockDonationId.toString(), mockUserId),
       ).rejects.toThrow("Can only resume donations that are on hold");
     });
   });
@@ -555,7 +676,7 @@ describe("DonationService", () => {
 
       await DonationService.cancelDonation(
         mockDonationId.toString(),
-        mockUserId
+        mockUserId,
       );
 
       expect(mockDonation.status).toBe("cancelled");
@@ -572,7 +693,7 @@ describe("DonationService", () => {
       mockFindOne.mockResolvedValue(mockDonation);
 
       await expect(
-        DonationService.cancelDonation(mockDonationId.toString(), mockUserId)
+        DonationService.cancelDonation(mockDonationId.toString(), mockUserId),
       ).rejects.toThrow("Cannot cancel completed donation");
     });
 
@@ -586,7 +707,7 @@ describe("DonationService", () => {
       mockFindOne.mockResolvedValue(mockDonation);
 
       await expect(
-        DonationService.cancelDonation(mockDonationId.toString(), mockUserId)
+        DonationService.cancelDonation(mockDonationId.toString(), mockUserId),
       ).rejects.toThrow("Donation is already cancelled");
     });
   });
@@ -697,7 +818,7 @@ describe("DonationService", () => {
         10000,
         "monthly" as DonationFrequency,
         new Date("2025-01-01"),
-        { type: "occurrences", count: 12 }
+        { type: "occurrences", count: 12 },
       );
 
       expect(result.totalGifts).toBe(12);
@@ -710,7 +831,7 @@ describe("DonationService", () => {
         5000,
         "weekly" as DonationFrequency,
         new Date("2025-01-01"),
-        { type: "date", endDate: new Date("2025-03-01") }
+        { type: "date", endDate: new Date("2025-03-01") },
       );
 
       expect(result.totalGifts).toBeGreaterThan(0);
@@ -741,9 +862,8 @@ describe("DonationService", () => {
       const mockDistinct = vi
         .fn()
         .mockResolvedValue(["user1", "user2", "user3"]);
-      const DonationTransaction = await import(
-        "../../../src/models/DonationTransaction"
-      );
+      const DonationTransaction =
+        await import("../../../src/models/DonationTransaction");
       (DonationTransaction.default as any).distinct = mockDistinct;
 
       // Mock Donation.find for active recurring donations
@@ -779,9 +899,8 @@ describe("DonationService", () => {
 
       // Mock distinct to return empty array
       const mockDistinct = vi.fn().mockResolvedValue([]);
-      const DonationTransaction = await import(
-        "../../../src/models/DonationTransaction"
-      );
+      const DonationTransaction =
+        await import("../../../src/models/DonationTransaction");
       (DonationTransaction.default as any).distinct = mockDistinct;
 
       // Mock empty active recurring donations
@@ -804,9 +923,8 @@ describe("DonationService", () => {
       mockAggregate.mockResolvedValueOnce([{ revenue: 0, donations: 0 }]);
 
       const mockDistinct = vi.fn().mockResolvedValue([]);
-      const DonationTransaction = await import(
-        "../../../src/models/DonationTransaction"
-      );
+      const DonationTransaction =
+        await import("../../../src/models/DonationTransaction");
       (DonationTransaction.default as any).distinct = mockDistinct;
 
       // Mock active recurring donations with various frequencies
@@ -862,9 +980,8 @@ describe("DonationService", () => {
       mockAggregate.mockResolvedValueOnce([{ revenue: 0, donations: 0 }]);
 
       const mockDistinct = vi.fn().mockResolvedValue([]);
-      const DonationTransaction = await import(
-        "../../../src/models/DonationTransaction"
-      );
+      const DonationTransaction =
+        await import("../../../src/models/DonationTransaction");
       (DonationTransaction.default as any).distinct = mockDistinct;
 
       // Mock donation with unknown frequency
@@ -914,9 +1031,8 @@ describe("DonationService", () => {
       ];
 
       // Mock DonationTransaction.find with chained methods
-      const DonationTransaction = await import(
-        "../../../src/models/DonationTransaction"
-      );
+      const DonationTransaction =
+        await import("../../../src/models/DonationTransaction");
       (DonationTransaction.default as any).find = vi.fn().mockReturnValue({
         populate: vi.fn().mockReturnValue({
           sort: vi.fn().mockReturnValue({
@@ -942,9 +1058,8 @@ describe("DonationService", () => {
     });
 
     it("should apply status filter when provided", async () => {
-      const DonationTransaction = await import(
-        "../../../src/models/DonationTransaction"
-      );
+      const DonationTransaction =
+        await import("../../../src/models/DonationTransaction");
 
       const mockFindFn = vi.fn().mockReturnValue({
         populate: vi.fn().mockReturnValue({
@@ -968,7 +1083,7 @@ describe("DonationService", () => {
       expect(mockFindFn).toHaveBeenCalledWith(
         expect.objectContaining({
           status: "completed",
-        })
+        }),
       );
     });
 
@@ -979,9 +1094,8 @@ describe("DonationService", () => {
         select: vi.fn().mockResolvedValue([{ _id: new Types.ObjectId() }]),
       });
 
-      const DonationTransaction = await import(
-        "../../../src/models/DonationTransaction"
-      );
+      const DonationTransaction =
+        await import("../../../src/models/DonationTransaction");
       const mockFindFn = vi.fn().mockReturnValue({
         populate: vi.fn().mockReturnValue({
           sort: vi.fn().mockReturnValue({
@@ -1034,9 +1148,8 @@ describe("DonationService", () => {
         },
       ];
 
-      const DonationTransaction = await import(
-        "../../../src/models/DonationTransaction"
-      );
+      const DonationTransaction =
+        await import("../../../src/models/DonationTransaction");
       (DonationTransaction.default as any).find = vi.fn().mockReturnValue({
         populate: vi.fn().mockReturnValue({
           sort: vi.fn().mockReturnValue({
@@ -1062,9 +1175,8 @@ describe("DonationService", () => {
     });
 
     it("should calculate pagination correctly", async () => {
-      const DonationTransaction = await import(
-        "../../../src/models/DonationTransaction"
-      );
+      const DonationTransaction =
+        await import("../../../src/models/DonationTransaction");
       (DonationTransaction.default as any).find = vi.fn().mockReturnValue({
         populate: vi.fn().mockReturnValue({
           sort: vi.fn().mockReturnValue({

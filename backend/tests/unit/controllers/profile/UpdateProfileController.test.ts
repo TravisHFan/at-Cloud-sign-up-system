@@ -20,7 +20,7 @@ vi.mock(
     AutoEmailNotificationService: {
       sendAtCloudRoleChangeNotification: vi.fn(),
     },
-  })
+  }),
 );
 
 vi.mock("../../../../src/services", () => ({
@@ -112,7 +112,7 @@ describe("UpdateProfileController", () => {
     vi.mocked(cleanupOldAvatar).mockResolvedValue(true);
     vi.mocked(CachePatterns.invalidateUserCache).mockResolvedValue(undefined);
     vi.mocked(
-      AutoEmailNotificationService.sendAtCloudRoleChangeNotification
+      AutoEmailNotificationService.sendAtCloudRoleChangeNotification,
     ).mockResolvedValue({ emailsSent: 1, messagesCreated: 1, success: true });
   });
 
@@ -128,7 +128,7 @@ describe("UpdateProfileController", () => {
 
         await UpdateProfileController.updateProfile(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(401);
@@ -145,7 +145,7 @@ describe("UpdateProfileController", () => {
 
         await UpdateProfileController.updateProfile(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -161,7 +161,7 @@ describe("UpdateProfileController", () => {
 
         await UpdateProfileController.updateProfile(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(404);
@@ -182,20 +182,20 @@ describe("UpdateProfileController", () => {
 
         await UpdateProfileController.updateProfile(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(User.findByIdAndUpdate).toHaveBeenCalledWith(
           "user123",
           { $set: { firstName: "Updated" } },
-          { new: true, runValidators: true, select: "-password" }
+          { new: true, runValidators: true, select: "-password" },
         );
         expect(statusMock).toHaveBeenCalledWith(200);
         expect(jsonMock).toHaveBeenCalledWith(
           expect.objectContaining({
             success: true,
             message: "Profile updated successfully.",
-          })
+          }),
         );
       });
 
@@ -208,7 +208,7 @@ describe("UpdateProfileController", () => {
 
         await UpdateProfileController.updateProfile(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(404);
@@ -227,11 +227,11 @@ describe("UpdateProfileController", () => {
 
         await UpdateProfileController.updateProfile(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(CachePatterns.invalidateUserCache).toHaveBeenCalledWith(
-          "user123"
+          "user123",
         );
       });
     });
@@ -251,7 +251,7 @@ describe("UpdateProfileController", () => {
 
         await UpdateProfileController.updateProfile(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(User.findByIdAndUpdate).toHaveBeenCalledWith(
@@ -262,7 +262,7 @@ describe("UpdateProfileController", () => {
               avatar: "https://i.pravatar.cc/300?img=12",
             },
           },
-          expect.any(Object)
+          expect.any(Object),
         );
       });
 
@@ -280,7 +280,7 @@ describe("UpdateProfileController", () => {
 
         await UpdateProfileController.updateProfile(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(User.findByIdAndUpdate).toHaveBeenCalledWith(
@@ -291,7 +291,7 @@ describe("UpdateProfileController", () => {
               avatar: "https://i.pravatar.cc/300?img=47",
             },
           },
-          expect.any(Object)
+          expect.any(Object),
         );
       });
 
@@ -309,18 +309,42 @@ describe("UpdateProfileController", () => {
 
         await UpdateProfileController.updateProfile(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         await vi.waitFor(
           () => {
             expect(cleanupOldAvatar).toHaveBeenCalledWith(
               "user123",
-              "/old.jpg"
+              "/old.jpg",
             );
           },
-          { timeout: 100 }
+          { timeout: 100 },
         );
+      });
+
+      it("should continue even if avatar cleanup fails", async () => {
+        const mockUser = createMockUser({
+          gender: "female",
+          avatar: "/old.jpg",
+        });
+        const updatedUser = createMockUser({ gender: "male" });
+
+        vi.mocked(User.findById).mockResolvedValue(mockUser);
+        vi.mocked(User.findByIdAndUpdate).mockResolvedValue(updatedUser);
+        vi.mocked(cleanupOldAvatar).mockRejectedValue(
+          new Error("Cleanup failed"),
+        );
+
+        mockReq.body = { gender: "male" };
+
+        await UpdateProfileController.updateProfile(
+          mockReq as unknown as Request,
+          mockRes as Response,
+        );
+
+        // Should still succeed despite cleanup failure
+        expect(statusMock).toHaveBeenCalledWith(200);
       });
     });
 
@@ -342,13 +366,13 @@ describe("UpdateProfileController", () => {
 
         await UpdateProfileController.updateProfile(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(User.findByIdAndUpdate).toHaveBeenCalledWith(
           "user123",
           { $set: { isAtCloudLeader: false, roleInAtCloud: undefined } },
-          expect.any(Object)
+          expect.any(Object),
         );
       });
 
@@ -369,18 +393,18 @@ describe("UpdateProfileController", () => {
 
         await UpdateProfileController.updateProfile(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(
-          AutoEmailNotificationService.sendAtCloudRoleChangeNotification
+          AutoEmailNotificationService.sendAtCloudRoleChangeNotification,
         ).toHaveBeenCalledWith(
           expect.objectContaining({
             changeType: "assigned",
             userData: expect.objectContaining({
               roleInAtCloud: "Ministry Leader",
             }),
-          })
+          }),
         );
       });
 
@@ -401,18 +425,18 @@ describe("UpdateProfileController", () => {
 
         await UpdateProfileController.updateProfile(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(
-          AutoEmailNotificationService.sendAtCloudRoleChangeNotification
+          AutoEmailNotificationService.sendAtCloudRoleChangeNotification,
         ).toHaveBeenCalledWith(
           expect.objectContaining({
             changeType: "removed",
             userData: expect.objectContaining({
               previousRoleInAtCloud: "Developer",
             }),
-          })
+          }),
         );
       });
 
@@ -433,11 +457,11 @@ describe("UpdateProfileController", () => {
 
         await UpdateProfileController.updateProfile(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(
-          AutoEmailNotificationService.sendAtCloudRoleChangeNotification
+          AutoEmailNotificationService.sendAtCloudRoleChangeNotification,
         ).not.toHaveBeenCalled();
       });
 
@@ -451,20 +475,20 @@ describe("UpdateProfileController", () => {
         vi.mocked(User.findById).mockResolvedValue(mockUser);
         vi.mocked(User.findByIdAndUpdate).mockResolvedValue(updatedUser);
         vi.mocked(
-          AutoEmailNotificationService.sendAtCloudRoleChangeNotification
+          AutoEmailNotificationService.sendAtCloudRoleChangeNotification,
         ).mockRejectedValue(new Error("Email failed"));
 
         mockReq.body = { isAtCloudLeader: true, roleInAtCloud: "Developer" };
 
         await UpdateProfileController.updateProfile(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
         expect(consoleErrorSpy).toHaveBeenCalledWith(
           "Failed to send @Cloud role change notification:",
-          expect.any(Error)
+          expect.any(Error),
         );
       });
     });
@@ -487,7 +511,7 @@ describe("UpdateProfileController", () => {
 
         await UpdateProfileController.updateProfile(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -508,7 +532,7 @@ describe("UpdateProfileController", () => {
 
         await UpdateProfileController.updateProfile(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);

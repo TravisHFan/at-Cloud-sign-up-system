@@ -56,7 +56,7 @@ describe("PurchaseReceiptController", () => {
 
       await PurchaseReceiptController.getPurchaseReceipt(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(401);
@@ -75,7 +75,7 @@ describe("PurchaseReceiptController", () => {
 
       await PurchaseReceiptController.getPurchaseReceipt(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -93,12 +93,12 @@ describe("PurchaseReceiptController", () => {
       mockReq.params = { id: purchaseId.toString() };
 
       vi.mocked(Purchase.findById).mockReturnValue(
-        mockPurchaseFindByIdChain(null)
+        mockPurchaseFindByIdChain(null),
       );
 
       await PurchaseReceiptController.getPurchaseReceipt(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(404);
@@ -124,12 +124,12 @@ describe("PurchaseReceiptController", () => {
       };
 
       vi.mocked(Purchase.findById).mockReturnValue(
-        mockPurchaseFindByIdChain(mockPurchase)
+        mockPurchaseFindByIdChain(mockPurchase),
       );
 
       await PurchaseReceiptController.getPurchaseReceipt(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(403);
@@ -154,12 +154,12 @@ describe("PurchaseReceiptController", () => {
       };
 
       vi.mocked(Purchase.findById).mockReturnValue(
-        mockPurchaseFindByIdChain(mockPurchase)
+        mockPurchaseFindByIdChain(mockPurchase),
       );
 
       await PurchaseReceiptController.getPurchaseReceipt(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -193,12 +193,12 @@ describe("PurchaseReceiptController", () => {
       };
 
       vi.mocked(Purchase.findById).mockReturnValue(
-        mockPurchaseFindByIdChain(mockPurchase)
+        mockPurchaseFindByIdChain(mockPurchase),
       );
 
       await PurchaseReceiptController.getPurchaseReceipt(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -231,12 +231,12 @@ describe("PurchaseReceiptController", () => {
       };
 
       vi.mocked(Purchase.findById).mockReturnValue(
-        mockPurchaseFindByIdChain(mockPurchase)
+        mockPurchaseFindByIdChain(mockPurchase),
       );
 
       await PurchaseReceiptController.getPurchaseReceipt(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -262,12 +262,12 @@ describe("PurchaseReceiptController", () => {
       };
 
       vi.mocked(Purchase.findById).mockReturnValue(
-        mockPurchaseFindByIdChain(mockPurchase)
+        mockPurchaseFindByIdChain(mockPurchase),
       );
 
       await PurchaseReceiptController.getPurchaseReceipt(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -298,12 +298,12 @@ describe("PurchaseReceiptController", () => {
       };
 
       vi.mocked(Purchase.findById).mockReturnValue(
-        mockPurchaseFindByIdChain(mockPurchase)
+        mockPurchaseFindByIdChain(mockPurchase),
       );
 
       await PurchaseReceiptController.getPurchaseReceipt(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -328,12 +328,12 @@ describe("PurchaseReceiptController", () => {
       };
 
       vi.mocked(Purchase.findById).mockReturnValue(
-        mockPurchaseFindByIdChain(mockPurchase)
+        mockPurchaseFindByIdChain(mockPurchase),
       );
 
       await PurchaseReceiptController.getPurchaseReceipt(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -367,18 +367,18 @@ describe("PurchaseReceiptController", () => {
 
       await PurchaseReceiptController.getPurchaseReceipt(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(Purchase.findById).toHaveBeenCalledWith(purchaseId.toString());
       expect(populateProgramMock).toHaveBeenCalledWith(
         "programId",
-        "title programType hostedBy"
+        "title programType hostedBy",
       );
       expect(populateEventMock).toHaveBeenCalledWith("eventId", "title");
       expect(populateUserMock).toHaveBeenCalledWith(
         "userId",
-        "firstName lastName email"
+        "firstName lastName email",
       );
     });
 
@@ -406,12 +406,12 @@ describe("PurchaseReceiptController", () => {
 
       await PurchaseReceiptController.getPurchaseReceipt(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         "Error fetching receipt:",
-        dbError
+        dbError,
       );
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith({
@@ -443,7 +443,7 @@ describe("PurchaseReceiptController", () => {
 
       await PurchaseReceiptController.getPurchaseReceipt(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(500);
@@ -471,12 +471,12 @@ describe("PurchaseReceiptController", () => {
       };
 
       vi.mocked(Purchase.findById).mockReturnValue(
-        mockPurchaseFindByIdChain(mockPurchase)
+        mockPurchaseFindByIdChain(mockPurchase),
       );
 
       await PurchaseReceiptController.getPurchaseReceipt(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(403);
@@ -501,12 +501,12 @@ describe("PurchaseReceiptController", () => {
       };
 
       vi.mocked(Purchase.findById).mockReturnValue(
-        mockPurchaseFindByIdChain(mockPurchase)
+        mockPurchaseFindByIdChain(mockPurchase),
       );
 
       await PurchaseReceiptController.getPurchaseReceipt(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -531,18 +531,80 @@ describe("PurchaseReceiptController", () => {
       };
 
       vi.mocked(Purchase.findById).mockReturnValue(
-        mockPurchaseFindByIdChain(mockPurchase)
+        mockPurchaseFindByIdChain(mockPurchase),
       );
 
       await PurchaseReceiptController.getPurchaseReceipt(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith({
         success: false,
         message: "Receipt is only available for completed purchases.",
+      });
+    });
+
+    it("should return 400 with specific message for refunded status", async () => {
+      mockReq.user = {
+        _id: userId,
+        role: "Member",
+      };
+      mockReq.params = { id: purchaseId.toString() };
+
+      const mockPurchase = {
+        _id: purchaseId,
+        userId: userId,
+        programId,
+        status: "refunded",
+      };
+
+      vi.mocked(Purchase.findById).mockReturnValue(
+        mockPurchaseFindByIdChain(mockPurchase),
+      );
+
+      await PurchaseReceiptController.getPurchaseReceipt(
+        mockReq as Request,
+        mockRes as Response,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(400);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: false,
+        message:
+          "This purchase has been refunded. Receipts are not available for refunded purchases.",
+      });
+    });
+
+    it("should return 400 with specific message for refund_processing status", async () => {
+      mockReq.user = {
+        _id: userId,
+        role: "Member",
+      };
+      mockReq.params = { id: purchaseId.toString() };
+
+      const mockPurchase = {
+        _id: purchaseId,
+        userId: userId,
+        programId,
+        status: "refund_processing",
+      };
+
+      vi.mocked(Purchase.findById).mockReturnValue(
+        mockPurchaseFindByIdChain(mockPurchase),
+      );
+
+      await PurchaseReceiptController.getPurchaseReceipt(
+        mockReq as Request,
+        mockRes as Response,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(400);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: false,
+        message:
+          "This purchase has been refunded. Receipts are not available for refunded purchases.",
       });
     });
   });

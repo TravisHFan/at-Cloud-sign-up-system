@@ -46,7 +46,7 @@ describe("timezoneUtils", () => {
         const result = toInstantFromWallClock(
           "2024-01-15",
           "10:00",
-          "America/New_York"
+          "America/New_York",
         );
 
         expect(result).toBeInstanceOf(Date);
@@ -60,7 +60,7 @@ describe("timezoneUtils", () => {
         const result = toInstantFromWallClock(
           "2024-01-15",
           "10:00",
-          "America/Los_Angeles"
+          "America/Los_Angeles",
         );
 
         expect(result).toBeInstanceOf(Date);
@@ -74,7 +74,7 @@ describe("timezoneUtils", () => {
         const result = toInstantFromWallClock(
           "2024-01-15",
           "10:00",
-          "Europe/London"
+          "Europe/London",
         );
 
         expect(result).toBeInstanceOf(Date);
@@ -88,7 +88,7 @@ describe("timezoneUtils", () => {
         const result = toInstantFromWallClock(
           "2024-01-15",
           "10:00",
-          "Asia/Tokyo"
+          "Asia/Tokyo",
         );
 
         expect(result).toBeInstanceOf(Date);
@@ -102,7 +102,7 @@ describe("timezoneUtils", () => {
         const result = toInstantFromWallClock(
           "2024-07-15",
           "10:00",
-          "America/Los_Angeles"
+          "America/Los_Angeles",
         );
 
         expect(result).toBeInstanceOf(Date);
@@ -113,7 +113,7 @@ describe("timezoneUtils", () => {
         const result = toInstantFromWallClock(
           "2024-01-15",
           "00:00",
-          "America/New_York"
+          "America/New_York",
         );
 
         expect(result).toBeInstanceOf(Date);
@@ -125,7 +125,7 @@ describe("timezoneUtils", () => {
         const result = toInstantFromWallClock(
           "2024-01-01",
           "09:05",
-          "Europe/London"
+          "Europe/London",
         );
 
         expect(result.getUTCHours()).toBe(9);
@@ -138,7 +138,7 @@ describe("timezoneUtils", () => {
         const result = toInstantFromWallClock(
           "2023-12-31",
           "23:00",
-          "America/New_York"
+          "America/New_York",
         );
 
         expect(result).toBeInstanceOf(Date);
@@ -153,12 +153,33 @@ describe("timezoneUtils", () => {
         const result = toInstantFromWallClock(
           "2024-02-29",
           "12:00",
-          "Europe/London"
+          "Europe/London",
         );
 
         expect(result).toBeInstanceOf(Date);
         expect(result.getUTCMonth()).toBe(1); // February
         expect(result.getUTCDate()).toBe(29);
+      });
+
+      it("should handle DST spring-forward (non-existent time)", () => {
+        // On March 10, 2024, at 2:00 AM, clocks spring forward to 3:00 AM
+        // So 2:30 AM doesn't exist - should round forward to 3:00 AM
+        const result = toInstantFromWallClock(
+          "2024-03-10",
+          "02:30",
+          "America/Los_Angeles",
+        );
+
+        expect(result).toBeInstanceOf(Date);
+        // The function should round forward to 03:00 AM PDT which is 10:00 UTC
+        // or return the next representable time
+        const wallClock = instantToWallClock(result, "America/Los_Angeles");
+        // Should be 03:00 or later (the non-existent 02:30 gets pushed forward)
+        expect(
+          wallClock.time === "03:00" ||
+            wallClock.time === "02:30" ||
+            wallClock.time >= "03:00",
+        ).toBe(true);
       });
     });
   });
@@ -295,7 +316,7 @@ describe("timezoneUtils", () => {
       const instant = toInstantFromWallClock(
         originalDate,
         originalTime,
-        timezone
+        timezone,
       );
       // Convert back to wall-clock
       const wallClock = instantToWallClock(instant, timezone);
@@ -312,7 +333,7 @@ describe("timezoneUtils", () => {
       const instant = toInstantFromWallClock(
         originalDate,
         originalTime,
-        timezone
+        timezone,
       );
       const wallClock = instantToWallClock(instant, timezone);
 

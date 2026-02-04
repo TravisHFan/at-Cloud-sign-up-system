@@ -69,7 +69,7 @@ describe("PurchaseController", () => {
       },
       query: {},
       user: { _id: "user123", email: "test@example.com" },
-    } as Partial<Request>;
+    } as unknown as Partial<Request>;
     mockRes = {
       status: vi.fn().mockReturnThis(),
       json: vi.fn(),

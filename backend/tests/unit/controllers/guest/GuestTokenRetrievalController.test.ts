@@ -73,7 +73,7 @@ describe("GuestTokenRetrievalController", () => {
 
         await GuestTokenRetrievalController.getGuestByToken(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(404);
@@ -88,7 +88,7 @@ describe("GuestTokenRetrievalController", () => {
 
         await GuestTokenRetrievalController.getGuestByToken(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(404);
@@ -117,14 +117,14 @@ describe("GuestTokenRetrievalController", () => {
 
         await GuestTokenRetrievalController.getGuestByToken(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(GuestRegistration.findOne).toHaveBeenCalledWith(
           expect.objectContaining({
             manageTokenExpires: expect.any(Object),
             status: { $ne: "cancelled" },
-          })
+          }),
         );
         expect(mockGuest.toPublicJSON).toHaveBeenCalled();
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -145,12 +145,12 @@ describe("GuestTokenRetrievalController", () => {
     describe("Error Handling", () => {
       it("should return 500 when database error occurs", async () => {
         vi.mocked(GuestRegistration.findOne).mockRejectedValue(
-          new Error("Database error")
+          new Error("Database error"),
         );
 
         await GuestTokenRetrievalController.getGuestByToken(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -159,6 +159,31 @@ describe("GuestTokenRetrievalController", () => {
           message: "Failed to fetch guest registration",
         });
         expect(consoleErrorSpy).toHaveBeenCalled();
+      });
+
+      it("should handle error even when CorrelatedLogger throws", async () => {
+        // Import CorrelatedLogger to mock it throwing
+        const { CorrelatedLogger } =
+          await import("../../../../src/services/CorrelatedLogger");
+        vi.mocked(CorrelatedLogger.fromRequest).mockImplementation(() => {
+          throw new Error("Logger creation failed");
+        });
+
+        vi.mocked(GuestRegistration.findOne).mockRejectedValue(
+          new Error("Database error"),
+        );
+
+        await GuestTokenRetrievalController.getGuestByToken(
+          mockReq as unknown as Request,
+          mockRes as Response,
+        );
+
+        // Should still return 500 even if CorrelatedLogger fails
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(jsonMock).toHaveBeenCalledWith({
+          success: false,
+          message: "Failed to fetch guest registration",
+        });
       });
     });
   });

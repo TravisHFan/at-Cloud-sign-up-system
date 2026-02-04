@@ -87,7 +87,7 @@ describe("ReactivationController", () => {
 
         await ReactivationController.reactivatePromoCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -102,7 +102,7 @@ describe("ReactivationController", () => {
 
         await ReactivationController.reactivatePromoCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -125,7 +125,7 @@ describe("ReactivationController", () => {
 
         await ReactivationController.reactivatePromoCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(PromoCode.findById).toHaveBeenCalledWith(validId);
@@ -152,7 +152,7 @@ describe("ReactivationController", () => {
 
         await ReactivationController.reactivatePromoCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -195,7 +195,7 @@ describe("ReactivationController", () => {
 
         await ReactivationController.reactivatePromoCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(reactivateMock).toHaveBeenCalled();
@@ -207,7 +207,7 @@ describe("ReactivationController", () => {
             discountPercent: 20,
             expiresAt: expiresAt.toISOString(),
             reactivatedBy: "Administrator Admin User",
-          })
+          }),
         );
         expect(statusMock).toHaveBeenCalledWith(200);
         expect(jsonMock).toHaveBeenCalledWith({
@@ -249,7 +249,7 @@ describe("ReactivationController", () => {
 
         await ReactivationController.reactivatePromoCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(EmailService.sendPromoCodeReactivatedEmail).toHaveBeenCalledWith(
@@ -257,7 +257,7 @@ describe("ReactivationController", () => {
             recipientName: "justuser",
             discountPercent: 100, // Default when null
             expiresAt: undefined, // null?.toISOString() = undefined
-          })
+          }),
         );
       });
 
@@ -291,17 +291,17 @@ describe("ReactivationController", () => {
 
         await ReactivationController.reactivatePromoCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(mockPromoCode.populate).toHaveBeenCalledWith(
           "allowedProgramIds",
-          "title"
+          "title",
         );
         expect(EmailService.sendPromoCodeReactivatedEmail).toHaveBeenCalledWith(
           expect.objectContaining({
             allowedPrograms: "Gold Membership",
-          })
+          }),
         );
       });
     });
@@ -330,14 +330,14 @@ describe("ReactivationController", () => {
 
         await ReactivationController.reactivatePromoCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(consoleWarnSpy).toHaveBeenCalledWith(
-          "No user found in request, skipping notifications"
+          "No user found in request, skipping notifications",
         );
         expect(
-          EmailService.sendPromoCodeReactivatedEmail
+          EmailService.sendPromoCodeReactivatedEmail,
         ).not.toHaveBeenCalled();
         expect(statusMock).toHaveBeenCalledWith(200);
       });
@@ -370,23 +370,23 @@ describe("ReactivationController", () => {
         } as any);
 
         vi.mocked(EmailService.sendPromoCodeReactivatedEmail).mockRejectedValue(
-          new Error("Email service unavailable")
+          new Error("Email service unavailable"),
         );
 
         await ReactivationController.reactivatePromoCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(consoleErrorSpy).toHaveBeenCalledWith(
           "Failed to send reactivation notifications:",
-          expect.any(Error)
+          expect.any(Error),
         );
         expect(statusMock).toHaveBeenCalledWith(200);
         expect(jsonMock).toHaveBeenCalledWith(
           expect.objectContaining({
             success: true,
-          })
+          }),
         );
       });
     });
@@ -402,7 +402,7 @@ describe("ReactivationController", () => {
 
         await ReactivationController.reactivatePromoCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -412,7 +412,57 @@ describe("ReactivationController", () => {
         });
         expect(consoleErrorSpy).toHaveBeenCalledWith(
           "Error reactivating promo code:",
-          expect.any(Error)
+          expect.any(Error),
+        );
+      });
+    });
+
+    describe("Actor display formatting", () => {
+      it("should use admin username when admin firstName/lastName not available", async () => {
+        const validId = new mongoose.Types.ObjectId().toString();
+        const ownerId = new mongoose.Types.ObjectId().toString();
+        mockReq.params.id = validId;
+        // Admin user without firstName/lastName
+        mockReq.user = {
+          id: "admin123",
+          _id: "admin123",
+          role: "Super Admin",
+          email: "admin@test.com",
+          username: "adminuser",
+          firstName: undefined,
+          lastName: undefined,
+        };
+
+        const mockPromoCode = {
+          _id: validId,
+          code: "TESTCODE",
+          isActive: false,
+          discountPercent: 25,
+          expiresAt: null,
+          ownerId: {
+            _id: ownerId,
+            email: "owner@test.com",
+            firstName: "Owner",
+            lastName: "User",
+          },
+          allowedProgramIds: null,
+          populate: vi.fn().mockResolvedValue(undefined),
+          reactivate: vi.fn().mockResolvedValue(undefined),
+        };
+        const populateMock = vi.fn().mockResolvedValue(mockPromoCode);
+        vi.mocked(PromoCode.findById).mockReturnValue({
+          populate: populateMock,
+        } as any);
+
+        await ReactivationController.reactivatePromoCode(
+          mockReq as Request,
+          mockRes as Response,
+        );
+
+        expect(EmailService.sendPromoCodeReactivatedEmail).toHaveBeenCalledWith(
+          expect.objectContaining({
+            reactivatedBy: "Super Admin adminuser",
+          }),
         );
       });
     });

@@ -93,11 +93,11 @@ describe("RoleUpdateService.processRoleUpdate", () => {
       "event-1",
       existingRoles,
       incomingRoles as any,
-      true
+      true,
     );
 
     expect(
-      DeletionController.deleteAllRegistrationsForEvent
+      DeletionController.deleteAllRegistrationsForEvent,
     ).toHaveBeenCalledWith("event-1");
     expect(result.success).toBe(true);
     expect(result.mergedRoles).toHaveLength(2);
@@ -106,14 +106,14 @@ describe("RoleUpdateService.processRoleUpdate", () => {
         id: "r1",
         description: "Updated description",
         maxParticipants: 10,
-      })
+      }),
     );
     expect(result.mergedRoles?.[1]).toEqual(
       expect.objectContaining({
         id: "generated-role-id",
         name: "Helper",
         openToPublic: true,
-      })
+      }),
     );
   });
 
@@ -126,14 +126,14 @@ describe("RoleUpdateService.processRoleUpdate", () => {
       "event-1",
       existingRoles,
       [],
-      true
+      true,
     );
 
     expect(result.success).toBe(false);
     expect(result.error).toEqual(
       expect.objectContaining({
         status: 500,
-      })
+      }),
     );
   });
 
@@ -154,7 +154,7 @@ describe("RoleUpdateService.processRoleUpdate", () => {
           maxParticipants: 0,
         },
       ] as any,
-      false
+      false,
     );
 
     expect(result.success).toBe(false);
@@ -162,7 +162,7 @@ describe("RoleUpdateService.processRoleUpdate", () => {
       expect.objectContaining({
         status: 400,
         errors: ["name is required"],
-      })
+      }),
     );
   });
 
@@ -179,14 +179,14 @@ describe("RoleUpdateService.processRoleUpdate", () => {
       "event-1",
       existingRoles,
       incomingRoles as any,
-      false
+      false,
     );
 
     expect(result.success).toBe(false);
     expect(result.error).toEqual(
       expect.objectContaining({
         status: 409,
-      })
+      }),
     );
     expect(result.error?.errors?.[0]).toContain('Cannot delete role "Leader"');
   });
@@ -207,19 +207,19 @@ describe("RoleUpdateService.processRoleUpdate", () => {
           maxParticipants: 3, // below currentCount
         },
       ] as any,
-      false
+      false,
     );
 
     expect(result.success).toBe(false);
     expect(result.error?.status).toBe(409);
     expect(result.error?.errors?.[0]).toContain(
-      'Cannot reduce capacity for role "Leader"'
+      'Cannot reduce capacity for role "Leader"',
     );
   });
 
   it("fails closed when signup lookup throws in non-test env", async () => {
     (RegistrationQueryService.getEventSignupCounts as any).mockRejectedValue(
-      new Error("db down")
+      new Error("db down"),
     );
     (process as any).env.VITEST = "false";
 
@@ -234,7 +234,7 @@ describe("RoleUpdateService.processRoleUpdate", () => {
           maxParticipants: 5,
         },
       ] as any,
-      false
+      false,
     );
 
     expect(result.success).toBe(false);
@@ -243,7 +243,7 @@ describe("RoleUpdateService.processRoleUpdate", () => {
 
   it("fails open when signup lookup throws in vitest env", async () => {
     (RegistrationQueryService.getEventSignupCounts as any).mockRejectedValue(
-      new Error("db down")
+      new Error("db down"),
     );
     (process as any).env.VITEST = "true";
 
@@ -258,9 +258,69 @@ describe("RoleUpdateService.processRoleUpdate", () => {
           maxParticipants: 5,
         },
       ] as any,
-      false
+      false,
     );
 
     expect(result.success).toBe(true);
+  });
+
+  it("succeeds early when signupCounts is null", async () => {
+    (RegistrationQueryService.getEventSignupCounts as any).mockResolvedValue(
+      null,
+    );
+
+    const result = await RoleUpdateService.processRoleUpdate(
+      "event-1",
+      existingRoles,
+      [
+        {
+          id: "r1",
+          name: "Leader",
+          description: "Leads",
+          maxParticipants: 5,
+        },
+      ] as any,
+      false,
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.mergedRoles).toHaveLength(1);
+  });
+
+  it('normalizes openToPublic false values ("false", 0, false)', async () => {
+    const incomingRoles = [
+      {
+        id: "r1",
+        name: "Leader",
+        description: "Updated",
+        maxParticipants: 5,
+        openToPublic: "false", // string "false"
+      },
+      {
+        name: "Helper",
+        description: "Helps",
+        maxParticipants: 10,
+        openToPublic: 0, // numeric 0
+      },
+      {
+        name: "Volunteer",
+        description: "Volunteers",
+        maxParticipants: 10,
+        openToPublic: false, // boolean false
+      },
+    ];
+
+    const result = await RoleUpdateService.processRoleUpdate(
+      "event-1",
+      existingRoles,
+      incomingRoles as any,
+      false,
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.mergedRoles).toHaveLength(3);
+    expect(result.mergedRoles?.[0].openToPublic).toBe(false);
+    expect(result.mergedRoles?.[1].openToPublic).toBe(false);
+    expect(result.mergedRoles?.[2].openToPublic).toBe(false);
   });
 });

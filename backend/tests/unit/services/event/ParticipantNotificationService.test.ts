@@ -64,7 +64,7 @@ const makeReq = (overrides: Partial<Request> = {}): Request =>
       ...((overrides as any).user || {}),
     },
     ...overrides,
-  } as unknown as Request);
+  }) as unknown as Request;
 
 describe("ParticipantNotificationService.sendEventUpdateNotifications", () => {
   beforeEach(() => {
@@ -90,7 +90,7 @@ describe("ParticipantNotificationService.sendEventUpdateNotifications", () => {
     await ParticipantNotificationService.sendEventUpdateNotifications(
       baseEvent.id,
       baseEvent,
-      req
+      req,
     );
 
     expect(EmailService.sendEventNotificationEmailBulk).toHaveBeenCalled();
@@ -142,7 +142,7 @@ describe("ParticipantNotificationService.sendEventUpdateNotifications", () => {
     await ParticipantNotificationService.sendEventUpdateNotifications(
       baseEvent.id,
       baseEvent,
-      req
+      req,
     );
 
     expect(User.findOne).toHaveBeenCalledWith({
@@ -152,14 +152,14 @@ describe("ParticipantNotificationService.sendEventUpdateNotifications", () => {
     });
 
     expect(
-      UnifiedMessageController.createTargetedSystemMessage
+      UnifiedMessageController.createTargetedSystemMessage,
     ).toHaveBeenCalledWith(
       expect.objectContaining({
         title: expect.stringContaining("Event Updated"),
         metadata: { eventId: baseEvent.id },
       }),
       ["existing-1", "user-lookup"],
-      expect.objectContaining({ id: "user-actor" })
+      expect.objectContaining({ id: "user-actor" }),
     );
   });
 
@@ -178,12 +178,12 @@ describe("ParticipantNotificationService.sendEventUpdateNotifications", () => {
     await ParticipantNotificationService.sendEventUpdateNotifications(
       baseEvent.id,
       baseEvent,
-      req
+      req,
     );
 
     // No system message should be created because no IDs resolved
     expect(
-      UnifiedMessageController.createTargetedSystemMessage
+      UnifiedMessageController.createTargetedSystemMessage,
     ).not.toHaveBeenCalled();
 
     // But emails should still have been attempted
@@ -192,7 +192,7 @@ describe("ParticipantNotificationService.sendEventUpdateNotifications", () => {
 
   it("swallows outer errors and does not throw", async () => {
     (EmailRecipientUtils.getEventParticipants as any).mockRejectedValue(
-      new Error("participant query failed")
+      new Error("participant query failed"),
     );
     (EmailRecipientUtils.getEventGuests as any).mockResolvedValue([]);
 
@@ -202,8 +202,88 @@ describe("ParticipantNotificationService.sendEventUpdateNotifications", () => {
       ParticipantNotificationService.sendEventUpdateNotifications(
         baseEvent.id,
         baseEvent,
-        req
-      )
+        req,
+      ),
+    ).resolves.toBeUndefined();
+  });
+
+  it("uses fallback when select().lean() throws", async () => {
+    (EmailRecipientUtils.getEventParticipants as any).mockResolvedValue([
+      { email: "fallback@example.com" },
+    ]);
+    (EmailRecipientUtils.getEventGuests as any).mockResolvedValue([]);
+
+    // Mock User.findOne to throw in select().lean() and fallback to awaiting
+    (User.findOne as any).mockImplementation(() => {
+      return {
+        select: vi.fn().mockReturnValue({
+          lean: vi.fn().mockImplementation(() => {
+            throw new Error("lean() failed");
+          }),
+        }),
+      };
+    });
+
+    const req = makeReq();
+
+    await ParticipantNotificationService.sendEventUpdateNotifications(
+      baseEvent.id,
+      baseEvent,
+      req,
+    );
+
+    // Emails should still be attempted
+    expect(EmailService.sendEventNotificationEmailBulk).toHaveBeenCalled();
+  });
+
+  it("handles system message creation failure gracefully", async () => {
+    (EmailRecipientUtils.getEventParticipants as any).mockResolvedValue([
+      {
+        _id: "user-1",
+        email: "user@example.com",
+        firstName: "U",
+        lastName: "1",
+      },
+    ]);
+    (EmailRecipientUtils.getEventGuests as any).mockResolvedValue([]);
+
+    // System message creation will fail
+    (
+      UnifiedMessageController.createTargetedSystemMessage as any
+    ).mockRejectedValue(new Error("system message failed"));
+
+    const req = makeReq();
+
+    // Should not throw
+    await expect(
+      ParticipantNotificationService.sendEventUpdateNotifications(
+        baseEvent.id,
+        baseEvent,
+        req,
+      ),
+    ).resolves.toBeUndefined();
+  });
+
+  it("handles email bulk send failure gracefully", async () => {
+    (EmailRecipientUtils.getEventParticipants as any).mockResolvedValue([
+      { email: "user@example.com", firstName: "U", lastName: "1" },
+    ]);
+    (EmailRecipientUtils.getEventGuests as any).mockResolvedValue([]);
+
+    // Email send will fail
+    (EmailService.sendEventNotificationEmailBulk as any).mockRejectedValue(
+      new Error("email send failed"),
+    );
+
+    const req = makeReq();
+
+    // Should not throw due to fire-and-forget pattern
+    await expect(
+      ParticipantNotificationService.sendEventUpdateNotifications(
+        baseEvent.id,
+        baseEvent,
+        req,
+      ),
     ).resolves.toBeUndefined();
   });
 });
