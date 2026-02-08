@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { ProgramController } from "../controllers/programController";
-import { authenticate } from "../middleware/auth";
+import { authenticate, authenticateOptional } from "../middleware/auth";
 import { EmailService } from "../services/infrastructure/EmailServiceFacade";
 import { EmailRecipientUtils } from "../utils/emailRecipientUtils";
 import { Program } from "../models";
@@ -8,11 +8,15 @@ import mongoose from "mongoose";
 
 const router = Router();
 
-// Public list and get
+// Public list and get (with optional auth for contact info filtering)
 router.get("/", ProgramController.list);
-router.get("/:id", ProgramController.getById);
+router.get("/:id", authenticateOptional, ProgramController.getById);
 router.get("/:id/events", ProgramController.listEvents);
-router.get("/:id/participants", ProgramController.getParticipants);
+router.get(
+  "/:id/participants",
+  authenticateOptional,
+  ProgramController.getParticipants,
+);
 
 // Authenticated admin-only operations are validated inside controller
 router.post("/", authenticate, ProgramController.create);
@@ -24,7 +28,7 @@ router.post("/:id/admin-enroll", authenticate, ProgramController.adminEnroll);
 router.delete(
   "/:id/admin-enroll",
   authenticate,
-  ProgramController.adminUnenroll
+  ProgramController.adminUnenroll,
 );
 
 // Email all participants (mentors, class reps, mentees) - authenticated
@@ -111,7 +115,7 @@ router.post("/:id/email", authenticate, async (req: Request, res: Response) => {
         // Also check admin enrollments for class reps
         isClassRep =
           program.adminEnrollments?.classReps?.some(
-            (crId: unknown) => String(crId) === user.id
+            (crId: unknown) => String(crId) === user.id,
           ) ?? false;
       }
     }
@@ -182,12 +186,12 @@ router.post("/:id/email", authenticate, async (req: Request, res: Response) => {
           html: bodyHtml,
           text: bodyText,
           replyTo,
-        })
-      )
+        }),
+      ),
     );
 
     const sent = results.filter(
-      (x) => x.status === "fulfilled" && x.value === true
+      (x) => x.status === "fulfilled" && x.value === true,
     ).length;
 
     res.status(200).json({

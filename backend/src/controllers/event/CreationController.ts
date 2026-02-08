@@ -204,7 +204,7 @@ export class CreationController {
           eventData as Parameters<
             typeof EventFieldNormalizationService.normalizeAndValidate
           >[0],
-          req.body
+          req.body,
         );
 
       if (!normalizationResult.valid && normalizationResult.error) {
@@ -229,7 +229,7 @@ export class CreationController {
         eventData.endTime,
         undefined,
         eventData.timeZone,
-        eventData.suppressNotifications
+        eventData.suppressNotifications,
       );
 
       if (conflictResult.hasConflict) {
@@ -246,11 +246,10 @@ export class CreationController {
       // STEP 3.5: Pricing Validation (Paid Events Feature)
       // ========================================
       // Validate pricing data if provided
-      const { validatePricing } = await import(
-        "../../utils/event/eventValidation"
-      );
+      const { validatePricing } =
+        await import("../../utils/event/eventValidation");
       const pricingValidation = validatePricing(
-        eventData.pricing as { isFree?: boolean; price?: number } | undefined
+        eventData.pricing as { isFree?: boolean; price?: number } | undefined,
       );
 
       if (!pricingValidation.valid) {
@@ -266,7 +265,7 @@ export class CreationController {
       // ========================================
       // Prepare and validate event roles
       const rolePreparationResult = EventRolePreparationService.prepareRoles(
-        eventData.roles
+        eventData.roles,
       );
 
       if (!rolePreparationResult.valid && rolePreparationResult.error) {
@@ -289,7 +288,7 @@ export class CreationController {
       // Process organizer details with placeholder pattern for contact info
       const processedOrganizerDetails =
         EventOrganizerDataService.processOrganizerDetails(
-          eventData.organizerDetails
+          eventData.organizerDetails,
         );
 
       // ========================================
@@ -299,7 +298,7 @@ export class CreationController {
       const programLinkageResult =
         await EventProgramLinkageService.validateAndLinkPrograms(
           (req.body as { programLabels?: unknown }).programLabels,
-          { _id: req.user!._id, role: req.user!.role }
+          { _id: req.user!._id, role: req.user!.role },
         );
 
       if (!programLinkageResult.valid && programLinkageResult.error) {
@@ -326,7 +325,7 @@ export class CreationController {
           processedOrganizerDetails as unknown as Parameters<
             typeof CoOrganizerProgramAccessService.validateCoOrganizerAccess
           >[0],
-          validatedProgramLabels
+          validatedProgramLabels,
         );
 
       if (!coOrganizerAccessResult.valid && coOrganizerAccessResult.error) {
@@ -352,7 +351,7 @@ export class CreationController {
           time: string;
           endTime: string;
           hostedBy?: string;
-        }
+        },
       ) => {
         // Ensure pricing is set - default to free if not provided
         const pricingData = (data.pricing as
@@ -376,7 +375,7 @@ export class CreationController {
         // Bidirectional linking: add event to program.events arrays
         await EventProgramLinkageService.linkEventToPrograms(
           ev._id,
-          linkedPrograms
+          linkedPrograms,
         );
 
         return ev;
@@ -409,7 +408,7 @@ export class CreationController {
               eventData,
               event._id,
               createAndSaveEvent,
-              req.user!
+              req.user!,
             );
           createdSeriesIds = result.seriesIds;
         } catch (recurringError) {
@@ -426,7 +425,7 @@ export class CreationController {
           .suppressNotifications === "boolean"
           ? Boolean(
               (req.body as { suppressNotifications?: boolean })
-                .suppressNotifications
+                .suppressNotifications,
             )
           : false;
 
@@ -445,12 +444,12 @@ export class CreationController {
                   occurrenceCount: recurring!.occurrenceCount!,
                 }
               : undefined,
-            EventController.toIdString
+            EventController.toIdString,
           );
         } catch (notificationError) {
           console.error(
             "Failed to send broadcast notifications:",
-            notificationError
+            notificationError,
           );
           // Don't throw - continue with event creation
         }
@@ -462,7 +461,7 @@ export class CreationController {
         await EventCreationNotificationService.sendCoOrganizerNotifications(
           event,
           req.user!,
-          EventController.toIdString
+          EventController.toIdString,
         );
       } catch (coOrgError) {
         console.error("Failed to send co-organizer notifications:", coOrgError);
@@ -474,7 +473,7 @@ export class CreationController {
       // ========================================
       // Invalidate event-related caches since new event was created
       await CachePatterns.invalidateEventCache(
-        EventController.toIdString(event._id)
+        EventController.toIdString(event._id),
       );
       await CachePatterns.invalidateAnalyticsCache();
 
@@ -483,7 +482,9 @@ export class CreationController {
       try {
         populatedEvent =
           await ResponseBuilderService.buildEventWithRegistrations(
-            EventController.toIdString(event._id)
+            EventController.toIdString(event._id),
+            req.user ? EventController.toIdString(req.user._id) : undefined,
+            (req.user as { role?: string } | undefined)?.role,
           );
       } catch (populationError) {
         console.error("Error populating event data:", populationError);
@@ -538,7 +539,7 @@ export class CreationController {
       console.error("Create event error:", error);
       CorrelatedLogger.fromRequest(req, "EventController").error(
         "createEvent failed",
-        error as Error
+        error as Error,
       );
 
       if (
@@ -547,7 +548,7 @@ export class CreationController {
         (error as { name?: unknown }).name === "ValidationError"
       ) {
         const validationErrors = Object.values(
-          (error as { errors: Record<string, { message: string }> }).errors
+          (error as { errors: Record<string, { message: string }> }).errors,
         ).map((err) => err.message);
         res.status(400).json({
           success: false,

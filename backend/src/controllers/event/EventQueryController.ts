@@ -71,7 +71,7 @@ export class EventQueryController {
         endDate,
       };
       const orderingCacheKey = `events-ordering:${JSON.stringify(
-        baseFilterDescriptor
+        baseFilterDescriptor,
       )}`;
       const pageCacheKey = `events-list:${JSON.stringify({
         ...baseFilterDescriptor,
@@ -219,13 +219,13 @@ export class EventQueryController {
                       const s =
                         typeof (chain as { sort?: unknown }).sort === "function"
                           ? (chain as { sort: (s: unknown) => unknown }).sort(
-                              sort
+                              sort,
                             )
                           : chain;
                       const sel =
                         typeof (s as { select?: unknown }).select === "function"
                           ? (s as { select: (p: string) => unknown }).select(
-                              "_id"
+                              "_id",
                             )
                           : s;
                       idResults =
@@ -240,7 +240,7 @@ export class EventQueryController {
                     ids: idResults.map((d) => d._id.toString()),
                     total: idResults.length,
                   };
-                }
+                },
               );
             totalEventsComputed = ordering.total;
             totalPagesComputed = Math.ceil(totalEventsComputed / limitNumber);
@@ -249,13 +249,13 @@ export class EventQueryController {
               try {
                 events = (await Event.find({ _id: { $in: slice } }).populate(
                   "createdBy",
-                  "username firstName lastName avatar"
+                  "username firstName lastName avatar",
                 )) as unknown[];
                 const map = new Map(
                   (events as Array<{ _id: Types.ObjectId }>).map((e) => [
                     e._id.toString(),
                     e,
-                  ])
+                  ]),
                 );
                 events = slice
                   .map((id) => map.get(id))
@@ -333,7 +333,7 @@ export class EventQueryController {
                   time: string;
                   endTime: string;
                   status: string;
-                }
+                },
               );
             }
           }
@@ -341,15 +341,15 @@ export class EventQueryController {
           // FIX: Use ResponseBuilderService to include accurate registration counts
           // This ensures frontend event cards show correct signup statistics
           console.log(
-            `🔍 [getAllEvents] Building ${events.length} events with registration data`
+            `🔍 [getAllEvents] Building ${events.length} events with registration data`,
           );
           const eventsWithRegistrations =
             await ResponseBuilderService.buildEventsWithRegistrations(
-              events as Array<{ _id: Types.ObjectId }>
+              events as Array<{ _id: Types.ObjectId }>,
             );
 
           console.log(
-            `✅ [getAllEvents] Successfully built ${eventsWithRegistrations.length} events with registration counts`
+            `✅ [getAllEvents] Successfully built ${eventsWithRegistrations.length} events with registration counts`,
           );
 
           return {
@@ -362,7 +362,7 @@ export class EventQueryController {
               hasPrev: pageNumber > 1,
             },
           };
-        }
+        },
       );
 
       res.status(200).json({
@@ -373,7 +373,7 @@ export class EventQueryController {
       console.error("Get events error:", error);
       CorrelatedLogger.fromRequest(req, "EventController").error(
         "getAllEvents failed",
-        error as Error
+        error as Error,
       );
       res.status(500).json({
         success: false,
@@ -397,7 +397,7 @@ export class EventQueryController {
 
       const event = await Event.findById(id).populate(
         "createdBy",
-        "username firstName lastName avatar"
+        "username firstName lastName avatar",
       );
 
       if (!event) {
@@ -414,12 +414,17 @@ export class EventQueryController {
       // FIX: Use ResponseBuilderService to include registration data
       // This ensures frontend shows current registrations for each role
       console.log(
-        `🔍 [getEventById] Building event data with registrations for event ${id}`
+        `🔍 [getEventById] Building event data with registrations for event ${id}`,
       );
+      const viewerId = req.user
+        ? EventController.toIdString(req.user._id)
+        : undefined;
+      const viewerRole = (req.user as { role?: string } | undefined)?.role;
       const eventWithRegistrations =
         await ResponseBuilderService.buildEventWithRegistrations(
           id,
-          req.user ? EventController.toIdString(req.user._id) : undefined
+          viewerId,
+          viewerRole,
         );
 
       if (!eventWithRegistrations) {
@@ -431,13 +436,13 @@ export class EventQueryController {
       }
 
       console.log(
-        `✅ [getEventById] Successfully built event data with ${eventWithRegistrations.roles.length} roles`
+        `✅ [getEventById] Successfully built event data with ${eventWithRegistrations.roles.length} roles`,
       );
       eventWithRegistrations.roles.forEach((role, index) => {
         console.log(
           `   Role ${index + 1}: ${role.name} - ${role.currentCount}/${
             role.maxParticipants
-          } registered`
+          } registered`,
         );
       });
 
@@ -451,7 +456,7 @@ export class EventQueryController {
         "getEventById failed",
         error as Error,
         undefined,
-        { eventId: req.params?.id }
+        { eventId: req.params?.id },
       );
       res.status(500).json({
         success: false,

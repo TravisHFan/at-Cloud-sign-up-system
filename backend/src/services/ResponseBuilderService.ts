@@ -106,7 +106,7 @@ export class ResponseBuilderService {
    * Helper method to populate fresh organizer contact information
    */
   private static async populateFreshOrganizerContacts(
-    organizerDetails: Array<Record<string, unknown>>
+    organizerDetails: Array<Record<string, unknown>>,
   ): Promise<Array<Record<string, unknown>>> {
     if (!organizerDetails || organizerDetails.length === 0) {
       return [];
@@ -117,7 +117,7 @@ export class ResponseBuilderService {
         if ((organizer as { userId?: string }).userId) {
           // Get fresh contact info from User collection
           const user = await User.findById(
-            (organizer as { userId: string }).userId
+            (organizer as { userId: string }).userId,
           ).select("email phone firstName lastName avatar");
           if (user) {
             return {
@@ -131,17 +131,21 @@ export class ResponseBuilderService {
         }
         // If no userId or user not found, return stored data
         return organizer;
-      })
+      }),
     );
   }
 
   /**
    * Builds event data with registration information
    * Used for event detail API responses
+   * @param eventId - The event ID to fetch
+   * @param viewerId - The ID of the user viewing (optional)
+   * @param viewerRole - The role of the user viewing (optional, for privacy checks)
    */
   static async buildEventWithRegistrations(
     eventId: string,
-    viewerId?: string
+    viewerId?: string,
+    viewerRole?: string,
   ): Promise<EventWithRegistrationData | null> {
     try {
       // Get basic event data
@@ -149,7 +153,7 @@ export class ResponseBuilderService {
         .populate(
           "createdBy",
           // Include contact and role fields so Organizer card can show email/phone
-          "username firstName lastName email phone gender role roleInAtCloud avatar"
+          "username firstName lastName email phone gender role roleInAtCloud avatar",
         )
         .lean()) as EventLean | null;
 
@@ -165,12 +169,26 @@ export class ResponseBuilderService {
         return null;
       }
 
+      // Determine if viewer can see all contact info (admin, event creator, or registered)
+      const isAdmin =
+        viewerRole === "Super Admin" || viewerRole === "Administrator";
+      const eventCreatorId = (
+        event.createdBy as { _id?: Types.ObjectId }
+      )?._id?.toString();
+      const isEventCreator = viewerId && eventCreatorId === viewerId;
+
       // Determine viewer's group letters if applicable (for workshop privacy)
       // FIX: Support users registered in multiple groups by finding ALL their groups
       const viewerRegistrations = (await Registration.find({
         eventId: event._id,
         userId: viewerId,
       }).lean()) as unknown as Array<{ roleId: string }>;
+      const isRegistered = viewerRegistrations.length > 0;
+
+      // Simplified visibility: admins, event creator, or ANY registered user can see ALL contacts
+      const canViewAllContacts = isAdmin || isEventCreator || isRegistered;
+      // Viewer can see mentor contacts if they're admin, event creator, or registered
+      const canViewMentorContacts = canViewAllContacts;
 
       const viewerGroupLetters: string[] = [];
 
@@ -178,7 +196,7 @@ export class ResponseBuilderService {
         for (const viewerReg of viewerRegistrations) {
           // Find the role that this registration belongs to
           const roleForViewer = event.roles.find(
-            (role: EventRole) => role.id === viewerReg.roleId
+            (role: EventRole) => role.id === viewerReg.roleId,
           );
           if (roleForViewer) {
             // Extract group letter from role name using CONSISTENT regex
@@ -232,10 +250,13 @@ export class ResponseBuilderService {
             let email = "";
             let phone = "";
 
-            // Show contact information to all registered users
-            // (Admins/organizers can always see via isAdmin/isOrganizer flags)
-            if (viewerId) {
-              // If viewer is logged in and viewing event details, show all contacts
+            // Show contact information only to:
+            // 1. Admins (Super Admin, Administrator)
+            // 2. Event creator (organizer)
+            // 3. The user themselves (viewing their own registration)
+            const isOwnRegistration =
+              viewerId && reg.userId._id.toString() === viewerId;
+            if (canViewAllContacts || isOwnRegistration) {
               showContact = true;
               email = reg.userId.email || "";
               phone = reg.userId.phone || "";
@@ -302,13 +323,13 @@ export class ResponseBuilderService {
             waitlistCount: 0,
             registrations,
           };
-        })
+        }),
       );
 
       // Populate fresh organizer contact information
       const freshOrganizerDetails =
         await ResponseBuilderService.populateFreshOrganizerContacts(
-          event.organizerDetails || []
+          event.organizerDetails || [],
         );
 
       // Build pricing object
@@ -376,7 +397,8 @@ export class ResponseBuilderService {
           ).mentors?.map((m) => ({
             userId: m.userId ? m.userId.toString() : undefined,
             name: m.name,
-            email: m.email,
+            // Only show mentor email to admins, event creator, or registered users
+            email: canViewMentorContacts ? m.email : undefined,
             gender: m.gender,
             avatar: m.avatar,
             roleInAtCloud: m.roleInAtCloud,
@@ -391,14 +413,14 @@ export class ResponseBuilderService {
         roles: rolesWithRegistrations,
         totalCapacity: event.roles.reduce(
           (total: number, r: EventRole) => total + r.maxParticipants,
-          0
+          0,
         ),
         totalRegistrations: eventSignupCounts.totalSignups,
         availableSpots:
           eventSignupCounts.totalSlots - eventSignupCounts.totalSignups,
         totalSlots: event.roles.reduce(
           (total: number, r: EventRole) => total + r.maxParticipants,
-          0
+          0,
         ),
         signedUp: eventSignupCounts.totalSignups,
         maxParticipants: eventSignupCounts.totalSlots,
@@ -441,7 +463,7 @@ export class ResponseBuilderService {
    * Used for events listing API responses
    */
   static async buildEventsWithRegistrations(
-    events: Array<{ _id: Types.ObjectId }>
+    events: Array<{ _id: Types.ObjectId }>,
   ): Promise<EventWithRegistrationData[]> {
     if (!events || events.length === 0) {
       return [];
@@ -449,14 +471,16 @@ export class ResponseBuilderService {
 
     const eventsWithRegistrations = await Promise.all(
       events.map((event) =>
-        ResponseBuilderService.buildEventWithRegistrations(event._id.toString())
-      )
+        ResponseBuilderService.buildEventWithRegistrations(
+          event._id.toString(),
+        ),
+      ),
     );
 
     return eventsWithRegistrations.filter(
       (
-        event: EventWithRegistrationData | null
-      ): event is EventWithRegistrationData => event !== null
+        event: EventWithRegistrationData | null,
+      ): event is EventWithRegistrationData => event !== null,
     );
   }
 
@@ -493,7 +517,7 @@ export class ResponseBuilderService {
    * Used for analytics API responses
    */
   static async buildAnalyticsEventData(
-    events: AnalyticsEventInput[]
+    events: AnalyticsEventInput[],
   ): Promise<AnalyticsEventData[]> {
     if (!events || events.length === 0) {
       return [];
@@ -505,7 +529,7 @@ export class ResponseBuilderService {
           // Get registration counts for this event
           const eventSignupCounts =
             await RegistrationQueryService.getEventSignupCounts(
-              event._id.toString()
+              event._id.toString(),
             );
 
           // Fetch registrations for this event to power engagement metrics
@@ -532,7 +556,7 @@ export class ResponseBuilderService {
             ? event.roles.reduce(
                 (total: number, role: EventRole) =>
                   total + role.maxParticipants,
-                0
+                0,
               )
             : 0;
 
@@ -550,7 +574,7 @@ export class ResponseBuilderService {
             type: event.type || "",
             hostedBy: event.hostedBy || "@Cloud Marketplace Ministry", // default fallback
             createdBy: ResponseBuilderService.buildUserBasicInfo(
-              event.createdBy
+              event.createdBy,
             ),
             roles: event.roles.map((role: EventRole) => {
               const roleCount =
@@ -574,7 +598,7 @@ export class ResponseBuilderService {
                     ? (reg.userId as LeanUser)
                     : ({
                         id: (reg.userId as Types.ObjectId).toString(),
-                      } as { id: string })) as LeanUser | { id: string }
+                      } as { id: string })) as LeanUser | { id: string },
                 ),
                 registeredAt: reg.createdAt || new Date(),
                 // Minimal snapshot for analytics; detailed snapshot not needed here
@@ -601,7 +625,7 @@ export class ResponseBuilderService {
                 ? ((eventSignupCounts?.totalSignups || 0) / totalSlots) * 100
                 : 0,
           };
-        })
+        }),
       );
 
       return analyticsData;
@@ -617,7 +641,7 @@ export class ResponseBuilderService {
    */
   static async buildUserSignupStatus(
     userId: string,
-    eventId: string
+    eventId: string,
   ): Promise<{
     userId: string;
     eventId: string;
@@ -644,9 +668,8 @@ export class ResponseBuilderService {
       if (!user) return null;
 
       // Get user signup info
-      const userSignupInfo = await RegistrationQueryService.getUserSignupInfo(
-        userId
-      );
+      const userSignupInfo =
+        await RegistrationQueryService.getUserSignupInfo(userId);
       if (!userSignupInfo) return null;
 
       // Get event signup counts
@@ -666,7 +689,7 @@ export class ResponseBuilderService {
 
       for (const role of event.roles) {
         const roleSignupData = eventSignupCounts.roles.find(
-          (r) => r.roleId === role.id
+          (r) => r.roleId === role.id,
         );
         const isFull = roleSignupData?.isFull || false;
 

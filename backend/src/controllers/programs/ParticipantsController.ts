@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 import { Program, Purchase, User } from "../../models";
+import { sanitizeParticipants } from "../../utils/privacy";
 
 export default class ParticipantsController {
   /**
@@ -45,7 +46,7 @@ export default class ParticipantsController {
           };
         }>(
           "userId",
-          "firstName lastName email phone avatar gender roleInAtCloud"
+          "firstName lastName email phone avatar gender roleInAtCloud",
         )
         .sort({ purchaseDate: 1 }); // Sort by enrollment date
 
@@ -73,39 +74,71 @@ export default class ParticipantsController {
       const adminMentees = await User.find({
         _id: { $in: adminMenteeIds },
       }).select(
-        "_id firstName lastName email phone avatar gender roleInAtCloud"
+        "_id firstName lastName email phone avatar gender roleInAtCloud",
       );
 
       const adminClassReps = await User.find({
         _id: { $in: adminClassRepIds },
       }).select(
-        "_id firstName lastName email phone avatar gender roleInAtCloud"
+        "_id firstName lastName email phone avatar gender roleInAtCloud",
       );
 
+      // Helper to convert Mongoose document to plain object with virtuals (for 'id' field)
+      const toPlainUser = (
+        doc: mongoose.Document | Record<string, unknown>,
+      ) => {
+        if (doc && typeof (doc as mongoose.Document).toObject === "function") {
+          return (doc as mongoose.Document).toObject({ virtuals: true });
+        }
+        return doc;
+      };
+
       // Combine paid and admin enrollments (admins sorted to end for now, can adjust later)
+      // Convert Mongoose documents to plain objects for proper serialization
       const allMentees = [
-        ...paidMentees,
+        ...paidMentees.map((p) => ({
+          user: toPlainUser(p.user),
+          isPaid: p.isPaid,
+          enrollmentDate: p.enrollmentDate,
+        })),
         ...adminMentees.map((user) => ({
-          user,
+          user: toPlainUser(user),
           isPaid: false,
           enrollmentDate: program.updatedAt, // Use program updated date as proxy
         })),
       ];
 
       const allClassReps = [
-        ...paidClassReps,
+        ...paidClassReps.map((p) => ({
+          user: toPlainUser(p.user),
+          isPaid: p.isPaid,
+          enrollmentDate: p.enrollmentDate,
+        })),
         ...adminClassReps.map((user) => ({
-          user,
+          user: toPlainUser(user),
           isPaid: false,
           enrollmentDate: program.updatedAt,
         })),
       ];
 
+      // Determine if user can view contact information:
+      // - Super Admin and Administrator can always see contacts
+      // - Mentors of this program can see contacts
+      // - Everyone else cannot see participant contact info
+      const user = req.user;
+      const isAdmin =
+        user?.role === "Super Admin" || user?.role === "Administrator";
+      const isMentor = program.mentors?.some(
+        (mentor: { userId: mongoose.Types.ObjectId }) =>
+          mentor.userId.toString() === String(user?._id),
+      );
+      const canViewContact = isAdmin || isMentor;
+
       res.status(200).json({
         success: true,
         data: {
-          mentees: allMentees,
-          classReps: allClassReps,
+          mentees: sanitizeParticipants(allMentees, canViewContact),
+          classReps: sanitizeParticipants(allClassReps, canViewContact),
         },
       });
     } catch (error) {

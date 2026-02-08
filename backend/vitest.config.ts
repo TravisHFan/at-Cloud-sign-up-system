@@ -59,9 +59,14 @@ export default defineConfig({
     // NOTE: Some unit tests may experience mock pollution when run in full suite
     // but pass when run individually. This is a known limitation of shared module mocks.
     // All integration tests pass, confirming actual functionality is correct.
+    sequence: {
+      hooks: "list", // Run hooks in sequence
+    },
+    fileParallelism: false, // Run test files sequentially to prevent mock pollution
+    pool: "forks", // Use forks instead of threads for better isolation
     poolOptions: {
-      threads: {
-        singleThread: true,
+      forks: {
+        singleFork: true,
         isolate: true, // Isolate each test file to prevent mock pollution
       },
     },

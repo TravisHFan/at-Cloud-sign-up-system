@@ -7,8 +7,9 @@ import { describe, it, expect, beforeAll, afterEach, afterAll } from "vitest";
 import request from "supertest";
 import mongoose from "mongoose";
 import app from "../../../src/app";
-import { Program } from "../../../src/models";
+import { Program, Purchase, User } from "../../../src/models";
 import { ensureIntegrationDB } from "../setup/connect";
+import { createAndLoginTestUser } from "../../test-utils/createTestUser";
 
 describe("Programs Retrieval API Integration Tests", () => {
   let testProgramId: string;
@@ -235,7 +236,7 @@ describe("Programs Retrieval API Integration Tests", () => {
           .expect(200);
 
         expect(response.body.data.programType).toBe(
-          "Effective Communication Workshops"
+          "Effective Communication Workshops",
         );
       });
 
@@ -253,7 +254,7 @@ describe("Programs Retrieval API Integration Tests", () => {
           .expect(200);
 
         expect(response.body.data.programType).toBe(
-          "Marketplace Church Incubator Program (MCIP)"
+          "Marketplace Church Incubator Program (MCIP)",
         );
       });
     });
@@ -323,7 +324,7 @@ describe("Programs Retrieval API Integration Tests", () => {
         ]);
 
         const requests = programs.map((program) =>
-          request(app).get(`/api/programs/${program._id}`)
+          request(app).get(`/api/programs/${program._id}`),
         );
 
         const responses = await Promise.all(requests);
@@ -410,6 +411,317 @@ describe("Programs Retrieval API Integration Tests", () => {
 
         expect(response.body.data.classRepLimit).toBe(0);
         expect(response.body.data.classRepCount).toBe(100);
+      });
+    });
+
+    describe("Mentor Contact Info Privacy (Server-Side Filtering)", () => {
+      let mentorUserId: mongoose.Types.ObjectId;
+
+      beforeAll(() => {
+        mentorUserId = new mongoose.Types.ObjectId();
+      });
+
+      afterEach(async () => {
+        // Clean up purchases and users besides programs
+        await Purchase.deleteMany({});
+      });
+
+      it("should include mentor email for Administrator users", async () => {
+        const admin = await createAndLoginTestUser({ role: "Administrator" });
+        const createdBy = new mongoose.Types.ObjectId();
+        const program = await Program.create({
+          title: "Privacy Test Program",
+          programType: "EMBA Mentor Circles",
+          fullPriceTicket: 10000,
+          createdBy,
+          mentors: [
+            {
+              userId: mentorUserId,
+              firstName: "John",
+              lastName: "Mentor",
+              email: "mentor@test.com",
+              gender: "male",
+            },
+          ],
+        });
+
+        const response = await request(app)
+          .get(`/api/programs/${program._id}`)
+          .set("Authorization", `Bearer ${admin.token}`)
+          .expect(200);
+
+        expect(response.body.data.mentors[0].email).toBe("mentor@test.com");
+      });
+
+      it("should include mentor email for Super Admin users", async () => {
+        const superAdmin = await createAndLoginTestUser({
+          role: "Super Admin",
+        });
+        const createdBy = new mongoose.Types.ObjectId();
+        const program = await Program.create({
+          title: "Privacy Test Program",
+          programType: "EMBA Mentor Circles",
+          fullPriceTicket: 10000,
+          createdBy,
+          mentors: [
+            {
+              userId: mentorUserId,
+              firstName: "John",
+              lastName: "Mentor",
+              email: "mentor@test.com",
+              gender: "male",
+            },
+          ],
+        });
+
+        const response = await request(app)
+          .get(`/api/programs/${program._id}`)
+          .set("Authorization", `Bearer ${superAdmin.token}`)
+          .expect(200);
+
+        expect(response.body.data.mentors[0].email).toBe("mentor@test.com");
+      });
+
+      it("should include mentor email for enrolled users (purchased)", async () => {
+        const participant = await createAndLoginTestUser({
+          role: "Participant",
+        });
+        const createdBy = new mongoose.Types.ObjectId();
+        const program = await Program.create({
+          title: "Privacy Test Program",
+          programType: "EMBA Mentor Circles",
+          fullPriceTicket: 10000,
+          createdBy,
+          mentors: [
+            {
+              userId: mentorUserId,
+              firstName: "John",
+              lastName: "Mentor",
+              email: "mentor@test.com",
+              gender: "male",
+            },
+          ],
+        });
+
+        // Create a completed purchase for the participant
+        await Purchase.create({
+          userId: participant.userId,
+          programId: program._id,
+          stripeSessionId: `cs_test_${Date.now()}`,
+          stripePaymentIntentId: `pi_test_${Date.now()}`,
+          status: "completed",
+          fullPrice: 10000,
+          finalPrice: 10000,
+          purchaseDate: new Date(),
+          isClassRep: false,
+          isEarlyBird: false,
+          orderNumber: `ORD-TEST-${Date.now()}`,
+          paymentMethod: {
+            type: "card",
+            cardBrand: "visa",
+            last4: "4242",
+            cardholderName: "Test User",
+          },
+          billingInfo: {
+            fullName: "Test User",
+            email: "test@test.com",
+            address: "123 Test St",
+            city: "Test City",
+            state: "TS",
+            zipCode: "12345",
+            country: "US",
+          },
+        });
+
+        const response = await request(app)
+          .get(`/api/programs/${program._id}`)
+          .set("Authorization", `Bearer ${participant.token}`)
+          .expect(200);
+
+        expect(response.body.data.mentors[0].email).toBe("mentor@test.com");
+      });
+
+      it("should include mentor email for free program users", async () => {
+        const participant = await createAndLoginTestUser({
+          role: "Participant",
+        });
+        const createdBy = new mongoose.Types.ObjectId();
+        const program = await Program.create({
+          title: "Free Privacy Test Program",
+          programType: "EMBA Mentor Circles",
+          fullPriceTicket: 0,
+          isFree: true,
+          createdBy,
+          mentors: [
+            {
+              userId: mentorUserId,
+              firstName: "John",
+              lastName: "Mentor",
+              email: "mentor@test.com",
+              gender: "male",
+            },
+          ],
+        });
+
+        const response = await request(app)
+          .get(`/api/programs/${program._id}`)
+          .set("Authorization", `Bearer ${participant.token}`)
+          .expect(200);
+
+        expect(response.body.data.mentors[0].email).toBe("mentor@test.com");
+      });
+
+      it("should include mentor email for program mentors", async () => {
+        const leader = await createAndLoginTestUser({ role: "Leader" });
+        const createdBy = new mongoose.Types.ObjectId();
+        const program = await Program.create({
+          title: "Privacy Test Program",
+          programType: "EMBA Mentor Circles",
+          fullPriceTicket: 10000,
+          createdBy,
+          mentors: [
+            {
+              userId: new mongoose.Types.ObjectId(leader.userId),
+              firstName: "Leader",
+              lastName: "Mentor",
+              email: "leader@test.com",
+              gender: "male",
+            },
+            {
+              userId: mentorUserId,
+              firstName: "John",
+              lastName: "Mentor",
+              email: "mentor@test.com",
+              gender: "male",
+            },
+          ],
+        });
+
+        const response = await request(app)
+          .get(`/api/programs/${program._id}`)
+          .set("Authorization", `Bearer ${leader.token}`)
+          .expect(200);
+
+        expect(response.body.data.mentors[0].email).toBe("leader@test.com");
+        expect(response.body.data.mentors[1].email).toBe("mentor@test.com");
+      });
+
+      it("should NOT include mentor email for unauthenticated requests", async () => {
+        const createdBy = new mongoose.Types.ObjectId();
+        const program = await Program.create({
+          title: "Privacy Test Program",
+          programType: "EMBA Mentor Circles",
+          fullPriceTicket: 10000,
+          createdBy,
+          mentors: [
+            {
+              userId: mentorUserId,
+              firstName: "John",
+              lastName: "Mentor",
+              email: "mentor@test.com",
+              gender: "male",
+            },
+          ],
+        });
+
+        const response = await request(app)
+          .get(`/api/programs/${program._id}`)
+          .expect(200);
+
+        expect(response.body.data.mentors[0]).not.toHaveProperty("email");
+        expect(response.body.data.mentors[0].firstName).toBe("John");
+      });
+
+      it("should NOT include mentor email for non-enrolled Participant", async () => {
+        const participant = await createAndLoginTestUser({
+          role: "Participant",
+        });
+        const createdBy = new mongoose.Types.ObjectId();
+        const program = await Program.create({
+          title: "Privacy Test Program",
+          programType: "EMBA Mentor Circles",
+          fullPriceTicket: 10000,
+          createdBy,
+          mentors: [
+            {
+              userId: mentorUserId,
+              firstName: "John",
+              lastName: "Mentor",
+              email: "mentor@test.com",
+              gender: "male",
+            },
+          ],
+        });
+
+        const response = await request(app)
+          .get(`/api/programs/${program._id}`)
+          .set("Authorization", `Bearer ${participant.token}`)
+          .expect(200);
+
+        expect(response.body.data.mentors[0]).not.toHaveProperty("email");
+        expect(response.body.data.mentors[0].firstName).toBe("John");
+      });
+
+      it("should NOT include mentor email for Leader who is not a mentor of this program", async () => {
+        const leader = await createAndLoginTestUser({ role: "Leader" });
+        const createdBy = new mongoose.Types.ObjectId();
+        const program = await Program.create({
+          title: "Privacy Test Program",
+          programType: "EMBA Mentor Circles",
+          fullPriceTicket: 10000,
+          createdBy,
+          mentors: [
+            {
+              userId: mentorUserId, // Different from leader's userId
+              firstName: "John",
+              lastName: "Mentor",
+              email: "mentor@test.com",
+              gender: "male",
+            },
+          ],
+        });
+
+        const response = await request(app)
+          .get(`/api/programs/${program._id}`)
+          .set("Authorization", `Bearer ${leader.token}`)
+          .expect(200);
+
+        expect(response.body.data.mentors[0]).not.toHaveProperty("email");
+        expect(response.body.data.mentors[0].firstName).toBe("John");
+      });
+
+      it("should include mentor email for admin-enrolled user", async () => {
+        const admin = await createAndLoginTestUser({ role: "Administrator" });
+        const participant = await createAndLoginTestUser({
+          role: "Participant",
+        });
+        const createdBy = new mongoose.Types.ObjectId();
+        const program = await Program.create({
+          title: "Privacy Test Program",
+          programType: "EMBA Mentor Circles",
+          fullPriceTicket: 10000,
+          createdBy,
+          adminEnrollments: {
+            mentees: [new mongoose.Types.ObjectId(participant.userId)],
+            classReps: [],
+          },
+          mentors: [
+            {
+              userId: mentorUserId,
+              firstName: "John",
+              lastName: "Mentor",
+              email: "mentor@test.com",
+              gender: "male",
+            },
+          ],
+        });
+
+        const response = await request(app)
+          .get(`/api/programs/${program._id}`)
+          .set("Authorization", `Bearer ${participant.token}`)
+          .expect(200);
+
+        expect(response.body.data.mentors[0].email).toBe("mentor@test.com");
       });
     });
   });

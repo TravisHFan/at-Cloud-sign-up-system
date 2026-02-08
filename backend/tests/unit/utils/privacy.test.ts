@@ -4,10 +4,21 @@
  * Tests privacy-focused utility functions:
  * - hashEmail: SHA256 hashing with normalization
  * - truncateIpToCidr: IP anonymization for privacy
+ * - stripContactInfo: Remove sensitive contact fields from user objects
+ * - sanitizeMentor/sanitizeMentors: Conditionally strip mentor contact info
+ * - sanitizeParticipant/sanitizeParticipants: Conditionally strip participant contact info
  */
 
 import { describe, it, expect } from "vitest";
-import { hashEmail, truncateIpToCidr } from "../../../src/utils/privacy";
+import {
+  hashEmail,
+  truncateIpToCidr,
+  stripContactInfo,
+  sanitizeMentor,
+  sanitizeMentors,
+  sanitizeParticipant,
+  sanitizeParticipants,
+} from "../../../src/utils/privacy";
 import crypto from "crypto";
 
 describe("privacy utilities", () => {
@@ -98,7 +109,7 @@ describe("privacy utilities", () => {
     describe("IPv6 addresses", () => {
       it("should truncate IPv6 to /48 CIDR (first 3 hextets)", () => {
         const result = truncateIpToCidr(
-          "2001:0db8:85a3:0000:0000:8a2e:0370:7334"
+          "2001:0db8:85a3:0000:0000:8a2e:0370:7334",
         );
 
         expect(result).toBe("2001:0db8:85a3::/48");
@@ -171,6 +182,216 @@ describe("privacy utilities", () => {
 
         expect(result).toBeNull();
       });
+    });
+  });
+
+  describe("stripContactInfo", () => {
+    it("should remove email and phone from user object", () => {
+      const user = {
+        firstName: "John",
+        lastName: "Doe",
+        email: "john@example.com",
+        phone: "555-1234",
+        avatar: "/avatar.jpg",
+      };
+
+      const result = stripContactInfo(user);
+
+      expect(result).toEqual({
+        firstName: "John",
+        lastName: "Doe",
+        avatar: "/avatar.jpg",
+      });
+      expect(result).not.toHaveProperty("email");
+      expect(result).not.toHaveProperty("phone");
+    });
+
+    it("should handle user with only email", () => {
+      const user = {
+        firstName: "John",
+        email: "john@example.com",
+      };
+
+      const result = stripContactInfo(user);
+
+      expect(result).toEqual({ firstName: "John" });
+      expect(result).not.toHaveProperty("email");
+    });
+
+    it("should handle user with only phone", () => {
+      const user = {
+        firstName: "John",
+        phone: "555-1234",
+      };
+
+      const result = stripContactInfo(user);
+
+      expect(result).toEqual({ firstName: "John" });
+      expect(result).not.toHaveProperty("phone");
+    });
+
+    it("should return same object structure without contact fields", () => {
+      const user = {
+        _id: "123",
+        firstName: "John",
+        lastName: "Doe",
+        email: "john@example.com",
+        phone: "555-1234",
+        avatar: "/avatar.jpg",
+        gender: "male" as const,
+        roleInAtCloud: "Mentor",
+      };
+
+      const result = stripContactInfo(user);
+
+      expect(result).toEqual({
+        _id: "123",
+        firstName: "John",
+        lastName: "Doe",
+        avatar: "/avatar.jpg",
+        gender: "male",
+        roleInAtCloud: "Mentor",
+      });
+    });
+  });
+
+  describe("sanitizeMentor", () => {
+    const mentor = {
+      userId: "123",
+      firstName: "Jane",
+      lastName: "Smith",
+      email: "jane@example.com",
+      avatar: "/jane.jpg",
+    };
+
+    it("should return full mentor when canViewContact is true", () => {
+      const result = sanitizeMentor(mentor, true);
+
+      expect(result).toEqual(mentor);
+      expect((result as typeof mentor).email).toBe("jane@example.com");
+    });
+
+    it("should strip contact info when canViewContact is false", () => {
+      const result = sanitizeMentor(mentor, false);
+
+      expect(result).not.toHaveProperty("email");
+      expect(result).toHaveProperty("firstName", "Jane");
+      expect(result).toHaveProperty("lastName", "Smith");
+    });
+  });
+
+  describe("sanitizeMentors", () => {
+    const mentors = [
+      { userId: "1", firstName: "John", email: "john@example.com" },
+      {
+        userId: "2",
+        firstName: "Jane",
+        email: "jane@example.com",
+        phone: "555-1234",
+      },
+    ];
+
+    it("should return all mentors with contact info when canViewContact is true", () => {
+      const result = sanitizeMentors(mentors, true);
+
+      expect(result).toHaveLength(2);
+      expect((result[0] as (typeof mentors)[0]).email).toBe("john@example.com");
+      expect((result[1] as (typeof mentors)[1]).email).toBe("jane@example.com");
+      expect((result[1] as (typeof mentors)[1]).phone).toBe("555-1234");
+    });
+
+    it("should strip contact info from all mentors when canViewContact is false", () => {
+      const result = sanitizeMentors(mentors, false);
+
+      expect(result).toHaveLength(2);
+      expect(result[0]).not.toHaveProperty("email");
+      expect(result[1]).not.toHaveProperty("email");
+      expect(result[1]).not.toHaveProperty("phone");
+      expect(result[0].firstName).toBe("John");
+      expect(result[1].firstName).toBe("Jane");
+    });
+
+    it("should handle empty array", () => {
+      const result = sanitizeMentors([], false);
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe("sanitizeParticipant", () => {
+    const participant = {
+      user: {
+        firstName: "Bob",
+        lastName: "Wilson",
+        email: "bob@example.com",
+        phone: "555-9999",
+        avatar: "/bob.jpg",
+      },
+      isPaid: true,
+      enrollmentDate: new Date("2024-01-01"),
+    };
+
+    it("should return full participant when canViewContact is true", () => {
+      const result = sanitizeParticipant(participant, true);
+
+      expect(result.user.email).toBe("bob@example.com");
+      expect(result.user.phone).toBe("555-9999");
+      expect(result.isPaid).toBe(true);
+    });
+
+    it("should strip contact info from nested user when canViewContact is false", () => {
+      const result = sanitizeParticipant(participant, false);
+
+      expect(result.user).not.toHaveProperty("email");
+      expect(result.user).not.toHaveProperty("phone");
+      expect(result.user.firstName).toBe("Bob");
+      expect(result.isPaid).toBe(true);
+    });
+  });
+
+  describe("sanitizeParticipants", () => {
+    const participants = [
+      {
+        user: { firstName: "Alice", email: "alice@example.com" },
+        isPaid: true,
+      },
+      {
+        user: { firstName: "Bob", email: "bob@example.com", phone: "555-1234" },
+        isPaid: false,
+      },
+    ];
+
+    it("should return all participants with contact info when canViewContact is true", () => {
+      const result = sanitizeParticipants(participants, true);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].user.email).toBe("alice@example.com");
+      expect(result[1].user.email).toBe("bob@example.com");
+      expect(result[1].user.phone).toBe("555-1234");
+    });
+
+    it("should strip contact info from all participants when canViewContact is false", () => {
+      const result = sanitizeParticipants(participants, false);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].user).not.toHaveProperty("email");
+      expect(result[1].user).not.toHaveProperty("email");
+      expect(result[1].user).not.toHaveProperty("phone");
+      expect(result[0].user.firstName).toBe("Alice");
+      expect(result[1].user.firstName).toBe("Bob");
+    });
+
+    it("should handle empty array", () => {
+      const result = sanitizeParticipants([], false);
+
+      expect(result).toEqual([]);
+    });
+
+    it("should preserve non-user fields", () => {
+      const result = sanitizeParticipants(participants, false);
+
+      expect(result[0].isPaid).toBe(true);
+      expect(result[1].isPaid).toBe(false);
     });
   });
 });

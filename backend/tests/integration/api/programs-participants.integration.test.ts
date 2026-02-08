@@ -50,7 +50,7 @@ describe("Program Participants API", () => {
     if (mongoose.connection.readyState === 0) {
       await mongoose.connect(
         process.env.MONGODB_URI ||
-          "mongodb://127.0.0.1:27017/atcloud-signup-test"
+          "mongodb://127.0.0.1:27017/atcloud-signup-test",
       );
     }
   });
@@ -197,7 +197,7 @@ describe("Program Participants API", () => {
       const program = await ProgramModel.findById(programId);
       expect(program?.adminEnrollments.classReps).toHaveLength(1);
       expect(program?.adminEnrollments.classReps[0].toString()).toBe(
-        adminUserId
+        adminUserId,
       );
     });
 
@@ -400,6 +400,107 @@ describe("Program Participants API", () => {
     });
   });
 
+  describe("Contact Info Privacy (Server-Side Filtering)", () => {
+    beforeEach(async () => {
+      // Enroll admin as mentee to have a participant with known email
+      await request(app)
+        .post(`/api/programs/${programId}/admin-enroll`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ enrollAs: "mentee" });
+    });
+
+    it("should include contact info for Administrator users", async () => {
+      const response = await request(app)
+        .get(`/api/programs/${programId}/participants`)
+        .set("Authorization", `Bearer ${adminToken}`);
+
+      expect(response.status).toBe(200);
+      const mentee = response.body.data.mentees[0];
+      expect(mentee.user).toHaveProperty("email");
+      expect(mentee.user.email).toBeDefined();
+    });
+
+    it("should include contact info for Super Admin users", async () => {
+      const superAdmin = await createAndLoginTestUser({ role: "Super Admin" });
+
+      const response = await request(app)
+        .get(`/api/programs/${programId}/participants`)
+        .set("Authorization", `Bearer ${superAdmin.token}`);
+
+      expect(response.status).toBe(200);
+      const mentee = response.body.data.mentees[0];
+      expect(mentee.user).toHaveProperty("email");
+      expect(mentee.user.email).toBeDefined();
+    });
+
+    it("should include contact info for program mentors (Leader)", async () => {
+      // leaderUserId is already set as mentor in beforeEach
+      const response = await request(app)
+        .get(`/api/programs/${programId}/participants`)
+        .set("Authorization", `Bearer ${leaderToken}`);
+
+      expect(response.status).toBe(200);
+      const mentee = response.body.data.mentees[0];
+      expect(mentee.user).toHaveProperty("email");
+      expect(mentee.user.email).toBeDefined();
+    });
+
+    it("should NOT include contact info for regular Participant users", async () => {
+      const response = await request(app)
+        .get(`/api/programs/${programId}/participants`)
+        .set("Authorization", `Bearer ${participantToken}`);
+
+      expect(response.status).toBe(200);
+      const mentee = response.body.data.mentees[0];
+      expect(mentee.user).not.toHaveProperty("email");
+      expect(mentee.user).not.toHaveProperty("phone");
+      // Other fields should still be present
+      expect(mentee.user).toHaveProperty("firstName");
+    });
+
+    it("should NOT include contact info for unauthenticated requests", async () => {
+      const response = await request(app).get(
+        `/api/programs/${programId}/participants`,
+      );
+
+      expect(response.status).toBe(200);
+      const mentee = response.body.data.mentees[0];
+      expect(mentee.user).not.toHaveProperty("email");
+      expect(mentee.user).not.toHaveProperty("phone");
+      // Other fields should still be present
+      expect(mentee.user).toHaveProperty("firstName");
+    });
+
+    it("should NOT include contact info for Leader who is NOT a mentor of this program", async () => {
+      // Create a new leader who is not a mentor of this program
+      const nonMentorLeader = await createAndLoginTestUser({ role: "Leader" });
+
+      const response = await request(app)
+        .get(`/api/programs/${programId}/participants`)
+        .set("Authorization", `Bearer ${nonMentorLeader.token}`);
+
+      expect(response.status).toBe(200);
+      const mentee = response.body.data.mentees[0];
+      expect(mentee.user).not.toHaveProperty("email");
+      expect(mentee.user).not.toHaveProperty("phone");
+    });
+
+    it("should NOT include contact info for Guest Expert users", async () => {
+      const guestExpert = await createAndLoginTestUser({
+        role: "Guest Expert",
+      });
+
+      const response = await request(app)
+        .get(`/api/programs/${programId}/participants`)
+        .set("Authorization", `Bearer ${guestExpert.token}`);
+
+      expect(response.status).toBe(200);
+      const mentee = response.body.data.mentees[0];
+      expect(mentee.user).not.toHaveProperty("email");
+      expect(mentee.user).not.toHaveProperty("phone");
+    });
+  });
+
   describe("Edge Cases", () => {
     it("should handle concurrent enrollments (may have race condition)", async () => {
       // Create a fresh program for this test to avoid conflicts
@@ -435,7 +536,7 @@ describe("Program Participants API", () => {
       // This is expected behavior without transaction locking
       const program = await ProgramModel.findById(freshProgramId);
       expect(program?.adminEnrollments.mentees.length).toBeGreaterThanOrEqual(
-        1
+        1,
       );
       expect(program?.adminEnrollments.mentees.length).toBeLessThanOrEqual(2);
     });

@@ -91,7 +91,7 @@ export class RegistrationController {
 
       // Role permission checks
       const targetRole = event.roles.find(
-        (role: IEventRole) => role.id === roleId
+        (role: IEventRole) => role.id === roleId,
       );
       if (!targetRole) {
         res.status(400).json({
@@ -163,7 +163,7 @@ export class RegistrationController {
 
             if (currentCount >= targetRole.maxParticipants) {
               throw new Error(
-                `This role is at full capacity (${currentCount}/${targetRole.maxParticipants}). Please try another role.`
+                `This role is at full capacity (${currentCount}/${targetRole.maxParticipants}). Please try another role.`,
               );
             }
 
@@ -198,19 +198,18 @@ export class RegistrationController {
                 gender: user.gender,
               },
               eventSnapshot: await (async () => {
-                const { EventSnapshotBuilder } = await import(
-                  "../../services/EventSnapshotBuilder"
-                );
+                const { EventSnapshotBuilder } =
+                  await import("../../services/EventSnapshotBuilder");
                 return EventSnapshotBuilder.buildRegistrationSnapshot(
                   event,
-                  targetRole
+                  targetRole,
                 );
               })(),
             });
 
             // Attempt atomic save (protected by unique index for duplicates)
             console.log(
-              `🔄 Saving registration for user ${user._id} to role ${roleId} in event ${id}`
+              `🔄 Saving registration for user ${user._id} to role ${roleId} in event ${id}`,
             );
             await newRegistration.save();
             console.log(`✅ Registration saved successfully`);
@@ -222,7 +221,7 @@ export class RegistrationController {
 
             return newRegistration;
           },
-          10000
+          10000,
         ); // 10 second timeout
 
         // Get updated event data using ResponseBuilderService
@@ -230,7 +229,8 @@ export class RegistrationController {
         const updatedEvent =
           await ResponseBuilderService.buildEventWithRegistrations(
             id,
-            req.user ? EventController.toIdString(req.user._id) : undefined
+            req.user ? EventController.toIdString(req.user._id) : undefined,
+            (req.user as { role?: string } | undefined)?.role,
           );
         console.log(`✅ Updated event data built:`, {
           eventId: id,
@@ -286,10 +286,10 @@ export class RegistrationController {
           lockError !== null &&
           typeof (lockError as { message?: unknown }).message === "string" &&
           ((lockError as { message: string }).message.includes(
-            "already signed up"
+            "already signed up",
           ) ||
             (lockError as { message: string }).message.includes(
-              "full capacity"
+              "full capacity",
             ))
         ) {
           const msg = (lockError as { message: string }).message;
@@ -308,7 +308,7 @@ export class RegistrationController {
         "signUpForEvent failed",
         error as Error,
         undefined,
-        { eventId: req.params?.id }
+        { eventId: req.params?.id },
       );
 
       if (
@@ -336,7 +336,7 @@ export class RegistrationController {
   // Update a specific workshop group topic (Workshop only)
   static async updateWorkshopGroupTopic(
     req: Request,
-    res: Response
+    res: Response,
   ): Promise<void> {
     try {
       const { id, group } = req.params as { id: string; group: string };
@@ -388,14 +388,14 @@ export class RegistrationController {
         authorized = event.organizerDetails.some(
           (o: { userId?: unknown }) =>
             (o.userId ? EventController.toIdString(o.userId) : undefined) ===
-            EventController.toIdString(user._id)
+            EventController.toIdString(user._id),
         );
       }
       if (!authorized) {
         // Check if user is registered as Group X Leader for this event
         const leaderRoleName = `Group ${group} Leader`;
         const leaderRole = event.roles.find(
-          (r: { id: string; name: string }) => r.name === leaderRoleName
+          (r: { id: string; name: string }) => r.name === leaderRoleName,
         );
         if (leaderRole) {
           const count = await Registration.countDocuments({
@@ -419,14 +419,15 @@ export class RegistrationController {
       await Event.findByIdAndUpdate(
         id,
         { $set: { [key]: (topic ?? "").toString().trim() } },
-        { new: true, runValidators: true, context: "query" }
+        { new: true, runValidators: true, context: "query" },
       );
 
       // Build fresh event response and emit socket update
       const updatedEvent =
         await ResponseBuilderService.buildEventWithRegistrations(
           id,
-          req.user ? EventController.toIdString(req.user._id) : undefined
+          req.user ? EventController.toIdString(req.user._id) : undefined,
+          (req.user as { role?: string } | undefined)?.role,
         );
       await CachePatterns.invalidateEventCache(id);
       socketService.emitEventUpdate(id, "workshop_topic_updated", {
@@ -449,7 +450,7 @@ export class RegistrationController {
         {
           eventId: req.params?.id,
           group: (req.params as { group?: string })?.group,
-        }
+        },
       );
       if (
         typeof error === "object" &&
@@ -458,7 +459,7 @@ export class RegistrationController {
       ) {
         const errors = Object.values(
           (error as { errors?: Record<string, { message?: string }> }).errors ||
-            {}
+            {},
         ).map((e) => e.message || "Validation error");
         res
           .status(400)
@@ -539,7 +540,8 @@ export class RegistrationController {
       const updatedEvent =
         await ResponseBuilderService.buildEventWithRegistrations(
           id,
-          req.user ? EventController.toIdString(req.user._id) : undefined
+          req.user ? EventController.toIdString(req.user._id) : undefined,
+          (req.user as { role?: string } | undefined)?.role,
         );
 
       // Emit real-time event update for cancellation
@@ -563,7 +565,7 @@ export class RegistrationController {
         "cancelSignup failed",
         error as Error,
         undefined,
-        { eventId: req.params?.id }
+        { eventId: req.params?.id },
       );
       res.status(500).json({
         success: false,
@@ -623,7 +625,8 @@ export class RegistrationController {
       const updatedEvent =
         await ResponseBuilderService.buildEventWithRegistrations(
           eventId,
-          req.user ? EventController.toIdString(req.user._id) : undefined
+          req.user ? EventController.toIdString(req.user._id) : undefined,
+          (req.user as { role?: string } | undefined)?.role,
         );
 
       // Emit real-time event update to all connected clients
@@ -682,7 +685,7 @@ export class RegistrationController {
         "removeUserFromRole failed",
         error as Error,
         undefined,
-        { eventId: req.params?.id }
+        { eventId: req.params?.id },
       );
       res.status(500).json({
         success: false,
@@ -699,7 +702,7 @@ export class RegistrationController {
   // Move user between roles (admin/organizer management operation)
   static async moveUserBetweenRoles(
     req: Request,
-    res: Response
+    res: Response,
   ): Promise<void> {
     try {
       const { id: eventId } = req.params;
@@ -715,7 +718,7 @@ export class RegistrationController {
       }
 
       const sourceRole = event.roles.find(
-        (r: IEventRole) => r.id === fromRoleId
+        (r: IEventRole) => r.id === fromRoleId,
       );
       const targetRole = event.roles.find((r: IEventRole) => r.id === toRoleId);
 
@@ -778,7 +781,8 @@ export class RegistrationController {
         const updatedEvent =
           await ResponseBuilderService.buildEventWithRegistrations(
             eventId,
-            req.user ? EventController.toIdString(req.user._id) : undefined
+            req.user ? EventController.toIdString(req.user._id) : undefined,
+            (req.user as { role?: string } | undefined)?.role,
           );
 
         // Emit real-time event update to all connected clients
@@ -895,7 +899,7 @@ export class RegistrationController {
         "moveUserBetweenRoles failed",
         error as Error,
         undefined,
-        { eventId: req.params?.id }
+        { eventId: req.params?.id },
       );
       res.status(500).json({
         success: false,
@@ -994,7 +998,8 @@ export class RegistrationController {
         const updatedEvent =
           await ResponseBuilderService.buildEventWithRegistrations(
             eventId,
-            req.user ? EventController.toIdString(req.user._id) : undefined
+            req.user ? EventController.toIdString(req.user._id) : undefined,
+            (req.user as { role?: string } | undefined)?.role,
           );
         res.status(200).json({
           success: true,
@@ -1040,12 +1045,11 @@ export class RegistrationController {
           gender: targetUser.gender,
         },
         eventSnapshot: await (async () => {
-          const { EventSnapshotBuilder } = await import(
-            "../../services/EventSnapshotBuilder"
-          );
+          const { EventSnapshotBuilder } =
+            await import("../../services/EventSnapshotBuilder");
           return EventSnapshotBuilder.buildRegistrationSnapshot(
             event,
-            targetRole
+            targetRole,
           );
         })(),
       });
@@ -1054,7 +1058,7 @@ export class RegistrationController {
       reg.addAuditEntry(
         "assigned",
         actingUser._id,
-        `Assigned to role: ${targetRole.name}`
+        `Assigned to role: ${targetRole.name}`,
       );
       await reg.save();
 
@@ -1065,7 +1069,8 @@ export class RegistrationController {
       const updatedEvent =
         await ResponseBuilderService.buildEventWithRegistrations(
           eventId,
-          req.user ? EventController.toIdString(req.user._id) : undefined
+          req.user ? EventController.toIdString(req.user._id) : undefined,
+          (req.user as { role?: string } | undefined)?.role,
         );
       socketService.emitEventUpdate(eventId, "user_assigned", {
         operatorId: EventController.toIdString(actingUser._id),
@@ -1184,7 +1189,7 @@ export class RegistrationController {
         "assignUserToRole failed",
         error as Error,
         undefined,
-        { eventId: req.params?.id }
+        { eventId: req.params?.id },
       );
       res.status(500).json({
         success: false,

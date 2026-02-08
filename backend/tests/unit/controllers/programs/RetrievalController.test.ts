@@ -9,6 +9,9 @@ vi.mock("../../../../src/models", () => ({
   Program: {
     findById: vi.fn(),
   },
+  Purchase: {
+    findOne: vi.fn(),
+  },
 }));
 
 describe("RetrievalController", () => {
@@ -42,7 +45,7 @@ describe("RetrievalController", () => {
 
         await RetrievalController.getById(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -57,7 +60,7 @@ describe("RetrievalController", () => {
 
         await RetrievalController.getById(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(Program.findById).toHaveBeenCalledWith(programId.toString());
@@ -71,30 +74,34 @@ describe("RetrievalController", () => {
 
     describe("program retrieval", () => {
       it("should return program when found", async () => {
-        const mockProgram = {
+        const mockProgramData = {
           _id: programId,
           title: "Test Program",
           description: "Test description",
           programType: "Workshop",
+        };
+        const mockProgram = {
+          ...mockProgramData,
+          toObject: vi.fn().mockReturnValue(mockProgramData),
         };
 
         vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
 
         await RetrievalController.getById(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(Program.findById).toHaveBeenCalledWith(programId.toString());
         expect(statusMock).toHaveBeenCalledWith(200);
         expect(jsonMock).toHaveBeenCalledWith({
           success: true,
-          data: mockProgram,
+          data: mockProgramData,
         });
       });
 
       it("should return complete program with all fields", async () => {
-        const mockProgram = {
+        const mockProgramData = {
           _id: programId,
           title: "Complete Program",
           description: "Full description",
@@ -110,36 +117,44 @@ describe("RetrievalController", () => {
           createdAt: new Date("2023-12-01"),
           updatedAt: new Date("2024-01-15"),
         };
-
-        vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
-
-        await RetrievalController.getById(
-          mockReq as Request,
-          mockRes as Response
-        );
-
-        const response = jsonMock.mock.calls[0][0];
-        expect(response.success).toBe(true);
-        expect(response.data).toEqual(mockProgram);
-      });
-
-      it("should handle program with no optional fields", async () => {
         const mockProgram = {
-          _id: programId,
-          title: "Minimal Program",
+          ...mockProgramData,
+          toObject: vi.fn().mockReturnValue(mockProgramData),
         };
 
         vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
 
         await RetrievalController.getById(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
+        );
+
+        const response = jsonMock.mock.calls[0][0];
+        expect(response.success).toBe(true);
+        expect(response.data).toEqual(mockProgramData);
+      });
+
+      it("should handle program with no optional fields", async () => {
+        const mockProgramData = {
+          _id: programId,
+          title: "Minimal Program",
+        };
+        const mockProgram = {
+          ...mockProgramData,
+          toObject: vi.fn().mockReturnValue(mockProgramData),
+        };
+
+        vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
+
+        await RetrievalController.getById(
+          mockReq as Request,
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
         expect(jsonMock).toHaveBeenCalledWith({
           success: true,
-          data: mockProgram,
+          data: mockProgramData,
         });
       });
     });
@@ -147,12 +162,12 @@ describe("RetrievalController", () => {
     describe("error handling", () => {
       it("should handle database errors", async () => {
         vi.mocked(Program.findById).mockRejectedValue(
-          new Error("Database error")
+          new Error("Database error"),
         );
 
         await RetrievalController.getById(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -164,12 +179,12 @@ describe("RetrievalController", () => {
 
       it("should handle unexpected errors gracefully", async () => {
         vi.mocked(Program.findById).mockRejectedValue(
-          new Error("Unexpected error")
+          new Error("Unexpected error"),
         );
 
         await RetrievalController.getById(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);

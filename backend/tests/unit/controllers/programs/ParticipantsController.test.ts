@@ -37,6 +37,11 @@ describe("ParticipantsController", () => {
 
     mockReq = {
       params: { id: programId.toString() },
+      // Set up admin user so contact info is visible in tests
+      user: {
+        _id: new mongoose.Types.ObjectId(),
+        role: "Administrator",
+      },
     };
 
     mockRes = {
@@ -52,7 +57,7 @@ describe("ParticipantsController", () => {
 
         await ParticipantsController.getParticipants(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -67,7 +72,7 @@ describe("ParticipantsController", () => {
 
         await ParticipantsController.getParticipants(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(404);
@@ -96,7 +101,7 @@ describe("ParticipantsController", () => {
         };
 
         vi.mocked(Program.findById).mockResolvedValue(
-          programWithoutAdminEnrollments as any
+          programWithoutAdminEnrollments as any,
         );
 
         const mockPurchaseFind = vi.fn().mockReturnValue({
@@ -112,7 +117,7 @@ describe("ParticipantsController", () => {
 
         await ParticipantsController.getParticipants(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -157,7 +162,7 @@ describe("ParticipantsController", () => {
 
         await ParticipantsController.getParticipants(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(Purchase.find).toHaveBeenCalledWith({
@@ -206,7 +211,7 @@ describe("ParticipantsController", () => {
 
         await ParticipantsController.getParticipants(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
@@ -254,7 +259,7 @@ describe("ParticipantsController", () => {
 
         await ParticipantsController.getParticipants(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
@@ -301,7 +306,7 @@ describe("ParticipantsController", () => {
 
         await ParticipantsController.getParticipants(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
@@ -385,7 +390,7 @@ describe("ParticipantsController", () => {
 
         await ParticipantsController.getParticipants(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const response = jsonMock.mock.calls[0][0];
@@ -422,7 +427,7 @@ describe("ParticipantsController", () => {
 
         await ParticipantsController.getParticipants(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const sortCall =
@@ -450,13 +455,13 @@ describe("ParticipantsController", () => {
 
         await ParticipantsController.getParticipants(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const populateCall = mockPurchaseFind.mock.results[0].value.populate;
         expect(populateCall).toHaveBeenCalledWith(
           "userId",
-          "firstName lastName email phone avatar gender roleInAtCloud"
+          "firstName lastName email phone avatar gender roleInAtCloud",
         );
       });
 
@@ -477,11 +482,11 @@ describe("ParticipantsController", () => {
 
         await ParticipantsController.getParticipants(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(selectMock).toHaveBeenCalledWith(
-          "_id firstName lastName email phone avatar gender roleInAtCloud"
+          "_id firstName lastName email phone avatar gender roleInAtCloud",
         );
       });
 
@@ -495,7 +500,7 @@ describe("ParticipantsController", () => {
         };
 
         vi.mocked(Program.findById).mockResolvedValue(
-          programWithEmptyArrays as any
+          programWithEmptyArrays as any,
         );
 
         const mockPurchaseFind = vi.fn().mockReturnValue({
@@ -511,7 +516,7 @@ describe("ParticipantsController", () => {
 
         await ParticipantsController.getParticipants(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -524,12 +529,12 @@ describe("ParticipantsController", () => {
     describe("error handling", () => {
       it("should handle database errors when fetching program", async () => {
         vi.mocked(Program.findById).mockRejectedValue(
-          new Error("Database error")
+          new Error("Database error"),
         );
 
         await ParticipantsController.getParticipants(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -556,7 +561,7 @@ describe("ParticipantsController", () => {
 
         await ParticipantsController.getParticipants(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -591,7 +596,7 @@ describe("ParticipantsController", () => {
 
         await ParticipantsController.getParticipants(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);

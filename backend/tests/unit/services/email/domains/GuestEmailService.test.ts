@@ -60,7 +60,7 @@ describe("GuestEmailService - Guest Email Operations", () => {
     }
     if (anyMailer.default?.createTransport) {
       vi.mocked(anyMailer.default.createTransport).mockReturnValue(
-        mockTransporter
+        mockTransporter,
       );
     }
 
@@ -392,9 +392,8 @@ describe("GuestEmailService - Guest Email Operations", () => {
       };
 
       // Act
-      const result = await GuestEmailService.sendGuestDeclineNotification(
-        params
-      );
+      const result =
+        await GuestEmailService.sendGuestDeclineNotification(params);
 
       // Assert
       expect(result).toBe(true);
@@ -455,9 +454,8 @@ describe("GuestEmailService - Guest Email Operations", () => {
       };
 
       // Act
-      const result = await GuestEmailService.sendGuestDeclineNotification(
-        params
-      );
+      const result =
+        await GuestEmailService.sendGuestDeclineNotification(params);
 
       // Assert
       expect(result).toBe(false);
@@ -480,9 +478,8 @@ describe("GuestEmailService - Guest Email Operations", () => {
       };
 
       // Act
-      const result = await GuestEmailService.sendGuestDeclineNotification(
-        params
-      );
+      const result =
+        await GuestEmailService.sendGuestDeclineNotification(params);
 
       // Assert
       expect(result).toBe(false);
@@ -515,9 +512,8 @@ describe("GuestEmailService - Guest Email Operations", () => {
       };
 
       // Act
-      const result = await GuestEmailService.sendGuestRegistrationNotification(
-        params
-      );
+      const result =
+        await GuestEmailService.sendGuestRegistrationNotification(params);
 
       // Assert
       expect(result).toBe(true);
@@ -579,9 +575,8 @@ describe("GuestEmailService - Guest Email Operations", () => {
       };
 
       // Act
-      const result = await GuestEmailService.sendGuestRegistrationNotification(
-        params
-      );
+      const result =
+        await GuestEmailService.sendGuestRegistrationNotification(params);
 
       // Assert
       expect(result).toBe(true); // Returns true (nothing to send)
@@ -621,7 +616,7 @@ describe("GuestEmailService - Guest Email Operations", () => {
     it("should handle email sending failures gracefully", async () => {
       // Arrange
       mockTransporter.sendMail.mockRejectedValue(
-        new Error("Connection refused")
+        new Error("Connection refused"),
       );
       const params = {
         organizerEmails: ["organizer@example.com"],
@@ -638,9 +633,8 @@ describe("GuestEmailService - Guest Email Operations", () => {
       };
 
       // Act
-      const result = await GuestEmailService.sendGuestRegistrationNotification(
-        params
-      );
+      const result =
+        await GuestEmailService.sendGuestRegistrationNotification(params);
 
       // Assert
       expect(result).toBe(false);
@@ -698,6 +692,1052 @@ describe("GuestEmailService - Guest Email Operations", () => {
       // createTransport should only be called once (transporter reused)
       const anyMailer: any = nodemailer as any;
       expect(anyMailer.createTransport).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("sendGuestConfirmationEmail - Virtual Meeting Edge Cases", () => {
+    it("should show 'meeting details pending' when zoomLink is present but passcode is missing", async () => {
+      // Arrange: zoomLink without passcode should NOT show virtual sections
+      const params = {
+        guestEmail: "guest@example.com",
+        guestName: "Virtual Guest",
+        event: {
+          title: "Online Event",
+          date: new Date("2025-04-15"),
+          time: "10:00 AM",
+          format: "Online",
+          zoomLink: "https://zoom.us/j/123456789",
+          meetingId: "123 456 789",
+          // passcode missing
+        },
+        role: { name: "Participant" },
+        registrationId: "REG-NO-PASSCODE",
+      };
+
+      // Act
+      await GuestEmailService.sendGuestConfirmationEmail(params);
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      // Should show pending message instead of meeting details
+      expect(emailCall.html).toContain(
+        "meeting link and event details will be provided",
+      );
+      expect(emailCall.html).not.toContain("Meeting ID:");
+      expect(emailCall.text).toContain(
+        "meeting link and event details will be provided",
+      );
+    });
+
+    it("should show 'meeting details pending' when meetingId is present but zoomLink is missing", async () => {
+      // Arrange: meetingId without zoomLink should NOT show virtual sections
+      const params = {
+        guestEmail: "guest@example.com",
+        guestName: "Virtual Guest",
+        event: {
+          title: "Online Event",
+          date: new Date("2025-04-15"),
+          time: "10:00 AM",
+          format: "Online",
+          // zoomLink missing
+          meetingId: "123 456 789",
+          passcode: "secret123",
+        },
+        role: { name: "Participant" },
+        registrationId: "REG-NO-LINK",
+      };
+
+      // Act
+      await GuestEmailService.sendGuestConfirmationEmail(params);
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain(
+        "meeting link and event details will be provided",
+      );
+      expect(emailCall.html).not.toContain("Join Online Meeting");
+    });
+
+    it("should display complete virtual meeting info when all fields are present", async () => {
+      // Arrange
+      const params = {
+        guestEmail: "guest@example.com",
+        guestName: "Complete Virtual Guest",
+        event: {
+          title: "Full Virtual Event",
+          date: new Date("2025-04-20"),
+          time: "2:00 PM",
+          endTime: "4:00 PM",
+          format: "Online",
+          zoomLink: "https://zoom.us/j/999888777",
+          meetingId: "999 888 777",
+          passcode: "fullpass",
+        },
+        role: { name: "Speaker" },
+        registrationId: "REG-FULL-VIRTUAL",
+      };
+
+      // Act
+      await GuestEmailService.sendGuestConfirmationEmail(params);
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain("Join Online Meeting");
+      expect(emailCall.html).toContain("https://zoom.us/j/999888777");
+      expect(emailCall.html).toContain("Meeting ID:");
+      expect(emailCall.html).toContain("999 888 777");
+      expect(emailCall.html).toContain("Passcode:");
+      expect(emailCall.html).toContain("fullpass");
+      // Text version should also contain these
+      expect(emailCall.text).toContain("https://zoom.us/j/999888777");
+      expect(emailCall.text).toContain("Meeting ID: 999 888 777");
+      expect(emailCall.text).toContain("Passcode: fullpass");
+    });
+
+    it("should handle whitespace-only zoomLink as missing", async () => {
+      // Arrange
+      const params = {
+        guestEmail: "guest@example.com",
+        guestName: "Guest",
+        event: {
+          title: "Test Event",
+          date: new Date("2025-04-25"),
+          time: "10:00 AM",
+          zoomLink: "   ", // whitespace only
+          meetingId: "111 222 333",
+          passcode: "pass123",
+        },
+        role: { name: "Attendee" },
+        registrationId: "REG-WHITESPACE-LINK",
+      };
+
+      // Act
+      await GuestEmailService.sendGuestConfirmationEmail(params);
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain(
+        "meeting link and event details will be provided",
+      );
+    });
+
+    it("should handle whitespace-only passcode as missing", async () => {
+      // Arrange
+      const params = {
+        guestEmail: "guest@example.com",
+        guestName: "Guest",
+        event: {
+          title: "Test Event",
+          date: new Date("2025-04-25"),
+          time: "10:00 AM",
+          zoomLink: "https://zoom.us/j/123",
+          meetingId: "111 222 333",
+          passcode: "  ", // whitespace only
+        },
+        role: { name: "Attendee" },
+        registrationId: "REG-WHITESPACE-PASS",
+      };
+
+      // Act
+      await GuestEmailService.sendGuestConfirmationEmail(params);
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain(
+        "meeting link and event details will be provided",
+      );
+    });
+  });
+
+  describe("sendGuestConfirmationEmail - Invited Guest with DeclineToken", () => {
+    it("should show decline section without token when invited but declineToken is missing", async () => {
+      // Arrange
+      const params = {
+        guestEmail: "guest@example.com",
+        guestName: "Invited Guest",
+        event: {
+          title: "Special Event",
+          date: new Date("2025-05-01"),
+          time: "3:00 PM",
+          createdBy: {
+            firstName: "Jane",
+            lastName: "Organizer",
+            email: "jane@example.com",
+          },
+        },
+        role: { name: "VIP Guest" },
+        registrationId: "REG-INVITED-NO-TOKEN",
+        inviterName: "Jane Organizer", // Invited
+        // declineToken is missing
+      };
+
+      // Act
+      await GuestEmailService.sendGuestConfirmationEmail(params);
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain("You have been invited as a Guest");
+      expect(emailCall.html).toContain("Jane Organizer");
+      // Should show fallback decline message
+      expect(emailCall.html).toContain("decline");
+      expect(emailCall.html).toContain("please contact the organizer");
+      expect(emailCall.html).toContain("A decline link was not generated");
+    });
+
+    it("should show full decline button when invited with declineToken", async () => {
+      // Arrange
+      const params = {
+        guestEmail: "guest@example.com",
+        guestName: "Invited Guest",
+        event: {
+          title: "Exclusive Event",
+          date: new Date("2025-05-10"),
+          time: "6:00 PM",
+          createdBy: {
+            firstName: "John",
+            lastName: "Host",
+            email: "john@example.com",
+          },
+        },
+        role: { name: "Keynote Speaker" },
+        registrationId: "REG-INVITED-WITH-TOKEN",
+        inviterName: "John Host",
+        declineToken: "DECLINE-ABC-123",
+      };
+
+      // Act
+      await GuestEmailService.sendGuestConfirmationEmail(params);
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain("Decline This Invitation");
+      expect(emailCall.html).toContain("/guest/decline/DECLINE-ABC-123");
+      expect(emailCall.html).toContain("expires in 14 days");
+    });
+
+    it("should not show decline section for non-invited guests", async () => {
+      // Arrange
+      const params = {
+        guestEmail: "guest@example.com",
+        guestName: "Self-Registered Guest",
+        event: {
+          title: "Open Event",
+          date: new Date("2025-05-15"),
+          time: "10:00 AM",
+        },
+        role: { name: "Attendee" },
+        registrationId: "REG-SELF-REG",
+        // No inviterName = not invited
+        declineToken: "SOME-TOKEN", // Even with token, no decline section without invite
+      };
+
+      // Act
+      await GuestEmailService.sendGuestConfirmationEmail(params);
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain("You're Registered as a Guest");
+      expect(emailCall.html).not.toContain("Decline This Invitation");
+      expect(emailCall.html).not.toContain("A decline link was not generated");
+    });
+
+    it("should get inviter name from createdBy when inviterName is truthy but not a name", async () => {
+      // Arrange: inviterName is set but createdBy has the actual name
+      const params = {
+        guestEmail: "guest@example.com",
+        guestName: "Invited Guest",
+        event: {
+          title: "Event",
+          date: new Date("2025-05-20"),
+          time: "1:00 PM",
+          createdBy: {
+            firstName: "Real",
+            lastName: "Organizer",
+            email: "real@example.com",
+          },
+        },
+        role: { name: "Guest" },
+        registrationId: "REG-NAME-FROM-CREATEDBY",
+        inviterName: "true", // Truthy but not useful as a display name
+        declineToken: "TOKEN-123",
+      };
+
+      // Act
+      await GuestEmailService.sendGuestConfirmationEmail(params);
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      // The actualInviterName should be extracted from createdBy
+      expect(emailCall.html).toContain("Real Organizer");
+    });
+
+    it("should fall back to organizerDetails for inviter name when createdBy lacks name", async () => {
+      // Arrange
+      const params = {
+        guestEmail: "guest@example.com",
+        guestName: "Invited Guest",
+        event: {
+          title: "Event",
+          date: new Date("2025-05-25"),
+          time: "2:00 PM",
+          createdBy: {
+            // No firstName/lastName
+            email: "org@example.com",
+          },
+          organizerDetails: [
+            {
+              name: "Lead Organizer",
+              role: "Organizer",
+              email: "lead@example.com",
+            },
+          ],
+        },
+        role: { name: "Participant" },
+        registrationId: "REG-FALLBACK-ORGDETAILS",
+        inviterName: "someone",
+        declineToken: "TOKEN-456",
+      };
+
+      // Act
+      await GuestEmailService.sendGuestConfirmationEmail(params);
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      // Should use first organizerDetails name
+      expect(emailCall.html).toContain("Lead Organizer");
+    });
+
+    it("should use 'an Organizer' when no inviter name can be determined", async () => {
+      // Arrange
+      const params = {
+        guestEmail: "guest@example.com",
+        guestName: "Invited Guest",
+        event: {
+          title: "Anonymous Event",
+          date: new Date("2025-05-30"),
+          time: "4:00 PM",
+          // No createdBy, no organizerDetails
+        },
+        role: { name: "Guest" },
+        registrationId: "REG-NO-INVITER",
+        inviterName: "yes",
+        declineToken: "TOKEN-789",
+      };
+
+      // Act
+      await GuestEmailService.sendGuestConfirmationEmail(params);
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain("an Organizer");
+    });
+  });
+
+  describe("sendGuestConfirmationEmail - Edge Cases for Event Fields", () => {
+    it("should handle event with minimal fields (only title and date)", async () => {
+      // Arrange
+      const params = {
+        guestEmail: "guest@example.com",
+        guestName: "Minimal Guest",
+        event: {
+          title: "Minimal Event",
+          date: new Date("2025-06-01"),
+          // No location, time, format, etc.
+        },
+        role: { name: "Attendee" },
+        registrationId: "REG-MINIMAL",
+      };
+
+      // Act
+      const result = await GuestEmailService.sendGuestConfirmationEmail(params);
+
+      // Assert
+      expect(result).toBe(true);
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain("Minimal Event");
+      expect(emailCall.html).toContain("Minimal Guest");
+      expect(emailCall.html).toContain("Attendee");
+    });
+
+    it("should force 'Online' location label for Online format events", async () => {
+      // Arrange
+      const params = {
+        guestEmail: "guest@example.com",
+        guestName: "Online Guest",
+        event: {
+          title: "Online Only Event",
+          date: new Date("2025-06-05"),
+          time: "10:00 AM",
+          format: "Online",
+          location: "Some Physical Location", // Should be ignored for Online
+        },
+        role: { name: "Viewer" },
+        registrationId: "REG-ONLINE-LABEL",
+      };
+
+      // Act
+      await GuestEmailService.sendGuestConfirmationEmail(params);
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      // For Online format, location should be "Online" not the physical location
+      expect(emailCall.html).toContain("<strong>Location:</strong> Online");
+      expect(emailCall.html).not.toContain("Some Physical Location");
+    });
+
+    it("should include physical location for In-person format", async () => {
+      // Arrange
+      const params = {
+        guestEmail: "guest@example.com",
+        guestName: "In-Person Guest",
+        event: {
+          title: "In-Person Event",
+          date: new Date("2025-06-10"),
+          time: "9:00 AM",
+          format: "In-person",
+          location: "123 Main Street, City",
+        },
+        role: { name: "Attendee" },
+        registrationId: "REG-INPERSON",
+      };
+
+      // Act
+      await GuestEmailService.sendGuestConfirmationEmail(params);
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain("123 Main Street, City");
+    });
+
+    it("should include location for Hybrid format events", async () => {
+      // Arrange
+      const params = {
+        guestEmail: "guest@example.com",
+        guestName: "Hybrid Guest",
+        event: {
+          title: "Hybrid Event",
+          date: new Date("2025-06-15"),
+          time: "1:00 PM",
+          format: "Hybrid Participation",
+          location: "Convention Hall",
+          zoomLink: "https://zoom.us/j/hybrid123",
+          meetingId: "hybrid 123",
+          passcode: "hybridpass",
+        },
+        role: { name: "Participant" },
+        registrationId: "REG-HYBRID-FULL",
+      };
+
+      // Act
+      await GuestEmailService.sendGuestConfirmationEmail(params);
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain("Convention Hall");
+      expect(emailCall.html).toContain("Join Online Meeting");
+    });
+
+    it("should handle event with endDate for multi-day events", async () => {
+      // Arrange
+      const params = {
+        guestEmail: "guest@example.com",
+        guestName: "Multi-Day Guest",
+        event: {
+          title: "Multi-Day Conference",
+          date: new Date("2025-07-01"),
+          endDate: new Date("2025-07-03"),
+          time: "09:00",
+          endTime: "17:00",
+          timeZone: "America/Los_Angeles",
+          location: "Conference Center",
+        },
+        role: { name: "Speaker" },
+        registrationId: "REG-MULTIDAY",
+      };
+
+      // Act
+      await GuestEmailService.sendGuestConfirmationEmail(params);
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain("Multi-Day Conference");
+      // ICS should be generated for multi-day
+      expect(emailCall.attachments).toBeDefined();
+      expect(emailCall.attachments[0].content).toContain("BEGIN:VCALENDAR");
+    });
+
+    it("should handle event date as string", async () => {
+      // Arrange
+      const params = {
+        guestEmail: "guest@example.com",
+        guestName: "String Date Guest",
+        event: {
+          title: "String Date Event",
+          date: "2025-08-15", // String instead of Date
+          time: "10:00 AM",
+        },
+        role: { name: "Attendee" },
+        registrationId: "REG-STRING-DATE",
+      };
+
+      // Act
+      const result = await GuestEmailService.sendGuestConfirmationEmail(params);
+
+      // Assert
+      expect(result).toBe(true);
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.attachments).toBeDefined();
+    });
+
+    it("should escape HTML in purpose and agenda fields", async () => {
+      // Arrange
+      const params = {
+        guestEmail: "guest@example.com",
+        guestName: "XSS Guest",
+        event: {
+          title: "Safe Event",
+          date: new Date("2025-09-01"),
+          time: "10:00 AM",
+          purpose: "<script>alert('xss')</script>",
+          agenda: "Item 1\n<b>Bold attempt</b>\nItem 3",
+        },
+        role: { name: "Attendee" },
+        registrationId: "REG-XSS",
+      };
+
+      // Act
+      await GuestEmailService.sendGuestConfirmationEmail(params);
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      // Script tags should be escaped
+      expect(emailCall.html).toContain("&lt;script&gt;");
+      expect(emailCall.html).not.toContain("<script>");
+      expect(emailCall.html).toContain("&lt;b&gt;");
+    });
+
+    it("should handle organizer with username fallback when no firstName/lastName", async () => {
+      // Arrange
+      const params = {
+        guestEmail: "guest@example.com",
+        guestName: "Guest",
+        event: {
+          title: "Event",
+          date: new Date("2025-09-05"),
+          time: "11:00 AM",
+          createdBy: {
+            // No firstName/lastName
+            username: "orguser123",
+            email: "orguser@example.com",
+          },
+        },
+        role: { name: "Attendee" },
+        registrationId: "REG-USERNAME",
+      };
+
+      // Act
+      await GuestEmailService.sendGuestConfirmationEmail(params);
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain("orguser123");
+    });
+
+    it("should handle organizer without any contact info (no email, no phone)", async () => {
+      // Arrange
+      const params = {
+        guestEmail: "guest@example.com",
+        guestName: "Guest",
+        event: {
+          title: "Event",
+          date: new Date("2025-09-10"),
+          time: "12:00 PM",
+          createdBy: {
+            firstName: "No",
+            lastName: "Contact",
+            // No email, no phone
+          },
+        },
+        role: { name: "Attendee" },
+        registrationId: "REG-NO-CONTACT",
+      };
+
+      // Act
+      await GuestEmailService.sendGuestConfirmationEmail(params);
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      // Should not include organizer contact section since no contact info
+      expect(emailCall.html).not.toContain("No Contact");
+    });
+
+    it("should include organizer with only phone (no email)", async () => {
+      // Arrange
+      const params = {
+        guestEmail: "guest@example.com",
+        guestName: "Guest",
+        event: {
+          title: "Phone Only Organizer Event",
+          date: new Date("2025-09-15"),
+          time: "1:00 PM",
+          createdBy: {
+            firstName: "Phone",
+            lastName: "Only",
+            phone: "(555) 999-8888",
+            // No email
+          },
+        },
+        role: { name: "Attendee" },
+        registrationId: "REG-PHONE-ONLY",
+      };
+
+      // Act
+      await GuestEmailService.sendGuestConfirmationEmail(params);
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain("Phone Only");
+      expect(emailCall.html).toContain("(555) 999-8888");
+    });
+
+    it("should handle organizerDetails with contacts that have no email", async () => {
+      // Arrange
+      const params = {
+        guestEmail: "guest@example.com",
+        guestName: "Guest",
+        event: {
+          title: "Mixed Contact Event",
+          date: new Date("2025-09-20"),
+          time: "2:00 PM",
+          organizerDetails: [
+            {
+              name: "No Email Org",
+              role: "Co-Organizer",
+              email: "",
+              phone: "(555) 111-2222",
+            },
+            { name: "No Contact Org", role: "Assistant", email: "", phone: "" },
+          ],
+        },
+        role: { name: "Attendee" },
+        registrationId: "REG-MIXED-CONTACT",
+      };
+
+      // Act
+      await GuestEmailService.sendGuestConfirmationEmail(params);
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain("No Email Org");
+      expect(emailCall.html).toContain("(555) 111-2222");
+    });
+  });
+
+  describe("sendGuestDeclineNotification - Additional Edge Cases", () => {
+    it("should handle Date object for event.date", async () => {
+      // Arrange
+      const params = {
+        event: {
+          title: "Date Object Event",
+          date: new Date("2025-10-01T14:30:00Z"),
+        },
+        roleName: "Volunteer",
+        guest: { name: "Declining Guest", email: "decline@example.com" },
+        reason: "Personal reasons",
+        organizerEmails: ["org@example.com"],
+      };
+
+      // Act
+      const result =
+        await GuestEmailService.sendGuestDeclineNotification(params);
+
+      // Assert
+      expect(result).toBe(true);
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      // Should format the date properly
+      expect(emailCall.html).toContain("Oct");
+      expect(emailCall.html).toContain("2025");
+    });
+
+    it("should handle string date for event.date", async () => {
+      // Arrange
+      const params = {
+        event: {
+          title: "String Date Event",
+          date: "2025-11-15",
+        },
+        roleName: "Helper",
+        guest: { name: "String Date Guest", email: "stringdate@example.com" },
+        organizerEmails: ["org@example.com"],
+      };
+
+      // Act
+      const result =
+        await GuestEmailService.sendGuestDeclineNotification(params);
+
+      // Assert
+      expect(result).toBe(true);
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain("Nov");
+    });
+
+    it("should handle missing roleName gracefully", async () => {
+      // Arrange
+      const params = {
+        event: {
+          title: "No Role Event",
+          date: new Date("2025-12-01"),
+        },
+        // roleName is undefined
+        guest: { name: "Guest", email: "guest@example.com" },
+        organizerEmails: ["org@example.com"],
+      };
+
+      // Act
+      const result =
+        await GuestEmailService.sendGuestDeclineNotification(params);
+
+      // Assert
+      expect(result).toBe(true);
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.subject).toContain("Role");
+      expect(emailCall.html).not.toContain("undefined");
+    });
+
+    it("should escape special characters in guest name and reason", async () => {
+      // Arrange
+      const params = {
+        event: {
+          title: "XSS Test Event",
+          date: new Date("2025-12-10"),
+        },
+        roleName: "Tester",
+        guest: {
+          name: "<script>alert('name')</script>",
+          email: "xss@example.com",
+        },
+        reason: "<img src=x onerror=alert('reason')>",
+        organizerEmails: ["org@example.com"],
+      };
+
+      // Act
+      await GuestEmailService.sendGuestDeclineNotification(params);
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain("&lt;script&gt;");
+      expect(emailCall.html).not.toContain("<script>");
+      expect(emailCall.html).toContain("&lt;img");
+    });
+
+    it("should handle undefined organizerEmails array", async () => {
+      // Arrange
+      const params = {
+        event: {
+          title: "No Organizers Event",
+          date: new Date("2025-12-15"),
+        },
+        guest: { name: "Guest", email: "guest@example.com" },
+        organizerEmails: undefined as any,
+      };
+
+      // Act
+      const result =
+        await GuestEmailService.sendGuestDeclineNotification(params);
+
+      // Assert
+      expect(result).toBe(false);
+      expect(mockTransporter.sendMail).not.toHaveBeenCalled();
+    });
+
+    it("should include date formatting even with invalid date string", async () => {
+      // Arrange
+      const params = {
+        event: {
+          title: "Invalid Date Event",
+          date: "not-a-date",
+        },
+        roleName: "Volunteer",
+        guest: { name: "Guest", email: "guest@example.com" },
+        organizerEmails: ["org@example.com"],
+      };
+
+      // Act
+      const result =
+        await GuestEmailService.sendGuestDeclineNotification(params);
+
+      // Assert
+      expect(result).toBe(true);
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      // When date string is invalid, toLocaleString returns "Invalid Date"
+      expect(emailCall.html).toContain("Invalid Date");
+    });
+  });
+
+  describe("sendGuestRegistrationNotification - Additional Edge Cases", () => {
+    it("should send to multiple organizers individually", async () => {
+      // Arrange
+      const params = {
+        organizerEmails: [
+          "org1@example.com",
+          "org2@example.com",
+          "org3@example.com",
+        ],
+        event: {
+          title: "Multi-Organizer Event",
+          date: new Date("2025-10-15"),
+          time: "10:00 AM",
+        },
+        guest: { name: "New Guest", email: "newguest@example.com" },
+        role: { name: "Volunteer" },
+        registrationDate: new Date("2025-10-01"),
+      };
+
+      // Act
+      const result =
+        await GuestEmailService.sendGuestRegistrationNotification(params);
+
+      // Assert
+      expect(result).toBe(true);
+      expect(mockTransporter.sendMail).toHaveBeenCalledTimes(3);
+
+      const calls = mockTransporter.sendMail.mock.calls;
+      expect(calls[0][0].to).toBe("org1@example.com");
+      expect(calls[1][0].to).toBe("org2@example.com");
+      expect(calls[2][0].to).toBe("org3@example.com");
+    });
+
+    it("should filter out empty/falsy organizer emails", async () => {
+      // Arrange
+      const params = {
+        organizerEmails: [
+          "org@example.com",
+          "",
+          null as any,
+          undefined as any,
+          "valid@example.com",
+        ],
+        event: {
+          title: "Filter Test Event",
+          date: new Date("2025-10-20"),
+          time: "11:00 AM",
+        },
+        guest: { name: "Guest", email: "guest@example.com" },
+        role: { name: "Attendee" },
+        registrationDate: new Date("2025-10-15"),
+      };
+
+      // Act
+      const result =
+        await GuestEmailService.sendGuestRegistrationNotification(params);
+
+      // Assert
+      expect(result).toBe(true);
+      expect(mockTransporter.sendMail).toHaveBeenCalledTimes(2);
+
+      const calls = mockTransporter.sendMail.mock.calls;
+      expect(calls[0][0].to).toBe("org@example.com");
+      expect(calls[1][0].to).toBe("valid@example.com");
+    });
+
+    it("should handle undefined organizerEmails array", async () => {
+      // Arrange
+      const params = {
+        organizerEmails: undefined as any,
+        event: {
+          title: "Undefined Emails Event",
+          date: new Date("2025-10-25"),
+        },
+        guest: { name: "Guest", email: "guest@example.com" },
+        role: { name: "Attendee" },
+        registrationDate: new Date("2025-10-20"),
+      };
+
+      // Act
+      const result =
+        await GuestEmailService.sendGuestRegistrationNotification(params);
+
+      // Assert
+      expect(result).toBe(true); // Returns true since nothing to send
+      expect(mockTransporter.sendMail).not.toHaveBeenCalled();
+    });
+
+    it("should handle event without date gracefully", async () => {
+      // Arrange
+      const params = {
+        organizerEmails: ["org@example.com"],
+        event: {
+          title: "No Date Event",
+          // date is missing
+        } as any,
+        guest: { name: "Guest", email: "guest@example.com" },
+        role: { name: "Attendee" },
+        registrationDate: new Date("2025-11-01"),
+      };
+
+      // Act
+      const result =
+        await GuestEmailService.sendGuestRegistrationNotification(params);
+
+      // Assert
+      expect(result).toBe(true);
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain("No Date Event");
+    });
+
+    it("should return false if any email fails to send", async () => {
+      // Arrange
+      mockTransporter.sendMail
+        .mockResolvedValueOnce({ messageId: "msg1" })
+        .mockRejectedValueOnce(new Error("SMTP error"));
+
+      const params = {
+        organizerEmails: ["org1@example.com", "org2@example.com"],
+        event: {
+          title: "Partial Fail Event",
+          date: new Date("2025-11-05"),
+          time: "10:00 AM",
+        },
+        guest: { name: "Guest", email: "guest@example.com" },
+        role: { name: "Attendee" },
+        registrationDate: new Date("2025-11-01"),
+      };
+
+      // Act
+      const result =
+        await GuestEmailService.sendGuestRegistrationNotification(params);
+
+      // Assert
+      expect(result).toBe(false); // One failure means overall failure
+    });
+
+    it("should include text version with all guest details", async () => {
+      // Arrange
+      const params = {
+        organizerEmails: ["org@example.com"],
+        event: {
+          title: "Text Version Event",
+          date: new Date("2025-11-10"),
+          time: "2:00 PM",
+          endTime: "4:00 PM",
+          location: "Meeting Room",
+          timeZone: "UTC",
+        },
+        guest: {
+          name: "Text Guest",
+          email: "text@example.com",
+          phone: "(555) 123-4567",
+        },
+        role: { name: "Speaker" },
+        registrationDate: new Date("2025-11-05"),
+      };
+
+      // Act
+      await GuestEmailService.sendGuestRegistrationNotification(params);
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.text).toContain("Text Guest");
+      expect(emailCall.text).toContain("text@example.com");
+      expect(emailCall.text).toContain("(555) 123-4567");
+      expect(emailCall.text).toContain("Speaker");
+    });
+  });
+
+  describe("sendGuestConfirmationEmail - ICS Generation Edge Cases", () => {
+    it("should log ICS generation success when email is sent with attachment", async () => {
+      // Mock console.log to capture ICS generation log
+      const consoleLogSpy = vi.spyOn(console, "log");
+
+      // Arrange
+      const params = {
+        guestEmail: "guest@example.com",
+        guestName: "ICS Success Guest",
+        event: {
+          title: "ICS Success Event",
+          date: new Date("2025-12-01"),
+          time: "10:00 AM",
+          endTime: "12:00 PM",
+          location: "Test Location",
+          purpose: "Test purpose",
+          timeZone: "UTC",
+        },
+        role: { name: "Attendee" },
+        registrationId: "REG-ICS-SUCCESS",
+      };
+
+      // Act
+      const result = await GuestEmailService.sendGuestConfirmationEmail(params);
+
+      // Assert
+      expect(result).toBe(true);
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      // Email should be sent with ICS attachment
+      expect(emailCall.attachments).toBeDefined();
+      expect(emailCall.attachments).toHaveLength(1);
+      expect(emailCall.attachments[0].content).toContain("BEGIN:VCALENDAR");
+      // Should log success
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining("ICS generation successful"),
+        expect.any(Object),
+      );
+    });
+
+    it("should include role description in ICS when provided", async () => {
+      // Arrange
+      const params = {
+        guestEmail: "guest@example.com",
+        guestName: "Description Guest",
+        event: {
+          title: "Role Description Event",
+          date: new Date("2025-12-05"),
+          time: "11:00 AM",
+          endTime: "1:00 PM",
+          location: "Room 101",
+          purpose: "Test purpose",
+          timeZone: "America/New_York",
+        },
+        role: {
+          name: "Lead Volunteer",
+          description: "Coordinate volunteer activities and manage schedules",
+        },
+        registrationId: "REG-ROLE-DESC",
+      };
+
+      // Act
+      await GuestEmailService.sendGuestConfirmationEmail(params);
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.attachments).toBeDefined();
+      expect(emailCall.attachments[0].content).toContain("VCALENDAR");
+    });
+
+    it("should use role name as fallback description when description is not provided", async () => {
+      // Arrange
+      const params = {
+        guestEmail: "guest@example.com",
+        guestName: "No Desc Guest",
+        event: {
+          title: "No Role Desc Event",
+          date: new Date("2025-12-10"),
+          time: "9:00 AM",
+          timeZone: "UTC",
+        },
+        role: {
+          name: "Assistant",
+          // description is not provided
+        },
+        registrationId: "REG-NO-ROLE-DESC",
+      };
+
+      // Act
+      await GuestEmailService.sendGuestConfirmationEmail(params);
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.attachments).toBeDefined();
+      expect(emailCall.attachments[0].content).toContain("BEGIN:VCALENDAR");
     });
   });
 });

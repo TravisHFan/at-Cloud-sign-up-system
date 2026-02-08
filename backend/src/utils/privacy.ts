@@ -32,4 +32,103 @@ export function truncateIpToCidr(ip: string | undefined | null): string | null {
   return null;
 }
 
-export default { hashEmail, truncateIpToCidr };
+/**
+ * Sensitive contact fields that should be stripped for unauthorized users
+ */
+const SENSITIVE_CONTACT_FIELDS = ["email", "phone"] as const;
+
+/**
+ * Represents a user object that may contain sensitive contact information
+ */
+interface UserWithContact {
+  email?: string;
+  phone?: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Represents a participant object containing a user with possible contact info
+ */
+interface ParticipantWithUser {
+  user: UserWithContact;
+  [key: string]: unknown;
+}
+
+/**
+ * Strip sensitive contact information from a user object.
+ * Returns a new object without email/phone fields.
+ */
+export function stripContactInfo<T extends UserWithContact>(
+  user: T,
+): Omit<T, "email" | "phone"> {
+  const { email: _email, phone: _phone, ...sanitized } = user;
+  return sanitized as Omit<T, "email" | "phone">;
+}
+
+/**
+ * Strip sensitive contact information from a mentor object.
+ * Mentors are stored as embedded documents in programs.
+ */
+export function sanitizeMentor<T extends UserWithContact>(
+  mentor: T,
+  canViewContact: boolean,
+): T | Omit<T, "email" | "phone"> {
+  if (canViewContact) {
+    return mentor;
+  }
+  return stripContactInfo(mentor);
+}
+
+/**
+ * Strip sensitive contact information from a list of mentors.
+ */
+export function sanitizeMentors<T extends UserWithContact>(
+  mentors: T[],
+  canViewContact: boolean,
+): (T | Omit<T, "email" | "phone">)[] {
+  if (canViewContact) {
+    return mentors;
+  }
+  return mentors.map((m) => stripContactInfo(m));
+}
+
+/**
+ * Strip sensitive contact information from a participant object.
+ * Participants have a nested user object.
+ */
+export function sanitizeParticipant<T extends ParticipantWithUser>(
+  participant: T,
+  canViewContact: boolean,
+): T {
+  if (canViewContact) {
+    return participant;
+  }
+  return {
+    ...participant,
+    user: stripContactInfo(participant.user),
+  };
+}
+
+/**
+ * Strip sensitive contact information from a list of participants.
+ */
+export function sanitizeParticipants<T extends ParticipantWithUser>(
+  participants: T[],
+  canViewContact: boolean,
+): T[] {
+  if (canViewContact) {
+    return participants;
+  }
+  return participants.map((p) => sanitizeParticipant(p, false));
+}
+
+export default {
+  hashEmail,
+  truncateIpToCidr,
+  stripContactInfo,
+  sanitizeMentor,
+  sanitizeMentors,
+  sanitizeParticipant,
+  sanitizeParticipants,
+  SENSITIVE_CONTACT_FIELDS,
+};

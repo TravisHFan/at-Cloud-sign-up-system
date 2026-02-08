@@ -170,11 +170,12 @@ describe("ShortLinkService", () => {
     const before = Date.now();
     const expiry = ShortLinkService.computeExpiry({});
     const after = Date.now();
-    // Should be approximately 30 days from now
+    // Should be approximately 30 days from now (+/- 1 hour tolerance for DST/clock issues)
+    const toleranceMs = 60 * 60 * 1000; // 1 hour tolerance
     const minExpected = before + 30 * 24 * 60 * 60 * 1000;
     const maxExpected = after + 30 * 24 * 60 * 60 * 1000;
-    expect(expiry.getTime()).toBeGreaterThanOrEqual(minExpected - 1000);
-    expect(expiry.getTime()).toBeLessThanOrEqual(maxExpected + 1000);
+    expect(expiry.getTime()).toBeGreaterThanOrEqual(minExpected - toleranceMs);
+    expect(expiry.getTime()).toBeLessThanOrEqual(maxExpected + toleranceMs);
   });
 
   it("computeExpiry uses event endDate/endTime when provided", () => {

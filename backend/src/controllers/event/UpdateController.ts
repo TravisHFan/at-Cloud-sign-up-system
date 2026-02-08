@@ -84,15 +84,15 @@ export class UpdateController {
       // Check permissions
       const canEditAnyEvent = hasPermission(
         req.user.role,
-        PERMISSIONS.EDIT_ANY_EVENT
+        PERMISSIONS.EDIT_ANY_EVENT,
       );
       const canEditOwnEvent = hasPermission(
         req.user.role,
-        PERMISSIONS.EDIT_OWN_EVENT
+        PERMISSIONS.EDIT_OWN_EVENT,
       );
       const userIsOrganizer = isEventOrganizer(
         event,
-        EventController.toIdString(req.user._id)
+        EventController.toIdString(req.user._id),
       );
 
       if (!canEditAnyEvent && !(canEditOwnEvent && userIsOrganizer)) {
@@ -118,7 +118,7 @@ export class UpdateController {
           updateData,
           event,
           id,
-          res
+          res,
         );
 
       // If validation failed, response already sent
@@ -134,13 +134,12 @@ export class UpdateController {
         normalizedData.pricing !== undefined &&
         normalizedData.pricing !== null
       ) {
-        const { validatePricing } = await import(
-          "../../utils/event/eventValidation"
-        );
+        const { validatePricing } =
+          await import("../../utils/event/eventValidation");
         const pricingValidation = validatePricing(
           normalizedData.pricing as
             | { isFree?: boolean; price?: number }
-            | undefined
+            | undefined,
         );
 
         if (!pricingValidation.valid) {
@@ -163,7 +162,7 @@ export class UpdateController {
             .forceDeleteRegistrations === "boolean"
             ? Boolean(
                 (req.body as { forceDeleteRegistrations?: boolean })
-                  .forceDeleteRegistrations
+                  .forceDeleteRegistrations,
               )
             : false;
 
@@ -172,7 +171,7 @@ export class UpdateController {
           id,
           event.roles,
           normalizedData.roles,
-          forceDeleteRegistrations
+          forceDeleteRegistrations,
         );
 
         if (!roleUpdateResult.success) {
@@ -204,7 +203,7 @@ export class UpdateController {
       ) {
         normalizedData.organizerDetails =
           organizerMgmtService.normalizeOrganizerDetails(
-            normalizedData.organizerDetails
+            normalizedData.organizerDetails,
           );
       }
 
@@ -226,7 +225,7 @@ export class UpdateController {
         const result = await ProgramLinkageService.processAndValidate(
           rawProgramLabels,
           req.user?._id,
-          req.user?.role
+          req.user?.role,
         );
 
         if (!result.success && result.error) {
@@ -274,7 +273,7 @@ export class UpdateController {
           >[0],
           programsToValidate as Parameters<
             typeof CoOrganizerProgramAccessService.validateCoOrganizerAccess
-          >[1]
+          >[1],
         );
 
       if (!coOrganizerAccessResult.valid && coOrganizerAccessResult.error) {
@@ -329,7 +328,7 @@ export class UpdateController {
         } catch (auditError) {
           console.error(
             "Failed to create audit log for event cancellation:",
-            auditError
+            auditError,
           );
           // Don't fail the request if audit logging fails
         }
@@ -340,7 +339,7 @@ export class UpdateController {
         await AutoUnpublishService.sendAutoUnpublishNotifications(
           event,
           missingFieldsForAutoUnpublish,
-          req
+          req,
         );
       }
 
@@ -354,7 +353,7 @@ export class UpdateController {
 
       const addedPrograms = nextProgramLabels.filter((id) => !prevSet.has(id));
       const removedPrograms = prevProgramLabels.filter(
-        (id) => !nextSet.has(id)
+        (id) => !nextSet.has(id),
       );
 
       console.log(addedPrograms.length > 0 || removedPrograms.length > 0);
@@ -375,7 +374,7 @@ export class UpdateController {
               }
             ).updateOne(
               { _id: new mongoose.Types.ObjectId(programId) },
-              { $pull: { events: eventIdBson } }
+              { $pull: { events: eventIdBson } },
             );
           }
 
@@ -386,12 +385,12 @@ export class UpdateController {
               Program as unknown as {
                 updateOne: (
                   q: unknown,
-                  u: unknown
+                  u: unknown,
                 ) => Promise<{ modifiedCount: number }>;
               }
             ).updateOne(
               { _id: new mongoose.Types.ObjectId(programId) },
-              { $addToSet: { events: eventIdBson } }
+              { $addToSet: { events: eventIdBson } },
             );
           }
         } catch (e) {
@@ -408,7 +407,7 @@ export class UpdateController {
           event,
           oldOrganizerUserIds,
           normalizedData,
-          req
+          req,
         );
       }
 
@@ -417,7 +416,7 @@ export class UpdateController {
         await ParticipantNotificationService.sendEventUpdateNotifications(
           id,
           event,
-          req
+          req,
         );
       }
 
@@ -430,7 +429,11 @@ export class UpdateController {
 
       // Build response with proper field mapping (includes maxParticipants alias)
       const eventResponse =
-        await ResponseBuilderService.buildEventWithRegistrations(id);
+        await ResponseBuilderService.buildEventWithRegistrations(
+          id,
+          req.user ? EventController.toIdString(req.user._id) : undefined,
+          (req.user as { role?: string } | undefined)?.role,
+        );
 
       res.status(200).json({
         success: true,
@@ -445,7 +448,7 @@ export class UpdateController {
         "updateEvent failed",
         error as Error,
         undefined,
-        { eventId: req.params?.id }
+        { eventId: req.params?.id },
       );
 
       // Handle validation errors
