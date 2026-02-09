@@ -54,6 +54,22 @@ const getProgramTypeColors = (type: ProgramCard["type"]) => {
         dot: "bg-purple-500 group-hover:bg-purple-700",
         shadow: "hover:shadow-purple-200/50",
       };
+    case "Webinar":
+      return {
+        card: "bg-gradient-to-br from-sky-50 to-sky-100 border-sky-300 hover:from-sky-100 hover:to-sky-200",
+        badge: "bg-sky-100 text-sky-800 border-sky-400",
+        title: "group-hover:text-sky-700",
+        dot: "bg-sky-600 group-hover:bg-sky-700",
+        shadow: "hover:shadow-sky-200/50",
+      };
+    case "NextGen":
+      return {
+        card: "bg-gradient-to-br from-lime-50 to-olive-100 border-lime-200 hover:from-lime-100 hover:to-olive-200",
+        badge: "bg-lime-100 text-lime-800 border-lime-300",
+        title: "group-hover:text-lime-700",
+        dot: "bg-lime-600 group-hover:bg-lime-700",
+        shadow: "hover:shadow-lime-200/50",
+      };
     default:
       return {
         card: "bg-gradient-to-br from-gray-50 to-slate-100 border-gray-200 hover:from-gray-100 hover:to-slate-200",

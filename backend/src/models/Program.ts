@@ -16,7 +16,9 @@ export interface IProgram extends Document {
   programType:
     | "EMBA Mentor Circles"
     | "Effective Communication Workshops"
-    | "Marketplace Church Incubator Program (MCIP)";
+    | "Marketplace Church Incubator Program (MCIP)"
+    | "Webinar"
+    | "NextGen";
   hostedBy?: string;
   period?: {
     startYear?: string;
@@ -66,7 +68,7 @@ const userRefLiteSchema = new Schema<IUserRefLite>(
     avatar: { type: String, trim: true },
     roleInAtCloud: { type: String, trim: true, maxlength: 100 },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const programSchema = new Schema<IProgram>(
@@ -84,6 +86,8 @@ const programSchema = new Schema<IProgram>(
         "EMBA Mentor Circles",
         "Effective Communication Workshops",
         "Marketplace Church Incubator Program (MCIP)",
+        "Webinar",
+        "NextGen",
       ],
     },
     hostedBy: {
@@ -100,7 +104,7 @@ const programSchema = new Schema<IProgram>(
           endYear: { type: String, trim: true, maxlength: 4 },
           endMonth: { type: String, trim: true, maxlength: 2 },
         },
-        { _id: false }
+        { _id: false },
       ),
       default: undefined,
     },
@@ -154,7 +158,7 @@ const programSchema = new Schema<IProgram>(
           mentees: [{ type: Schema.Types.ObjectId, ref: "User" }],
           classReps: [{ type: Schema.Types.ObjectId, ref: "User" }],
         },
-        { _id: false }
+        { _id: false },
       ),
       default: undefined,
     },
@@ -230,7 +234,7 @@ const programSchema = new Schema<IProgram>(
     toJSON: {
       transform: function (
         _doc,
-        ret: Record<string, unknown> & { _id?: unknown; __v?: unknown }
+        ret: Record<string, unknown> & { _id?: unknown; __v?: unknown },
       ) {
         // create an 'id' copy and remove Mongo-specific fields
         (ret as { id?: string }).id = ret._id as unknown as string;
@@ -239,7 +243,7 @@ const programSchema = new Schema<IProgram>(
         return ret;
       },
     },
-  }
+  },
 );
 
 // Composite validator: individual discounts cannot exceed full price
@@ -266,8 +270,8 @@ programSchema.pre("validate", function (next) {
   if (early > 0 && !p.earlyBirdDeadline) {
     return next(
       new Error(
-        "Early Bird Deadline is required when Early Bird Discount is greater than 0"
-      )
+        "Early Bird Deadline is required when Early Bird Discount is greater than 0",
+      ),
     );
   }
 

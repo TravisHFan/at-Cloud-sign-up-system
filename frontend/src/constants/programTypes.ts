@@ -10,6 +10,8 @@ export const PROGRAM_TYPES = [
   "EMBA Mentor Circles",
   "Effective Communication Workshops",
   "Marketplace Church Incubator Program (MCIP)",
+  "Webinar",
+  "NextGen",
 ] as const;
 
 export type ProgramType = (typeof PROGRAM_TYPES)[number];

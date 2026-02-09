@@ -26,7 +26,7 @@ export default function PublicEventsList() {
     async (
       currentPage = 1,
       currentSearch = search,
-      currentType = typeFilter
+      currentType = typeFilter,
     ) => {
       setLoading(true);
       setError(null);
@@ -46,7 +46,7 @@ export default function PublicEventsList() {
         setLoading(false);
       }
     },
-    [search, typeFilter]
+    [search, typeFilter],
   );
 
   useEffect(() => {
@@ -78,7 +78,7 @@ export default function PublicEventsList() {
       setPage(newPage);
       loadEvents(newPage, search, typeFilter);
     },
-    [page, pagination.totalPages, loadEvents, search, typeFilter]
+    [page, pagination.totalPages, loadEvents, search, typeFilter],
   );
 
   if (loading && events.length === 0) {
@@ -237,7 +237,7 @@ export default function PublicEventsList() {
                     "Error rendering EventCard:",
                     error,
                     "Event data:",
-                    event
+                    event,
                   );
                   return (
                     <div
@@ -340,7 +340,7 @@ function getEventTypeColorClasses(eventType: string | undefined): string {
     case "Conference":
       return "bg-purple-100 text-purple-800";
     case "Webinar":
-      return "bg-indigo-100 text-indigo-800";
+      return "bg-sky-100 text-sky-800";
     case "Effective Communication Workshop":
     case "Workshop":
       // Match "Effective Communication Workshops" program orange colors
@@ -348,6 +348,9 @@ function getEventTypeColorClasses(eventType: string | undefined): string {
     case "Mentor Circle":
       // Match "EMBA Mentor Circles" program blue colors
       return "bg-blue-100 text-blue-800";
+    case "NextGen":
+      // Match "NextGen" program olive/lime colors
+      return "bg-lime-100 text-lime-800";
     default:
       // Fallback to purple for unknown types
       return "bg-purple-100 text-purple-800";
@@ -357,7 +360,7 @@ function getEventTypeColorClasses(eventType: string | undefined): string {
 // Get shorter display name for event type labels
 function getEventTypeDisplayName(
   eventType: string | undefined,
-  title?: string
+  title?: string,
 ): string {
   // If missing, heuristically infer from title keywords
   if (!eventType) {
@@ -393,7 +396,7 @@ function EventCard({ event }: { event: PublicEventListItem }) {
     event.time,
     event.endTime,
     event.timeZone,
-    event.endDate
+    event.endDate,
   );
 
   // Simple date parsing for upcoming status (the ISO string should now be correct)
@@ -407,7 +410,7 @@ function EventCard({ event }: { event: PublicEventListItem }) {
       <div className="flex items-center justify-between mb-3">
         <span
           className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getEventTypeColorClasses(
-            event.type
+            event.type,
           )}`}
         >
           {getEventTypeDisplayName(event.type, event.title)}

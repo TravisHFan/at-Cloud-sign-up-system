@@ -61,6 +61,7 @@ interface ParticipantWithUser {
 export function stripContactInfo<T extends UserWithContact>(
   user: T,
 ): Omit<T, "email" | "phone"> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { email: _email, phone: _phone, ...sanitized } = user;
   return sanitized as Omit<T, "email" | "phone">;
 }

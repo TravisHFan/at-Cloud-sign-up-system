@@ -126,7 +126,7 @@ export default function EventCalendar({
       case "Conference":
         return "bg-purple-100 text-purple-800 hover:bg-purple-200";
       case "Webinar":
-        return "bg-indigo-100 text-indigo-800 hover:bg-indigo-200";
+        return "bg-sky-100 text-sky-800 hover:bg-sky-200";
       case "Effective Communication Workshop":
       case "Workshop":
         // Match "Effective Communication Workshops" program orange colors
@@ -134,6 +134,9 @@ export default function EventCalendar({
       case "Mentor Circle":
         // Match "EMBA Mentor Circles" program blue colors
         return "bg-blue-100 text-blue-800 hover:bg-blue-200";
+      case "NextGen":
+        // Match "NextGen" program olive/lime colors
+        return "bg-lime-100 text-lime-800 hover:bg-lime-200";
       default:
         // Fallback to purple for unknown types
         return "bg-purple-100 text-purple-800 hover:bg-purple-200";
@@ -235,8 +238,8 @@ export default function EventCalendar({
               !day.isCurrentMonth
                 ? "bg-gray-50 text-gray-400"
                 : day.isToday
-                ? "bg-blue-50 border-blue-200"
-                : "bg-white hover:bg-gray-50"
+                  ? "bg-blue-50 border-blue-200"
+                  : "bg-white hover:bg-gray-50"
             } transition-colors`}
           >
             {/* Date Number */}
@@ -245,8 +248,8 @@ export default function EventCalendar({
                 day.isToday
                   ? "text-blue-700"
                   : day.isCurrentMonth
-                  ? "text-gray-900"
-                  : "text-gray-400"
+                    ? "text-gray-900"
+                    : "text-gray-400"
               }`}
             >
               {day.date.getDate()}
@@ -259,7 +262,7 @@ export default function EventCalendar({
                   key={eventIndex}
                   onClick={() => onEventClick?.(getEventId(event))}
                   className={`text-xs p-1 rounded cursor-pointer truncate ${getEventColorClasses(
-                    event
+                    event,
                   )} transition-colors`}
                   title={getEventTitle(event)}
                 >
@@ -290,7 +293,7 @@ export default function EventCalendar({
             <span>Conference</span>
           </div>
           <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-indigo-100 rounded"></div>
+            <div className="w-3 h-3 bg-sky-100 rounded"></div>
             <span>Webinar</span>
           </div>
           <div className="flex items-center space-x-2">
@@ -300,6 +303,10 @@ export default function EventCalendar({
           <div className="flex items-center space-x-2">
             <div className="w-3 h-3 bg-blue-100 rounded"></div>
             <span>Mentor Circle</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 bg-lime-100 rounded"></div>
+            <span>NextGen</span>
           </div>
         </div>
         <div className="text-xs">Click on events to view details</div>
