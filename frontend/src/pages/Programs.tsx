@@ -18,7 +18,13 @@ interface ProgramCard {
   type: ProgramType;
   isFree?: boolean;
   hasAccess?: boolean; // Whether user has access (admin, mentor, purchased, or free)
-  accessReason?: "admin" | "mentor" | "free" | "purchased" | "not_purchased";
+  accessReason?:
+    | "admin"
+    | "mentor"
+    | "creator"
+    | "free"
+    | "purchased"
+    | "not_purchased";
 }
 
 // Static helpers live at module scope to avoid exhaustive-deps warnings
@@ -244,7 +250,7 @@ export default function Programs() {
           } catch (error) {
             console.error(
               `Failed to check access for program ${program.id}`,
-              error
+              error,
             );
             return {
               id: program.id,
@@ -267,7 +273,7 @@ export default function Programs() {
                   accessReason: result.accessReason,
                 }
               : program;
-          })
+          }),
         );
       } catch (error) {
         console.error("Failed to check program access", error);
@@ -280,10 +286,10 @@ export default function Programs() {
 
   // Get unique years and types for filter dropdowns
   const availableYears = Array.from(
-    new Set(rawPrograms.map((p) => p.period?.startYear).filter(Boolean))
+    new Set(rawPrograms.map((p) => p.period?.startYear).filter(Boolean)),
   ).sort();
   const availableTypes = Array.from(
-    new Set(rawPrograms.map((p) => p.type))
+    new Set(rawPrograms.map((p) => p.type)),
   ).sort();
 
   const handleCreateProgram = () => {
@@ -294,10 +300,12 @@ export default function Programs() {
     navigate(`/dashboard/programs/${program.id}`);
   };
 
-  const isAdmin =
+  // Leaders and above can create programs
+  const canCreateProgram =
     !!currentUser &&
     (currentUser.role === "Super Admin" ||
-      currentUser.role === "Administrator");
+      currentUser.role === "Administrator" ||
+      currentUser.role === "Leader");
 
   if (loading && programs.length === 0) {
     // Standardized dashboard loading: centered, fullscreen, larger spinner
@@ -571,22 +579,21 @@ export default function Programs() {
             <div className="col-span-1 sm:col-span-2 lg:col-span-3 xl:col-span-4">
               <div className="rounded-lg border border-gray-200 bg-white p-8 text-center text-gray-700">
                 <p className="font-medium">No programs found.</p>
-                {isAdmin ? (
+                {canCreateProgram ? (
                   <p className="text-sm text-gray-500 mt-1">
                     Click "Create Program" to add your first program.
                   </p>
                 ) : (
                   <p className="text-sm text-gray-500 mt-1">
-                    Programs will appear here once they are created by
-                    administrators.
+                    Programs will appear here once they are created.
                   </p>
                 )}
               </div>
             </div>
           )}
 
-          {/* Create Program Button - Only visible to Super Admin and Administrator */}
-          {isAdmin && (
+          {/* Create Program Button - Visible to Super Admin, Administrator, and Leader */}
+          {canCreateProgram && (
             <div
               onClick={handleCreateProgram}
               className="bg-gradient-to-br from-slate-50 to-gray-100 rounded-lg shadow-sm border-2 border-dashed border-gray-300 hover:border-green-400 hover:from-green-50 hover:to-emerald-100 transition-all duration-300 cursor-pointer group flex items-center justify-center hover:shadow-green-200/50"

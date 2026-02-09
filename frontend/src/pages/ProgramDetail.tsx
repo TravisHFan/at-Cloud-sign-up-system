@@ -106,7 +106,13 @@ export default function ProgramDetail({
   // Purchase/Access state
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [accessReason, setAccessReason] = useState<
-    "admin" | "mentor" | "free" | "purchased" | "not_purchased" | null
+    | "admin"
+    | "mentor"
+    | "creator"
+    | "free"
+    | "purchased"
+    | "not_purchased"
+    | null
   >(null);
   const [isCurrentUserClassRep, setIsCurrentUserClassRep] = useState(false);
 
@@ -143,7 +149,7 @@ export default function ProgramDetail({
               format: e.format,
               createdBy: e.createdBy,
               createdAt: e.createdAt,
-            })) as EventData[]
+            })) as EventData[],
           );
         }
       } catch (e) {
@@ -245,7 +251,7 @@ export default function ProgramDetail({
   }, [serverPaginationEnabled, serverTotalPages, sortedEvents.length, limit]);
 
   const [serverPageEvents, setServerPageEvents] = useState<EventData[] | null>(
-    null
+    null,
   );
   const pageEvents = useMemo(() => {
     if (serverPaginationEnabled && serverPageEvents) return serverPageEvents;
@@ -327,7 +333,7 @@ export default function ProgramDetail({
     }
     const startTs = Date.parse(`${e.date || ""} ${e.time || "00:00"}`);
     const endTs = Date.parse(
-      `${e.endDate || e.date || ""} ${e.endTime || e.time || "23:59"}`
+      `${e.endDate || e.date || ""} ${e.endTime || e.time || "23:59"}`,
     );
     const now = Date.now();
     if (!isNaN(startTs) && !isNaN(endTs)) {
@@ -403,21 +409,21 @@ export default function ProgramDetail({
           "Unable to delete program due to network issues. Please check your connection and try again.",
           {
             title: "Connection Error",
-          }
+          },
         );
       } else if (error.status === 403) {
         notification.error(
           "You don't have permission to delete this program. Contact an administrator if needed.",
           {
             title: "Permission Denied",
-          }
+          },
         );
       } else if (error.status === 404) {
         notification.error(
           "This program may have already been deleted. Refreshing the page...",
           {
             title: "Program Not Found",
-          }
+          },
         );
         setTimeout(() => window.location.reload(), 2000);
       } else {
@@ -425,7 +431,7 @@ export default function ProgramDetail({
           `Failed to delete program: ${errorMsg}. Please try again or contact support if the issue persists.`,
           {
             title: "Deletion Failed",
-          }
+          },
         );
       }
 
@@ -473,25 +479,36 @@ export default function ProgramDetail({
         period={program.period}
         canEdit={
           hasRole(["Administrator", "Super Admin"]) ||
+          // Program creator (Leader who created this program)
+          accessReason === "creator" ||
+          // Mentors assigned to this program
           (program.mentors?.some(
-            (mentor: { userId: string }) => mentor.userId === currentUser?.id
+            (mentor: { userId: string }) => mentor.userId === currentUser?.id,
           ) ??
             false)
         }
-        canDelete={hasRole(["Administrator", "Super Admin"])}
+        canDelete={
+          hasRole(["Administrator", "Super Admin"]) ||
+          // Program creator can delete their own program
+          accessReason === "creator"
+        }
         canCreateEvent={
           // Admin and Super Admin can always create events
           hasRole(["Administrator", "Super Admin"]) ||
-          // Leaders can only create events in programs they have access to
+          // Program creator can create events
+          accessReason === "creator" ||
+          // Leaders can create events in programs they have access to
           (hasRole(["Leader"]) && hasAccess === true)
         }
         canEmail={
           // Super Admin and Administrator can always email participants
           hasRole(["Administrator", "Super Admin"]) ||
+          // Program creator can email participants
+          accessReason === "creator" ||
           // Leaders can email if they are a Mentor or Class Rep of this program
           (hasRole(["Leader"]) &&
             ((program.mentors?.some(
-              (mentor: { userId: string }) => mentor.userId === currentUser?.id
+              (mentor: { userId: string }) => mentor.userId === currentUser?.id,
             ) ??
               false) ||
               isCurrentUserClassRep))
@@ -576,13 +593,13 @@ export default function ProgramDetail({
             setAnnounceText(
               wasOutOfRange || clamped !== n
                 ? `Clamped to page ${clamped} of ${totalPages}`
-                : `Moved to page ${clamped} of ${totalPages}`
+                : `Moved to page ${clamped} of ${totalPages}`,
             );
             setPageHelper("");
           } else {
             setPageInput(String(page));
             setAnnounceText(
-              `Invalid page. Staying on page ${page} of ${totalPages}`
+              `Invalid page. Staying on page ${page} of ${totalPages}`,
             );
             setPageHelper("Enter a number between 1 and " + totalPages);
           }
@@ -601,7 +618,7 @@ export default function ProgramDetail({
                 setAnnounceText(
                   wasOutOfRange || clamped !== n
                     ? `Clamped to page ${clamped} of ${totalPages}`
-                    : `Moved to page ${clamped} of ${totalPages}`
+                    : `Moved to page ${clamped} of ${totalPages}`,
                 );
                 setPageHelper("");
               }, 300);
@@ -609,7 +626,7 @@ export default function ProgramDetail({
             } else {
               setPageInput(String(page));
               setAnnounceText(
-                `Invalid page. Staying on page ${page} of ${totalPages}`
+                `Invalid page. Staying on page ${page} of ${totalPages}`,
               );
               setPageHelper("Enter a number between 1 and " + totalPages);
             }
@@ -652,14 +669,14 @@ export default function ProgramDetail({
               typeof res.recipientCount === "number"
                 ? res.recipientCount
                 : typeof res.sent === "number"
-                ? res.sent
-                : 0;
+                  ? res.sent
+                  : 0;
 
             notification.success(
               count > 0
                 ? `Email sent to ${count} recipient${count === 1 ? "" : "s"}.`
                 : "No recipients found for this program.",
-              { title: "Email Sent" }
+              { title: "Email Sent" },
             );
 
             closeEmailModal();

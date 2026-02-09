@@ -47,11 +47,22 @@ class PurchaseAccessController {
         return;
       }
 
+      // Check if user is the creator of this program (Leader who created it)
+      const isCreator =
+        program.createdBy && String(program.createdBy) === String(req.user._id);
+      if (isCreator) {
+        res.status(200).json({
+          success: true,
+          data: { hasAccess: true, reason: "creator" },
+        });
+        return;
+      }
+
       // Check if user is a mentor of this program
       const isMentor = program.mentors?.some(
         (mentor: { userId: mongoose.Types.ObjectId }) =>
           mentor.userId.toString() ===
-          (req.user!._id as mongoose.Types.ObjectId).toString()
+          (req.user!._id as mongoose.Types.ObjectId).toString(),
       );
       if (isMentor) {
         res.status(200).json({

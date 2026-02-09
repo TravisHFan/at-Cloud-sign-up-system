@@ -9,6 +9,7 @@ interface ProgramIntroSectionProps {
   accessReason:
     | "admin"
     | "mentor"
+    | "creator"
     | "free"
     | "purchased"
     | "not_purchased"
@@ -69,16 +70,20 @@ export default function ProgramIntroSection({
                       />
                       <div>
                         <p className="font-semibold text-green-900">
-                          {accessReason === "admin" || accessReason === "mentor"
+                          {accessReason === "admin" ||
+                          accessReason === "mentor" ||
+                          accessReason === "creator"
                             ? "Congratulations!"
                             : "You're enrolled!"}
                         </p>
                         <p className="text-sm text-green-700 mt-1">
                           {accessReason === "admin"
                             ? "As an administrator, you have full access to all programs."
-                            : accessReason === "mentor"
-                            ? "As a mentor of this program, you have full access."
-                            : "Thank you for enrolling. You now have access to all events in this program."}
+                            : accessReason === "creator"
+                              ? "As the creator of this program, you have full access to this program."
+                              : accessReason === "mentor"
+                                ? "As a mentor of this program, you have full access."
+                                : "Thank you for enrolling. You now have access to all events in this program."}
                         </p>
                       </div>
                     </div>

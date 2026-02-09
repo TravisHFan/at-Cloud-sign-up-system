@@ -42,7 +42,7 @@ describe("CreationController", () => {
 
         await CreationController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(401);
@@ -52,25 +52,25 @@ describe("CreationController", () => {
         });
       });
 
-      it("should return 403 if user is not an admin", async () => {
+      it("should return 403 if user is not a Leader or higher", async () => {
         mockReq.user = {
           _id: "user123",
-          role: "User",
+          role: "Participant",
           email: "user@test.com",
         } as any;
 
-        vi.mocked(RoleUtils.isAdmin).mockReturnValue(false);
+        vi.mocked(RoleUtils.isLeaderOrHigher).mockReturnValue(false);
 
         await CreationController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
-        expect(RoleUtils.isAdmin).toHaveBeenCalledWith("User");
+        expect(RoleUtils.isLeaderOrHigher).toHaveBeenCalledWith("Participant");
         expect(statusMock).toHaveBeenCalledWith(403);
         expect(jsonMock).toHaveBeenCalledWith({
           success: false,
-          message: "Only Administrators can create programs.",
+          message: "Only Leaders and above can create programs.",
         });
       });
 
@@ -82,7 +82,7 @@ describe("CreationController", () => {
         } as any;
         mockReq.body = { title: "Test Program" };
 
-        vi.mocked(RoleUtils.isAdmin).mockReturnValue(true);
+        vi.mocked(RoleUtils.isLeaderOrHigher).mockReturnValue(true);
         vi.mocked(Program.create).mockResolvedValue({
           _id: "program123",
           title: "Test Program",
@@ -91,7 +91,7 @@ describe("CreationController", () => {
 
         await CreationController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(201);
@@ -105,7 +105,7 @@ describe("CreationController", () => {
         } as any;
         mockReq.body = { title: "Test Program" };
 
-        vi.mocked(RoleUtils.isAdmin).mockReturnValue(true);
+        vi.mocked(RoleUtils.isLeaderOrHigher).mockReturnValue(true);
         vi.mocked(Program.create).mockResolvedValue({
           _id: "program123",
           title: "Test Program",
@@ -114,7 +114,30 @@ describe("CreationController", () => {
 
         await CreationController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(201);
+      });
+
+      it("should allow Leader to create program", async () => {
+        mockReq.user = {
+          _id: "leader123",
+          role: "Leader",
+          email: "leader@test.com",
+        } as any;
+        mockReq.body = { title: "Test Program" };
+
+        vi.mocked(RoleUtils.isLeaderOrHigher).mockReturnValue(true);
+        vi.mocked(Program.create).mockResolvedValue({
+          _id: "program123",
+          title: "Test Program",
+          createdBy: "leader123",
+        } as any);
+
+        await CreationController.create(
+          mockReq as Request,
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(201);
@@ -129,7 +152,7 @@ describe("CreationController", () => {
           email: "admin@test.com",
         } as any;
 
-        vi.mocked(RoleUtils.isAdmin).mockReturnValue(true);
+        vi.mocked(RoleUtils.isLeaderOrHigher).mockReturnValue(true);
       });
 
       it("should create program with minimal data", async () => {
@@ -143,7 +166,7 @@ describe("CreationController", () => {
 
         await CreationController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(Program.create).toHaveBeenCalledWith({
@@ -186,7 +209,7 @@ describe("CreationController", () => {
 
         await CreationController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(Program.create).toHaveBeenCalledWith({
@@ -216,13 +239,13 @@ describe("CreationController", () => {
 
         await CreationController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(Program.create).toHaveBeenCalledWith(
           expect.objectContaining({
             createdBy: "admin123",
-          })
+          }),
         );
       });
 
@@ -236,7 +259,7 @@ describe("CreationController", () => {
 
         await CreationController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(Program.create).toHaveBeenCalledWith({
@@ -260,7 +283,7 @@ describe("CreationController", () => {
 
         await CreationController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(Program.create).toHaveBeenCalledWith({
@@ -281,7 +304,7 @@ describe("CreationController", () => {
           email: "admin@test.com",
         } as any;
 
-        vi.mocked(RoleUtils.isAdmin).mockReturnValue(true);
+        vi.mocked(RoleUtils.isLeaderOrHigher).mockReturnValue(true);
       });
 
       it("should return 400 on validation error", async () => {
@@ -292,7 +315,7 @@ describe("CreationController", () => {
 
         await CreationController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -310,7 +333,7 @@ describe("CreationController", () => {
 
         await CreationController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -328,7 +351,7 @@ describe("CreationController", () => {
 
         await CreationController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -346,7 +369,7 @@ describe("CreationController", () => {
 
         await CreationController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -365,7 +388,7 @@ describe("CreationController", () => {
           email: "admin@test.com",
         } as any;
 
-        vi.mocked(RoleUtils.isAdmin).mockReturnValue(true);
+        vi.mocked(RoleUtils.isLeaderOrHigher).mockReturnValue(true);
       });
 
       it("should handle null body", async () => {
@@ -378,7 +401,7 @@ describe("CreationController", () => {
 
         await CreationController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(Program.create).toHaveBeenCalledWith({
@@ -399,7 +422,7 @@ describe("CreationController", () => {
 
         await CreationController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(201);
@@ -418,7 +441,7 @@ describe("CreationController", () => {
 
         await CreationController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(201);
@@ -440,13 +463,13 @@ describe("CreationController", () => {
 
         await CreationController.create(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(Program.create).toHaveBeenCalledWith(
           expect.objectContaining({
             createdBy: undefined,
-          })
+          }),
         );
       });
     });

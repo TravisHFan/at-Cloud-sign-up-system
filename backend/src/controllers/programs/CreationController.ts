@@ -11,10 +11,11 @@ export default class CreationController {
           .json({ success: false, message: "Authentication required." });
         return;
       }
-      if (!RoleUtils.isAdmin(req.user.role)) {
+      // Leaders and above can create programs
+      if (!RoleUtils.isLeaderOrHigher(req.user.role)) {
         res.status(403).json({
           success: false,
-          message: "Only Administrators can create programs.",
+          message: "Only Leaders and above can create programs.",
         });
         return;
       }

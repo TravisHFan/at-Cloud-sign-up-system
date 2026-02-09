@@ -46,13 +46,6 @@ export default class DeletionController {
           .json({ success: false, message: "Authentication required." });
         return;
       }
-      if (!RoleUtils.isAdmin(req.user.role)) {
-        res.status(403).json({
-          success: false,
-          message: "Only Administrators can delete programs.",
-        });
-        return;
-      }
       const { id } = req.params;
       if (!mongoose.Types.ObjectId.isValid(id)) {
         res
@@ -61,13 +54,7 @@ export default class DeletionController {
         return;
       }
 
-      const deleteLinkedEvents =
-        String(
-          (req.query as { deleteLinkedEvents?: string }).deleteLinkedEvents ??
-            "false"
-        ).toLowerCase() === "true";
-
-      // Get program details before deletion for audit log
+      // Get program details before permission check
       const program = await Program.findById(id).lean();
       if (!program) {
         res.status(404).json({ success: false, message: "Program not found." });
@@ -78,13 +65,35 @@ export default class DeletionController {
         _id: unknown;
         title?: string;
         programType?: string;
+        createdBy?: unknown;
       };
+
+      // Authorization: Admin can delete any program, Leader can delete their own
+      const isAdmin = RoleUtils.isAdmin(req.user.role);
+      const isCreator =
+        programData.createdBy &&
+        String(programData.createdBy) === String(req.user._id);
+
+      if (!isAdmin && !isCreator) {
+        res.status(403).json({
+          success: false,
+          message:
+            "You do not have permission to delete this program. Only Administrators or the program creator can delete programs.",
+        });
+        return;
+      }
+
+      const deleteLinkedEvents =
+        String(
+          (req.query as { deleteLinkedEvents?: string }).deleteLinkedEvents ??
+            "false",
+        ).toLowerCase() === "true";
 
       if (!deleteLinkedEvents) {
         // Remove this program from all events' programLabels arrays
         const result = await Event.updateMany(
           { programLabels: id },
-          { $pull: { programLabels: id } }
+          { $pull: { programLabels: id } },
         );
         await Program.findByIdAndDelete(id);
 
@@ -114,7 +123,7 @@ export default class DeletionController {
         } catch (auditError) {
           console.error(
             "Failed to create audit log for program deletion:",
-            auditError
+            auditError,
           );
           // Don't fail the request if audit logging fails
         }
@@ -169,7 +178,7 @@ export default class DeletionController {
       } catch (auditError) {
         console.error(
           "Failed to create audit log for program deletion:",
-          auditError
+          auditError,
         );
         // Don't fail the request if audit logging fails
       }

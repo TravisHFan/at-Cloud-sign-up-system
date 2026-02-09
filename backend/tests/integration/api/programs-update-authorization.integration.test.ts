@@ -19,7 +19,7 @@ describe("PUT /api/programs/:id - Authorization Tests", () => {
     if (mongoose.connection.readyState === 0) {
       await mongoose.connect(
         process.env.MONGODB_URI ||
-          "mongodb://127.0.0.1:27017/atcloud-signup-test"
+          "mongodb://127.0.0.1:27017/atcloud-signup-test",
       );
     }
   });
@@ -169,7 +169,7 @@ describe("PUT /api/programs/:id - Authorization Tests", () => {
       expect(response.status).toBe(403);
       expect(response.body.success).toBe(false);
       expect(response.body.message).toBe(
-        "You do not have permission to edit this program. Only Administrators and assigned mentors can edit programs."
+        "You do not have permission to edit this program. Only Administrators, the program creator, and assigned mentors can edit programs.",
       );
 
       // Verify program was not updated
@@ -195,7 +195,7 @@ describe("PUT /api/programs/:id - Authorization Tests", () => {
       expect(response.status).toBe(403);
       expect(response.body.success).toBe(false);
       expect(response.body.message).toBe(
-        "You do not have permission to edit this program. Only Administrators and assigned mentors can edit programs."
+        "You do not have permission to edit this program. Only Administrators, the program creator, and assigned mentors can edit programs.",
       );
 
       // Verify program was not updated
@@ -221,7 +221,7 @@ describe("PUT /api/programs/:id - Authorization Tests", () => {
       expect(response.status).toBe(403);
       expect(response.body.success).toBe(false);
       expect(response.body.message).toBe(
-        "You do not have permission to edit this program. Only Administrators and assigned mentors can edit programs."
+        "You do not have permission to edit this program. Only Administrators, the program creator, and assigned mentors can edit programs.",
       );
 
       // Verify program was not updated
@@ -247,7 +247,7 @@ describe("PUT /api/programs/:id - Authorization Tests", () => {
       expect(response.status).toBe(403);
       expect(response.body.success).toBe(false);
       expect(response.body.message).toBe(
-        "You do not have permission to edit this program. Only Administrators and assigned mentors can edit programs."
+        "You do not have permission to edit this program. Only Administrators, the program creator, and assigned mentors can edit programs.",
       );
 
       // Verify program was not updated

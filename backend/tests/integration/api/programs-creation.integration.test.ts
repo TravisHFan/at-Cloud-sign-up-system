@@ -73,7 +73,7 @@ describe("Programs Creation API Integration Tests", () => {
 
         expect(response.body.success).toBe(false);
         expect(response.body.message).toBe(
-          "Access denied. No token provided or invalid format."
+          "Access denied. No token provided or invalid format.",
         );
       });
 
@@ -90,7 +90,7 @@ describe("Programs Creation API Integration Tests", () => {
 
         expect(response.body.success).toBe(false);
         expect(response.body.message).toBe(
-          "Only Administrators can create programs."
+          "Only Leaders and above can create programs.",
         );
       });
 
@@ -424,7 +424,7 @@ describe("Programs Creation API Integration Tests", () => {
                 programType: "EMBA Mentor Circles",
                 fullPriceTicket: 5000,
                 isFree: false,
-              })
+              }),
           );
 
         const responses = await Promise.all(requests);

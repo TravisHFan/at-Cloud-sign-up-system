@@ -65,7 +65,7 @@ describe("DeletionController", () => {
 
         await DeletionController.remove(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(401);
@@ -75,26 +75,67 @@ describe("DeletionController", () => {
         });
       });
 
-      it("should return 403 if user is not an admin", async () => {
+      it("should return 403 if user is not an admin and not the creator", async () => {
         mockReq.user = {
           _id: "user123",
-          role: "User",
+          role: "Leader",
           email: "user@test.com",
         };
 
+        isValidSpy.mockReturnValue(true);
         vi.mocked(RoleUtils.isAdmin).mockReturnValue(false);
+        vi.mocked(Program.findById).mockReturnValue({
+          lean: vi.fn().mockResolvedValue({
+            _id: testProgramId,
+            title: "Test Program",
+            programType: "Mentorship",
+            createdBy: "differentUser456", // Not the current user
+          }),
+        } as any);
 
         await DeletionController.remove(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
-        expect(RoleUtils.isAdmin).toHaveBeenCalledWith("User");
+        expect(RoleUtils.isAdmin).toHaveBeenCalledWith("Leader");
         expect(statusMock).toHaveBeenCalledWith(403);
         expect(jsonMock).toHaveBeenCalledWith({
           success: false,
-          message: "Only Administrators can delete programs.",
+          message:
+            "You do not have permission to delete this program. Only Administrators or the program creator can delete programs.",
         });
+      });
+
+      it("should allow Leader to delete their own program", async () => {
+        mockReq.user = {
+          _id: "leader123",
+          role: "Leader",
+          email: "leader@test.com",
+        };
+
+        isValidSpy.mockReturnValue(true);
+        vi.mocked(RoleUtils.isAdmin).mockReturnValue(false);
+        vi.mocked(Program.findById).mockReturnValue({
+          lean: vi.fn().mockResolvedValue({
+            _id: testProgramId,
+            title: "Test Program",
+            programType: "Mentorship",
+            createdBy: "leader123", // Same as current user
+          }),
+        } as any);
+        vi.mocked(Event.updateMany).mockResolvedValue({
+          modifiedCount: 0,
+        } as any);
+        vi.mocked(Program.findByIdAndDelete).mockResolvedValue({} as any);
+        vi.mocked(AuditLog.create).mockResolvedValue({} as any);
+
+        await DeletionController.remove(
+          mockReq as Request,
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(200);
       });
 
       it("should allow Super Admin to delete program", async () => {
@@ -121,7 +162,7 @@ describe("DeletionController", () => {
 
         await DeletionController.remove(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -151,7 +192,7 @@ describe("DeletionController", () => {
 
         await DeletionController.remove(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -174,11 +215,11 @@ describe("DeletionController", () => {
 
         await DeletionController.remove(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(mongoose.Types.ObjectId.isValid).toHaveBeenCalledWith(
-          "invalid-id"
+          "invalid-id",
         );
         expect(statusMock).toHaveBeenCalledWith(400);
         expect(jsonMock).toHaveBeenCalledWith({
@@ -195,7 +236,7 @@ describe("DeletionController", () => {
 
         await DeletionController.remove(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(404);
@@ -235,12 +276,12 @@ describe("DeletionController", () => {
 
         await DeletionController.remove(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(Event.updateMany).toHaveBeenCalledWith(
           { programLabels: testProgramId },
-          { $pull: { programLabels: testProgramId } }
+          { $pull: { programLabels: testProgramId } },
         );
         expect(Program.findByIdAndDelete).toHaveBeenCalledWith(testProgramId);
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -259,7 +300,7 @@ describe("DeletionController", () => {
 
         await DeletionController.remove(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(jsonMock).toHaveBeenCalledWith({
@@ -277,7 +318,7 @@ describe("DeletionController", () => {
 
         await DeletionController.remove(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(jsonMock).toHaveBeenCalledWith({
@@ -297,7 +338,7 @@ describe("DeletionController", () => {
 
         await DeletionController.remove(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(Event.updateMany).toHaveBeenCalled();
@@ -312,7 +353,7 @@ describe("DeletionController", () => {
 
         await DeletionController.remove(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(AuditLog.create).toHaveBeenCalledWith({
@@ -351,13 +392,13 @@ describe("DeletionController", () => {
 
         await DeletionController.remove(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
         expect(consoleErrorSpy).toHaveBeenCalledWith(
           "Failed to create audit log for program deletion:",
-          expect.any(Error)
+          expect.any(Error),
         );
 
         consoleErrorSpy.mockRestore();
@@ -407,7 +448,7 @@ describe("DeletionController", () => {
 
         await DeletionController.remove(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(Event.find).toHaveBeenCalledWith({
@@ -435,7 +476,7 @@ describe("DeletionController", () => {
 
         await DeletionController.remove(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(EventCascadeService.deleteEventFully).not.toHaveBeenCalled();
@@ -474,7 +515,7 @@ describe("DeletionController", () => {
 
         await DeletionController.remove(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(jsonMock).toHaveBeenCalledWith({
@@ -504,7 +545,7 @@ describe("DeletionController", () => {
 
         await DeletionController.remove(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(AuditLog.create).toHaveBeenCalledWith({
@@ -543,7 +584,7 @@ describe("DeletionController", () => {
 
         await DeletionController.remove(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(Event.find).toHaveBeenCalledWith({
@@ -565,7 +606,7 @@ describe("DeletionController", () => {
 
         await DeletionController.remove(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -594,7 +635,7 @@ describe("DeletionController", () => {
 
         await DeletionController.remove(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -615,12 +656,12 @@ describe("DeletionController", () => {
         } as any);
 
         vi.mocked(Event.updateMany).mockRejectedValue(
-          new Error("Update failed")
+          new Error("Update failed"),
         );
 
         await DeletionController.remove(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -646,7 +687,7 @@ describe("DeletionController", () => {
 
         await DeletionController.remove(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -669,12 +710,12 @@ describe("DeletionController", () => {
         } as any);
 
         vi.mocked(EventCascadeService.deleteEventFully).mockRejectedValue(
-          new Error("Cascade failed")
+          new Error("Cascade failed"),
         );
 
         await DeletionController.remove(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -711,13 +752,13 @@ describe("DeletionController", () => {
 
         await DeletionController.remove(
           reqWithoutIp as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(AuditLog.create).toHaveBeenCalledWith(
           expect.objectContaining({
             ipAddress: undefined,
-          })
+          }),
         );
       });
 
@@ -732,13 +773,13 @@ describe("DeletionController", () => {
 
         await DeletionController.remove(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(AuditLog.create).toHaveBeenCalledWith(
           expect.objectContaining({
             userAgent: "unknown",
-          })
+          }),
         );
       });
 
@@ -758,7 +799,7 @@ describe("DeletionController", () => {
 
         await DeletionController.remove(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(AuditLog.create).toHaveBeenCalledWith(
@@ -770,7 +811,7 @@ describe("DeletionController", () => {
                 programType: undefined,
               },
             }),
-          })
+          }),
         );
       });
 
@@ -794,7 +835,7 @@ describe("DeletionController", () => {
 
         await DeletionController.remove(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(EventCascadeService.deleteEventFully).toHaveBeenCalledTimes(100);

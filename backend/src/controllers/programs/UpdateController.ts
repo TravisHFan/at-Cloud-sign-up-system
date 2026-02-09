@@ -30,19 +30,23 @@ export default class UpdateController {
 
       // Authorization logic:
       // 1. Super Admin and Administrator can edit any program
-      // 2. Mentors assigned to this program can edit it
+      // 2. Program creator can edit their own program
+      // 3. Mentors assigned to this program can edit it
       const isAdmin = RoleUtils.isAdmin(req.user.role);
+      const isCreator =
+        program.createdBy &&
+        String(program.createdBy) === String(req.user!._id);
       const isMentor =
         program.mentors?.some(
           (mentor: { userId: unknown }) =>
-            String(mentor.userId) === String(req.user!._id)
+            String(mentor.userId) === String(req.user!._id),
         ) ?? false;
 
-      if (!isAdmin && !isMentor) {
+      if (!isAdmin && !isCreator && !isMentor) {
         res.status(403).json({
           success: false,
           message:
-            "You do not have permission to edit this program. Only Administrators and assigned mentors can edit programs.",
+            "You do not have permission to edit this program. Only Administrators, the program creator, and assigned mentors can edit programs.",
         });
         return;
       }

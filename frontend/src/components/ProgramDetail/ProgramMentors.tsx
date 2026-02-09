@@ -18,6 +18,7 @@ interface ProgramMentorsProps {
   accessReason:
     | "admin"
     | "mentor"
+    | "creator"
     | "free"
     | "purchased"
     | "not_purchased"
@@ -97,7 +98,7 @@ export default function ProgramMentors({
                 alt={getAvatarAlt(
                   m.firstName || "",
                   m.lastName || "",
-                  !!m.avatar
+                  !!m.avatar,
                 )}
                 className="h-12 w-12 rounded-full object-cover flex-shrink-0"
               />

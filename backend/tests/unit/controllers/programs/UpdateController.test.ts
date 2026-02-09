@@ -108,7 +108,7 @@ describe("UpdateController", () => {
         };
 
         vi.mocked(Program.findByIdAndUpdate).mockResolvedValue(
-          updatedProgram as any
+          updatedProgram as any,
         );
 
         await UpdateController.update(mockReq as Request, mockRes as Response);
@@ -117,7 +117,7 @@ describe("UpdateController", () => {
         expect(Program.findByIdAndUpdate).toHaveBeenCalledWith(
           programId.toString(),
           mockReq.body,
-          { new: true, runValidators: true }
+          { new: true, runValidators: true },
         );
         expect(statusMock).toHaveBeenCalledWith(200);
         expect(jsonMock).toHaveBeenCalledWith({
@@ -144,7 +144,7 @@ describe("UpdateController", () => {
         };
 
         vi.mocked(Program.findByIdAndUpdate).mockResolvedValue(
-          updatedProgram as any
+          updatedProgram as any,
         );
 
         await UpdateController.update(mockReq as Request, mockRes as Response);
@@ -174,7 +174,7 @@ describe("UpdateController", () => {
         };
 
         vi.mocked(Program.findByIdAndUpdate).mockResolvedValue(
-          updatedProgram as any
+          updatedProgram as any,
         );
 
         await UpdateController.update(mockReq as Request, mockRes as Response);
@@ -182,7 +182,7 @@ describe("UpdateController", () => {
         expect(statusMock).toHaveBeenCalledWith(200);
       });
 
-      it("should reject non-admin non-mentor users", async () => {
+      it("should reject non-admin non-creator non-mentor users", async () => {
         mockReq.user = {
           _id: userId,
           role: "Member",
@@ -191,6 +191,7 @@ describe("UpdateController", () => {
         const mockProgram = {
           _id: programId,
           title: "Original Title",
+          createdBy: "differentUser456", // Different creator
           mentors: [{ userId: mentorId }], // Different mentor
         };
 
@@ -203,7 +204,7 @@ describe("UpdateController", () => {
         expect(jsonMock).toHaveBeenCalledWith({
           success: false,
           message:
-            "You do not have permission to edit this program. Only Administrators and assigned mentors can edit programs.",
+            "You do not have permission to edit this program. Only Administrators, the program creator, and assigned mentors can edit programs.",
         });
       });
 
@@ -293,7 +294,7 @@ describe("UpdateController", () => {
         };
 
         vi.mocked(Program.findByIdAndUpdate).mockResolvedValue(
-          updatedProgram as any
+          updatedProgram as any,
         );
 
         await UpdateController.update(mockReq as Request, mockRes as Response);
@@ -301,7 +302,7 @@ describe("UpdateController", () => {
         expect(Program.findByIdAndUpdate).toHaveBeenCalledWith(
           programId.toString(),
           mockReq.body,
-          { new: true, runValidators: true }
+          { new: true, runValidators: true },
         );
         expect(statusMock).toHaveBeenCalledWith(200);
         expect(jsonMock).toHaveBeenCalledWith({
@@ -317,7 +318,7 @@ describe("UpdateController", () => {
         };
 
         vi.mocked(Program.findByIdAndUpdate).mockResolvedValue(
-          updatedProgram as any
+          updatedProgram as any,
         );
 
         await UpdateController.update(mockReq as Request, mockRes as Response);
@@ -381,7 +382,7 @@ describe("UpdateController", () => {
 
       it("should handle database errors", async () => {
         vi.mocked(Program.findByIdAndUpdate).mockRejectedValue(
-          new Error("Database error")
+          new Error("Database error"),
         );
 
         await UpdateController.update(mockReq as Request, mockRes as Response);
@@ -395,7 +396,7 @@ describe("UpdateController", () => {
 
       it("should handle errors during permission check", async () => {
         vi.mocked(Program.findById).mockRejectedValue(
-          new Error("Database error")
+          new Error("Database error"),
         );
 
         await UpdateController.update(mockReq as Request, mockRes as Response);

@@ -8,6 +8,7 @@ import { ensureIntegrationDB } from "../setup/connect";
 describe("Event Access - OR Logic (Purchase ANY associated program)", () => {
   let authToken: string;
   let userId: string;
+  let adminUserId: string;
 
   // Program IDs
   let programAId: string;
@@ -51,6 +52,19 @@ describe("Event Access - OR Logic (Purchase ANY associated program)", () => {
     // Verify user
     await User.findByIdAndUpdate(userId, { isVerified: true });
 
+    // Create admin user to be the program creator (not the test participant)
+    const adminUser = await User.create({
+      email: "admin-creator@test.com",
+      username: "admincreator",
+      password: "TestPass123!",
+      firstName: "Admin",
+      lastName: "Creator",
+      role: "Administrator",
+      isVerified: true,
+      isActive: true,
+    });
+    adminUserId = adminUser._id.toString();
+
     // Login
     const loginResponse = await request(app).post("/api/auth/login").send({
       emailOrUsername: "participant@test.com",
@@ -77,7 +91,7 @@ describe("Event Access - OR Logic (Purchase ANY associated program)", () => {
       },
       introduction: "Program A",
       mentors: [],
-      createdBy: userId,
+      createdBy: adminUserId,
     });
     programAId = programA._id.toString();
 
@@ -98,7 +112,7 @@ describe("Event Access - OR Logic (Purchase ANY associated program)", () => {
       },
       introduction: "Program B",
       mentors: [],
-      createdBy: userId,
+      createdBy: adminUserId,
     });
     programBId = programB._id.toString();
 
@@ -119,7 +133,7 @@ describe("Event Access - OR Logic (Purchase ANY associated program)", () => {
       },
       introduction: "Program C",
       mentors: [],
-      createdBy: userId,
+      createdBy: adminUserId,
     });
     programCId = programC._id.toString();
 
@@ -149,7 +163,7 @@ describe("Event Access - OR Logic (Purchase ANY associated program)", () => {
           maxParticipants: 50,
         },
       ],
-      createdBy: userId,
+      createdBy: adminUserId,
     });
     multiProgramEventId = event._id.toString();
   });
