@@ -68,7 +68,7 @@ describe("SystemMessagesRetrievalController", () => {
 
         await SystemMessagesRetrievalController.getSystemMessages(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(401);
@@ -83,7 +83,7 @@ describe("SystemMessagesRetrievalController", () => {
 
         await SystemMessagesRetrievalController.getSystemMessages(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(401);
@@ -98,7 +98,7 @@ describe("SystemMessagesRetrievalController", () => {
 
         await SystemMessagesRetrievalController.getSystemMessages(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(404);
@@ -125,7 +125,7 @@ describe("SystemMessagesRetrievalController", () => {
 
         await SystemMessagesRetrievalController.getSystemMessages(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -170,7 +170,7 @@ describe("SystemMessagesRetrievalController", () => {
 
         await SystemMessagesRetrievalController.getSystemMessages(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -182,7 +182,7 @@ describe("SystemMessagesRetrievalController", () => {
                 totalCount: 1,
               }),
             }),
-          })
+          }),
         );
       });
 
@@ -200,7 +200,7 @@ describe("SystemMessagesRetrievalController", () => {
 
         await SystemMessagesRetrievalController.getSystemMessages(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(jsonMock).toHaveBeenCalledWith(
@@ -209,7 +209,7 @@ describe("SystemMessagesRetrievalController", () => {
               messages: [],
               pagination: expect.objectContaining({ totalCount: 0 }),
             }),
-          })
+          }),
         );
       });
 
@@ -221,13 +221,13 @@ describe("SystemMessagesRetrievalController", () => {
 
         await SystemMessagesRetrievalController.getSystemMessages(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(Message.find).toHaveBeenCalledWith(
           expect.objectContaining({
             type: "announcement",
-          })
+          }),
         );
       });
 
@@ -252,7 +252,7 @@ describe("SystemMessagesRetrievalController", () => {
 
         await SystemMessagesRetrievalController.getSystemMessages(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(jsonMock).toHaveBeenCalledWith(
@@ -264,7 +264,7 @@ describe("SystemMessagesRetrievalController", () => {
                 totalCount: 10,
               }),
             }),
-          })
+          }),
         );
       });
 
@@ -289,7 +289,7 @@ describe("SystemMessagesRetrievalController", () => {
 
         await SystemMessagesRetrievalController.getSystemMessages(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(jsonMock).toHaveBeenCalledWith(
@@ -298,7 +298,7 @@ describe("SystemMessagesRetrievalController", () => {
             data: expect.objectContaining({
               pagination: expect.objectContaining({ totalCount: 1 }),
             }),
-          })
+          }),
         );
       });
 
@@ -322,7 +322,7 @@ describe("SystemMessagesRetrievalController", () => {
 
         await SystemMessagesRetrievalController.getSystemMessages(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         // User role is "Viewer", so shouldn't see "Administrator" targeted message
@@ -331,7 +331,113 @@ describe("SystemMessagesRetrievalController", () => {
             data: expect.objectContaining({
               messages: [],
             }),
-          })
+          }),
+        );
+      });
+    });
+
+    describe("Legacy targetUserId Inference", () => {
+      it("should infer targetUserId from Map userStates with single key for auth_level_change", async () => {
+        const mockMessage = {
+          _id: "msg1",
+          title: "Auth Level Change",
+          content: "Your auth level changed",
+          type: "auth_level_change",
+          priority: "medium",
+          creator: { firstName: "Admin" },
+          userStates: new Map([["user123", { isReadInSystem: false }]]),
+          createdAt: new Date(),
+          // targetUserId intentionally missing to trigger legacy inference
+        };
+        vi.mocked(Message.find).mockReturnValue({
+          sort: vi.fn().mockResolvedValue([mockMessage]),
+        } as any);
+
+        await SystemMessagesRetrievalController.getSystemMessages(
+          mockReq as unknown as Request,
+          mockRes as Response,
+        );
+
+        expect(jsonMock).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              messages: expect.arrayContaining([
+                expect.objectContaining({
+                  targetUserId: "user123",
+                }),
+              ]),
+            }),
+          }),
+        );
+      });
+
+      it("should infer targetUserId from object userStates with single key for event_role_change", async () => {
+        const mockMessage = {
+          _id: "msg2",
+          title: "Role Change",
+          content: "Your role changed",
+          type: "event_role_change",
+          priority: "medium",
+          creator: { firstName: "Admin" },
+          userStates: { user123: { isReadInSystem: false } }, // Plain object, not Map
+          createdAt: new Date(),
+          // targetUserId intentionally missing
+        };
+        vi.mocked(Message.find).mockReturnValue({
+          sort: vi.fn().mockResolvedValue([mockMessage]),
+        } as any);
+
+        await SystemMessagesRetrievalController.getSystemMessages(
+          mockReq as unknown as Request,
+          mockRes as Response,
+        );
+
+        expect(jsonMock).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              messages: expect.arrayContaining([
+                expect.objectContaining({
+                  targetUserId: "user123",
+                }),
+              ]),
+            }),
+          }),
+        );
+      });
+
+      it("should not infer targetUserId when userStates has multiple keys", async () => {
+        const mockMessage = {
+          _id: "msg3",
+          title: "Auth Level Change",
+          content: "Content",
+          type: "auth_level_change",
+          priority: "medium",
+          creator: {},
+          userStates: new Map([
+            ["user123", { isReadInSystem: false }],
+            ["user456", { isReadInSystem: true }],
+          ]),
+          createdAt: new Date(),
+        };
+        vi.mocked(Message.find).mockReturnValue({
+          sort: vi.fn().mockResolvedValue([mockMessage]),
+        } as any);
+
+        await SystemMessagesRetrievalController.getSystemMessages(
+          mockReq as unknown as Request,
+          mockRes as Response,
+        );
+
+        expect(jsonMock).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              messages: expect.arrayContaining([
+                expect.objectContaining({
+                  targetUserId: undefined,
+                }),
+              ]),
+            }),
+          }),
         );
       });
     });
@@ -344,7 +450,7 @@ describe("SystemMessagesRetrievalController", () => {
 
         await SystemMessagesRetrievalController.getSystemMessages(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);

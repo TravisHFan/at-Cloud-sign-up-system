@@ -65,9 +65,36 @@ vi.mock("../../../../src/services/event/PostCreationService", () => ({
   },
 }));
 
+vi.mock(
+  "../../../../src/services/event/RecurringEventGenerationService",
+  () => ({
+    RecurringEventGenerationService: {
+      generateRecurringSeries: vi.fn(),
+    },
+  }),
+);
+
+vi.mock(
+  "../../../../src/services/event/EventCreationNotificationService",
+  () => ({
+    EventCreationNotificationService: {
+      sendAllNotifications: vi.fn(),
+      sendCoOrganizerNotifications: vi.fn(),
+    },
+  }),
+);
+
 vi.mock("../../../../src/services/ResponseBuilderService", () => ({
   ResponseBuilderService: {
     buildEventResponse: vi.fn(),
+    buildEventWithRegistrations: vi.fn(),
+  },
+}));
+
+vi.mock("../../../../src/services", () => ({
+  CachePatterns: {
+    invalidateEventCache: vi.fn().mockResolvedValue(undefined),
+    invalidateAnalyticsCache: vi.fn().mockResolvedValue(undefined),
   },
 }));
 

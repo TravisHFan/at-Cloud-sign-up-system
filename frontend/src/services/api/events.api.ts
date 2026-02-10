@@ -140,14 +140,14 @@ class EventsApiClient extends BaseApiClient {
 
   async updateEvent(
     eventId: string,
-    eventData: UpdateEventPayload
+    eventData: UpdateEventPayload,
   ): Promise<EventData> {
     const response = await this.request<{ event: EventData }>(
       `/events/${eventId}`,
       {
         method: "PUT",
         body: JSON.stringify(eventData),
-      }
+      },
     );
 
     if (response.data) {
@@ -160,14 +160,14 @@ class EventsApiClient extends BaseApiClient {
   async updateWorkshopGroupTopic(
     eventId: string,
     group: "A" | "B" | "C" | "D" | "E" | "F",
-    topic: string
+    topic: string,
   ): Promise<EventData> {
     const response = await this.request<{ event: EventData }>(
       `/events/${eventId}/workshop/groups/${group}/topic`,
       {
         method: "POST",
         body: JSON.stringify({ topic }),
-      }
+      },
     );
     if (response.data) return response.data.event;
     throw new Error(response.message || "Failed to update group topic");
@@ -177,6 +177,31 @@ class EventsApiClient extends BaseApiClient {
     await this.request(`/events/${eventId}`, {
       method: "DELETE",
     });
+  }
+
+  // ========== YouTube URL (Past Events) ==========
+
+  /**
+   * Update the YouTube video URL for a completed event
+   * Only Super Admin, Administrator, event creator, or co-organizer can update
+   */
+  async updateYoutubeUrl(
+    eventId: string,
+    youtubeUrl: string | null,
+  ): Promise<EventData> {
+    const response = await this.request<{ event: EventData }>(
+      `/events/${eventId}/youtube-url`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ youtubeUrl }),
+      },
+    );
+
+    if (response.data) {
+      return response.data.event;
+    }
+
+    throw new Error(response.message || "Failed to update YouTube URL");
   }
 
   // ========== Event Publishing ==========
@@ -243,7 +268,7 @@ class EventsApiClient extends BaseApiClient {
 
   async getEventParticipants(eventId: string): Promise<EventParticipant[]> {
     const response = await this.request<{ participants: EventParticipant[] }>(
-      `/events/${eventId}/participants`
+      `/events/${eventId}/participants`,
     );
 
     if (response.data) {
@@ -263,7 +288,7 @@ class EventsApiClient extends BaseApiClient {
       bodyText?: string;
       includeGuests?: boolean;
       includeUsers?: boolean;
-    }
+    },
   ): Promise<{ recipientCount: number; sent?: number }> {
     type EmailResult = { recipientCount: number; sent?: number };
     const response = await this.request<EmailResult>(
@@ -271,7 +296,7 @@ class EventsApiClient extends BaseApiClient {
       {
         method: "POST",
         body: JSON.stringify(payload),
-      }
+      },
     );
 
     const isEmailResult = (v: unknown): v is EmailResult =>
@@ -304,7 +329,7 @@ class EventsApiClient extends BaseApiClient {
     eventId: string,
     roleId: string,
     notes?: string,
-    specialRequirements?: string
+    specialRequirements?: string,
   ): Promise<EventData> {
     const response = await this.request<{ event: EventData }>(
       `/events/${eventId}/signup`,
@@ -315,7 +340,7 @@ class EventsApiClient extends BaseApiClient {
           notes,
           specialRequirements,
         }),
-      }
+      },
     );
 
     if (response.data) {
@@ -331,7 +356,7 @@ class EventsApiClient extends BaseApiClient {
       {
         method: "POST",
         body: JSON.stringify({ roleId }),
-      }
+      },
     );
 
     if (response.data) {
@@ -346,7 +371,7 @@ class EventsApiClient extends BaseApiClient {
   async removeUserFromRole(
     eventId: string,
     userId: string,
-    roleId: string
+    roleId: string,
   ): Promise<EventData> {
     const response = await this.request<{ event: EventData }>(
       `/events/${eventId}/manage/remove-user`,
@@ -356,7 +381,7 @@ class EventsApiClient extends BaseApiClient {
           userId,
           roleId,
         }),
-      }
+      },
     );
 
     if (response.data) {
@@ -370,7 +395,7 @@ class EventsApiClient extends BaseApiClient {
     eventId: string,
     userId: string,
     fromRoleId: string,
-    toRoleId: string
+    toRoleId: string,
   ): Promise<EventData> {
     const response = await this.request<{ event: EventData }>(
       `/events/${eventId}/manage/move-user`,
@@ -381,7 +406,7 @@ class EventsApiClient extends BaseApiClient {
           fromRoleId,
           toRoleId,
         }),
-      }
+      },
     );
 
     if (response.data) {
@@ -396,7 +421,7 @@ class EventsApiClient extends BaseApiClient {
     userId: string,
     roleId: string,
     notes?: string,
-    sendNotifications?: boolean
+    sendNotifications?: boolean,
   ): Promise<EventData> {
     const response = await this.request<{ event: EventData }>(
       `/events/${eventId}/manage/assign-user`,
@@ -408,7 +433,7 @@ class EventsApiClient extends BaseApiClient {
           notes,
           suppressNotifications: sendNotifications === false,
         }),
-      }
+      },
     );
 
     if (response.data) {
@@ -425,7 +450,7 @@ class EventsApiClient extends BaseApiClient {
       "/events/update-statuses",
       {
         method: "POST",
-      }
+      },
     );
 
     if (response.data) {
@@ -439,7 +464,7 @@ class EventsApiClient extends BaseApiClient {
 
   async getUserEvents(
     page?: number,
-    limit?: number
+    limit?: number,
   ): Promise<
     | {
         events: MyEventRegistrationItem[];
@@ -487,7 +512,7 @@ class EventsApiClient extends BaseApiClient {
 
   async getCreatedEvents(): Promise<EventData[]> {
     const response = await this.request<{ events: EventData[] }>(
-      "/events/user/created"
+      "/events/user/created",
     );
 
     if (response.data) {
@@ -527,7 +552,7 @@ class EventsApiClient extends BaseApiClient {
    */
   async getEventPurchaseInfo(
     eventId: string,
-    promoCode?: string
+    promoCode?: string,
   ): Promise<{
     eventId: string;
     eventTitle: string;
@@ -555,7 +580,7 @@ class EventsApiClient extends BaseApiClient {
     }
 
     throw new Error(
-      response.message || "Failed to get event purchase information"
+      response.message || "Failed to get event purchase information",
     );
   }
 
@@ -564,7 +589,7 @@ class EventsApiClient extends BaseApiClient {
    */
   async createEventPurchase(
     eventId: string,
-    promoCode?: string
+    promoCode?: string,
   ): Promise<{
     sessionId: string;
     sessionUrl: string;
@@ -641,16 +666,20 @@ export const eventsService = {
   hasRegistrations: (id: string) => eventsApiClient.hasRegistrations(id),
   createEvent: (eventData: unknown) => eventsApiClient.createEvent(eventData),
   checkEventTimeConflict: (
-    params: Parameters<typeof eventsApiClient.checkEventTimeConflict>[0]
+    params: Parameters<typeof eventsApiClient.checkEventTimeConflict>[0],
   ) => eventsApiClient.checkEventTimeConflict(params),
   updateEvent: (eventId: string, eventData: UpdateEventPayload) =>
     eventsApiClient.updateEvent(eventId, eventData),
   updateWorkshopGroupTopic: (
     eventId: string,
     group: "A" | "B" | "C" | "D" | "E" | "F",
-    topic: string
+    topic: string,
   ) => eventsApiClient.updateWorkshopGroupTopic(eventId, group, topic),
   deleteEvent: (eventId: string) => eventsApiClient.deleteEvent(eventId),
+
+  // YouTube URL (Past Events)
+  updateYoutubeUrl: (eventId: string, youtubeUrl: string | null) =>
+    eventsApiClient.updateYoutubeUrl(eventId, youtubeUrl),
 
   // Publishing
   publishEvent: (eventId: string) => eventsApiClient.publishEvent(eventId),
@@ -663,7 +692,7 @@ export const eventsService = {
   // Communication
   sendEventEmails: (
     eventId: string,
-    payload: Parameters<typeof eventsApiClient.sendEventEmails>[1]
+    payload: Parameters<typeof eventsApiClient.sendEventEmails>[1],
   ) => eventsApiClient.sendEventEmails(eventId, payload),
 
   // User registration
@@ -671,7 +700,7 @@ export const eventsService = {
     eventId: string,
     roleId: string,
     notes?: string,
-    specialRequirements?: string
+    specialRequirements?: string,
   ) =>
     eventsApiClient.signUpForEvent(eventId, roleId, notes, specialRequirements),
   cancelEventSignup: (eventId: string, roleId: string) =>
@@ -684,7 +713,7 @@ export const eventsService = {
     eventId: string,
     userId: string,
     fromRoleId: string,
-    toRoleId: string
+    toRoleId: string,
   ) =>
     eventsApiClient.moveUserBetweenRoles(eventId, userId, fromRoleId, toRoleId),
   assignUserToRole: (
@@ -692,14 +721,14 @@ export const eventsService = {
     userId: string,
     roleId: string,
     notes?: string,
-    sendNotifications?: boolean
+    sendNotifications?: boolean,
   ) =>
     eventsApiClient.assignUserToRole(
       eventId,
       userId,
       roleId,
       notes,
-      sendNotifications
+      sendNotifications,
     ),
 
   // Status management

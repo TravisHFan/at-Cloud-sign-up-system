@@ -88,7 +88,7 @@ describe("StaffCodeCreationController", () => {
 
         await StaffCodeCreationController.createStaffCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(401);
@@ -105,7 +105,7 @@ describe("StaffCodeCreationController", () => {
 
         await StaffCodeCreationController.createStaffCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -121,7 +121,7 @@ describe("StaffCodeCreationController", () => {
 
         await StaffCodeCreationController.createStaffCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -138,7 +138,7 @@ describe("StaffCodeCreationController", () => {
 
         await StaffCodeCreationController.createStaffCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(404);
@@ -164,7 +164,7 @@ describe("StaffCodeCreationController", () => {
 
         await StaffCodeCreationController.createStaffCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -179,7 +179,7 @@ describe("StaffCodeCreationController", () => {
 
         await StaffCodeCreationController.createStaffCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -194,7 +194,7 @@ describe("StaffCodeCreationController", () => {
 
         await StaffCodeCreationController.createStaffCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -220,12 +220,12 @@ describe("StaffCodeCreationController", () => {
         };
         vi.mocked(PromoCode.create).mockResolvedValue(mockPromoCode as any);
         vi.mocked(EmailService.sendStaffPromoCodeEmail).mockResolvedValue(
-          undefined
+          undefined,
         );
 
         await StaffCodeCreationController.createStaffCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(201);
@@ -247,12 +247,12 @@ describe("StaffCodeCreationController", () => {
         };
         vi.mocked(PromoCode.create).mockResolvedValue(mockPromoCode as any);
         vi.mocked(EmailService.sendStaffPromoCodeEmail).mockResolvedValue(
-          undefined
+          undefined,
         );
 
         await StaffCodeCreationController.createStaffCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(201);
@@ -289,18 +289,18 @@ describe("StaffCodeCreationController", () => {
         };
         vi.mocked(PromoCode.create).mockResolvedValue(mockPromoCode as any);
         vi.mocked(EmailService.sendStaffPromoCodeEmail).mockResolvedValue(
-          undefined
+          undefined,
         );
 
         await StaffCodeCreationController.createStaffCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(PromoCode.create).toHaveBeenCalledWith(
           expect.objectContaining({
             allowedProgramIds: undefined,
-          })
+          }),
         );
       });
 
@@ -318,7 +318,7 @@ describe("StaffCodeCreationController", () => {
 
         await StaffCodeCreationController.createStaffCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -352,12 +352,12 @@ describe("StaffCodeCreationController", () => {
         };
         vi.mocked(PromoCode.create).mockResolvedValue(mockPromoCode as any);
         vi.mocked(EmailService.sendStaffPromoCodeEmail).mockResolvedValue(
-          undefined
+          undefined,
         );
 
         await StaffCodeCreationController.createStaffCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(201);
@@ -367,7 +367,7 @@ describe("StaffCodeCreationController", () => {
               expect.any(mongoose.Types.ObjectId),
               expect.any(mongoose.Types.ObjectId),
             ]),
-          })
+          }),
         );
       });
 
@@ -391,19 +391,130 @@ describe("StaffCodeCreationController", () => {
         };
         vi.mocked(PromoCode.create).mockResolvedValue(mockPromoCode as any);
         vi.mocked(EmailService.sendStaffPromoCodeEmail).mockResolvedValue(
-          undefined
+          undefined,
         );
 
         await StaffCodeCreationController.createStaffCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         // Should be treated as undefined
         expect(PromoCode.create).toHaveBeenCalledWith(
           expect.objectContaining({
             allowedProgramIds: undefined,
-          })
+          }),
+        );
+      });
+    });
+
+    describe("allowedEventIds validation", () => {
+      beforeEach(() => {
+        isValidSpy.mockReturnValue(true);
+        vi.mocked(User.findById).mockResolvedValue({
+          _id: testUserId,
+          email: "user@test.com",
+          username: "testuser",
+        } as any);
+      });
+
+      it("should return 400 if allowedEventIds contains invalid ID", async () => {
+        const validId = new mongoose.Types.ObjectId().toString();
+        mockReq.body = {
+          userId: testUserId,
+          discountPercent: 50,
+          allowedEventIds: [validId, "invalid-id"],
+        };
+
+        // Make isValid return false for the invalid ID
+        isValidSpy.mockImplementation((id: string) => {
+          return id !== "invalid-id";
+        });
+
+        await StaffCodeCreationController.createStaffCode(
+          mockReq as Request,
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(400);
+        expect(jsonMock).toHaveBeenCalledWith({
+          success: false,
+          message: "Invalid event ID in allowedEventIds.",
+        });
+      });
+
+      it("should accept valid allowedEventIds", async () => {
+        const eventId1 = new mongoose.Types.ObjectId().toString();
+        const eventId2 = new mongoose.Types.ObjectId().toString();
+        mockReq.body = {
+          userId: testUserId,
+          discountPercent: 50,
+          allowedEventIds: [eventId1, eventId2],
+        };
+
+        vi.mocked(PromoCode.generateUniqueCode).mockResolvedValue("STAFF123");
+        const mockPromoCode = {
+          _id: new mongoose.Types.ObjectId(),
+          code: "STAFF123",
+          type: "staff_access",
+          discountPercent: 50,
+          ownerId: testUserId,
+          allowedEventIds: [{ title: "Event 1" }, { title: "Event 2" }],
+          isActive: true,
+          createdBy: "admin",
+          populate: vi.fn().mockReturnThis(),
+        };
+        vi.mocked(PromoCode.create).mockResolvedValue(mockPromoCode as any);
+        vi.mocked(EmailService.sendStaffPromoCodeEmail).mockResolvedValue(
+          undefined,
+        );
+
+        await StaffCodeCreationController.createStaffCode(
+          mockReq as Request,
+          mockRes as Response,
+        );
+
+        expect(PromoCode.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            allowedEventIds: expect.arrayContaining([
+              expect.any(mongoose.Types.ObjectId),
+            ]),
+          }),
+        );
+      });
+
+      it("should accept empty allowedEventIds array", async () => {
+        mockReq.body = {
+          userId: testUserId,
+          discountPercent: 50,
+          allowedEventIds: [],
+        };
+
+        vi.mocked(PromoCode.generateUniqueCode).mockResolvedValue("STAFF123");
+        const mockPromoCode = {
+          _id: new mongoose.Types.ObjectId(),
+          code: "STAFF123",
+          type: "staff_access",
+          discountPercent: 50,
+          ownerId: testUserId,
+          isActive: true,
+          createdBy: "admin",
+          populate: vi.fn().mockReturnThis(),
+        };
+        vi.mocked(PromoCode.create).mockResolvedValue(mockPromoCode as any);
+        vi.mocked(EmailService.sendStaffPromoCodeEmail).mockResolvedValue(
+          undefined,
+        );
+
+        await StaffCodeCreationController.createStaffCode(
+          mockReq as Request,
+          mockRes as Response,
+        );
+
+        expect(PromoCode.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            allowedEventIds: undefined,
+          }),
         );
       });
     });
@@ -428,7 +539,7 @@ describe("StaffCodeCreationController", () => {
 
         await StaffCodeCreationController.createStaffCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -447,7 +558,7 @@ describe("StaffCodeCreationController", () => {
 
         await StaffCodeCreationController.createStaffCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -479,19 +590,19 @@ describe("StaffCodeCreationController", () => {
         };
         vi.mocked(PromoCode.create).mockResolvedValue(mockPromoCode as any);
         vi.mocked(EmailService.sendStaffPromoCodeEmail).mockResolvedValue(
-          undefined
+          undefined,
         );
 
         await StaffCodeCreationController.createStaffCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(201);
         expect(PromoCode.create).toHaveBeenCalledWith(
           expect.objectContaining({
             expiresAt: expect.any(Date),
-          })
+          }),
         );
       });
 
@@ -514,18 +625,18 @@ describe("StaffCodeCreationController", () => {
         };
         vi.mocked(PromoCode.create).mockResolvedValue(mockPromoCode as any);
         vi.mocked(EmailService.sendStaffPromoCodeEmail).mockResolvedValue(
-          undefined
+          undefined,
         );
 
         await StaffCodeCreationController.createStaffCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(PromoCode.create).toHaveBeenCalledWith(
           expect.objectContaining({
             expiresAt: undefined,
-          })
+          }),
         );
       });
     });
@@ -562,19 +673,19 @@ describe("StaffCodeCreationController", () => {
         };
         vi.mocked(PromoCode.create).mockResolvedValue(mockPromoCode as any);
         vi.mocked(EmailService.sendStaffPromoCodeEmail).mockResolvedValue(
-          undefined
+          undefined,
         );
 
         await StaffCodeCreationController.createStaffCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(PromoCode.generateUniqueCode).toHaveBeenCalled();
         expect(PromoCode.create).toHaveBeenCalledWith(
           expect.objectContaining({
             code: "UNIQUE123",
-          })
+          }),
         );
       });
 
@@ -598,18 +709,18 @@ describe("StaffCodeCreationController", () => {
         };
         vi.mocked(PromoCode.create).mockResolvedValue(mockPromoCode as any);
         vi.mocked(EmailService.sendStaffPromoCodeEmail).mockResolvedValue(
-          undefined
+          undefined,
         );
 
         await StaffCodeCreationController.createStaffCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(PromoCode.create).toHaveBeenCalledWith(
           expect.objectContaining({
             type: "staff_access",
-          })
+          }),
         );
       });
 
@@ -633,18 +744,18 @@ describe("StaffCodeCreationController", () => {
         };
         vi.mocked(PromoCode.create).mockResolvedValue(mockPromoCode as any);
         vi.mocked(EmailService.sendStaffPromoCodeEmail).mockResolvedValue(
-          undefined
+          undefined,
         );
 
         await StaffCodeCreationController.createStaffCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(PromoCode.create).toHaveBeenCalledWith(
           expect.objectContaining({
             createdBy: "admin",
-          })
+          }),
         );
       });
 
@@ -674,18 +785,18 @@ describe("StaffCodeCreationController", () => {
         };
         vi.mocked(PromoCode.create).mockResolvedValue(mockPromoCode as any);
         vi.mocked(EmailService.sendStaffPromoCodeEmail).mockResolvedValue(
-          undefined
+          undefined,
         );
 
         await StaffCodeCreationController.createStaffCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(PromoCode.create).toHaveBeenCalledWith(
           expect.objectContaining({
             createdBy: "admin@test.com",
-          })
+          }),
         );
       });
     });
@@ -724,12 +835,12 @@ describe("StaffCodeCreationController", () => {
         };
         vi.mocked(PromoCode.create).mockResolvedValue(mockPromoCode as any);
         vi.mocked(EmailService.sendStaffPromoCodeEmail).mockResolvedValue(
-          undefined
+          undefined,
         );
 
         await StaffCodeCreationController.createStaffCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(EmailService.sendStaffPromoCodeEmail).toHaveBeenCalledWith({
@@ -763,18 +874,18 @@ describe("StaffCodeCreationController", () => {
         };
         vi.mocked(PromoCode.create).mockResolvedValue(mockPromoCode as any);
         vi.mocked(EmailService.sendStaffPromoCodeEmail).mockRejectedValue(
-          new Error("Email service down")
+          new Error("Email service down"),
         );
 
         await StaffCodeCreationController.createStaffCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(201);
         expect(consoleErrorSpy).toHaveBeenCalledWith(
           "Failed to send notifications for staff promo code:",
-          expect.any(Error)
+          expect.any(Error),
         );
       });
     });
@@ -797,7 +908,7 @@ describe("StaffCodeCreationController", () => {
         const codeId = new mongoose.Types.ObjectId();
         const createdAt = new Date();
         vi.mocked(PromoCode.generateUniqueCode).mockResolvedValue(
-          "RESPONSE123"
+          "RESPONSE123",
         );
         const mockPromoCode = {
           _id: codeId,
@@ -818,12 +929,12 @@ describe("StaffCodeCreationController", () => {
         };
         vi.mocked(PromoCode.create).mockResolvedValue(mockPromoCode as any);
         vi.mocked(EmailService.sendStaffPromoCodeEmail).mockResolvedValue(
-          undefined
+          undefined,
         );
 
         await StaffCodeCreationController.createStaffCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(201);
@@ -875,12 +986,12 @@ describe("StaffCodeCreationController", () => {
         };
         vi.mocked(PromoCode.create).mockResolvedValue(mockPromoCode as any);
         vi.mocked(EmailService.sendStaffPromoCodeEmail).mockResolvedValue(
-          undefined
+          undefined,
         );
 
         await StaffCodeCreationController.createStaffCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(jsonMock).toHaveBeenCalledWith(
@@ -890,7 +1001,7 @@ describe("StaffCodeCreationController", () => {
                 ownerName: "testuser",
               }),
             }),
-          })
+          }),
         );
       });
     });
@@ -909,12 +1020,12 @@ describe("StaffCodeCreationController", () => {
         mockReq.body = { userId: testUserId, discountPercent: 50 };
 
         vi.mocked(PromoCode.generateUniqueCode).mockRejectedValue(
-          new Error("Generation failed")
+          new Error("Generation failed"),
         );
 
         await StaffCodeCreationController.createStaffCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -932,7 +1043,7 @@ describe("StaffCodeCreationController", () => {
 
         await StaffCodeCreationController.createStaffCode(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -942,7 +1053,7 @@ describe("StaffCodeCreationController", () => {
         });
         expect(consoleErrorSpy).toHaveBeenCalledWith(
           "Error creating staff promo code:",
-          expect.any(Error)
+          expect.any(Error),
         );
       });
     });

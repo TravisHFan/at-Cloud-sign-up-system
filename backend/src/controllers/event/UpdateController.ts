@@ -473,4 +473,119 @@ export class UpdateController {
       });
     }
   }
+
+  /**
+   * Update YouTube URL for a completed/past event
+   * Only Super Admin, Administrator, event creator, or co-organizers can update
+   */
+  static async updateYoutubeUrl(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { youtubeUrl } = req.body;
+
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        res.status(400).json({
+          success: false,
+          message: "Invalid event ID.",
+        });
+        return;
+      }
+
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          message: "Authentication required.",
+        });
+        return;
+      }
+
+      const event = await Event.findById(id);
+
+      if (!event) {
+        res.status(404).json({
+          success: false,
+          message: "Event not found.",
+        });
+        return;
+      }
+
+      // Only allow for completed events
+      if (event.status !== "completed") {
+        res.status(400).json({
+          success: false,
+          message: "YouTube URL can only be added to completed events.",
+        });
+        return;
+      }
+
+      // Check permissions: Super Admin, Administrator, creator, or co-organizer
+      const userId = EventController.toIdString(req.user._id);
+      const isAdmin = ["Super Admin", "Administrator"].includes(req.user.role);
+      const isCreator = EventController.toIdString(event.createdBy) === userId;
+      const isCoOrganizer = event.organizerDetails?.some(
+        (org: { userId?: unknown }) =>
+          org.userId && EventController.toIdString(org.userId) === userId,
+      );
+
+      if (!isAdmin && !isCreator && !isCoOrganizer) {
+        res.status(403).json({
+          success: false,
+          message:
+            "You do not have permission to update this event's YouTube URL.",
+        });
+        return;
+      }
+
+      // Validate YouTube URL format if provided
+      if (youtubeUrl && typeof youtubeUrl === "string" && youtubeUrl.trim()) {
+        const urlPattern = /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\/.+/;
+        if (!urlPattern.test(youtubeUrl.trim())) {
+          res.status(400).json({
+            success: false,
+            message:
+              "Invalid YouTube URL. Please provide a valid YouTube link.",
+          });
+          return;
+        }
+        event.youtubeUrl = youtubeUrl.trim();
+      } else {
+        // Allow clearing the URL
+        event.youtubeUrl = undefined;
+      }
+
+      await event.save();
+
+      // Invalidate cache
+      await CachePatterns.invalidateEventCache(id);
+
+      // Build response with proper field mapping
+      const eventResponse =
+        await ResponseBuilderService.buildEventWithRegistrations(
+          id,
+          req.user ? EventController.toIdString(req.user._id) : undefined,
+          (req.user as { role?: string } | undefined)?.role,
+        );
+
+      res.status(200).json({
+        success: true,
+        message: youtubeUrl
+          ? "YouTube URL updated successfully."
+          : "YouTube URL removed successfully.",
+        data: { event: eventResponse },
+      });
+    } catch (error: unknown) {
+      console.error("Update YouTube URL error:", error);
+      CorrelatedLogger.fromRequest(req, "UpdateController").error(
+        "updateYoutubeUrl failed",
+        error as Error,
+        undefined,
+        { eventId: req.params?.id },
+      );
+
+      res.status(500).json({
+        success: false,
+        message: "Failed to update YouTube URL.",
+      });
+    }
+  }
 }

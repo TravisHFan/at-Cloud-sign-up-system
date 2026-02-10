@@ -126,7 +126,7 @@ describe("EventReminderController", () => {
 
         await EventReminderController.sendEventReminderNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -141,7 +141,7 @@ describe("EventReminderController", () => {
 
         await EventReminderController.sendEventReminderNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -156,7 +156,7 @@ describe("EventReminderController", () => {
 
         await EventReminderController.sendEventReminderNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -171,7 +171,7 @@ describe("EventReminderController", () => {
 
         await EventReminderController.sendEventReminderNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -196,12 +196,12 @@ describe("EventReminderController", () => {
           true,
         ]);
         vi.mocked(
-          UnifiedMessageController.createTargetedSystemMessage
+          UnifiedMessageController.createTargetedSystemMessage,
         ).mockResolvedValue({} as any);
 
         await EventReminderController.sendEventReminderNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -222,12 +222,12 @@ describe("EventReminderController", () => {
           true,
         ]);
         vi.mocked(
-          UnifiedMessageController.createTargetedSystemMessage
+          UnifiedMessageController.createTargetedSystemMessage,
         ).mockResolvedValue({} as any);
 
         await EventReminderController.sendEventReminderNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -241,13 +241,13 @@ describe("EventReminderController", () => {
       it("should return success with 0 recipients if no participants or guests", async () => {
         mockReq.body.reminderType = "1h"; // Skip 24h dedup logic
         vi.mocked(EmailRecipientUtils.getEventParticipants).mockResolvedValue(
-          []
+          [],
         );
         vi.mocked(EmailRecipientUtils.getEventGuests).mockResolvedValue([]);
 
         await EventReminderController.sendEventReminderNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -285,12 +285,12 @@ describe("EventReminderController", () => {
           true,
         ]);
         vi.mocked(
-          UnifiedMessageController.createTargetedSystemMessage
+          UnifiedMessageController.createTargetedSystemMessage,
         ).mockResolvedValue({} as any);
 
         await EventReminderController.sendEventReminderNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(EmailService.sendEventReminderEmailBulk).toHaveBeenCalledWith(
@@ -299,14 +299,14 @@ describe("EventReminderController", () => {
             { email: "user2@test.com", name: "User Two" },
           ]),
           expect.objectContaining({ title: "Test Event" }),
-          "1h"
+          "1h",
         );
         expect(statusMock).toHaveBeenCalledWith(200);
       });
 
       it("should send emails to guests", async () => {
         vi.mocked(EmailRecipientUtils.getEventParticipants).mockResolvedValue(
-          []
+          [],
         );
         vi.mocked(EmailRecipientUtils.getEventGuests).mockResolvedValue([
           { email: "guest@test.com", firstName: "Guest", lastName: "User" },
@@ -317,7 +317,7 @@ describe("EventReminderController", () => {
 
         await EventReminderController.sendEventReminderNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(EmailService.sendEventReminderEmailBulk).toHaveBeenCalledWith(
@@ -325,7 +325,7 @@ describe("EventReminderController", () => {
             { email: "guest@test.com", name: "Guest User" },
           ]),
           expect.any(Object),
-          "1h"
+          "1h",
         );
       });
     });
@@ -346,23 +346,23 @@ describe("EventReminderController", () => {
           true,
         ]);
         vi.mocked(
-          UnifiedMessageController.createTargetedSystemMessage
+          UnifiedMessageController.createTargetedSystemMessage,
         ).mockResolvedValue({} as any);
 
         await EventReminderController.sendEventReminderNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(
-          UnifiedMessageController.createTargetedSystemMessage
+          UnifiedMessageController.createTargetedSystemMessage,
         ).toHaveBeenCalledWith(
           expect.objectContaining({
             title: expect.stringContaining("Event Reminder"),
             type: "announcement",
           }),
           ["user1"],
-          expect.any(Object)
+          expect.any(Object),
         );
       });
 
@@ -381,12 +381,12 @@ describe("EventReminderController", () => {
           true,
         ]);
         vi.mocked(
-          UnifiedMessageController.createTargetedSystemMessage
+          UnifiedMessageController.createTargetedSystemMessage,
         ).mockRejectedValue(new Error("System message failed"));
 
         await EventReminderController.sendEventReminderNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -401,7 +401,7 @@ describe("EventReminderController", () => {
 
         await EventReminderController.sendEventReminderNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -409,20 +409,20 @@ describe("EventReminderController", () => {
           expect.objectContaining({
             success: false,
             message: "Failed to send event reminder notifications",
-          })
+          }),
         );
       });
 
       it("should continue with empty participants if fetching fails", async () => {
         mockReq.body.reminderType = "1h";
         vi.mocked(EmailRecipientUtils.getEventParticipants).mockRejectedValue(
-          new Error("Failed to fetch")
+          new Error("Failed to fetch"),
         );
         vi.mocked(EmailRecipientUtils.getEventGuests).mockResolvedValue([]);
 
         await EventReminderController.sendEventReminderNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         // Controller catches this and continues with empty participants
@@ -433,6 +433,57 @@ describe("EventReminderController", () => {
           message: "Event reminder notification sent to 0 recipient(s)",
           recipientCount: 0,
         });
+      });
+
+      it("should normalize non-array participants to empty array", async () => {
+        mockReq.body.reminderType = "1h";
+        // Mock returns null instead of array
+        vi.mocked(EmailRecipientUtils.getEventParticipants).mockResolvedValue(
+          null as any,
+        );
+        vi.mocked(EmailRecipientUtils.getEventGuests).mockResolvedValue([]);
+
+        await EventReminderController.sendEventReminderNotification(
+          mockReq as unknown as Request,
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(200);
+        expect(jsonMock).toHaveBeenCalledWith({
+          success: true,
+          message: "Event reminder notification sent to 0 recipient(s)",
+          recipientCount: 0,
+        });
+      });
+
+      it("should continue with empty guests if fetching fails", async () => {
+        mockReq.body.reminderType = "1h";
+        vi.mocked(EmailRecipientUtils.getEventParticipants).mockResolvedValue([
+          {
+            email: "user@test.com",
+            firstName: "Test",
+            lastName: "User",
+            _id: "user1",
+          },
+        ]);
+        vi.mocked(EmailRecipientUtils.getEventGuests).mockRejectedValue(
+          new Error("Failed to fetch guests"),
+        );
+        vi.mocked(EmailService.sendEventReminderEmailBulk).mockResolvedValue([
+          true,
+        ]);
+        vi.mocked(
+          UnifiedMessageController.createTargetedSystemMessage,
+        ).mockResolvedValue({} as any);
+
+        await EventReminderController.sendEventReminderNotification(
+          mockReq as unknown as Request,
+          mockRes as Response,
+        );
+
+        // Controller catches guest fetch error and continues
+        expect(consoleWarnSpy).toHaveBeenCalled();
+        expect(statusMock).toHaveBeenCalledWith(200);
       });
     });
   });

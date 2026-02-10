@@ -89,7 +89,7 @@ describe("EventCreatedController", () => {
 
         await EventCreatedController.sendEventCreatedNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -104,7 +104,7 @@ describe("EventCreatedController", () => {
 
         await EventCreatedController.sendEventCreatedNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -115,7 +115,7 @@ describe("EventCreatedController", () => {
 
         await EventCreatedController.sendEventCreatedNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -125,12 +125,12 @@ describe("EventCreatedController", () => {
     describe("No Recipients", () => {
       it("should return success with 0 recipients when no eligible users found", async () => {
         vi.mocked(EmailRecipientUtils.getActiveVerifiedUsers).mockResolvedValue(
-          []
+          [],
         );
 
         await EventCreatedController.sendEventCreatedNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -149,13 +149,13 @@ describe("EventCreatedController", () => {
           { email: "user2@test.com", firstName: "User", lastName: "Two" },
         ];
         vi.mocked(EmailRecipientUtils.getActiveVerifiedUsers).mockResolvedValue(
-          recipients
+          recipients,
         );
         vi.mocked(EmailService.sendEventCreatedEmail).mockResolvedValue(true);
 
         await EventCreatedController.sendEventCreatedNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(EmailService.sendEventCreatedEmail).toHaveBeenCalledTimes(2);
@@ -170,16 +170,16 @@ describe("EventCreatedController", () => {
       it("should pass excludeEmail to getActiveVerifiedUsers", async () => {
         mockReq.body.excludeEmail = "organizer@test.com";
         vi.mocked(EmailRecipientUtils.getActiveVerifiedUsers).mockResolvedValue(
-          []
+          [],
         );
 
         await EventCreatedController.sendEventCreatedNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(EmailRecipientUtils.getActiveVerifiedUsers).toHaveBeenCalledWith(
-          "organizer@test.com"
+          "organizer@test.com",
         );
       });
 
@@ -196,13 +196,13 @@ describe("EventCreatedController", () => {
           { email: "user@test.com", firstName: "Test", lastName: "User" },
         ];
         vi.mocked(EmailRecipientUtils.getActiveVerifiedUsers).mockResolvedValue(
-          recipients
+          recipients,
         );
         vi.mocked(EmailService.sendEventCreatedEmail).mockResolvedValue(true);
 
         await EventCreatedController.sendEventCreatedNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(EmailService.sendEventCreatedEmail).toHaveBeenCalledWith(
@@ -216,7 +216,7 @@ describe("EventCreatedController", () => {
             zoomLink: "https://zoom.us/test",
             purpose: "Team meeting",
             format: "hybrid",
-          })
+          }),
         );
       });
 
@@ -226,7 +226,7 @@ describe("EventCreatedController", () => {
           { email: "user2@test.com", firstName: "User", lastName: "Two" },
         ];
         vi.mocked(EmailRecipientUtils.getActiveVerifiedUsers).mockResolvedValue(
-          recipients
+          recipients,
         );
         vi.mocked(EmailService.sendEventCreatedEmail)
           .mockResolvedValueOnce(true)
@@ -234,7 +234,7 @@ describe("EventCreatedController", () => {
 
         await EventCreatedController.sendEventCreatedNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         // Should still return success with full recipient count
@@ -250,12 +250,12 @@ describe("EventCreatedController", () => {
     describe("Error Handling", () => {
       it("should return 500 on error", async () => {
         vi.mocked(EmailRecipientUtils.getActiveVerifiedUsers).mockRejectedValue(
-          new Error("Database error")
+          new Error("Database error"),
         );
 
         await EventCreatedController.sendEventCreatedNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -263,6 +263,24 @@ describe("EventCreatedController", () => {
           success: false,
           message: "Failed to send event creation notifications",
           error: "Database error",
+        });
+      });
+
+      it("should return Unknown error for non-Error throws", async () => {
+        vi.mocked(EmailRecipientUtils.getActiveVerifiedUsers).mockRejectedValue(
+          "string error",
+        );
+
+        await EventCreatedController.sendEventCreatedNotification(
+          mockReq as unknown as Request,
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(jsonMock).toHaveBeenCalledWith({
+          success: false,
+          message: "Failed to send event creation notifications",
+          error: "Unknown error",
         });
       });
     });

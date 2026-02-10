@@ -77,6 +77,7 @@ export interface EventData {
   timeZone?: string;
   flyerUrl?: string; // Optional Event Flyer image URL
   secondaryFlyerUrl?: string; // Optional Secondary Event Flyer image URL (for events only)
+  youtubeUrl?: string; // Optional YouTube video URL (only for completed events)
 
   // Programs integration - many-to-many relationship
   programLabels?: string[]; // Array of program IDs this event belongs to
@@ -145,7 +146,7 @@ export const PUBLISH_FIELD_LABELS: Record<string, string> = {
 };
 
 export function getMissingNecessaryFieldsForPublishFrontend(
-  event: Partial<EventData>
+  event: Partial<EventData>,
 ): string[] {
   const needed = NECESSARY_PUBLISH_FIELDS_BY_FORMAT[event.format || ""] || [];
   const missing: string[] = [];
@@ -163,7 +164,7 @@ export function getMissingNecessaryFieldsForPublishFrontend(
   // Check if at least one role is open to public
   const roles = event.roles || [];
   const hasPublicRole = roles.some(
-    (r) => (r as { openToPublic?: boolean }).openToPublic
+    (r) => (r as { openToPublic?: boolean }).openToPublic,
   );
   if (!hasPublicRole) {
     missing.push("roles");
@@ -173,7 +174,7 @@ export function getMissingNecessaryFieldsForPublishFrontend(
 }
 
 export function buildPublishReadinessMessage(
-  event: Partial<EventData>
+  event: Partial<EventData>,
 ): string {
   const missing = getMissingNecessaryFieldsForPublishFrontend(event);
   if (!missing.length) return "All required fields present for publishing.";

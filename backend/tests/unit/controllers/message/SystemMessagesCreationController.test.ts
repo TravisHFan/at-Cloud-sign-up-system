@@ -140,7 +140,7 @@ describe("SystemMessagesCreationController", () => {
 
         await SystemMessagesCreationController.createSystemMessage(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(401);
@@ -159,7 +159,7 @@ describe("SystemMessagesCreationController", () => {
 
         await SystemMessagesCreationController.createSystemMessage(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(404);
@@ -177,7 +177,7 @@ describe("SystemMessagesCreationController", () => {
 
         await SystemMessagesCreationController.createSystemMessage(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(403);
@@ -199,7 +199,7 @@ describe("SystemMessagesCreationController", () => {
       it("should create system message successfully", async () => {
         await SystemMessagesCreationController.createSystemMessage(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(201);
@@ -207,14 +207,14 @@ describe("SystemMessagesCreationController", () => {
           expect.objectContaining({
             success: true,
             message: "System message created successfully",
-          })
+          }),
         );
       });
 
       it("should emit socket updates to all users", async () => {
         await SystemMessagesCreationController.createSystemMessage(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(socketService.emitSystemMessageUpdate).toHaveBeenCalledTimes(3);
@@ -224,7 +224,7 @@ describe("SystemMessagesCreationController", () => {
       it("should invalidate cache for all users", async () => {
         await SystemMessagesCreationController.createSystemMessage(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(CachePatterns.invalidateUserCache).toHaveBeenCalledTimes(3);
@@ -244,12 +244,12 @@ describe("SystemMessagesCreationController", () => {
 
         await SystemMessagesCreationController.createSystemMessage(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(User.find).toHaveBeenCalledWith(
           { role: { $in: ["Leader", "Admin"] } },
-          "_id role"
+          "_id role",
         );
       });
 
@@ -259,7 +259,7 @@ describe("SystemMessagesCreationController", () => {
 
         await SystemMessagesCreationController.createSystemMessage(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         // Should emit to user1 and user3, but not user2
@@ -278,7 +278,7 @@ describe("SystemMessagesCreationController", () => {
       it("should include creator by default", async () => {
         await SystemMessagesCreationController.createSystemMessage(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(201);
@@ -291,7 +291,7 @@ describe("SystemMessagesCreationController", () => {
                 hideCreator: false,
               }),
             }),
-          })
+          }),
         );
       });
 
@@ -300,7 +300,7 @@ describe("SystemMessagesCreationController", () => {
 
         await SystemMessagesCreationController.createSystemMessage(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(201);
@@ -313,7 +313,7 @@ describe("SystemMessagesCreationController", () => {
                 hideCreator: true,
               }),
             }),
-          })
+          }),
         );
       });
 
@@ -322,7 +322,7 @@ describe("SystemMessagesCreationController", () => {
 
         await SystemMessagesCreationController.createSystemMessage(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(201);
@@ -334,7 +334,7 @@ describe("SystemMessagesCreationController", () => {
                 hideCreator: true,
               }),
             }),
-          })
+          }),
         );
       });
     });
@@ -347,7 +347,7 @@ describe("SystemMessagesCreationController", () => {
 
         await SystemMessagesCreationController.createSystemMessage(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -370,7 +370,7 @@ describe("SystemMessagesCreationController", () => {
 
         await SystemMessagesCreationController.createSystemMessage(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -378,6 +378,59 @@ describe("SystemMessagesCreationController", () => {
           success: false,
           message: "Title and content are required",
         });
+      });
+    });
+
+    describe("Boolean String Parsing", () => {
+      beforeEach(() => {
+        vi.mocked(User.findById).mockReturnValue({
+          select: vi.fn().mockResolvedValue(createMockCreator()),
+        } as any);
+        vi.mocked(User.find).mockResolvedValue(createMockUsers() as any);
+      });
+
+      it("should parse includeCreator string 'false' as boolean false", async () => {
+        (mockReq.body as Record<string, unknown>).includeCreator = "false";
+
+        await SystemMessagesCreationController.createSystemMessage(
+          mockReq as unknown as Request,
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(201);
+      });
+
+      it("should parse includeCreator string 'true' as boolean true", async () => {
+        (mockReq.body as Record<string, unknown>).includeCreator = "true";
+
+        await SystemMessagesCreationController.createSystemMessage(
+          mockReq as unknown as Request,
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(201);
+      });
+
+      it("should parse hideCreator string 'true' as boolean true", async () => {
+        (mockReq.body as Record<string, unknown>).hideCreator = "true";
+
+        await SystemMessagesCreationController.createSystemMessage(
+          mockReq as unknown as Request,
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(201);
+      });
+
+      it("should parse hideCreator string 'false' as boolean false", async () => {
+        (mockReq.body as Record<string, unknown>).hideCreator = "false";
+
+        await SystemMessagesCreationController.createSystemMessage(
+          mockReq as unknown as Request,
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(201);
       });
     });
   });

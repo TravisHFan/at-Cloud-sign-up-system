@@ -50,6 +50,8 @@ export interface IEvent extends Document {
   flyerUrl?: string;
   // Optional Secondary Event Flyer image URL (for events only, not programs)
   secondaryFlyerUrl?: string;
+  // Optional YouTube video URL for completed/past events
+  youtubeUrl?: string;
 
   // Role-based System (core feature)
   roles: IEventRole[]; // Array of event roles with signups
@@ -174,7 +176,7 @@ const eventRoleSchema = new Schema(
       default: false,
     },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const organizerDetailSchema = new Schema(
@@ -212,7 +214,7 @@ const organizerDetailSchema = new Schema(
       enum: ["male", "female"],
     },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const eventSchema: Schema = new Schema(
@@ -355,6 +357,26 @@ const eventSchema: Schema = new Schema(
         },
         message:
           "Secondary flyer URL must be an absolute http(s) URL or a path starting with /uploads/",
+      },
+      default: undefined,
+    },
+
+    // Optional YouTube video URL for completed/past events
+    youtubeUrl: {
+      type: String,
+      trim: true,
+      maxlength: [500, "YouTube URL cannot exceed 500 characters"],
+      validate: {
+        validator: function (value: string | undefined | null) {
+          if (value === undefined || value === null || value === "")
+            return true;
+          const v = String(value).trim();
+          if (!v) return true;
+          // Accept YouTube URLs (youtube.com, youtu.be)
+          return /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//.test(v);
+        },
+        message:
+          "YouTube URL must be a valid YouTube link (youtube.com or youtu.be)",
       },
       default: undefined,
     },
@@ -529,7 +551,7 @@ const eventSchema: Schema = new Schema(
             validate: {
               validator: function (
                 this: { isFree: boolean },
-                value: number | undefined
+                value: number | undefined,
               ) {
                 // If isFree is false, price is required and must be >= 1
                 if (!this.isFree) {
@@ -543,7 +565,7 @@ const eventSchema: Schema = new Schema(
             },
           },
         },
-        { _id: false }
+        { _id: false },
       ),
       default: undefined, // Don't set default here - let application code handle it
     },
@@ -559,7 +581,7 @@ const eventSchema: Schema = new Schema(
           E: { type: String, trim: true, maxlength: 200 },
           F: { type: String, trim: true, maxlength: 200 },
         },
-        { _id: false }
+        { _id: false },
       ),
       default: undefined,
     },
@@ -591,7 +613,7 @@ const eventSchema: Schema = new Schema(
         return r;
       },
     },
-  }
+  },
 );
 
 // Indexes for performance

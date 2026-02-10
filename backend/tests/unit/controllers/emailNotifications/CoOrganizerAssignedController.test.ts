@@ -97,7 +97,7 @@ describe("CoOrganizerAssignedController", () => {
 
         await CoOrganizerAssignedController.sendCoOrganizerAssignedNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -112,7 +112,7 @@ describe("CoOrganizerAssignedController", () => {
 
         await CoOrganizerAssignedController.sendCoOrganizerAssignedNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -123,7 +123,7 @@ describe("CoOrganizerAssignedController", () => {
 
         await CoOrganizerAssignedController.sendCoOrganizerAssignedNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -134,7 +134,7 @@ describe("CoOrganizerAssignedController", () => {
 
         await CoOrganizerAssignedController.sendCoOrganizerAssignedNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -145,7 +145,7 @@ describe("CoOrganizerAssignedController", () => {
 
         await CoOrganizerAssignedController.sendCoOrganizerAssignedNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -160,7 +160,7 @@ describe("CoOrganizerAssignedController", () => {
 
         await CoOrganizerAssignedController.sendCoOrganizerAssignedNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -170,12 +170,12 @@ describe("CoOrganizerAssignedController", () => {
     describe("Successful Notification", () => {
       it("should send email to co-organizer and return success", async () => {
         vi.mocked(EmailService.sendCoOrganizerAssignedEmail).mockResolvedValue(
-          true
+          true,
         );
 
         await CoOrganizerAssignedController.sendCoOrganizerAssignedNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(EmailService.sendCoOrganizerAssignedEmail).toHaveBeenCalledWith(
@@ -187,7 +187,7 @@ describe("CoOrganizerAssignedController", () => {
             time: "10:00 AM",
             location: "Test Venue",
           },
-          { firstName: "Main", lastName: "Organizer" }
+          { firstName: "Main", lastName: "Organizer" },
         );
         expect(statusMock).toHaveBeenCalledWith(200);
         expect(jsonMock).toHaveBeenCalledWith({
@@ -200,12 +200,12 @@ describe("CoOrganizerAssignedController", () => {
 
       it("should return 0 recipients when email fails", async () => {
         vi.mocked(EmailService.sendCoOrganizerAssignedEmail).mockResolvedValue(
-          false
+          false,
         );
 
         await CoOrganizerAssignedController.sendCoOrganizerAssignedNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(jsonMock).toHaveBeenCalledWith({
@@ -223,31 +223,31 @@ describe("CoOrganizerAssignedController", () => {
         };
         mockReq.body.assignedBy = { firstName: "Jane" };
         vi.mocked(EmailService.sendCoOrganizerAssignedEmail).mockResolvedValue(
-          true
+          true,
         );
 
         await CoOrganizerAssignedController.sendCoOrganizerAssignedNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(EmailService.sendCoOrganizerAssignedEmail).toHaveBeenCalledWith(
           "test@test.com",
           { firstName: "John", lastName: "" },
           expect.any(Object),
-          { firstName: "Jane", lastName: "" }
+          { firstName: "Jane", lastName: "" },
         );
       });
 
       it("should use TBD for missing event details", async () => {
         mockReq.body.eventData = { title: "Test Event" };
         vi.mocked(EmailService.sendCoOrganizerAssignedEmail).mockResolvedValue(
-          true
+          true,
         );
 
         await CoOrganizerAssignedController.sendCoOrganizerAssignedNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(EmailService.sendCoOrganizerAssignedEmail).toHaveBeenCalledWith(
@@ -259,7 +259,7 @@ describe("CoOrganizerAssignedController", () => {
             time: "TBD",
             location: "TBD",
           },
-          expect.any(Object)
+          expect.any(Object),
         );
       });
     });
@@ -267,12 +267,12 @@ describe("CoOrganizerAssignedController", () => {
     describe("Error Handling", () => {
       it("should return 500 on error", async () => {
         vi.mocked(EmailService.sendCoOrganizerAssignedEmail).mockRejectedValue(
-          new Error("Email failed")
+          new Error("Email failed"),
         );
 
         await CoOrganizerAssignedController.sendCoOrganizerAssignedNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -280,6 +280,24 @@ describe("CoOrganizerAssignedController", () => {
           success: false,
           message: "Failed to send co-organizer assignment notification",
           error: "Email failed",
+        });
+      });
+
+      it("should return Unknown error for non-Error throws", async () => {
+        vi.mocked(EmailService.sendCoOrganizerAssignedEmail).mockRejectedValue(
+          "string error",
+        );
+
+        await CoOrganizerAssignedController.sendCoOrganizerAssignedNotification(
+          mockReq as unknown as Request,
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(jsonMock).toHaveBeenCalledWith({
+          success: false,
+          message: "Failed to send co-organizer assignment notification",
+          error: "Unknown error",
         });
       });
     });

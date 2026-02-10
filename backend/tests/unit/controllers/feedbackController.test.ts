@@ -690,6 +690,61 @@ describe("FeedbackController", () => {
           .mock.calls[0];
         expect(emailCall[2].attachments[0].filename).toBe("feedback.gif");
       });
+
+      it("should use empty extension for unknown content types", async () => {
+        process.env.SYSTEM_EMAIL = "admin@example.com";
+        mockReq.body = {
+          type: "bug",
+          subject: "Bug with webp image",
+          message: 'Message <img src="http://example.com/image.webp"/>',
+        };
+
+        (global.fetch as Mock).mockResolvedValueOnce({
+          ok: true,
+          headers: {
+            get: (header: string) =>
+              header === "content-type" ? "image/webp" : null,
+          },
+          arrayBuffer: async () => new ArrayBuffer(100),
+        });
+
+        await FeedbackController.submitFeedback(
+          mockReq as Request,
+          mockRes as Response,
+        );
+
+        const emailCall = (EmailService.sendGenericNotificationEmail as Mock)
+          .mock.calls[0];
+        // No extension when content-type is not png/jpeg/gif
+        expect(emailCall[2].attachments[0].filename).toBe("feedback");
+      });
+
+      it("should handle null content-type header", async () => {
+        process.env.SYSTEM_EMAIL = "admin@example.com";
+        mockReq.body = {
+          type: "bug",
+          subject: "Bug with no content-type",
+          message: 'Message <img src="http://example.com/image.unknown"/>',
+        };
+
+        (global.fetch as Mock).mockResolvedValueOnce({
+          ok: true,
+          headers: {
+            get: () => null, // content-type is null
+          },
+          arrayBuffer: async () => new ArrayBuffer(100),
+        });
+
+        await FeedbackController.submitFeedback(
+          mockReq as Request,
+          mockRes as Response,
+        );
+
+        const emailCall = (EmailService.sendGenericNotificationEmail as Mock)
+          .mock.calls[0];
+        expect(emailCall[2].attachments[0].filename).toBe("feedback");
+        expect(emailCall[2].attachments[0].contentType).toBeUndefined();
+      });
     });
 
     describe("system email configuration", () => {

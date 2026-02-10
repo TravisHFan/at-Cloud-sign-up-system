@@ -364,6 +364,30 @@ describe("TrendsAnalyticsController", () => {
         expect(response.success).toBe(true);
         // The data should still be processed without errors
       });
+
+      it("should create new map entry when donation month has no purchase data", async () => {
+        // Donation data for a month with NO purchase data tests the fallback:
+        // const existing = monthsMap.get(key) || { programRevenue: 0, donationRevenue: 0 }
+        const farFutureYear = 2098;
+        vi.mocked(Purchase.aggregate).mockResolvedValue([]);
+        vi.mocked(DonationTransaction.aggregate).mockResolvedValue([
+          {
+            _id: { year: farFutureYear, month: 6 },
+            revenue: 7500,
+            count: 3,
+          },
+        ]);
+
+        await TrendsAnalyticsController.getTrends(
+          mockReq as any,
+          mockRes as Response,
+        );
+
+        const response = jsonMock.mock.calls[0][0];
+        expect(response.success).toBe(true);
+        // The donation month should be included even without purchase data
+        expect(response.data).toBeDefined();
+      });
     });
 
     describe("Error Handling", () => {

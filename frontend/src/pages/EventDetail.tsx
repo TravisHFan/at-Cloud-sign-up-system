@@ -25,6 +25,7 @@ import EventModals from "../components/EventDetail/EventModals";
 import EventRolesSection from "../components/EventDetail/EventRolesSection";
 import EventPurchasersSection from "../components/EventDetail/EventPurchasersSection";
 import FlyerDisplay from "../components/EventDetail/FlyerDisplay";
+import YouTubePlayer from "../components/EventDetail/YouTubePlayer";
 import EventBasicDetails from "../components/EventDetail/EventBasicDetails";
 import EventHostAndPurpose from "../components/EventDetail/EventHostAndPurpose";
 import EventCapacityAndAgenda from "../components/EventDetail/EventCapacityAndAgenda";
@@ -305,6 +306,8 @@ export default function EventDetail() {
         <EventCapacityAndAgenda event={event} />
         {/* Event Flyer (optional) - now supports carousel for multiple flyers */}
         <FlyerDisplay event={event} />
+        {/* YouTube Video Player (optional) - for completed events with recordings */}
+        <YouTubePlayer event={event} />
         <div className="space-y-4">
           {/* Organizer Contact Information */}
           <div>
@@ -344,12 +347,12 @@ export default function EventDetail() {
                             <img
                               src={getAvatarUrlWithCacheBust(
                                 createdBy?.avatar || null,
-                                createdBy?.gender || "male"
+                                createdBy?.gender || "male",
                               )}
                               alt={getAvatarAlt(
                                 createdBy?.firstName || "",
                                 createdBy?.lastName || "",
-                                !!createdBy?.avatar
+                                !!createdBy?.avatar,
                               )}
                               className="h-12 w-12 rounded-full object-cover flex-shrink-0"
                             />
@@ -369,7 +372,7 @@ export default function EventDetail() {
                                   createdBy?.roleInAtCloud ||
                                     createdBy?.role ||
                                     createdBy?.systemAuthorizationLevel ||
-                                    ""
+                                    "",
                                 )}
                               </div>
                             </div>
@@ -442,7 +445,7 @@ export default function EventDetail() {
                                     handleNameCardClick(
                                       organizer.userId,
                                       organizer.name,
-                                      organizer.role
+                                      organizer.role,
                                     );
                                   }
                                 }}
@@ -455,12 +458,12 @@ export default function EventDetail() {
                                 <img
                                   src={getAvatarUrlWithCacheBust(
                                     organizer.avatar || null,
-                                    organizer.gender || "male"
+                                    organizer.gender || "male",
                                   )}
                                   alt={getAvatarAlt(
                                     organizer.name.split(" ")[0] || "",
                                     organizer.name.split(" ")[1] || "",
-                                    !!organizer.avatar
+                                    !!organizer.avatar,
                                   )}
                                   className="h-12 w-12 rounded-full object-cover flex-shrink-0"
                                 />
@@ -800,8 +803,8 @@ export default function EventDetail() {
               {isPassedEvent
                 ? "Event Participants"
                 : managementMode
-                ? "Manage Event Sign-ups"
-                : "Event Roles & Sign-up"}
+                  ? "Manage Event Sign-ups"
+                  : "Event Roles & Sign-up"}
             </h2>
 
             {/* Management Action Buttons - moved from header */}

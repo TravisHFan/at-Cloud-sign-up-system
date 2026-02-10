@@ -81,7 +81,7 @@ describe("PurchaseRefundController", () => {
 
         await PurchaseRefundController.checkRefundEligibility(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(401);
@@ -98,7 +98,7 @@ describe("PurchaseRefundController", () => {
 
         await PurchaseRefundController.checkRefundEligibility(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -115,7 +115,7 @@ describe("PurchaseRefundController", () => {
 
         await PurchaseRefundController.checkRefundEligibility(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(404);
@@ -141,7 +141,7 @@ describe("PurchaseRefundController", () => {
 
         await PurchaseRefundController.checkRefundEligibility(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(403);
@@ -170,7 +170,7 @@ describe("PurchaseRefundController", () => {
 
         await PurchaseRefundController.checkRefundEligibility(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -197,7 +197,7 @@ describe("PurchaseRefundController", () => {
 
         await PurchaseRefundController.checkRefundEligibility(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -221,7 +221,7 @@ describe("PurchaseRefundController", () => {
 
         await PurchaseRefundController.checkRefundEligibility(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -239,7 +239,7 @@ describe("PurchaseRefundController", () => {
 
         await PurchaseRefundController.checkRefundEligibility(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -262,7 +262,7 @@ describe("PurchaseRefundController", () => {
 
         await PurchaseRefundController.initiateRefund(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(401);
@@ -279,7 +279,7 @@ describe("PurchaseRefundController", () => {
 
         await PurchaseRefundController.initiateRefund(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -294,7 +294,7 @@ describe("PurchaseRefundController", () => {
 
         await PurchaseRefundController.initiateRefund(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -311,7 +311,7 @@ describe("PurchaseRefundController", () => {
 
         await PurchaseRefundController.initiateRefund(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(404);
@@ -337,7 +337,7 @@ describe("PurchaseRefundController", () => {
 
         await PurchaseRefundController.initiateRefund(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(403);
@@ -366,7 +366,7 @@ describe("PurchaseRefundController", () => {
 
         await PurchaseRefundController.initiateRefund(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -389,7 +389,7 @@ describe("PurchaseRefundController", () => {
 
         await PurchaseRefundController.initiateRefund(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -412,7 +412,7 @@ describe("PurchaseRefundController", () => {
 
         await PurchaseRefundController.initiateRefund(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -446,12 +446,12 @@ describe("PurchaseRefundController", () => {
 
         vi.mocked(processRefund).mockResolvedValue({ id: "re_test123" } as any);
         vi.mocked(
-          PurchaseEmailService.sendRefundInitiatedEmail
+          PurchaseEmailService.sendRefundInitiatedEmail,
         ).mockResolvedValue(true);
 
         await PurchaseRefundController.initiateRefund(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -484,13 +484,13 @@ describe("PurchaseRefundController", () => {
         } as any);
 
         vi.mocked(
-          PurchaseEmailService.sendRefundInitiatedEmail
+          PurchaseEmailService.sendRefundInitiatedEmail,
         ).mockRejectedValue(new Error("Email failed"));
         vi.mocked(processRefund).mockResolvedValue({ id: "re_test123" } as any);
 
         await PurchaseRefundController.initiateRefund(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -521,18 +521,18 @@ describe("PurchaseRefundController", () => {
         } as any);
 
         vi.mocked(
-          PurchaseEmailService.sendRefundInitiatedEmail
+          PurchaseEmailService.sendRefundInitiatedEmail,
         ).mockResolvedValue(true);
         vi.mocked(processRefund).mockRejectedValue(
-          new Error("Insufficient funds for refund")
+          new Error("Insufficient funds for refund"),
         );
         vi.mocked(PurchaseEmailService.sendRefundFailedEmail).mockResolvedValue(
-          true
+          true,
         );
 
         await PurchaseRefundController.initiateRefund(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -565,20 +565,62 @@ describe("PurchaseRefundController", () => {
         } as any);
 
         vi.mocked(
-          PurchaseEmailService.sendRefundInitiatedEmail
+          PurchaseEmailService.sendRefundInitiatedEmail,
         ).mockResolvedValue(true);
         vi.mocked(PurchaseEmailService.sendRefundFailedEmail).mockResolvedValue(
-          true
+          true,
         );
 
         await PurchaseRefundController.initiateRefund(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
         const response = jsonMock.mock.calls[0][0];
         expect(response.error).toContain("No payment intent");
+      });
+
+      it("should use Unknown error for non-Error Stripe failures", async () => {
+        const recentDate = new Date();
+        recentDate.setDate(recentDate.getDate() - 5);
+
+        const mockPurchase: any = {
+          _id: { toString: () => mockPurchaseId },
+          userId: { toString: () => mockUserId },
+          status: "completed",
+          purchaseDate: recentDate,
+          finalPrice: 5000,
+          stripePaymentIntentId: "pi_test123",
+          orderNumber: "ORD-12345",
+          programId: { title: "Test Program" },
+          billingInfo: { email: "user@test.com", fullName: "Test User" },
+          refundFailureReason: null,
+          save: vi.fn().mockResolvedValue(undefined),
+        };
+
+        vi.mocked(Purchase.findById).mockReturnValue({
+          populate: vi.fn().mockResolvedValue(mockPurchase),
+        } as any);
+
+        vi.mocked(
+          PurchaseEmailService.sendRefundInitiatedEmail,
+        ).mockResolvedValue(true);
+        // Reject with non-Error value
+        vi.mocked(processRefund).mockRejectedValue("string error");
+        vi.mocked(PurchaseEmailService.sendRefundFailedEmail).mockResolvedValue(
+          true,
+        );
+
+        await PurchaseRefundController.initiateRefund(
+          mockReq as any,
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(mockPurchase.refundFailureReason).toBe("Unknown error");
+        const response = jsonMock.mock.calls[0][0];
+        expect(response.error).toBe("Unknown error");
       });
     });
 
@@ -590,7 +632,7 @@ describe("PurchaseRefundController", () => {
 
         await PurchaseRefundController.initiateRefund(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);

@@ -19,6 +19,7 @@ import { EmailService } from "../services/infrastructure/EmailServiceFacade";
 import { EmailRecipientUtils } from "../utils/emailRecipientUtils";
 import { Event } from "../models";
 import { buildRegistrationICS } from "../services/ICSBuilder";
+import { UpdateController } from "../controllers/event/UpdateController";
 import {
   sanitizeGuestBody,
   guestUpdateValidation,
@@ -72,7 +73,7 @@ router.get(
       res.setHeader("Content-Type", "text/calendar; charset=utf-8");
       res.setHeader(
         "Content-Disposition",
-        `attachment; filename="${ics.filename}"`
+        `attachment; filename="${ics.filename}"`,
       );
 
       return res.send(ics.content);
@@ -83,7 +84,7 @@ router.get(
         message: "Failed to generate calendar file",
       });
     }
-  }
+  },
 );
 
 // Get single event by ID
@@ -94,7 +95,7 @@ router.get(
   authenticate,
   validateObjectId,
   handleValidationErrors,
-  EventController.hasRegistrations
+  EventController.hasRegistrations,
 );
 
 router.get(
@@ -102,7 +103,7 @@ router.get(
   authenticateOptional,
   validateObjectId,
   handleValidationErrors,
-  EventController.getEventById
+  EventController.getEventById,
 );
 
 // Batch status update (can be called by admins or as a maintenance endpoint)
@@ -110,7 +111,7 @@ router.post(
   "/update-statuses",
   authenticate,
   requireLeader,
-  EventController.updateAllEventStatuses
+  EventController.updateAllEventStatuses,
 );
 
 // Batch signup count recalculation (can be called by admins or as a maintenance endpoint)
@@ -118,7 +119,7 @@ router.post(
   "/recalculate-signups",
   authenticate,
   requireLeader,
-  EventController.recalculateSignupCounts
+  EventController.recalculateSignupCounts,
 );
 
 // Event Purchase & Access Control Routes (paid events feature)
@@ -147,7 +148,7 @@ router.get(
       ).default;
       const result = await EventAccessControlService.checkUserAccess(
         userId,
-        id
+        id,
       );
 
       return res.status(200).json({
@@ -164,7 +165,7 @@ router.get(
             : "Failed to check event access",
       });
     }
-  }
+  },
 );
 
 // Get event pricing info with optional promo code (requires authentication)
@@ -216,7 +217,7 @@ router.get(
               discount = validatedCode.discountAmount;
             } else if (validatedCode.discountPercent) {
               discount = Math.round(
-                (originalPrice * validatedCode.discountPercent) / 100
+                (originalPrice * validatedCode.discountPercent) / 100,
               );
             }
 
@@ -253,7 +254,7 @@ router.get(
         message: "Failed to get purchase information",
       });
     }
-  }
+  },
 );
 
 // Purchase event ticket (requires authentication)
@@ -263,11 +264,10 @@ router.post(
   validateObjectId,
   handleValidationErrors,
   async (req: Request, res: Response) => {
-    const { default: EventPurchaseController } = await import(
-      "../controllers/purchase/EventPurchaseController"
-    );
+    const { default: EventPurchaseController } =
+      await import("../controllers/purchase/EventPurchaseController");
     return EventPurchaseController.createCheckoutSession(req, res);
-  }
+  },
 );
 
 // Get list of users who purchased tickets for this event (organizers/admins only)
@@ -329,7 +329,7 @@ router.get(
         message: "Failed to fetch event purchases",
       });
     }
-  }
+  },
 );
 
 // All routes below require authentication
@@ -341,21 +341,31 @@ router.post(
   validateEventCreation,
   handleValidationErrors,
   authorizePermission(PERMISSIONS.CREATE_EVENT),
-  EventController.createEvent
+  EventController.createEvent,
 );
 router.put(
   "/:id",
   validateObjectId,
   handleValidationErrors,
   authorizeEventManagement,
-  EventController.updateEvent
+  EventController.updateEvent,
 );
 router.delete(
   "/:id",
   validateObjectId,
   handleValidationErrors,
   authorizeEventManagement,
-  EventController.deleteEvent
+  EventController.deleteEvent,
+);
+
+// Update YouTube URL for completed events
+// Permission check is done inside the controller (Super Admin, Administrator, creator, or co-organizer)
+router.patch(
+  "/:id/youtube-url",
+  validateObjectId,
+  handleValidationErrors,
+  authenticate,
+  UpdateController.updateYoutubeUrl,
 );
 
 // Publish / Unpublish (lifecycle) endpoints
@@ -364,14 +374,14 @@ router.post(
   validateObjectId,
   handleValidationErrors,
   authorizeEventManagement,
-  EventController.publishEvent
+  EventController.publishEvent,
 );
 router.post(
   "/:id/unpublish",
   validateObjectId,
   handleValidationErrors,
   authorizeEventManagement,
-  EventController.unpublishEvent
+  EventController.unpublishEvent,
 );
 
 // Create (or fetch existing) short link for a published event (idempotent)
@@ -391,19 +401,17 @@ router.post(
       const { id } = req.params;
       const { customKey } = req.body || {};
       const { ShortLinkService } = await import("../services/ShortLinkService");
-      const { ShortLinkMetricsService } = await import(
-        "../services/ShortLinkMetricsService"
-      );
-      const { shortLinkCreatedCounter } = await import(
-        "../services/PrometheusMetricsService"
-      );
+      const { ShortLinkMetricsService } =
+        await import("../services/ShortLinkMetricsService");
+      const { shortLinkCreatedCounter } =
+        await import("../services/PrometheusMetricsService");
       const userId =
         (req.user as { _id?: { toString: () => string } })._id?.toString() ||
         "";
       const result = await ShortLinkService.getOrCreateForEvent(
         id,
         userId,
-        customKey
+        customKey,
       );
       if (result.created) {
         try {
@@ -445,7 +453,7 @@ router.post(
       }
       res.status(status).json({ success: false, message: msg, code });
     }
-  }
+  },
 );
 
 // Event participation routes
@@ -453,13 +461,13 @@ router.post(
   "/:id/register",
   validateObjectId,
   handleValidationErrors,
-  EventController.signUpForEvent
+  EventController.signUpForEvent,
 );
 router.post(
   "/:id/signup",
   validateObjectId,
   handleValidationErrors,
-  EventController.signUpForEvent
+  EventController.signUpForEvent,
 );
 
 // Workshop group topic update (auth required; permission checked inside controller)
@@ -467,13 +475,13 @@ router.post(
   "/:id/workshop/groups/:group/topic",
   validateObjectId,
   handleValidationErrors,
-  EventController.updateWorkshopGroupTopic
+  EventController.updateWorkshopGroupTopic,
 );
 router.post(
   "/:id/cancel",
   validateObjectId,
   handleValidationErrors,
-  EventController.cancelSignup
+  EventController.cancelSignup,
 );
 
 // Event management routes (for organizers and admins)
@@ -482,14 +490,14 @@ router.post(
   validateObjectId,
   handleValidationErrors,
   authorizeEventManagement,
-  EventController.removeUserFromRole
+  EventController.removeUserFromRole,
 );
 router.post(
   "/:id/manage/move-user",
   validateObjectId,
   handleValidationErrors,
   authorizeEventManagement,
-  EventController.moveUserBetweenRoles
+  EventController.moveUserBetweenRoles,
 );
 
 // Move guest between roles (organizers/admins)
@@ -498,7 +506,7 @@ router.post(
   validateObjectId,
   handleValidationErrors,
   authorizeEventManagement,
-  GuestController.moveGuestBetweenRoles
+  GuestController.moveGuestBetweenRoles,
 );
 
 // Organizer/Admin: Update guest registration details for a specific event
@@ -509,7 +517,7 @@ router.put(
   guestUpdateValidation,
   handleValidationErrors,
   authorizeEventManagement,
-  GuestController.updateGuestRegistration
+  GuestController.updateGuestRegistration,
 );
 
 // Organizer/Admin: Cancel a guest registration for a specific event
@@ -520,7 +528,7 @@ router.delete(
   guestCancellationValidation,
   handleValidationErrors,
   authorizeEventManagement,
-  GuestController.cancelGuestRegistration
+  GuestController.cancelGuestRegistration,
 );
 
 // Organizer/Admin: Re-send manage link for a guest in a specific event
@@ -529,7 +537,7 @@ router.post(
   validateObjectId, // validates :id (eventId)
   handleValidationErrors,
   authorizeEventManagement,
-  GuestController.resendManageLink
+  GuestController.resendManageLink,
 );
 
 // Email all participants/guests (organizers/admins)
@@ -633,12 +641,12 @@ router.post(
             html: bodyHtml,
             text: bodyText,
             replyTo,
-          })
-        )
+          }),
+        ),
       );
 
       const sent = results.filter(
-        (x) => x.status === "fulfilled" && x.value === true
+        (x) => x.status === "fulfilled" && x.value === true,
       ).length;
 
       res.status(200).json({
@@ -653,7 +661,7 @@ router.post(
         .status(500)
         .json({ success: false, message: "Failed to send emails" });
     }
-  }
+  },
 );
 
 // Assign user to a role (organizers only)
@@ -662,7 +670,7 @@ router.post(
   validateObjectId,
   handleValidationErrors,
   authorizeEventManagement,
-  EventController.assignUserToRole
+  EventController.assignUserToRole,
 );
 
 // User's event routes
@@ -674,7 +682,7 @@ router.get(
   "/:id/participants",
   validateObjectId,
   handleValidationErrors,
-  EventController.getEventParticipants
+  EventController.getEventParticipants,
 );
 
 export default router;

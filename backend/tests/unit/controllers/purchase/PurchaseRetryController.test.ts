@@ -8,6 +8,11 @@ import mongoose from "mongoose";
 // Mock dependencies
 vi.mock("../../../../src/models/Purchase");
 vi.mock("../../../../src/services/stripeService");
+vi.mock("../../../../src/models/Event", () => ({
+  default: {
+    findById: vi.fn(),
+  },
+}));
 
 /**
  * Helper to create mock chain for Purchase.findById().populate().populate()
@@ -60,7 +65,7 @@ describe("PurchaseRetryController", () => {
 
       await PurchaseRetryController.retryPendingPurchase(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(401);
@@ -79,7 +84,7 @@ describe("PurchaseRetryController", () => {
 
       await PurchaseRetryController.retryPendingPurchase(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -97,12 +102,12 @@ describe("PurchaseRetryController", () => {
       mockReq.params = { id: purchaseId.toString() };
 
       vi.mocked(Purchase.findById).mockReturnValue(
-        mockPurchaseFindByIdChain(null)
+        mockPurchaseFindByIdChain(null),
       );
 
       await PurchaseRetryController.retryPendingPurchase(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(Purchase.findById).toHaveBeenCalledWith(purchaseId.toString());
@@ -129,12 +134,12 @@ describe("PurchaseRetryController", () => {
       };
 
       vi.mocked(Purchase.findById).mockReturnValue(
-        mockPurchaseFindByIdChain(mockPurchase)
+        mockPurchaseFindByIdChain(mockPurchase),
       );
 
       await PurchaseRetryController.retryPendingPurchase(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(403);
@@ -158,12 +163,12 @@ describe("PurchaseRetryController", () => {
       };
 
       vi.mocked(Purchase.findById).mockReturnValue(
-        mockPurchaseFindByIdChain(mockPurchase)
+        mockPurchaseFindByIdChain(mockPurchase),
       );
 
       await PurchaseRetryController.retryPendingPurchase(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -187,12 +192,12 @@ describe("PurchaseRetryController", () => {
       };
 
       vi.mocked(Purchase.findById).mockReturnValue(
-        mockPurchaseFindByIdChain(mockPurchase)
+        mockPurchaseFindByIdChain(mockPurchase),
       );
 
       await PurchaseRetryController.retryPendingPurchase(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -227,16 +232,16 @@ describe("PurchaseRetryController", () => {
       };
 
       vi.mocked(Purchase.findById).mockReturnValue(
-        mockPurchaseFindByIdChain(mockPendingPurchase)
+        mockPurchaseFindByIdChain(mockPendingPurchase),
       );
 
       vi.mocked(Purchase.findOne).mockResolvedValue(
-        mockCompletedPurchase as any
+        mockCompletedPurchase as any,
       );
 
       await PurchaseRetryController.retryPendingPurchase(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(Purchase.findOne).toHaveBeenCalledWith({
@@ -281,7 +286,7 @@ describe("PurchaseRetryController", () => {
       };
 
       vi.mocked(Purchase.findById).mockReturnValue(
-        mockPurchaseFindByIdChain(mockPendingPurchase)
+        mockPurchaseFindByIdChain(mockPendingPurchase),
       );
 
       vi.mocked(Purchase.findOne).mockResolvedValue(null);
@@ -292,12 +297,12 @@ describe("PurchaseRetryController", () => {
       };
 
       vi.mocked(stripeService.createCheckoutSession).mockResolvedValue(
-        mockSession as any
+        mockSession as any,
       );
 
       await PurchaseRetryController.retryPendingPurchase(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(stripeService.createCheckoutSession).toHaveBeenCalledWith({
@@ -317,7 +322,7 @@ describe("PurchaseRetryController", () => {
       expect(mockPendingPurchase.save).toHaveBeenCalled();
 
       expect(console.log).toHaveBeenCalledWith(
-        "Created new checkout session for pending purchase ORDER-001"
+        "Created new checkout session for pending purchase ORDER-001",
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -358,7 +363,7 @@ describe("PurchaseRetryController", () => {
       };
 
       vi.mocked(Purchase.findById).mockReturnValue(
-        mockPurchaseFindByIdChain(mockPendingPurchase)
+        mockPurchaseFindByIdChain(mockPendingPurchase),
       );
 
       vi.mocked(Purchase.findOne).mockResolvedValue(null);
@@ -369,12 +374,12 @@ describe("PurchaseRetryController", () => {
       };
 
       vi.mocked(stripeService.createCheckoutSession).mockResolvedValue(
-        mockSession as any
+        mockSession as any,
       );
 
       await PurchaseRetryController.retryPendingPurchase(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(stripeService.createCheckoutSession).toHaveBeenCalledWith({
@@ -421,7 +426,7 @@ describe("PurchaseRetryController", () => {
       };
 
       vi.mocked(Purchase.findById).mockReturnValue(
-        mockPurchaseFindByIdChain(mockPendingPurchase)
+        mockPurchaseFindByIdChain(mockPendingPurchase),
       );
 
       vi.mocked(Purchase.findOne).mockResolvedValue(null);
@@ -432,12 +437,12 @@ describe("PurchaseRetryController", () => {
       };
 
       vi.mocked(stripeService.createCheckoutSession).mockResolvedValue(
-        mockSession as any
+        mockSession as any,
       );
 
       await PurchaseRetryController.retryPendingPurchase(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -460,12 +465,12 @@ describe("PurchaseRetryController", () => {
 
       await PurchaseRetryController.retryPendingPurchase(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(console.error).toHaveBeenCalledWith(
         "Error retrying purchase:",
-        dbError
+        dbError,
       );
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith({
@@ -502,24 +507,24 @@ describe("PurchaseRetryController", () => {
       };
 
       vi.mocked(Purchase.findById).mockReturnValue(
-        mockPurchaseFindByIdChain(mockPendingPurchase)
+        mockPurchaseFindByIdChain(mockPendingPurchase),
       );
 
       vi.mocked(Purchase.findOne).mockResolvedValue(null);
 
       const stripeError = new Error("Stripe API error");
       vi.mocked(stripeService.createCheckoutSession).mockRejectedValue(
-        stripeError
+        stripeError,
       );
 
       await PurchaseRetryController.retryPendingPurchase(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(console.error).toHaveBeenCalledWith(
         "Error retrying purchase:",
-        stripeError
+        stripeError,
       );
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith({
@@ -558,7 +563,7 @@ describe("PurchaseRetryController", () => {
       };
 
       vi.mocked(Purchase.findById).mockReturnValue(
-        mockPurchaseFindByIdChain(mockPendingPurchase)
+        mockPurchaseFindByIdChain(mockPendingPurchase),
       );
 
       vi.mocked(Purchase.findOne).mockResolvedValue(null);
@@ -569,17 +574,17 @@ describe("PurchaseRetryController", () => {
       };
 
       vi.mocked(stripeService.createCheckoutSession).mockResolvedValue(
-        mockSession as any
+        mockSession as any,
       );
 
       await PurchaseRetryController.retryPendingPurchase(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(console.error).toHaveBeenCalledWith(
         "Error retrying purchase:",
-        saveError
+        saveError,
       );
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith({
@@ -604,14 +609,188 @@ describe("PurchaseRetryController", () => {
 
       await PurchaseRetryController.retryPendingPurchase(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(console.error).toHaveBeenCalledWith(
         "Error retrying purchase:",
-        "Unexpected string error"
+        "Unexpected string error",
       );
       expect(statusMock).toHaveBeenCalledWith(500);
+    });
+
+    it("should return 400 if user already has completed purchase for event", async () => {
+      const eventId = new mongoose.Types.ObjectId();
+
+      mockReq.user = {
+        _id: userId,
+        email: "user@example.com",
+      };
+      mockReq.params = { id: purchaseId.toString() };
+
+      const mockPendingPurchase = {
+        _id: purchaseId,
+        userId,
+        eventId,
+        purchaseType: "event",
+        programId: null,
+        status: "pending",
+      };
+
+      const mockCompletedPurchase = {
+        _id: new mongoose.Types.ObjectId(),
+        userId,
+        eventId,
+        purchaseType: "event",
+        status: "completed",
+      };
+
+      vi.mocked(Purchase.findById).mockReturnValue(
+        mockPurchaseFindByIdChain(mockPendingPurchase),
+      );
+
+      vi.mocked(Purchase.findOne).mockResolvedValue(
+        mockCompletedPurchase as any,
+      );
+
+      await PurchaseRetryController.retryPendingPurchase(
+        mockReq as Request,
+        mockRes as Response,
+      );
+
+      expect(Purchase.findOne).toHaveBeenCalledWith({
+        userId: userId,
+        eventId: eventId,
+        status: "completed",
+      });
+      expect(statusMock).toHaveBeenCalledWith(400);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: false,
+        message:
+          "You have already purchased this event. Check your purchase history.",
+      });
+    });
+
+    it("should successfully retry pending event purchase", async () => {
+      const eventId = new mongoose.Types.ObjectId();
+
+      mockReq.user = {
+        _id: userId,
+        email: "user@example.com",
+      };
+      mockReq.params = { id: purchaseId.toString() };
+
+      const mockPendingPurchase = {
+        _id: purchaseId,
+        userId,
+        eventId,
+        purchaseType: "event",
+        programId: null,
+        status: "pending",
+        orderNumber: "ORDER-EVENT-001",
+        fullPrice: 5000,
+        classRepDiscount: 0,
+        earlyBirdDiscount: 0,
+        finalPrice: 5000,
+        isClassRep: false,
+        isEarlyBird: false,
+        stripeSessionId: "old_event_session",
+        save: vi.fn().mockResolvedValue({}),
+      };
+
+      const mockEvent = {
+        _id: eventId,
+        title: "Test Event",
+        date: new Date("2025-01-15"),
+      };
+
+      vi.mocked(Purchase.findById).mockReturnValue(
+        mockPurchaseFindByIdChain(mockPendingPurchase),
+      );
+
+      vi.mocked(Purchase.findOne).mockResolvedValue(null);
+
+      const EventModel = await import("../../../../src/models/Event");
+      vi.mocked(EventModel.default.findById).mockResolvedValue(
+        mockEvent as any,
+      );
+
+      const mockSession = {
+        id: "cs_event_session_123",
+        url: "https://checkout.stripe.com/event_session",
+      };
+
+      const mockStripe = {
+        checkout: {
+          sessions: {
+            create: vi.fn().mockResolvedValue(mockSession),
+          },
+        },
+      };
+
+      vi.mocked(stripeService).stripe = mockStripe as any;
+
+      await PurchaseRetryController.retryPendingPurchase(
+        mockReq as Request,
+        mockRes as Response,
+      );
+
+      expect(EventModel.default.findById).toHaveBeenCalledWith(eventId);
+      expect(mockPendingPurchase.stripeSessionId).toBe("cs_event_session_123");
+      expect(mockPendingPurchase.save).toHaveBeenCalled();
+
+      expect(statusMock).toHaveBeenCalledWith(200);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: true,
+        data: {
+          sessionId: "cs_event_session_123",
+          sessionUrl: "https://checkout.stripe.com/event_session",
+        },
+      });
+    });
+
+    it("should return 404 when event is not found for event retry", async () => {
+      const eventId = new mongoose.Types.ObjectId();
+
+      mockReq.user = {
+        _id: userId,
+        email: "user@example.com",
+      };
+      mockReq.params = { id: purchaseId.toString() };
+
+      const mockPendingPurchase = {
+        _id: purchaseId,
+        userId,
+        eventId,
+        purchaseType: "event",
+        programId: null,
+        status: "pending",
+        orderNumber: "ORDER-EVENT-002",
+        fullPrice: 5000,
+        finalPrice: 5000,
+        save: vi.fn(),
+      };
+
+      vi.mocked(Purchase.findById).mockReturnValue(
+        mockPurchaseFindByIdChain(mockPendingPurchase),
+      );
+
+      vi.mocked(Purchase.findOne).mockResolvedValue(null);
+
+      const EventModel = await import("../../../../src/models/Event");
+      vi.mocked(EventModel.default.findById).mockResolvedValue(null);
+
+      await PurchaseRetryController.retryPendingPurchase(
+        mockReq as Request,
+        mockRes as Response,
+      );
+
+      expect(EventModel.default.findById).toHaveBeenCalledWith(eventId);
+      expect(statusMock).toHaveBeenCalledWith(404);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: false,
+        message: "Event not found.",
+      });
     });
   });
 });

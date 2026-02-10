@@ -101,7 +101,7 @@ describe("NewLeaderSignupController", () => {
 
         await NewLeaderSignupController.sendNewLeaderSignupNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -116,7 +116,7 @@ describe("NewLeaderSignupController", () => {
 
         await NewLeaderSignupController.sendNewLeaderSignupNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -127,7 +127,7 @@ describe("NewLeaderSignupController", () => {
 
         await NewLeaderSignupController.sendNewLeaderSignupNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -140,7 +140,7 @@ describe("NewLeaderSignupController", () => {
 
         await NewLeaderSignupController.sendNewLeaderSignupNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -170,22 +170,22 @@ describe("NewLeaderSignupController", () => {
           },
         ];
         vi.mocked(EmailRecipientUtils.getAdminUsers).mockResolvedValue(
-          adminRecipients
+          adminRecipients,
         );
         vi.mocked(EmailService.sendNewLeaderSignupEmail).mockResolvedValue(
-          true
+          true,
         );
         vi.mocked(User.find).mockResolvedValue([
           { _id: "admin1" },
           { _id: "admin2" },
         ]);
         vi.mocked(
-          UnifiedMessageController.createTargetedSystemMessage
+          UnifiedMessageController.createTargetedSystemMessage,
         ).mockResolvedValue({} as any);
 
         await NewLeaderSignupController.sendNewLeaderSignupNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(EmailService.sendNewLeaderSignupEmail).toHaveBeenCalledTimes(2);
@@ -213,7 +213,7 @@ describe("NewLeaderSignupController", () => {
           },
         ];
         vi.mocked(EmailRecipientUtils.getAdminUsers).mockResolvedValue(
-          adminRecipients
+          adminRecipients,
         );
         vi.mocked(EmailService.sendNewLeaderSignupEmail)
           .mockResolvedValueOnce(true)
@@ -222,7 +222,7 @@ describe("NewLeaderSignupController", () => {
 
         await NewLeaderSignupController.sendNewLeaderSignupNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(jsonMock).toHaveBeenCalledWith({
@@ -242,23 +242,23 @@ describe("NewLeaderSignupController", () => {
           },
         ];
         vi.mocked(EmailRecipientUtils.getAdminUsers).mockResolvedValue(
-          adminRecipients
+          adminRecipients,
         );
         vi.mocked(EmailService.sendNewLeaderSignupEmail).mockResolvedValue(
-          true
+          true,
         );
         vi.mocked(User.find).mockResolvedValue([{ _id: "adminId1" }]);
         vi.mocked(
-          UnifiedMessageController.createTargetedSystemMessage
+          UnifiedMessageController.createTargetedSystemMessage,
         ).mockResolvedValue({} as any);
 
         await NewLeaderSignupController.sendNewLeaderSignupNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(
-          UnifiedMessageController.createTargetedSystemMessage
+          UnifiedMessageController.createTargetedSystemMessage,
         ).toHaveBeenCalledWith(
           expect.objectContaining({
             title: "New Leader Registration",
@@ -266,7 +266,7 @@ describe("NewLeaderSignupController", () => {
             priority: "medium",
           }),
           ["adminId1"],
-          expect.any(Object)
+          expect.any(Object),
         );
       });
 
@@ -281,13 +281,13 @@ describe("NewLeaderSignupController", () => {
           },
         ]);
         vi.mocked(EmailService.sendNewLeaderSignupEmail).mockResolvedValue(
-          true
+          true,
         );
         vi.mocked(User.find).mockResolvedValue([]);
 
         await NewLeaderSignupController.sendNewLeaderSignupNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(EmailService.sendNewLeaderSignupEmail).toHaveBeenCalledWith(
@@ -295,7 +295,7 @@ describe("NewLeaderSignupController", () => {
           "Admin User",
           expect.objectContaining({
             roleInAtCloud: "Leader",
-          })
+          }),
         );
       });
 
@@ -309,16 +309,16 @@ describe("NewLeaderSignupController", () => {
           },
         ]);
         vi.mocked(EmailService.sendNewLeaderSignupEmail).mockResolvedValue(
-          true
+          true,
         );
         vi.mocked(User.find).mockResolvedValue([{ _id: "adminId" }]);
         vi.mocked(
-          UnifiedMessageController.createTargetedSystemMessage
+          UnifiedMessageController.createTargetedSystemMessage,
         ).mockRejectedValue(new Error("Message failed"));
 
         await NewLeaderSignupController.sendNewLeaderSignupNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -329,12 +329,12 @@ describe("NewLeaderSignupController", () => {
     describe("Error Handling", () => {
       it("should return 500 on error", async () => {
         vi.mocked(EmailRecipientUtils.getAdminUsers).mockRejectedValue(
-          new Error("Database error")
+          new Error("Database error"),
         );
 
         await NewLeaderSignupController.sendNewLeaderSignupNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -342,6 +342,24 @@ describe("NewLeaderSignupController", () => {
           success: false,
           message: "Failed to send new leader signup notifications",
           error: "Database error",
+        });
+      });
+
+      it("should return Unknown error for non-Error throws", async () => {
+        vi.mocked(EmailRecipientUtils.getAdminUsers).mockRejectedValue(
+          "string error",
+        );
+
+        await NewLeaderSignupController.sendNewLeaderSignupNotification(
+          mockReq as unknown as Request,
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(jsonMock).toHaveBeenCalledWith({
+          success: false,
+          message: "Failed to send new leader signup notifications",
+          error: "Unknown error",
         });
       });
     });

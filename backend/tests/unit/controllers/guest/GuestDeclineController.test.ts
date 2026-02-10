@@ -889,6 +889,188 @@ describe("GuestDeclineController", () => {
           }),
         );
       });
+
+      it("should use 'Role' and 'Event' fallbacks when eventSnapshot is missing", async () => {
+        mockVerifyToken.mockReturnValue({
+          valid: true,
+          payload: { registrationId: mockRegistrationId },
+        });
+
+        const creatorId = "507f1f77bcf86cd799439013";
+        const mockDoc: Record<string, any> = {
+          _id: mockRegistrationId,
+          status: "pending",
+          eventId: mockEventId,
+          fullName: "Test Guest",
+          email: "guest@test.com",
+          roleId: "role123",
+          invitedBy: undefined,
+          // eventSnapshot missing roleName and title
+          eventSnapshot: {},
+          save: vi.fn().mockResolvedValue(undefined),
+        };
+
+        const mockEvent = {
+          _id: mockEventId,
+          // title also missing
+          organizerDetails: [],
+          createdBy: creatorId,
+        };
+
+        const mockCreatorUser = {
+          _id: creatorId,
+          firstName: "Bob",
+          lastName: "Creator",
+          email: "bob@test.com",
+        };
+
+        vi.mocked(GuestRegistration.findById).mockResolvedValue(mockDoc);
+        vi.mocked(Event.findById).mockResolvedValue(mockEvent);
+        vi.mocked(User.findById).mockReturnValue({
+          lean: vi.fn().mockResolvedValue(mockCreatorUser),
+        } as any);
+
+        await GuestDeclineController.submitDecline(
+          mockReq as any,
+          mockRes as Response,
+        );
+
+        expect(TrioNotificationService.createTrio).toHaveBeenCalledWith(
+          expect.objectContaining({
+            systemMessage: expect.objectContaining({
+              content: expect.stringContaining('role "Role"'),
+            }),
+          }),
+        );
+        expect(TrioNotificationService.createTrio).toHaveBeenCalledWith(
+          expect.objectContaining({
+            systemMessage: expect.objectContaining({
+              content: expect.stringContaining('event "Event"'),
+            }),
+          }),
+        );
+      });
+
+      it("should include declineReason in system message content", async () => {
+        mockVerifyToken.mockReturnValue({
+          valid: true,
+          payload: { registrationId: mockRegistrationId },
+        });
+
+        const creatorId = "507f1f77bcf86cd799439013";
+        mockReq.body = { reason: "I have a conflict" };
+
+        const mockDoc: Record<string, any> = {
+          _id: mockRegistrationId,
+          status: "pending",
+          eventId: mockEventId,
+          fullName: "Test Guest",
+          email: "guest@test.com",
+          roleId: "role123",
+          invitedBy: undefined,
+          eventSnapshot: {
+            title: "Test Event",
+            roleName: "Speaker",
+          },
+          save: vi.fn().mockResolvedValue(undefined),
+        };
+
+        const mockEvent = {
+          _id: mockEventId,
+          title: "Test Event",
+          organizerDetails: [],
+          createdBy: creatorId,
+        };
+
+        const mockCreatorUser = {
+          _id: creatorId,
+          firstName: "Bob",
+          lastName: "Creator",
+          email: "bob@test.com",
+        };
+
+        vi.mocked(GuestRegistration.findById).mockResolvedValue(mockDoc);
+        vi.mocked(Event.findById).mockResolvedValue(mockEvent);
+        vi.mocked(User.findById).mockReturnValue({
+          lean: vi.fn().mockResolvedValue(mockCreatorUser),
+        } as any);
+
+        await GuestDeclineController.submitDecline(
+          mockReq as any,
+          mockRes as Response,
+        );
+
+        expect(TrioNotificationService.createTrio).toHaveBeenCalledWith(
+          expect.objectContaining({
+            systemMessage: expect.objectContaining({
+              content: expect.stringContaining("Reason: I have a conflict"),
+            }),
+          }),
+        );
+      });
+
+      it("should handle TrioNotificationService.createTrio error gracefully", async () => {
+        mockVerifyToken.mockReturnValue({
+          valid: true,
+          payload: { registrationId: mockRegistrationId },
+        });
+
+        const creatorId = "507f1f77bcf86cd799439013";
+        const mockDoc: Record<string, any> = {
+          _id: mockRegistrationId,
+          status: "pending",
+          eventId: mockEventId,
+          fullName: "Test Guest",
+          email: "guest@test.com",
+          roleId: "role123",
+          invitedBy: undefined,
+          eventSnapshot: {
+            title: "Test Event",
+            roleName: "Speaker",
+          },
+          save: vi.fn().mockResolvedValue(undefined),
+        };
+
+        const mockEvent = {
+          _id: mockEventId,
+          title: "Test Event",
+          organizerDetails: [],
+          createdBy: creatorId,
+        };
+
+        const mockCreatorUser = {
+          _id: creatorId,
+          firstName: "Bob",
+          lastName: "Creator",
+          email: "bob@test.com",
+        };
+
+        vi.mocked(GuestRegistration.findById).mockResolvedValue(mockDoc);
+        vi.mocked(Event.findById).mockResolvedValue(mockEvent);
+        vi.mocked(User.findById).mockReturnValue({
+          lean: vi.fn().mockResolvedValue(mockCreatorUser),
+        } as any);
+        vi.mocked(TrioNotificationService.createTrio).mockRejectedValueOnce(
+          new Error("Notification service error"),
+        );
+
+        await GuestDeclineController.submitDecline(
+          mockReq as any,
+          mockRes as Response,
+        );
+
+        // Should still succeed even if createTrio fails
+        expect(jsonMock).toHaveBeenCalledWith(
+          expect.objectContaining({
+            success: true,
+            message: "Invitation declined successfully",
+          }),
+        );
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          "Failed to create system message for guest decline",
+          expect.any(Error),
+        );
+      });
     });
   });
 });

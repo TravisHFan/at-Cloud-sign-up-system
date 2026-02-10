@@ -132,6 +132,18 @@ vi.mock("../../../../src/utils/event/eventValidation", () => ({
   validatePricing: vi.fn(() => ({ valid: true })),
 }));
 
+vi.mock("../../../../src/models/AuditLog", () => ({
+  default: {
+    create: vi.fn().mockResolvedValue({}),
+  },
+}));
+
+vi.mock("../../../../src/models/Program", () => ({
+  default: {
+    updateOne: vi.fn().mockResolvedValue({ modifiedCount: 1 }),
+  },
+}));
+
 import { hasPermission } from "../../../../src/utils/roleUtils";
 import { isEventOrganizer } from "../../../../src/utils/event/eventPermissions";
 import { Event } from "../../../../src/models";
@@ -145,6 +157,9 @@ import { CoOrganizerNotificationService } from "../../../../src/services/event/C
 import { ParticipantNotificationService } from "../../../../src/services/event/ParticipantNotificationService";
 import { ResponseBuilderService } from "../../../../src/services/ResponseBuilderService";
 import { CachePatterns } from "../../../../src/services";
+
+import AuditLog from "../../../../src/models/AuditLog";
+import Program from "../../../../src/models/Program";
 
 describe("UpdateController", () => {
   let req: Partial<Request>;
@@ -750,6 +765,169 @@ describe("UpdateController", () => {
         success: false,
         message: "Failed to update event.",
       });
+    });
+  });
+
+  describe("updateEvent - event cancellation audit logging", () => {
+    const mockEvent = {
+      _id: "507f1f77bcf86cd799439011",
+      title: "Test Event",
+      type: "Workshop",
+      date: new Date("2025-01-15"),
+      location: "Building A",
+      createdBy: "user-id-123",
+      roles: [],
+      isPublished: true,
+      organizerDetails: [],
+      status: "published",
+      save: vi.fn().mockImplementation(function (this: typeof mockEvent) {
+        // Simulate the save updating the status
+        this.status = "cancelled";
+        return Promise.resolve(true);
+      }),
+    };
+
+    beforeEach(() => {
+      vi.mocked(Event.findById).mockResolvedValue(mockEvent);
+      vi.mocked(hasPermission).mockReturnValue(true);
+      vi.mocked(isEventOrganizer).mockReturnValue(true);
+      vi.mocked(validatePricing).mockReturnValue({ valid: true });
+      vi.mocked(
+        CoOrganizerProgramAccessService.validateCoOrganizerAccess,
+      ).mockResolvedValue({ valid: true });
+      vi.mocked(
+        AutoUnpublishService.checkAndApplyAutoUnpublish,
+      ).mockResolvedValue({ autoUnpublished: false, missingFields: [] });
+      vi.mocked(
+        ResponseBuilderService.buildEventWithRegistrations,
+      ).mockResolvedValue({ _id: "507f1f77bcf86cd799439011" } as any);
+    });
+
+    it("should create audit log when event is cancelled", async () => {
+      req.body = { status: "cancelled" };
+      (req as any).ip = "192.168.1.1";
+      (req as any).get = vi.fn().mockReturnValue("Test Browser");
+      (req as any).user = {
+        _id: "user-id-123",
+        role: "Administrator",
+        email: "admin@example.com",
+      };
+
+      vi.mocked(
+        FieldNormalizationService.normalizeAndValidate,
+      ).mockResolvedValue({
+        status: "cancelled",
+      } as any);
+
+      await UpdateController.updateEvent(req as Request, res as Response);
+
+      expect(AuditLog.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: "event_cancelled",
+          actor: expect.objectContaining({
+            id: "user-id-123",
+            role: "Administrator",
+            email: "admin@example.com",
+          }),
+          targetModel: "Event",
+          targetId: "507f1f77bcf86cd799439011",
+          details: expect.objectContaining({
+            targetEvent: expect.objectContaining({
+              title: "Test Event",
+              type: "Workshop",
+            }),
+          }),
+        }),
+      );
+    });
+
+    it("should continue when audit log creation fails", async () => {
+      req.body = { status: "cancelled" };
+      (req as any).ip = "192.168.1.1";
+      (req as any).get = vi.fn().mockReturnValue("Test Browser");
+      (req as any).user = {
+        _id: "user-id-123",
+        role: "Administrator",
+        email: "admin@example.com",
+      };
+
+      vi.mocked(
+        FieldNormalizationService.normalizeAndValidate,
+      ).mockResolvedValue({
+        status: "cancelled",
+      } as any);
+
+      vi.mocked(AuditLog.create).mockRejectedValue(
+        new Error("Audit log DB error"),
+      );
+      vi.spyOn(console, "error").mockImplementation(() => {});
+
+      await UpdateController.updateEvent(req as Request, res as Response);
+
+      expect(console.error).toHaveBeenCalledWith(
+        "Failed to create audit log for event cancellation:",
+        expect.any(Error),
+      );
+      // Should still return success
+      expect(statusMock).toHaveBeenCalledWith(200);
+    });
+  });
+
+  describe("updateEvent - program sync on programLabels change", () => {
+    const mockEvent = {
+      _id: "507f1f77bcf86cd799439011",
+      title: "Test Event",
+      createdBy: "user-id-123",
+      roles: [],
+      isPublished: true,
+      organizerDetails: [],
+      save: vi.fn().mockResolvedValue(true),
+    };
+
+    beforeEach(() => {
+      vi.mocked(Event.findById).mockResolvedValue(mockEvent);
+      vi.mocked(hasPermission).mockReturnValue(true);
+      vi.mocked(isEventOrganizer).mockReturnValue(true);
+      vi.mocked(validatePricing).mockReturnValue({ valid: true });
+      vi.mocked(
+        CoOrganizerProgramAccessService.validateCoOrganizerAccess,
+      ).mockResolvedValue({ valid: true });
+      vi.mocked(
+        AutoUnpublishService.checkAndApplyAutoUnpublish,
+      ).mockResolvedValue({ autoUnpublished: false, missingFields: [] });
+      vi.mocked(
+        ResponseBuilderService.buildEventWithRegistrations,
+      ).mockResolvedValue({ _id: "507f1f77bcf86cd799439011" } as any);
+      vi.spyOn(console, "log").mockImplementation(() => {});
+      vi.spyOn(console, "warn").mockImplementation(() => {});
+    });
+
+    it("should log program changes when programLabels are updated", async () => {
+      // This test verifies the console.log that indicates program changes are detected
+      vi.mocked(ProgramLinkageService.extractPreviousLabels).mockReturnValue(
+        [],
+      );
+
+      vi.mocked(
+        FieldNormalizationService.normalizeAndValidate,
+      ).mockResolvedValue({
+        programLabels: ["507f1f77bcf86cd799439021"],
+      } as any);
+
+      vi.mocked(ProgramLinkageService.processAndValidate).mockResolvedValue({
+        valid: true,
+        programIds: ["507f1f77bcf86cd799439021"],
+      } as any);
+
+      vi.mocked(ProgramLinkageService.toObjectIdArray).mockReturnValue([
+        "507f1f77bcf86cd799439021",
+      ] as any);
+
+      await UpdateController.updateEvent(req as Request, res as Response);
+
+      // The code logs whether there are program changes
+      expect(console.log).toHaveBeenCalled();
+      expect(statusMock).toHaveBeenCalledWith(200);
     });
   });
 });

@@ -26,7 +26,8 @@ interface IconProps {
     | "clipboard-list"
     | "lock"
     | "ticket"
-    | "info-circle";
+    | "info-circle"
+    | "play";
   className?: string;
   size?: "sm" | "md" | "lg";
 }
@@ -84,6 +85,7 @@ const iconPaths = {
   ticket:
     "M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z",
   "info-circle": "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
+  play: "M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
 };
 
 export default function Icon({ name, className = "", size = "md" }: IconProps) {

@@ -14,6 +14,21 @@ vi.mock("../../../../src/models", () => ({
   },
 }));
 
+vi.mock("../../../../src/utils/privacy", () => ({
+  sanitizeMentors: vi.fn((mentors, canView) => {
+    if (canView) return mentors;
+    // Remove sensitive contact info when canView is false
+    return mentors.map((m: any) => ({
+      ...m,
+      email: undefined,
+      phone: undefined,
+    }));
+  }),
+}));
+
+import { sanitizeMentors } from "../../../../src/utils/privacy";
+import { Purchase } from "../../../../src/models";
+
 describe("RetrievalController", () => {
   let mockReq: any;
   let mockRes: Partial<Response>;
@@ -192,6 +207,351 @@ describe("RetrievalController", () => {
           success: false,
           message: "Failed to get program.",
         });
+      });
+    });
+
+    describe("mentor contact visibility", () => {
+      const mentorId = new mongoose.Types.ObjectId();
+      const userId = new mongoose.Types.ObjectId();
+
+      it("should allow admin to view mentor contacts", async () => {
+        mockReq.user = {
+          _id: userId,
+          role: "Super Admin",
+        };
+
+        const mockProgramData = {
+          _id: programId,
+          title: "Test Program",
+          mentors: [
+            {
+              userId: mentorId,
+              email: "mentor@example.com",
+              phone: "555-1234",
+            },
+          ],
+        };
+        const mockProgram = {
+          ...mockProgramData,
+          toObject: vi.fn().mockReturnValue(mockProgramData),
+        };
+
+        vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
+
+        await RetrievalController.getById(
+          mockReq as Request,
+          mockRes as Response,
+        );
+
+        expect(sanitizeMentors).toHaveBeenCalledWith(
+          mockProgramData.mentors,
+          true, // canViewMentorContact should be true for admin
+        );
+        expect(statusMock).toHaveBeenCalledWith(200);
+      });
+
+      it("should allow Administrator to view mentor contacts", async () => {
+        mockReq.user = {
+          _id: userId,
+          role: "Administrator",
+        };
+
+        const mockProgramData = {
+          _id: programId,
+          title: "Test Program",
+          mentors: [
+            {
+              userId: mentorId,
+              email: "mentor@example.com",
+            },
+          ],
+        };
+        const mockProgram = {
+          ...mockProgramData,
+          toObject: vi.fn().mockReturnValue(mockProgramData),
+        };
+
+        vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
+
+        await RetrievalController.getById(
+          mockReq as Request,
+          mockRes as Response,
+        );
+
+        expect(sanitizeMentors).toHaveBeenCalledWith(
+          mockProgramData.mentors,
+          true,
+        );
+      });
+
+      it("should allow mentor to view their own program contacts", async () => {
+        mockReq.user = {
+          _id: mentorId, // User is the mentor
+          role: "Leader",
+        };
+
+        const mockProgramData = {
+          _id: programId,
+          title: "Test Program",
+          mentors: [
+            {
+              userId: mentorId,
+              email: "mentor@example.com",
+            },
+          ],
+        };
+        const mockProgram = {
+          ...mockProgramData,
+          toObject: vi.fn().mockReturnValue(mockProgramData),
+        };
+
+        vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
+
+        await RetrievalController.getById(
+          mockReq as Request,
+          mockRes as Response,
+        );
+
+        expect(sanitizeMentors).toHaveBeenCalledWith(
+          mockProgramData.mentors,
+          true, // Mentor viewing their own program
+        );
+      });
+
+      it("should allow enrolled user (via purchase) to view mentor contacts", async () => {
+        mockReq.user = {
+          _id: userId,
+          role: "Participant",
+        };
+
+        const mockProgramData = {
+          _id: programId,
+          title: "Test Program",
+          isFree: false,
+          mentors: [
+            {
+              userId: mentorId,
+              email: "mentor@example.com",
+            },
+          ],
+          adminEnrollments: {
+            mentees: [],
+            classReps: [],
+          },
+        };
+        const mockProgram = {
+          ...mockProgramData,
+          toObject: vi.fn().mockReturnValue(mockProgramData),
+        };
+
+        vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
+        vi.mocked(Purchase.findOne).mockResolvedValue({
+          _id: new mongoose.Types.ObjectId(),
+          status: "completed",
+        } as any);
+
+        await RetrievalController.getById(
+          mockReq as Request,
+          mockRes as Response,
+        );
+
+        expect(Purchase.findOne).toHaveBeenCalledWith({
+          userId: userId,
+          programId: programId,
+          status: "completed",
+        });
+        expect(sanitizeMentors).toHaveBeenCalledWith(
+          mockProgramData.mentors,
+          true, // User has purchased
+        );
+      });
+
+      it("should allow free program user to view mentor contacts", async () => {
+        mockReq.user = {
+          _id: userId,
+          role: "Participant",
+        };
+
+        const mockProgramData = {
+          _id: programId,
+          title: "Free Program",
+          isFree: true,
+          mentors: [
+            {
+              userId: mentorId,
+              email: "mentor@example.com",
+            },
+          ],
+        };
+        const mockProgram = {
+          ...mockProgramData,
+          toObject: vi.fn().mockReturnValue(mockProgramData),
+        };
+
+        vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
+
+        await RetrievalController.getById(
+          mockReq as Request,
+          mockRes as Response,
+        );
+
+        // Free program - no purchase check needed
+        expect(Purchase.findOne).not.toHaveBeenCalled();
+        expect(sanitizeMentors).toHaveBeenCalledWith(
+          mockProgramData.mentors,
+          true, // Free program user is considered enrolled
+        );
+      });
+
+      it("should allow admin-enrolled mentee to view mentor contacts", async () => {
+        mockReq.user = {
+          _id: userId,
+          role: "Participant",
+        };
+
+        const mockProgramData = {
+          _id: programId,
+          title: "Test Program",
+          isFree: false,
+          mentors: [
+            {
+              userId: mentorId,
+              email: "mentor@example.com",
+            },
+          ],
+          adminEnrollments: {
+            mentees: [userId],
+            classReps: [],
+          },
+        };
+        const mockProgram = {
+          ...mockProgramData,
+          toObject: vi.fn().mockReturnValue(mockProgramData),
+        };
+
+        vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
+        vi.mocked(Purchase.findOne).mockResolvedValue(null); // No purchase
+
+        await RetrievalController.getById(
+          mockReq as Request,
+          mockRes as Response,
+        );
+
+        expect(sanitizeMentors).toHaveBeenCalledWith(
+          mockProgramData.mentors,
+          true, // Admin enrolled mentee
+        );
+      });
+
+      it("should allow admin-enrolled class rep to view mentor contacts", async () => {
+        mockReq.user = {
+          _id: userId,
+          role: "Participant",
+        };
+
+        const mockProgramData = {
+          _id: programId,
+          title: "Test Program",
+          isFree: false,
+          mentors: [
+            {
+              userId: mentorId,
+              email: "mentor@example.com",
+            },
+          ],
+          adminEnrollments: {
+            mentees: [],
+            classReps: [userId],
+          },
+        };
+        const mockProgram = {
+          ...mockProgramData,
+          toObject: vi.fn().mockReturnValue(mockProgramData),
+        };
+
+        vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
+        vi.mocked(Purchase.findOne).mockResolvedValue(null); // No purchase
+
+        await RetrievalController.getById(
+          mockReq as Request,
+          mockRes as Response,
+        );
+
+        expect(sanitizeMentors).toHaveBeenCalledWith(
+          mockProgramData.mentors,
+          true, // Admin enrolled class rep
+        );
+      });
+
+      it("should hide mentor contacts from non-enrolled users", async () => {
+        mockReq.user = {
+          _id: userId,
+          role: "Participant",
+        };
+
+        const mockProgramData = {
+          _id: programId,
+          title: "Test Program",
+          isFree: false,
+          mentors: [
+            {
+              userId: mentorId,
+              email: "mentor@example.com",
+            },
+          ],
+          adminEnrollments: {
+            mentees: [],
+            classReps: [],
+          },
+        };
+        const mockProgram = {
+          ...mockProgramData,
+          toObject: vi.fn().mockReturnValue(mockProgramData),
+        };
+
+        vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
+        vi.mocked(Purchase.findOne).mockResolvedValue(null); // No purchase
+
+        await RetrievalController.getById(
+          mockReq as Request,
+          mockRes as Response,
+        );
+
+        // Check that sanitizeMentors was called with canView = false
+        expect(sanitizeMentors).toHaveBeenCalled();
+        const calls = vi.mocked(sanitizeMentors).mock.calls;
+        expect(calls[0][1]).toBe(false); // canViewMentorContact should be false
+      });
+
+      it("should hide mentor contacts from unauthenticated users", async () => {
+        mockReq.user = undefined;
+
+        const mockProgramData = {
+          _id: programId,
+          title: "Test Program",
+          mentors: [
+            {
+              userId: mentorId,
+              email: "mentor@example.com",
+            },
+          ],
+        };
+        const mockProgram = {
+          ...mockProgramData,
+          toObject: vi.fn().mockReturnValue(mockProgramData),
+        };
+
+        vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
+
+        await RetrievalController.getById(
+          mockReq as Request,
+          mockRes as Response,
+        );
+
+        // Check that sanitizeMentors was called with canView = false
+        expect(sanitizeMentors).toHaveBeenCalled();
+        const calls = vi.mocked(sanitizeMentors).mock.calls;
+        expect(calls[0][1]).toBe(false); // canViewMentorContact should be false
       });
     });
   });

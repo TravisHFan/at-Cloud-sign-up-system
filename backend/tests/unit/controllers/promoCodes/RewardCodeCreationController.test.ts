@@ -103,7 +103,7 @@ describe("RewardCodeCreationController", () => {
 
         await RewardCodeCreationController.createRewardCode(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(401);
@@ -120,7 +120,7 @@ describe("RewardCodeCreationController", () => {
 
         await RewardCodeCreationController.createRewardCode(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -135,7 +135,7 @@ describe("RewardCodeCreationController", () => {
 
         await RewardCodeCreationController.createRewardCode(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -150,7 +150,7 @@ describe("RewardCodeCreationController", () => {
 
         await RewardCodeCreationController.createRewardCode(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -166,7 +166,7 @@ describe("RewardCodeCreationController", () => {
 
         await RewardCodeCreationController.createRewardCode(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -182,7 +182,7 @@ describe("RewardCodeCreationController", () => {
 
         await RewardCodeCreationController.createRewardCode(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -198,7 +198,7 @@ describe("RewardCodeCreationController", () => {
 
         await RewardCodeCreationController.createRewardCode(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(404);
@@ -218,7 +218,7 @@ describe("RewardCodeCreationController", () => {
 
         await RewardCodeCreationController.createRewardCode(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -238,7 +238,7 @@ describe("RewardCodeCreationController", () => {
 
         await RewardCodeCreationController.createRewardCode(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -260,7 +260,27 @@ describe("RewardCodeCreationController", () => {
 
         await RewardCodeCreationController.createRewardCode(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(400);
+        expect(jsonMock).toHaveBeenCalledWith({
+          success: false,
+          message: "Expiration date must be in the future.",
+        });
+      });
+
+      it("should return 400 for invalid (non-parseable) expiration date", async () => {
+        vi.mocked(User.findById).mockResolvedValue({ _id: mockUserId });
+        mockReq.body = {
+          userId: mockUserId,
+          discountPercent: 25,
+          expiresAt: "not-a-valid-date",
+        };
+
+        await RewardCodeCreationController.createRewardCode(
+          mockReq as any,
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -298,7 +318,7 @@ describe("RewardCodeCreationController", () => {
 
         await RewardCodeCreationController.createRewardCode(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(201);
@@ -335,14 +355,14 @@ describe("RewardCodeCreationController", () => {
 
         await RewardCodeCreationController.createRewardCode(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(201);
         expect(PromoCode.create).toHaveBeenCalledWith(
           expect.objectContaining({
             applicableToType: "program",
-          })
+          }),
         );
       });
 
@@ -374,14 +394,14 @@ describe("RewardCodeCreationController", () => {
 
         await RewardCodeCreationController.createRewardCode(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(201);
         expect(PromoCode.create).toHaveBeenCalledWith(
           expect.objectContaining({
             applicableToType: "event",
-          })
+          }),
         );
       });
 
@@ -403,12 +423,12 @@ describe("RewardCodeCreationController", () => {
         };
         vi.mocked(PromoCode.create).mockResolvedValue(mockPromoCode as any);
         vi.mocked(EmailService.sendStaffPromoCodeEmail).mockRejectedValue(
-          new Error("Email failed")
+          new Error("Email failed"),
         );
 
         await RewardCodeCreationController.createRewardCode(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         // Should still succeed even if email fails
@@ -422,7 +442,7 @@ describe("RewardCodeCreationController", () => {
 
         await RewardCodeCreationController.createRewardCode(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -430,6 +450,121 @@ describe("RewardCodeCreationController", () => {
           success: false,
           message: "Failed to create reward code.",
         });
+      });
+    });
+
+    describe("Creator Name Fallback", () => {
+      it("should use username when firstName/lastName are missing", async () => {
+        // Set up user without firstName/lastName
+        mockReq.user = {
+          _id: "admin123",
+          id: "admin123",
+          role: "Administrator",
+          email: "admin@test.com",
+          username: "adminuser",
+          // No firstName or lastName
+        } as any;
+
+        vi.mocked(User.findById).mockResolvedValue({
+          _id: mockUserId,
+          email: "user@test.com",
+        });
+        vi.mocked(PromoCode.generateUniqueCode).mockResolvedValue("REWARD456");
+
+        const mockPromoCode = {
+          _id: "promo456",
+          code: "REWARD456",
+          type: "reward",
+          ownerId: {
+            _id: mockUserId,
+            email: "user@test.com",
+          },
+          discountPercent: 25,
+          populate: vi.fn().mockResolvedValue(undefined),
+        };
+        vi.mocked(PromoCode.create).mockResolvedValue(mockPromoCode as any);
+
+        await RewardCodeCreationController.createRewardCode(
+          mockReq as any,
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(201);
+      });
+
+      it("should use email when firstName/lastName and username are missing", async () => {
+        // Set up user with only email
+        mockReq.user = {
+          _id: "admin123",
+          id: "admin123",
+          role: "Administrator",
+          email: "adminonly@test.com",
+          // No firstName, lastName, or username
+        } as any;
+
+        vi.mocked(User.findById).mockResolvedValue({
+          _id: mockUserId,
+          email: "user@test.com",
+        });
+        vi.mocked(PromoCode.generateUniqueCode).mockResolvedValue("REWARD789");
+
+        const mockPromoCode = {
+          _id: "promo789",
+          code: "REWARD789",
+          type: "reward",
+          ownerId: {
+            _id: mockUserId,
+            email: "user@test.com",
+          },
+          discountPercent: 25,
+          populate: vi.fn().mockResolvedValue(undefined),
+        };
+        vi.mocked(PromoCode.create).mockResolvedValue(mockPromoCode as any);
+
+        await RewardCodeCreationController.createRewardCode(
+          mockReq as any,
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(201);
+      });
+
+      it("should fall back to 'Administrator' when role is missing", async () => {
+        // Set up user without role
+        mockReq.user = {
+          _id: "admin123",
+          id: "admin123",
+          // No role
+          email: "admin@test.com",
+          firstName: "Admin",
+          lastName: "User",
+        } as any;
+
+        vi.mocked(User.findById).mockResolvedValue({
+          _id: mockUserId,
+          email: "user@test.com",
+        });
+        vi.mocked(PromoCode.generateUniqueCode).mockResolvedValue("REWARD101");
+
+        const mockPromoCode = {
+          _id: "promo101",
+          code: "REWARD101",
+          type: "reward",
+          ownerId: {
+            _id: mockUserId,
+            email: "user@test.com",
+          },
+          discountPercent: 25,
+          populate: vi.fn().mockResolvedValue(undefined),
+        };
+        vi.mocked(PromoCode.create).mockResolvedValue(mockPromoCode as any);
+
+        await RewardCodeCreationController.createRewardCode(
+          mockReq as any,
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(201);
       });
     });
   });

@@ -448,5 +448,71 @@ describe("roleAssignmentRejectionController - additional branches", () => {
       expect(trioSpy).not.toHaveBeenCalled();
       expect(res.statusCode).toBe(200);
     });
+
+    it("should return 410 when userId does not match assigneeId in rejectRoleAssignment", async () => {
+      vi.mocked(tokenUtil.verifyRoleAssignmentRejectionToken).mockReturnValue({
+        valid: true,
+        payload: {
+          assignmentId: "507f1f77bcf86cd799439011",
+          assigneeId: "507f1f77bcf86cd799439012",
+        },
+      } as any);
+
+      vi.mocked(Registration.findById).mockResolvedValue({
+        _id: "507f1f77bcf86cd799439011",
+        userId: "507f1f77bcf86cd799439099", // Different from assigneeId
+        eventId: "507f1f77bcf86cd799439088",
+        eventSnapshot: { title: "Event", roleName: "Role" },
+        deleteOne: vi.fn(),
+      } as any);
+
+      const incrementSpy = vi.spyOn(RejectionMetricsService, "increment");
+
+      const req = mockReq({
+        token: "valid-token",
+        note: "Reason for rejection",
+      });
+      const res = mockRes();
+
+      await controller.rejectRoleAssignment(req, res);
+
+      expect(incrementSpy).toHaveBeenCalledWith("invalid");
+      expect(res.statusCode).toBe(410);
+    });
+
+    it("should fall back to reg.userId when registeredBy is undefined", async () => {
+      vi.mocked(tokenUtil.verifyRoleAssignmentRejectionToken).mockReturnValue({
+        valid: true,
+        payload: {
+          assignmentId: "507f1f77bcf86cd799439011",
+          assigneeId: "507f1f77bcf86cd799439012",
+        },
+      } as any);
+
+      const deleteOne = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(Registration.findById).mockResolvedValue({
+        _id: "507f1f77bcf86cd799439011",
+        userId: "507f1f77bcf86cd799439012",
+        // No registeredBy - should fall back to userId
+        eventId: "507f1f77bcf86cd799439099",
+        eventSnapshot: { title: "Event", roleName: "Helper" },
+        deleteOne,
+      } as any);
+
+      // userId === assigneeId, so no notification should be sent
+      const trioSpy = vi.mocked(
+        TrioNotificationService.createEventRoleAssignmentRejectedTrio,
+      );
+
+      const req = mockReq({ token: "valid-token", note: "Self rejection" });
+      const res = mockRes();
+
+      await controller.rejectRoleAssignment(req, res);
+
+      // When registeredBy is undefined and falls back to userId,
+      // and userId === assigneeId, no notification is sent
+      expect(trioSpy).not.toHaveBeenCalled();
+      expect(res.statusCode).toBe(200);
+    });
   });
 });

@@ -111,7 +111,7 @@ describe("DonationController", () => {
 
         await DonationController.createDonation(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(401);
@@ -128,7 +128,7 @@ describe("DonationController", () => {
 
         await DonationController.createDonation(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -143,7 +143,7 @@ describe("DonationController", () => {
 
         await DonationController.createDonation(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -168,7 +168,7 @@ describe("DonationController", () => {
         };
 
         vi.mocked(DonationService.createDonation).mockResolvedValue(
-          mockDonation as any
+          mockDonation as any,
         );
         vi.mocked(createDonationCheckoutSession).mockResolvedValue({
           url: "https://checkout.stripe.com/session123",
@@ -177,7 +177,7 @@ describe("DonationController", () => {
 
         await DonationController.createDonation(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(DonationService.createDonation).toHaveBeenCalled();
@@ -209,7 +209,7 @@ describe("DonationController", () => {
         };
 
         vi.mocked(DonationService.createDonation).mockResolvedValue(
-          mockDonation as any
+          mockDonation as any,
         );
         vi.mocked(createDonationSubscription).mockResolvedValue({
           checkoutUrl: "https://checkout.stripe.com/sub123",
@@ -217,7 +217,7 @@ describe("DonationController", () => {
 
         await DonationController.createDonation(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(DonationService.createDonation).toHaveBeenCalled();
@@ -243,16 +243,41 @@ describe("DonationController", () => {
           .mockImplementation(() => {});
 
         vi.mocked(DonationService.createDonation).mockRejectedValue(
-          new Error("Service error")
+          new Error("Service error"),
         );
 
         await DonationController.createDonation(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
         expect(jsonMock.mock.calls[0][0].success).toBe(false);
+
+        consoleSpy.mockRestore();
+      });
+
+      it("should return default message on non-Error throw", async () => {
+        mockReq.body = { amount: 5000, type: "one-time" };
+
+        const consoleSpy = vi
+          .spyOn(console, "error")
+          .mockImplementation(() => {});
+
+        vi.mocked(DonationService.createDonation).mockRejectedValue(
+          "string error",
+        );
+
+        await DonationController.createDonation(
+          mockReq as any,
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(jsonMock).toHaveBeenCalledWith({
+          success: false,
+          message: "Failed to create donation.",
+        });
 
         consoleSpy.mockRestore();
       });
@@ -266,7 +291,7 @@ describe("DonationController", () => {
 
         await DonationController.retryDonationCheckout(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(401);
@@ -285,7 +310,7 @@ describe("DonationController", () => {
 
         await DonationController.retryDonationCheckout(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(404);
@@ -314,7 +339,7 @@ describe("DonationController", () => {
 
         await DonationController.retryDonationCheckout(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -326,6 +351,74 @@ describe("DonationController", () => {
         });
       });
     });
+
+    describe("Error Handling", () => {
+      it("should return 500 with error message on Error instance", async () => {
+        const consoleSpy = vi
+          .spyOn(console, "error")
+          .mockImplementation(() => {});
+
+        mockReq.params = { donationId: "donation789" };
+
+        const mockDonation = {
+          _id: "donation789",
+          userId: mockUserId,
+          amount: 5000,
+          giftDate: new Date("2024-12-25"),
+        };
+
+        vi.mocked(Donation.findOne).mockResolvedValue(mockDonation as any);
+        vi.mocked(createDonationCheckoutSession).mockRejectedValue(
+          new Error("Stripe checkout failed"),
+        );
+
+        await DonationController.retryDonationCheckout(
+          mockReq as any,
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(jsonMock).toHaveBeenCalledWith({
+          success: false,
+          message: "Stripe checkout failed",
+        });
+
+        consoleSpy.mockRestore();
+      });
+
+      it("should return 500 with default message on non-Error throw", async () => {
+        const consoleSpy = vi
+          .spyOn(console, "error")
+          .mockImplementation(() => {});
+
+        mockReq.params = { donationId: "donation789" };
+
+        const mockDonation = {
+          _id: "donation789",
+          userId: mockUserId,
+          amount: 5000,
+          giftDate: new Date("2024-12-25"),
+        };
+
+        vi.mocked(Donation.findOne).mockResolvedValue(mockDonation as any);
+        vi.mocked(createDonationCheckoutSession).mockRejectedValue(
+          "string error",
+        );
+
+        await DonationController.retryDonationCheckout(
+          mockReq as any,
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(jsonMock).toHaveBeenCalledWith({
+          success: false,
+          message: "Failed to retry donation checkout.",
+        });
+
+        consoleSpy.mockRestore();
+      });
+    });
   });
 
   describe("getMyDonations", () => {
@@ -335,7 +428,7 @@ describe("DonationController", () => {
 
         await DonationController.getMyDonations(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(401);
@@ -356,12 +449,12 @@ describe("DonationController", () => {
         };
 
         vi.mocked(DonationService.getUserDonationHistory).mockResolvedValue(
-          mockResult as any
+          mockResult as any,
         );
 
         await DonationController.getMyDonations(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(DonationService.getUserDonationHistory).toHaveBeenCalledWith(
@@ -369,7 +462,7 @@ describe("DonationController", () => {
           1,
           20,
           "giftDate",
-          "desc"
+          "desc",
         );
         expect(statusMock).toHaveBeenCalledWith(200);
         expect(jsonMock).toHaveBeenCalledWith({
@@ -387,12 +480,12 @@ describe("DonationController", () => {
         };
 
         vi.mocked(DonationService.getUserDonationHistory).mockResolvedValue(
-          {} as any
+          {} as any,
         );
 
         await DonationController.getMyDonations(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(DonationService.getUserDonationHistory).toHaveBeenCalledWith(
@@ -400,7 +493,7 @@ describe("DonationController", () => {
           2,
           10,
           "amount",
-          "asc"
+          "asc",
         );
       });
     });
@@ -412,12 +505,12 @@ describe("DonationController", () => {
           .mockImplementation(() => {});
 
         vi.mocked(DonationService.getUserDonationHistory).mockRejectedValue(
-          new Error("Database error")
+          new Error("Database error"),
         );
 
         await DonationController.getMyDonations(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -438,7 +531,7 @@ describe("DonationController", () => {
 
         await DonationController.getMyScheduledDonations(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(401);
@@ -456,12 +549,12 @@ describe("DonationController", () => {
         ];
 
         vi.mocked(DonationService.getUserScheduledDonations).mockResolvedValue(
-          mockDonations as any
+          mockDonations as any,
         );
 
         await DonationController.getMyScheduledDonations(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -481,12 +574,12 @@ describe("DonationController", () => {
           .mockImplementation(() => {});
 
         vi.mocked(DonationService.getUserScheduledDonations).mockRejectedValue(
-          new Error("Service error")
+          new Error("Service error"),
         );
 
         await DonationController.getMyScheduledDonations(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -524,7 +617,7 @@ describe("DonationController", () => {
         };
 
         vi.mocked(DonationService.getUserDonationStats).mockResolvedValue(
-          mockStats as any
+          mockStats as any,
         );
 
         await DonationController.getStats(mockReq as any, mockRes as Response);
@@ -544,7 +637,7 @@ describe("DonationController", () => {
           .mockImplementation(() => {});
 
         vi.mocked(DonationService.getUserDonationStats).mockRejectedValue(
-          new Error("Stats error")
+          new Error("Stats error"),
         );
 
         await DonationController.getStats(mockReq as any, mockRes as Response);
@@ -572,7 +665,7 @@ describe("DonationController", () => {
 
         await DonationController.editDonation(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(401);
@@ -592,12 +685,12 @@ describe("DonationController", () => {
         };
 
         vi.mocked(DonationService.updateDonation).mockResolvedValue(
-          mockDonation as any
+          mockDonation as any,
         );
 
         await DonationController.editDonation(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -619,13 +712,13 @@ describe("DonationController", () => {
         mockReq.body = { amount: 7500, frequency: "monthly" };
 
         vi.mocked(DonationService.updateDonation).mockResolvedValue(
-          mockDonation as any
+          mockDonation as any,
         );
         vi.mocked(updateDonationSubscription).mockResolvedValue({} as any);
 
         await DonationController.editDonation(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(updateDonationSubscription).toHaveBeenCalledWith({
@@ -647,20 +740,20 @@ describe("DonationController", () => {
         mockReq.body = { endDate };
 
         vi.mocked(DonationService.updateDonation).mockResolvedValue(
-          mockDonation as any
+          mockDonation as any,
         );
         vi.mocked(updateDonationSubscription).mockResolvedValue({} as any);
 
         await DonationController.editDonation(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(updateDonationSubscription).toHaveBeenCalledWith(
           expect.objectContaining({
             subscriptionId: "sub_123",
             endDate: expect.any(Date),
-          })
+          }),
         );
       });
 
@@ -674,19 +767,19 @@ describe("DonationController", () => {
         mockReq.body = { endDate: null };
 
         vi.mocked(DonationService.updateDonation).mockResolvedValue(
-          mockDonation as any
+          mockDonation as any,
         );
         vi.mocked(updateDonationSubscription).mockResolvedValue({} as any);
 
         await DonationController.editDonation(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(updateDonationSubscription).toHaveBeenCalledWith(
           expect.objectContaining({
             endDate: null,
-          })
+          }),
         );
       });
 
@@ -706,12 +799,12 @@ describe("DonationController", () => {
         };
 
         vi.mocked(DonationService.updateDonation).mockResolvedValue(
-          mockDonation as any
+          mockDonation as any,
         );
 
         await DonationController.editDonation(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(DonationService.updateDonation).toHaveBeenCalledWith(
@@ -721,7 +814,7 @@ describe("DonationController", () => {
             amount: 1000000, // 10000 * 100 cents
             frequency: "weekly",
             endAfterOccurrences: 12,
-          })
+          }),
         );
       });
     });
@@ -729,12 +822,12 @@ describe("DonationController", () => {
     describe("Error Handling", () => {
       it("should return 400 for ValidationError", async () => {
         vi.mocked(DonationService.updateDonation).mockRejectedValue(
-          new ValidationError("Invalid amount")
+          new ValidationError("Invalid amount"),
         );
 
         await DonationController.editDonation(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -746,12 +839,12 @@ describe("DonationController", () => {
 
       it("should return 404 for NotFoundError", async () => {
         vi.mocked(DonationService.updateDonation).mockRejectedValue(
-          new NotFoundError("Donation not found")
+          new NotFoundError("Donation not found"),
         );
 
         await DonationController.editDonation(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(404);
@@ -767,12 +860,12 @@ describe("DonationController", () => {
           .mockImplementation(() => {});
 
         vi.mocked(DonationService.updateDonation).mockRejectedValue(
-          new Error("Database error")
+          new Error("Database error"),
         );
 
         await DonationController.editDonation(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -797,7 +890,7 @@ describe("DonationController", () => {
 
         await DonationController.holdDonation(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(401);
@@ -817,18 +910,18 @@ describe("DonationController", () => {
         };
 
         vi.mocked(DonationService.holdDonation).mockResolvedValue(
-          mockDonation as any
+          mockDonation as any,
         );
         vi.mocked(pauseDonationSubscription).mockResolvedValue({} as any);
 
         await DonationController.holdDonation(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(DonationService.holdDonation).toHaveBeenCalledWith(
           "donation123",
-          mockUserId
+          mockUserId,
         );
         expect(pauseDonationSubscription).toHaveBeenCalledWith("sub_123");
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -846,12 +939,12 @@ describe("DonationController", () => {
         };
 
         vi.mocked(DonationService.holdDonation).mockResolvedValue(
-          mockDonation as any
+          mockDonation as any,
         );
 
         await DonationController.holdDonation(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(pauseDonationSubscription).not.toHaveBeenCalled();
@@ -862,12 +955,12 @@ describe("DonationController", () => {
     describe("Error Handling", () => {
       it("should return 400 for ValidationError", async () => {
         vi.mocked(DonationService.holdDonation).mockRejectedValue(
-          new ValidationError("Cannot hold this donation")
+          new ValidationError("Cannot hold this donation"),
         );
 
         await DonationController.holdDonation(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -875,12 +968,12 @@ describe("DonationController", () => {
 
       it("should return 404 for NotFoundError", async () => {
         vi.mocked(DonationService.holdDonation).mockRejectedValue(
-          new NotFoundError("Donation not found")
+          new NotFoundError("Donation not found"),
         );
 
         await DonationController.holdDonation(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(404);
@@ -892,12 +985,12 @@ describe("DonationController", () => {
           .mockImplementation(() => {});
 
         vi.mocked(DonationService.holdDonation).mockRejectedValue(
-          new Error("Service error")
+          new Error("Service error"),
         );
 
         await DonationController.holdDonation(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -918,7 +1011,7 @@ describe("DonationController", () => {
 
         await DonationController.resumeDonation(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(401);
@@ -938,18 +1031,18 @@ describe("DonationController", () => {
         };
 
         vi.mocked(DonationService.resumeDonation).mockResolvedValue(
-          mockDonation as any
+          mockDonation as any,
         );
         vi.mocked(resumeDonationSubscription).mockResolvedValue({} as any);
 
         await DonationController.resumeDonation(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(DonationService.resumeDonation).toHaveBeenCalledWith(
           "donation123",
-          mockUserId
+          mockUserId,
         );
         expect(resumeDonationSubscription).toHaveBeenCalledWith("sub_123");
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -967,12 +1060,12 @@ describe("DonationController", () => {
         };
 
         vi.mocked(DonationService.resumeDonation).mockResolvedValue(
-          mockDonation as any
+          mockDonation as any,
         );
 
         await DonationController.resumeDonation(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(resumeDonationSubscription).not.toHaveBeenCalled();
@@ -983,12 +1076,12 @@ describe("DonationController", () => {
     describe("Error Handling", () => {
       it("should return 400 for ValidationError", async () => {
         vi.mocked(DonationService.resumeDonation).mockRejectedValue(
-          new ValidationError("Cannot resume this donation")
+          new ValidationError("Cannot resume this donation"),
         );
 
         await DonationController.resumeDonation(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -996,12 +1089,12 @@ describe("DonationController", () => {
 
       it("should return 404 for NotFoundError", async () => {
         vi.mocked(DonationService.resumeDonation).mockRejectedValue(
-          new NotFoundError("Donation not found")
+          new NotFoundError("Donation not found"),
         );
 
         await DonationController.resumeDonation(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(404);
@@ -1013,12 +1106,12 @@ describe("DonationController", () => {
           .mockImplementation(() => {});
 
         vi.mocked(DonationService.resumeDonation).mockRejectedValue(
-          new Error("Service error")
+          new Error("Service error"),
         );
 
         await DonationController.resumeDonation(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -1039,7 +1132,7 @@ describe("DonationController", () => {
 
         await DonationController.cancelDonation(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(401);
@@ -1060,18 +1153,18 @@ describe("DonationController", () => {
         };
 
         vi.mocked(DonationService.cancelDonation).mockResolvedValue(
-          mockDonation as any
+          mockDonation as any,
         );
         vi.mocked(cancelDonationSubscription).mockResolvedValue({} as any);
 
         await DonationController.cancelDonation(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(DonationService.cancelDonation).toHaveBeenCalledWith(
           "donation123",
-          mockUserId
+          mockUserId,
         );
         expect(cancelDonationSubscription).toHaveBeenCalledWith("sub_123");
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -1090,12 +1183,12 @@ describe("DonationController", () => {
         };
 
         vi.mocked(DonationService.cancelDonation).mockResolvedValue(
-          mockDonation as any
+          mockDonation as any,
         );
 
         await DonationController.cancelDonation(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(cancelDonationSubscription).not.toHaveBeenCalled();
@@ -1111,12 +1204,12 @@ describe("DonationController", () => {
         };
 
         vi.mocked(DonationService.cancelDonation).mockResolvedValue(
-          mockDonation as any
+          mockDonation as any,
         );
 
         await DonationController.cancelDonation(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(cancelDonationSubscription).not.toHaveBeenCalled();
@@ -1127,12 +1220,12 @@ describe("DonationController", () => {
     describe("Error Handling", () => {
       it("should return 400 for ValidationError", async () => {
         vi.mocked(DonationService.cancelDonation).mockRejectedValue(
-          new ValidationError("Cannot cancel this donation")
+          new ValidationError("Cannot cancel this donation"),
         );
 
         await DonationController.cancelDonation(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -1140,12 +1233,12 @@ describe("DonationController", () => {
 
       it("should return 404 for NotFoundError", async () => {
         vi.mocked(DonationService.cancelDonation).mockRejectedValue(
-          new NotFoundError("Donation not found")
+          new NotFoundError("Donation not found"),
         );
 
         await DonationController.cancelDonation(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(404);
@@ -1157,12 +1250,12 @@ describe("DonationController", () => {
           .mockImplementation(() => {});
 
         vi.mocked(DonationService.cancelDonation).mockRejectedValue(
-          new Error("Service error")
+          new Error("Service error"),
         );
 
         await DonationController.cancelDonation(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -1179,7 +1272,7 @@ describe("DonationController", () => {
 
         await DonationController.getAllDonations(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(401);
@@ -1200,19 +1293,19 @@ describe("DonationController", () => {
         };
 
         vi.mocked(DonationService.getAllDonations).mockResolvedValue(
-          mockResult as any
+          mockResult as any,
         );
 
         await DonationController.getAllDonations(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(DonationService.getAllDonations).toHaveBeenCalledWith(
           1,
           20,
           "",
-          "all"
+          "all",
         );
         expect(statusMock).toHaveBeenCalledWith(200);
         expect(jsonMock).toHaveBeenCalledWith({
@@ -1237,19 +1330,19 @@ describe("DonationController", () => {
         };
 
         vi.mocked(DonationService.getAllDonations).mockResolvedValue(
-          mockResult as any
+          mockResult as any,
         );
 
         await DonationController.getAllDonations(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(DonationService.getAllDonations).toHaveBeenCalledWith(
           2,
           50,
           "john",
-          "completed"
+          "completed",
         );
       });
     });
@@ -1261,12 +1354,12 @@ describe("DonationController", () => {
           .mockImplementation(() => {});
 
         vi.mocked(DonationService.getAllDonations).mockRejectedValue(
-          new Error("Database error")
+          new Error("Database error"),
         );
 
         await DonationController.getAllDonations(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -1287,7 +1380,7 @@ describe("DonationController", () => {
 
         await DonationController.getAdminStats(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(401);
@@ -1308,12 +1401,12 @@ describe("DonationController", () => {
         };
 
         vi.mocked(DonationService.getAdminDonationStats).mockResolvedValue(
-          mockStats as any
+          mockStats as any,
         );
 
         await DonationController.getAdminStats(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(DonationService.getAdminDonationStats).toHaveBeenCalled();
@@ -1332,12 +1425,12 @@ describe("DonationController", () => {
           .mockImplementation(() => {});
 
         vi.mocked(DonationService.getAdminDonationStats).mockRejectedValue(
-          new Error("Stats error")
+          new Error("Stats error"),
         );
 
         await DonationController.getAdminStats(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);

@@ -157,12 +157,10 @@ describe("DeletionController", () => {
       });
 
       it("should return 403 if user lacks delete permissions", async () => {
-        const { hasPermission } = await import(
-          "../../../../src/utils/roleUtils"
-        );
-        const { isEventOrganizer } = await import(
-          "../../../../src/utils/event/eventPermissions"
-        );
+        const { hasPermission } =
+          await import("../../../../src/utils/roleUtils");
+        const { isEventOrganizer } =
+          await import("../../../../src/utils/event/eventPermissions");
 
         vi.mocked(hasPermission).mockReturnValue(false);
         vi.mocked(isEventOrganizer).mockReturnValue(false);
@@ -178,9 +176,8 @@ describe("DeletionController", () => {
       });
 
       it("should allow deletion with DELETE_ANY_EVENT permission", async () => {
-        const { hasPermission } = await import(
-          "../../../../src/utils/roleUtils"
-        );
+        const { hasPermission } =
+          await import("../../../../src/utils/roleUtils");
 
         vi.mocked(hasPermission).mockImplementation((role, permission) => {
           return permission === "delete_any_event";
@@ -198,17 +195,15 @@ describe("DeletionController", () => {
           expect.objectContaining({
             success: true,
             message: "Event deleted successfully!",
-          })
+          }),
         );
       });
 
       it("should allow deletion with DELETE_OWN_EVENT permission if user is organizer", async () => {
-        const { hasPermission } = await import(
-          "../../../../src/utils/roleUtils"
-        );
-        const { isEventOrganizer } = await import(
-          "../../../../src/utils/event/eventPermissions"
-        );
+        const { hasPermission } =
+          await import("../../../../src/utils/roleUtils");
+        const { isEventOrganizer } =
+          await import("../../../../src/utils/event/eventPermissions");
 
         vi.mocked(hasPermission).mockImplementation((role, permission) => {
           return permission === "delete_own_event";
@@ -227,17 +222,15 @@ describe("DeletionController", () => {
           expect.objectContaining({
             success: true,
             message: "Event deleted successfully!",
-          })
+          }),
         );
       });
 
       it("should deny deletion if user is not organizer and lacks DELETE_ANY_EVENT", async () => {
-        const { hasPermission } = await import(
-          "../../../../src/utils/roleUtils"
-        );
-        const { isEventOrganizer } = await import(
-          "../../../../src/utils/event/eventPermissions"
-        );
+        const { hasPermission } =
+          await import("../../../../src/utils/roleUtils");
+        const { isEventOrganizer } =
+          await import("../../../../src/utils/event/eventPermissions");
 
         vi.mocked(hasPermission).mockImplementation((role, permission) => {
           return permission === "delete_own_event";
@@ -269,12 +262,10 @@ describe("DeletionController", () => {
       });
 
       it("should return 400 if event has participants and user lacks force-delete permission", async () => {
-        const { hasPermission } = await import(
-          "../../../../src/utils/roleUtils"
-        );
-        const { isEventOrganizer } = await import(
-          "../../../../src/utils/event/eventPermissions"
-        );
+        const { hasPermission } =
+          await import("../../../../src/utils/roleUtils");
+        const { isEventOrganizer } =
+          await import("../../../../src/utils/event/eventPermissions");
 
         // User has delete_own_event but is not organizer
         vi.mocked(hasPermission).mockImplementation((role, permission) => {
@@ -288,9 +279,8 @@ describe("DeletionController", () => {
       });
 
       it("should allow force deletion if user has DELETE_ANY_EVENT permission", async () => {
-        const { hasPermission } = await import(
-          "../../../../src/utils/roleUtils"
-        );
+        const { hasPermission } =
+          await import("../../../../src/utils/roleUtils");
 
         vi.mocked(hasPermission).mockImplementation((role, permission) => {
           return permission === "delete_any_event";
@@ -308,21 +298,19 @@ describe("DeletionController", () => {
           expect.objectContaining({
             success: true,
             message: expect.stringContaining(
-              "Event deleted successfully! Also removed 5 associated registrations and 2 guest registrations"
+              "Event deleted successfully! Also removed 5 associated registrations and 2 guest registrations",
             ),
             deletedRegistrations: 5,
             deletedGuestRegistrations: 2,
-          })
+          }),
         );
       });
 
       it("should allow force deletion if user is organizer with DELETE_OWN_EVENT", async () => {
-        const { hasPermission } = await import(
-          "../../../../src/utils/roleUtils"
-        );
-        const { isEventOrganizer } = await import(
-          "../../../../src/utils/event/eventPermissions"
-        );
+        const { hasPermission } =
+          await import("../../../../src/utils/roleUtils");
+        const { isEventOrganizer } =
+          await import("../../../../src/utils/event/eventPermissions");
 
         vi.mocked(hasPermission).mockImplementation((role, permission) => {
           return permission === "delete_own_event";
@@ -341,10 +329,10 @@ describe("DeletionController", () => {
           expect.objectContaining({
             success: true,
             message: expect.stringContaining(
-              "Event deleted successfully! Also removed 3 associated registrations"
+              "Event deleted successfully! Also removed 3 associated registrations",
             ),
             deletedRegistrations: 3,
-          })
+          }),
         );
       });
     });
@@ -361,9 +349,8 @@ describe("DeletionController", () => {
         };
         vi.mocked(Event.findById).mockResolvedValue(mockEvent);
 
-        const { hasPermission } = await import(
-          "../../../../src/utils/roleUtils"
-        );
+        const { hasPermission } =
+          await import("../../../../src/utils/roleUtils");
         vi.mocked(hasPermission).mockReturnValue(true);
       });
 
@@ -376,7 +363,7 @@ describe("DeletionController", () => {
         await DeletionController.deleteEvent(req as Request, res as Response);
 
         expect(EventCascadeService.deleteEventFully).toHaveBeenCalledWith(
-          "507f1f77bcf86cd799439011"
+          "507f1f77bcf86cd799439011",
         );
         expect(statusMock).toHaveBeenCalledWith(200);
         expect(jsonMock).toHaveBeenCalledWith({
@@ -455,7 +442,7 @@ describe("DeletionController", () => {
         });
 
         vi.mocked(AuditLog.create).mockRejectedValue(
-          new Error("Audit log failed")
+          new Error("Audit log failed"),
         );
 
         const consoleErrorSpy = vi
@@ -468,11 +455,11 @@ describe("DeletionController", () => {
         expect(jsonMock).toHaveBeenCalledWith(
           expect.objectContaining({
             success: true,
-          })
+          }),
         );
         expect(consoleErrorSpy).toHaveBeenCalledWith(
           "Failed to create audit log for event deletion:",
-          expect.any(Error)
+          expect.any(Error),
         );
 
         consoleErrorSpy.mockRestore();
@@ -488,15 +475,14 @@ describe("DeletionController", () => {
         };
         vi.mocked(Event.findById).mockResolvedValue(mockEvent);
 
-        const { hasPermission } = await import(
-          "../../../../src/utils/roleUtils"
-        );
+        const { hasPermission } =
+          await import("../../../../src/utils/roleUtils");
         vi.mocked(hasPermission).mockReturnValue(true);
       });
 
       it("should handle cascade deletion errors", async () => {
         vi.mocked(EventCascadeService.deleteEventFully).mockRejectedValue(
-          new Error("Cascade deletion failed")
+          new Error("Cascade deletion failed"),
         );
 
         const consoleErrorSpy = vi
@@ -512,7 +498,7 @@ describe("DeletionController", () => {
         });
         expect(consoleErrorSpy).toHaveBeenCalledWith(
           "Delete event error:",
-          expect.any(Error)
+          expect.any(Error),
         );
 
         consoleErrorSpy.mockRestore();
@@ -520,7 +506,7 @@ describe("DeletionController", () => {
 
       it("should handle database errors", async () => {
         vi.mocked(Event.findById).mockRejectedValue(
-          new Error("Database connection lost")
+          new Error("Database connection lost"),
         );
 
         const consoleErrorSpy = vi
@@ -552,9 +538,8 @@ describe("DeletionController", () => {
         deletedCount: 5,
       } as any);
 
-      const result = await DeletionController.deleteAllRegistrationsForEvent(
-        "event-id-123"
-      );
+      const result =
+        await DeletionController.deleteAllRegistrationsForEvent("event-id-123");
 
       expect(Registration.deleteMany).toHaveBeenCalledWith({
         eventId: "event-id-123",
@@ -565,12 +550,28 @@ describe("DeletionController", () => {
 
     it("should handle user registration deletion errors", async () => {
       vi.mocked(Registration.deleteMany).mockRejectedValue(
-        new Error("Delete failed")
+        new Error("Delete failed"),
       );
 
       await expect(
-        DeletionController.deleteAllRegistrationsForEvent("event-id-123")
+        DeletionController.deleteAllRegistrationsForEvent("event-id-123"),
       ).rejects.toThrow("Delete failed");
+    });
+
+    it("should handle guest registration deletion errors", async () => {
+      const { GuestRegistration } = await import("../../../../src/models");
+
+      vi.mocked(Registration.deleteMany).mockResolvedValue({
+        deletedCount: 10,
+      } as any);
+
+      vi.mocked(GuestRegistration.deleteMany).mockRejectedValue(
+        new Error("Guest delete failed"),
+      );
+
+      await expect(
+        DeletionController.deleteAllRegistrationsForEvent("event-id-123"),
+      ).rejects.toThrow("Guest delete failed");
     });
   });
 });

@@ -102,7 +102,7 @@ describe("AtCloudRoleChangeController", () => {
 
         await AtCloudRoleChangeController.sendAtCloudRoleChangeNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -118,7 +118,7 @@ describe("AtCloudRoleChangeController", () => {
 
         await AtCloudRoleChangeController.sendAtCloudRoleChangeNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -132,7 +132,7 @@ describe("AtCloudRoleChangeController", () => {
 
         await AtCloudRoleChangeController.sendAtCloudRoleChangeNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -146,7 +146,7 @@ describe("AtCloudRoleChangeController", () => {
 
         await AtCloudRoleChangeController.sendAtCloudRoleChangeNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -162,7 +162,7 @@ describe("AtCloudRoleChangeController", () => {
 
         await AtCloudRoleChangeController.sendAtCloudRoleChangeNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -177,10 +177,10 @@ describe("AtCloudRoleChangeController", () => {
     describe("Successful Notification", () => {
       it("should send notification to user and admins", async () => {
         vi.mocked(EmailService.sendAtCloudRoleChangeToUser).mockResolvedValue(
-          true
+          true,
         );
         vi.mocked(
-          EmailRecipientUtils.getSystemAuthorizationChangeRecipients
+          EmailRecipientUtils.getSystemAuthorizationChangeRecipients,
         ).mockResolvedValue([
           {
             email: "admin1@test.com",
@@ -196,23 +196,23 @@ describe("AtCloudRoleChangeController", () => {
           },
         ]);
         vi.mocked(EmailService.sendAtCloudRoleChangeToAdmins).mockResolvedValue(
-          true
+          true,
         );
 
         await AtCloudRoleChangeController.sendAtCloudRoleChangeNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(EmailService.sendAtCloudRoleChangeToUser).toHaveBeenCalledWith(
           "user@test.com",
-          validUserData
+          validUserData,
         );
         expect(
-          EmailRecipientUtils.getSystemAuthorizationChangeRecipients
+          EmailRecipientUtils.getSystemAuthorizationChangeRecipients,
         ).toHaveBeenCalledWith("user123");
         expect(
-          EmailService.sendAtCloudRoleChangeToAdmins
+          EmailService.sendAtCloudRoleChangeToAdmins,
         ).toHaveBeenCalledTimes(2);
         expect(statusMock).toHaveBeenCalledWith(200);
         expect(jsonMock).toHaveBeenCalledWith({
@@ -224,10 +224,10 @@ describe("AtCloudRoleChangeController", () => {
 
       it("should count recipients correctly when user email fails", async () => {
         vi.mocked(EmailService.sendAtCloudRoleChangeToUser).mockResolvedValue(
-          false
+          false,
         );
         vi.mocked(
-          EmailRecipientUtils.getSystemAuthorizationChangeRecipients
+          EmailRecipientUtils.getSystemAuthorizationChangeRecipients,
         ).mockResolvedValue([
           {
             email: "admin@test.com",
@@ -237,12 +237,12 @@ describe("AtCloudRoleChangeController", () => {
           },
         ]);
         vi.mocked(EmailService.sendAtCloudRoleChangeToAdmins).mockResolvedValue(
-          true
+          true,
         );
 
         await AtCloudRoleChangeController.sendAtCloudRoleChangeNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(jsonMock).toHaveBeenCalledWith({
@@ -254,15 +254,15 @@ describe("AtCloudRoleChangeController", () => {
 
       it("should handle no admin recipients", async () => {
         vi.mocked(EmailService.sendAtCloudRoleChangeToUser).mockResolvedValue(
-          true
+          true,
         );
         vi.mocked(
-          EmailRecipientUtils.getSystemAuthorizationChangeRecipients
+          EmailRecipientUtils.getSystemAuthorizationChangeRecipients,
         ).mockResolvedValue([]);
 
         await AtCloudRoleChangeController.sendAtCloudRoleChangeNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(jsonMock).toHaveBeenCalledWith({
@@ -276,12 +276,12 @@ describe("AtCloudRoleChangeController", () => {
     describe("Error Handling", () => {
       it("should return 500 on error", async () => {
         vi.mocked(EmailService.sendAtCloudRoleChangeToUser).mockRejectedValue(
-          new Error("Email failed")
+          new Error("Email failed"),
         );
 
         await AtCloudRoleChangeController.sendAtCloudRoleChangeNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -291,6 +291,24 @@ describe("AtCloudRoleChangeController", () => {
           error: "Email failed",
         });
         expect(consoleErrorSpy).toHaveBeenCalled();
+      });
+
+      it("should return Unknown error for non-Error throws", async () => {
+        vi.mocked(EmailService.sendAtCloudRoleChangeToUser).mockRejectedValue(
+          "string error",
+        );
+
+        await AtCloudRoleChangeController.sendAtCloudRoleChangeNotification(
+          mockReq as unknown as Request,
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(jsonMock).toHaveBeenCalledWith({
+          success: false,
+          message: "Failed to send @Cloud role change notifications",
+          error: "Unknown error",
+        });
       });
     });
   });

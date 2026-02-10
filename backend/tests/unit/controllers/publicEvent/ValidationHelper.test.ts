@@ -49,7 +49,7 @@ describe("ValidationHelper - Unit Tests", () => {
         "valid-slug",
         mockLog,
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(result).toBe(true);
@@ -61,7 +61,7 @@ describe("ValidationHelper - Unit Tests", () => {
         undefined,
         mockLog,
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(result).toBe(false);
@@ -73,7 +73,7 @@ describe("ValidationHelper - Unit Tests", () => {
       expect(mockLog.warn).toHaveBeenCalledWith(
         "Public registration validation failure",
         undefined,
-        expect.objectContaining({ reason: "missing_slug" })
+        expect.objectContaining({ reason: "missing_slug" }),
       );
     });
 
@@ -82,13 +82,13 @@ describe("ValidationHelper - Unit Tests", () => {
         undefined,
         mockLog,
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(mockLog.warn).toHaveBeenCalledWith(
         expect.any(String),
         undefined,
-        expect.objectContaining({ requestId: "test-req-123" })
+        expect.objectContaining({ requestId: "test-req-123" }),
       );
     });
 
@@ -97,13 +97,13 @@ describe("ValidationHelper - Unit Tests", () => {
         undefined,
         mockLog,
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(mockLog.warn).toHaveBeenCalledWith(
         expect.any(String),
         undefined,
-        expect.objectContaining({ ipCidr: expect.any(String) })
+        expect.objectContaining({ ipCidr: expect.any(String) }),
       );
     });
   });
@@ -115,7 +115,7 @@ describe("ValidationHelper - Unit Tests", () => {
         "event-slug",
         mockLog,
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(result).toBe(true);
@@ -128,7 +128,7 @@ describe("ValidationHelper - Unit Tests", () => {
         "event-slug",
         mockLog,
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(result).toBe(false);
@@ -145,7 +145,7 @@ describe("ValidationHelper - Unit Tests", () => {
         "important-event",
         mockLog,
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(mockLog.warn).toHaveBeenCalledWith(
@@ -154,7 +154,7 @@ describe("ValidationHelper - Unit Tests", () => {
         expect.objectContaining({
           reason: "missing_roleId",
           slug: "important-event",
-        })
+        }),
       );
     });
   });
@@ -172,7 +172,7 @@ describe("ValidationHelper - Unit Tests", () => {
         "role-123",
         mockLog,
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(result).toBe(true);
@@ -186,7 +186,7 @@ describe("ValidationHelper - Unit Tests", () => {
         "role-123",
         mockLog,
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(result).toBe(false);
@@ -208,7 +208,7 @@ describe("ValidationHelper - Unit Tests", () => {
         "role-123",
         mockLog,
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(result).toBe(false);
@@ -229,7 +229,7 @@ describe("ValidationHelper - Unit Tests", () => {
         "role-123",
         mockLog,
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(result).toBe(false);
@@ -246,7 +246,7 @@ describe("ValidationHelper - Unit Tests", () => {
         "volunteer-role",
         mockLog,
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(mockLog.warn).toHaveBeenCalledWith(
@@ -255,7 +255,7 @@ describe("ValidationHelper - Unit Tests", () => {
         expect.objectContaining({
           slug: "important-event",
           roleId: "volunteer-role",
-        })
+        }),
       );
     });
 
@@ -272,7 +272,7 @@ describe("ValidationHelper - Unit Tests", () => {
         "role-123",
         mockLog,
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(result).toBe(true);
@@ -289,7 +289,7 @@ describe("ValidationHelper - Unit Tests", () => {
         "role-123",
         mockLog,
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(result).toBe(true);
@@ -305,7 +305,7 @@ describe("ValidationHelper - Unit Tests", () => {
         "role-123",
         mockLog,
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(result).toBe(false);
@@ -323,7 +323,7 @@ describe("ValidationHelper - Unit Tests", () => {
         "role-123",
         mockLog,
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(result).toBe(false);
@@ -337,7 +337,7 @@ describe("ValidationHelper - Unit Tests", () => {
         "role-123",
         mockLog,
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(result).toBe(false);
@@ -351,7 +351,7 @@ describe("ValidationHelper - Unit Tests", () => {
         "volunteer-role",
         mockLog,
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(mockLog.warn).toHaveBeenCalledWith(
@@ -361,7 +361,7 @@ describe("ValidationHelper - Unit Tests", () => {
           reason: "missing_consent",
           slug: "important-event",
           roleId: "volunteer-role",
-        })
+        }),
       );
     });
   });
@@ -376,7 +376,7 @@ describe("ValidationHelper - Unit Tests", () => {
         "event-slug",
         mockLog,
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(result).toBe(true);
@@ -390,7 +390,7 @@ describe("ValidationHelper - Unit Tests", () => {
         "event-slug",
         mockLog,
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(result).toBe(false);
@@ -408,7 +408,7 @@ describe("ValidationHelper - Unit Tests", () => {
         "important-event",
         mockLog,
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(mockLog.warn).toHaveBeenCalledWith(
@@ -418,7 +418,7 @@ describe("ValidationHelper - Unit Tests", () => {
           reason: "role_not_found",
           slug: "important-event",
           roleId: "nonexistent-role",
-        })
+        }),
       );
     });
   });
@@ -437,7 +437,7 @@ describe("ValidationHelper - Unit Tests", () => {
         "event-slug",
         mockLog,
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(result).toBe(true);
@@ -453,7 +453,7 @@ describe("ValidationHelper - Unit Tests", () => {
         "event-slug",
         mockLog,
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(result).toBe(false);
@@ -473,7 +473,7 @@ describe("ValidationHelper - Unit Tests", () => {
         "event-slug",
         mockLog,
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(result).toBe(false);
@@ -489,7 +489,7 @@ describe("ValidationHelper - Unit Tests", () => {
         "important-event",
         mockLog,
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(mockLog.warn).toHaveBeenCalledWith(
@@ -499,7 +499,7 @@ describe("ValidationHelper - Unit Tests", () => {
           reason: "role_not_open",
           slug: "important-event",
           roleId: "role-123",
-        })
+        }),
       );
     });
   });
@@ -516,7 +516,7 @@ describe("ValidationHelper - Unit Tests", () => {
         undefined,
         mockLog,
         reqWithoutIp,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(result).toBe(false);
@@ -530,14 +530,14 @@ describe("ValidationHelper - Unit Tests", () => {
         undefined,
         mockLog,
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(result).toBe(false);
       expect(mockLog.warn).toHaveBeenCalledWith(
         expect.any(String),
         undefined,
-        expect.objectContaining({ requestId: undefined })
+        expect.objectContaining({ requestId: undefined }),
       );
     });
 
@@ -553,11 +553,86 @@ describe("ValidationHelper - Unit Tests", () => {
         "role-123",
         mockLog,
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       // Should still validate successfully despite whitespace
       expect(result).toBe(true);
+    });
+
+    it("should fall back to socket.remoteAddress when req.ip is not a string", () => {
+      // Set req.ip to undefined to trigger the fallback
+      mockReq.ip = undefined as unknown as string;
+      mockReq.socket = { remoteAddress: "192.168.1.100" } as any;
+
+      const result = ValidationHelper.validateConsent(
+        undefined, // Missing consent to trigger warning log
+        "event-slug",
+        "role-123",
+        mockLog,
+        mockReq as Request,
+        mockRes as Response,
+      );
+
+      expect(result).toBe(false);
+      expect(mockLog.warn).toHaveBeenCalledWith(
+        "Public registration validation failure",
+        undefined,
+        expect.objectContaining({
+          reason: "missing_consent",
+          ipCidr: "192.168.1.0/24",
+        }),
+      );
+    });
+
+    it("should use empty string when neither req.ip nor socket.remoteAddress is available", () => {
+      mockReq.ip = undefined as unknown as string;
+      mockReq.socket = {} as any;
+
+      const result = ValidationHelper.validateRole(
+        undefined, // Missing role to trigger warning log
+        "role-123",
+        "event-slug",
+        mockLog,
+        mockReq as Request,
+        mockRes as Response,
+      );
+
+      expect(result).toBe(false);
+      expect(mockLog.warn).toHaveBeenCalledWith(
+        "Public registration validation failure",
+        undefined,
+        expect.objectContaining({
+          reason: "role_not_found",
+          ipCidr: null,
+        }),
+      );
+    });
+
+    it("should handle socket.remoteAddress fallback in validateRolePublic", () => {
+      mockReq.ip = undefined as unknown as string;
+      mockReq.socket = { remoteAddress: "10.0.0.50" } as any;
+
+      const targetRole = { openToPublic: false } as any;
+
+      const result = ValidationHelper.validateRolePublic(
+        targetRole,
+        "role-123",
+        "event-slug",
+        mockLog,
+        mockReq as Request,
+        mockRes as Response,
+      );
+
+      expect(result).toBe(false);
+      expect(mockLog.warn).toHaveBeenCalledWith(
+        "Public registration validation failure",
+        undefined,
+        expect.objectContaining({
+          reason: "role_not_open",
+          ipCidr: "10.0.0.0/24",
+        }),
+      );
     });
   });
 });

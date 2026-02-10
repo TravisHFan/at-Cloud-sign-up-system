@@ -38,6 +38,8 @@ export interface EventWithRegistrationData {
   flyerUrl?: string;
   // Optional Secondary Event Flyer image URL (for events only, not programs)
   secondaryFlyerUrl?: string;
+  // Optional YouTube video URL (for completed events)
+  youtubeUrl?: string;
   isHybrid?: boolean;
   zoomLink?: string;
   meetingId?: string;
@@ -302,7 +304,7 @@ export interface EventCascadeDeletionResult {
 
 // Type guards for program deletion responses
 export const isProgramDeletionResponse = (
-  response: unknown
+  response: unknown,
 ): response is ProgramDeletionResponse => {
   return (
     response !== null &&

@@ -9,7 +9,7 @@ vi.mock(
     AutoEmailNotificationService: {
       sendRoleChangeNotification: vi.fn(),
     },
-  })
+  }),
 );
 
 vi.mock("../../../../src/utils/roleUtils", () => ({
@@ -101,7 +101,7 @@ describe("SystemAuthorizationChangeController", () => {
 
         await SystemAuthorizationChangeController.sendSystemAuthorizationChangeNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -116,7 +116,7 @@ describe("SystemAuthorizationChangeController", () => {
 
         await SystemAuthorizationChangeController.sendSystemAuthorizationChangeNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -127,7 +127,7 @@ describe("SystemAuthorizationChangeController", () => {
 
         await SystemAuthorizationChangeController.sendSystemAuthorizationChangeNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -138,7 +138,7 @@ describe("SystemAuthorizationChangeController", () => {
 
         await SystemAuthorizationChangeController.sendSystemAuthorizationChangeNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -154,7 +154,7 @@ describe("SystemAuthorizationChangeController", () => {
 
         await SystemAuthorizationChangeController.sendSystemAuthorizationChangeNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -172,7 +172,7 @@ describe("SystemAuthorizationChangeController", () => {
         vi.mocked(RoleUtils.isPromotion).mockReturnValue(true);
         vi.mocked(RoleUtils.isDemotion).mockReturnValue(false);
         vi.mocked(
-          AutoEmailNotificationService.sendRoleChangeNotification
+          AutoEmailNotificationService.sendRoleChangeNotification,
         ).mockResolvedValue({
           emailsSent: 1,
           messagesCreated: 1,
@@ -181,12 +181,12 @@ describe("SystemAuthorizationChangeController", () => {
 
         await SystemAuthorizationChangeController.sendSystemAuthorizationChangeNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(RoleUtils.isPromotion).toHaveBeenCalledWith("Viewer", "Editor");
         expect(
-          AutoEmailNotificationService.sendRoleChangeNotification
+          AutoEmailNotificationService.sendRoleChangeNotification,
         ).toHaveBeenCalledWith({
           userData: validUserData,
           changedBy: validChangedBy,
@@ -215,7 +215,7 @@ describe("SystemAuthorizationChangeController", () => {
         vi.mocked(RoleUtils.isPromotion).mockReturnValue(false);
         vi.mocked(RoleUtils.isDemotion).mockReturnValue(true);
         vi.mocked(
-          AutoEmailNotificationService.sendRoleChangeNotification
+          AutoEmailNotificationService.sendRoleChangeNotification,
         ).mockResolvedValue({
           emailsSent: 1,
           messagesCreated: 1,
@@ -224,7 +224,7 @@ describe("SystemAuthorizationChangeController", () => {
 
         await SystemAuthorizationChangeController.sendSystemAuthorizationChangeNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(jsonMock).toHaveBeenCalledWith(
@@ -232,7 +232,7 @@ describe("SystemAuthorizationChangeController", () => {
             changeType: "demotion",
             message:
               "📋 Role change notification sent with email, system message, and bell notification",
-          })
+          }),
         );
       });
     });
@@ -242,7 +242,7 @@ describe("SystemAuthorizationChangeController", () => {
         vi.mocked(RoleUtils.isPromotion).mockReturnValue(false);
         vi.mocked(RoleUtils.isDemotion).mockReturnValue(false);
         vi.mocked(
-          AutoEmailNotificationService.sendRoleChangeNotification
+          AutoEmailNotificationService.sendRoleChangeNotification,
         ).mockResolvedValue({
           emailsSent: 1,
           messagesCreated: 1,
@@ -251,7 +251,7 @@ describe("SystemAuthorizationChangeController", () => {
 
         await SystemAuthorizationChangeController.sendSystemAuthorizationChangeNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(jsonMock).toHaveBeenCalledWith(
@@ -259,7 +259,7 @@ describe("SystemAuthorizationChangeController", () => {
             changeType: "change",
             message:
               "📋 Role change notification sent with email, system message, and bell notification",
-          })
+          }),
         );
       });
     });
@@ -268,12 +268,12 @@ describe("SystemAuthorizationChangeController", () => {
       it("should return 500 on error", async () => {
         vi.mocked(RoleUtils.isPromotion).mockReturnValue(true);
         vi.mocked(
-          AutoEmailNotificationService.sendRoleChangeNotification
+          AutoEmailNotificationService.sendRoleChangeNotification,
         ).mockRejectedValue(new Error("Notification failed"));
 
         await SystemAuthorizationChangeController.sendSystemAuthorizationChangeNotification(
           mockReq as unknown as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -281,6 +281,25 @@ describe("SystemAuthorizationChangeController", () => {
           success: false,
           message: "Failed to send system authorization change notifications",
           error: "Notification failed",
+        });
+      });
+
+      it("should return Unknown error for non-Error throws", async () => {
+        vi.mocked(RoleUtils.isPromotion).mockReturnValue(true);
+        vi.mocked(
+          AutoEmailNotificationService.sendRoleChangeNotification,
+        ).mockRejectedValue("string error");
+
+        await SystemAuthorizationChangeController.sendSystemAuthorizationChangeNotification(
+          mockReq as unknown as Request,
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(jsonMock).toHaveBeenCalledWith({
+          success: false,
+          message: "Failed to send system authorization change notifications",
+          error: "Unknown error",
         });
       });
     });

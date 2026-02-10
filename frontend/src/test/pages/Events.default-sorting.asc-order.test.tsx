@@ -192,8 +192,15 @@ vi.mock("../../services/api", () => {
           };
         }
         if (statuses.includes("completed") || statuses.includes("cancelled")) {
+          // Sort by date based on sortOrder parameter
+          const sortOrder = params.sortOrder || "desc";
+          const sortedEvents = [...passedEvents].sort((a, b) => {
+            const dateA = new Date(a.date).getTime();
+            const dateB = new Date(b.date).getTime();
+            return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
+          });
           return {
-            events: passedEvents,
+            events: sortedEvents,
             pagination: {
               currentPage: 1,
               totalPages: 1,
@@ -238,12 +245,12 @@ describe("Default event sorting (chronological asc)", () => {
         <NotificationProvider>
           <UpcomingEvents />
         </NotificationProvider>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     await waitFor(() => {
       expect(
-        screen.getByRole("heading", { name: /Upcoming Events/i })
+        screen.getByRole("heading", { name: /Upcoming Events/i }),
       ).toBeInTheDocument();
     });
 
@@ -260,25 +267,25 @@ describe("Default event sorting (chronological asc)", () => {
     ]);
   });
 
-  it("Past Events page sorts by earliest date first", async () => {
+  it("Past Events page sorts by newest date first (reverse chronological)", async () => {
     render(
       <MemoryRouter initialEntries={["/passed"]}>
         <NotificationProvider>
           <PassedEvents />
         </NotificationProvider>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     await waitFor(() => {
       expect(
-        screen.getByRole("heading", { name: /Past Events/i })
+        screen.getByRole("heading", { name: /Past Events/i }),
       ).toBeInTheDocument();
     });
 
     const titles = extractCardTitles(["Older Completed", "Newer Completed"]);
-    // Asc: Older Completed (1st), Newer Completed (10th)
-    expect(titles[0]).toMatch(/Older Completed/);
-    expect(titles[1]).toMatch(/Newer Completed/);
+    // Desc: Newer Completed (10th) first, Older Completed (1st) second
+    expect(titles[0]).toMatch(/Newer Completed/);
+    expect(titles[1]).toMatch(/Older Completed/);
   });
 
   it("My Events page sorts by earliest date first", async () => {
@@ -287,12 +294,12 @@ describe("Default event sorting (chronological asc)", () => {
         <NotificationProvider>
           <MyEvents />
         </NotificationProvider>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     await waitFor(() => {
       expect(
-        screen.getByRole("heading", { name: /My Events/i })
+        screen.getByRole("heading", { name: /My Events/i }),
       ).toBeInTheDocument();
     });
 
