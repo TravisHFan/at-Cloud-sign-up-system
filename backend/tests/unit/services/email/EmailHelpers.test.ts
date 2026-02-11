@@ -64,7 +64,7 @@ describe("EmailHelpers", () => {
       const result = EmailHelpers.buildDate(
         "2025-06-15",
         "14:30",
-        "America/Los_Angeles"
+        "America/Los_Angeles",
       );
       expect(result).toBeInstanceOf(Date);
       expect(result.getTime()).toBeGreaterThan(0);
@@ -74,7 +74,7 @@ describe("EmailHelpers", () => {
       const result = EmailHelpers.buildDate(
         "2025-12-15",
         "14:30",
-        "America/New_York"
+        "America/New_York",
       );
       expect(result).toBeInstanceOf(Date);
       expect(result.getTime()).toBeGreaterThan(0);
@@ -94,7 +94,7 @@ describe("EmailHelpers", () => {
       const result = EmailHelpers.buildDate(
         "2025-06-15",
         "14:30",
-        "Invalid/Timezone"
+        "Invalid/Timezone",
       );
       expect(result).toBeInstanceOf(Date);
     });
@@ -121,7 +121,7 @@ describe("EmailHelpers", () => {
       const result = EmailHelpers.formatDateTime(
         "2025-06-15",
         "14:30",
-        "America/Los_Angeles"
+        "America/Los_Angeles",
       );
       expect(result).toContain("Sunday");
       expect(result).toContain("June");
@@ -154,7 +154,7 @@ describe("EmailHelpers", () => {
       const result = EmailHelpers.formatTime(
         "14:30",
         "America/Los_Angeles",
-        "2025-06-15"
+        "2025-06-15",
       );
       expect(result).toContain("2:30");
       expect(result).toContain("PM");
@@ -191,7 +191,7 @@ describe("EmailHelpers", () => {
       const result = EmailHelpers.formatDateTimeRange(
         "2025-06-15",
         "14:30",
-        "16:00"
+        "16:00",
       );
       expect(result).toContain("Sunday");
       expect(result).toContain("June 15, 2025");
@@ -204,7 +204,7 @@ describe("EmailHelpers", () => {
       const result = EmailHelpers.formatDateTimeRange(
         "2025-06-15",
         "14:30",
-        undefined
+        undefined,
       );
       expect(result).toContain("Sunday");
       expect(result).toContain("June 15, 2025");
@@ -217,7 +217,7 @@ describe("EmailHelpers", () => {
         "2025-06-15",
         "14:30",
         "16:00",
-        "2025-06-17"
+        "2025-06-17",
       );
       expect(result).toContain("Sunday, June 15, 2025");
       expect(result).toContain("-");
@@ -231,7 +231,7 @@ describe("EmailHelpers", () => {
         "2025-06-15",
         "14:30",
         "16:00",
-        "2025-06-15"
+        "2025-06-15",
       );
       // Same date, should format as single day
       expect(result).toContain("2:30 PM");
@@ -244,7 +244,7 @@ describe("EmailHelpers", () => {
         "14:30",
         "16:00",
         undefined,
-        "America/Los_Angeles"
+        "America/Los_Angeles",
       );
       expect(result).toContain("PDT");
       expect(result).toContain("2:30 PM");
@@ -255,7 +255,7 @@ describe("EmailHelpers", () => {
       const result = EmailHelpers.formatDateTimeRange(
         "2025-06-15",
         "22:00",
-        "02:00"
+        "02:00",
       );
       expect(result).toContain("10:00 PM");
       expect(result).toContain("2:00 AM");
@@ -265,7 +265,7 @@ describe("EmailHelpers", () => {
       const result = EmailHelpers.formatDateTimeRange(
         "2025-06-15",
         "2:30 pm",
-        "4:00 pm"
+        "4:00 pm",
       );
       expect(result).toContain("2:30 PM");
       expect(result).toContain("4:00 PM");
@@ -278,7 +278,7 @@ describe("EmailHelpers", () => {
       const spring = EmailHelpers.buildDate(
         "2025-03-09",
         "02:30",
-        "America/Los_Angeles"
+        "America/Los_Angeles",
       );
       expect(spring).toBeInstanceOf(Date);
 
@@ -286,7 +286,7 @@ describe("EmailHelpers", () => {
       const fall = EmailHelpers.buildDate(
         "2025-11-02",
         "01:30",
-        "America/Los_Angeles"
+        "America/Los_Angeles",
       );
       expect(fall).toBeInstanceOf(Date);
     });
@@ -312,7 +312,7 @@ describe("EmailHelpers", () => {
       const newYearsEve = EmailHelpers.formatDateTime(
         "2025-12-31",
         "23:59",
-        "America/New_York"
+        "America/New_York",
       );
       expect(newYearsEve).toContain("2025");
       expect(newYearsEve).toContain("11:59 PM");
@@ -320,7 +320,7 @@ describe("EmailHelpers", () => {
       const newYearsDay = EmailHelpers.formatDateTime(
         "2026-01-01",
         "00:01",
-        "America/New_York"
+        "America/New_York",
       );
       expect(newYearsDay).toContain("2026");
       expect(newYearsDay).toContain("12:01 AM");
@@ -337,6 +337,113 @@ describe("EmailHelpers", () => {
       // Both should represent the same moment
       expect(builtDate).toBeInstanceOf(Date);
       expect(formatted).toContain("2025");
+    });
+  });
+
+  describe("Edge cases - buildDate timezone handling", () => {
+    it("should handle partial date components", () => {
+      // Date with only year
+      const result1 = EmailHelpers.buildDate(
+        "2025",
+        "14:30",
+        "America/New_York",
+      );
+      expect(result1).toBeInstanceOf(Date);
+
+      // Date with year-month
+      const result2 = EmailHelpers.buildDate(
+        "2025-06",
+        "14:30",
+        "America/New_York",
+      );
+      expect(result2).toBeInstanceOf(Date);
+    });
+
+    it("should handle time without minutes", () => {
+      const result = EmailHelpers.buildDate(
+        "2025-06-15",
+        "14",
+        "America/New_York",
+      );
+      expect(result).toBeInstanceOf(Date);
+    });
+
+    it("should handle empty time string", () => {
+      const result = EmailHelpers.buildDate(
+        "2025-06-15",
+        "",
+        "America/New_York",
+      );
+      expect(result).toBeInstanceOf(Date);
+    });
+
+    it("should handle DST boundary (spring forward)", () => {
+      // March 9, 2025 2:00 AM EST -> 3:00 AM EDT (spring forward)
+      const result = EmailHelpers.buildDate(
+        "2025-03-09",
+        "02:30",
+        "America/New_York",
+      );
+      expect(result).toBeInstanceOf(Date);
+    });
+
+    it("should handle DST boundary (fall back)", () => {
+      // Nov 2, 2025 2:00 AM EDT -> 1:00 AM EST (fall back)
+      const result = EmailHelpers.buildDate(
+        "2025-11-02",
+        "01:30",
+        "America/New_York",
+      );
+      expect(result).toBeInstanceOf(Date);
+    });
+  });
+
+  describe("Edge cases - formatTime", () => {
+    it("should format time without timezone", () => {
+      const result = EmailHelpers.formatTime("14:30");
+      expect(result).toContain("2:30");
+      expect(result).toContain("PM");
+    });
+
+    it("should format time with timezone", () => {
+      const result = EmailHelpers.formatTime(
+        "14:30",
+        "America/Los_Angeles",
+        "2025-06-15",
+      );
+      expect(result).toContain("2:30");
+      expect(result).toContain("PM");
+    });
+
+    it("should use provided date for timezone calculation", () => {
+      // During DST
+      const summerResult = EmailHelpers.formatTime(
+        "14:30",
+        "America/New_York",
+        "2025-06-15",
+      );
+      expect(summerResult).toContain("PM");
+
+      // Outside DST
+      const winterResult = EmailHelpers.formatTime(
+        "14:30",
+        "America/New_York",
+        "2025-01-15",
+      );
+      expect(winterResult).toContain("PM");
+    });
+  });
+
+  describe("Edge cases - normalizeTimeTo24h", () => {
+    it("should return original string when regex matches am/pm but full pattern fails", () => {
+      // Has am/pm suffix but doesn't match full time pattern
+      const result = EmailHelpers.normalizeTimeTo24h("invalid:am");
+      expect(result).toBe("invalid:am");
+    });
+
+    it("should handle time with no space before am/pm", () => {
+      expect(EmailHelpers.normalizeTimeTo24h("3:45pm")).toBe("15:45");
+      expect(EmailHelpers.normalizeTimeTo24h("12:00am")).toBe("00:00");
     });
   });
 });

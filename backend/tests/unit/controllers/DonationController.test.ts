@@ -876,6 +876,29 @@ describe("DonationController", () => {
 
         consoleSpy.mockRestore();
       });
+
+      it("should return 500 with default message on non-Error throw", async () => {
+        const consoleSpy = vi
+          .spyOn(console, "error")
+          .mockImplementation(() => {});
+
+        vi.mocked(DonationService.updateDonation).mockRejectedValue(
+          "string error",
+        );
+
+        await DonationController.editDonation(
+          mockReq as any,
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(jsonMock).toHaveBeenCalledWith({
+          success: false,
+          message: "Failed to update donation.",
+        });
+
+        consoleSpy.mockRestore();
+      });
     });
   });
 
@@ -997,6 +1020,29 @@ describe("DonationController", () => {
 
         consoleSpy.mockRestore();
       });
+
+      it("should return 500 with default message on non-Error throw", async () => {
+        const consoleSpy = vi
+          .spyOn(console, "error")
+          .mockImplementation(() => {});
+
+        vi.mocked(DonationService.holdDonation).mockRejectedValue(
+          "string error",
+        );
+
+        await DonationController.holdDonation(
+          mockReq as any,
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(jsonMock).toHaveBeenCalledWith({
+          success: false,
+          message: "Failed to hold donation.",
+        });
+
+        consoleSpy.mockRestore();
+      });
     });
   });
 
@@ -1115,6 +1161,29 @@ describe("DonationController", () => {
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
+
+        consoleSpy.mockRestore();
+      });
+
+      it("should return 500 with default message on non-Error throw", async () => {
+        const consoleSpy = vi
+          .spyOn(console, "error")
+          .mockImplementation(() => {});
+
+        vi.mocked(DonationService.resumeDonation).mockRejectedValue(
+          "string error",
+        );
+
+        await DonationController.resumeDonation(
+          mockReq as any,
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(jsonMock).toHaveBeenCalledWith({
+          success: false,
+          message: "Failed to resume donation.",
+        });
 
         consoleSpy.mockRestore();
       });
@@ -1259,6 +1328,29 @@ describe("DonationController", () => {
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
+
+        consoleSpy.mockRestore();
+      });
+
+      it("should return 500 with default message on non-Error throw", async () => {
+        const consoleSpy = vi
+          .spyOn(console, "error")
+          .mockImplementation(() => {});
+
+        vi.mocked(DonationService.cancelDonation).mockRejectedValue(
+          "string error",
+        );
+
+        await DonationController.cancelDonation(
+          mockReq as any,
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(jsonMock).toHaveBeenCalledWith({
+          success: false,
+          message: "Failed to cancel donation.",
+        });
 
         consoleSpy.mockRestore();
       });

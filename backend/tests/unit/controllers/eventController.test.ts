@@ -205,20 +205,20 @@ describe("EventController", () => {
 
     // Set up spies for EventEmailService methods used in tests
     vi.spyOn(EventEmailService, "sendEventCreatedEmail").mockResolvedValue(
-      true
+      true,
     );
     vi.spyOn(EventEmailService, "sendEventNotificationEmail").mockResolvedValue(
-      true
+      true,
     );
     vi.spyOn(
       EventEmailService,
-      "sendEventNotificationEmailBulk"
+      "sendEventNotificationEmailBulk",
     ).mockResolvedValue([]);
 
     // Set up spy for RoleEmailService methods used for co-organizer notifications
     vi.spyOn(
       RoleEmailService,
-      "sendCoOrganizerAssignedEmail"
+      "sendCoOrganizerAssignedEmail",
     ).mockResolvedValue(true);
 
     mockJson = vi.fn();
@@ -265,7 +265,7 @@ describe("EventController", () => {
       const getEventStatus = (EventController as any).getEventStatus as (
         d: string,
         t: string,
-        e: string
+        e: string,
       ) => "upcoming" | "ongoing" | "completed";
 
       // upcoming: event is tomorrow
@@ -346,29 +346,29 @@ describe("EventController", () => {
         endDate: string,
         time: string,
         endTime: string,
-        tz?: string
+        tz?: string,
       ) => "upcoming" | "ongoing" | "completed";
 
       // Now fixed at 2025-08-11T12:00Z
       // Event starts exactly now and ends one hour later
       expect(
-        getEventStatusNew("2025-08-11", "2025-08-11", "12:00", "13:00", "UTC")
+        getEventStatusNew("2025-08-11", "2025-08-11", "12:00", "13:00", "UTC"),
       ).toBe("ongoing");
 
       // Event ends exactly now -> now >= end -> completed
       expect(
-        getEventStatusNew("2025-08-11", "2025-08-11", "10:00", "12:00", "UTC")
+        getEventStatusNew("2025-08-11", "2025-08-11", "10:00", "12:00", "UTC"),
       ).toBe("completed");
 
       // One minute before end still ongoing
       vi.setSystemTime(new Date("2025-08-11T12:59:00Z"));
       expect(
-        getEventStatusNew("2025-08-11", "2025-08-11", "12:00", "13:00", "UTC")
+        getEventStatusNew("2025-08-11", "2025-08-11", "12:00", "13:00", "UTC"),
       ).toBe("ongoing");
       // Exactly at end -> completed
       vi.setSystemTime(new Date("2025-08-11T13:00:00Z"));
       expect(
-        getEventStatusNew("2025-08-11", "2025-08-11", "12:00", "13:00", "UTC")
+        getEventStatusNew("2025-08-11", "2025-08-11", "12:00", "13:00", "UTC"),
       ).toBe("completed");
       // Restore fixed base
       vi.setSystemTime(fixedNow);
@@ -380,23 +380,23 @@ describe("EventController", () => {
         endDate: string,
         time: string,
         endTime: string,
-        tz?: string
+        tz?: string,
       ) => "upcoming" | "ongoing" | "completed";
 
       // Multi-day event Aug 10 09:00 -> Aug 12 17:00. Now is Aug 11 12:00Z.
       expect(
-        getEventStatusNew("2025-08-10", "2025-08-12", "09:00", "17:00", "UTC")
+        getEventStatusNew("2025-08-10", "2025-08-12", "09:00", "17:00", "UTC"),
       ).toBe("ongoing");
 
       // Before it starts
       vi.setSystemTime(new Date("2025-08-10T08:59:00Z"));
       expect(
-        getEventStatusNew("2025-08-10", "2025-08-12", "09:00", "17:00", "UTC")
+        getEventStatusNew("2025-08-10", "2025-08-12", "09:00", "17:00", "UTC"),
       ).toBe("upcoming");
       // After it ends
       vi.setSystemTime(new Date("2025-08-12T17:00:00Z"));
       expect(
-        getEventStatusNew("2025-08-10", "2025-08-12", "09:00", "17:00", "UTC")
+        getEventStatusNew("2025-08-10", "2025-08-12", "09:00", "17:00", "UTC"),
       ).toBe("completed");
       vi.setSystemTime(fixedNow);
     });
@@ -407,7 +407,7 @@ describe("EventController", () => {
         endDate: string,
         time: string,
         endTime: string,
-        tz?: string
+        tz?: string,
       ) => "upcoming" | "ongoing" | "completed";
 
       // Choose a timezone behind UTC (America/Los_Angeles). At 12:00Z it's 05:00 PDT (UTC-7) on Aug 11.
@@ -418,8 +418,8 @@ describe("EventController", () => {
           "2025-08-11",
           "06:00",
           "07:00",
-          "America/Los_Angeles"
-        )
+          "America/Los_Angeles",
+        ),
       ).toBe("upcoming");
 
       // Advance to 13:05Z -> 06:05 PDT -> ongoing
@@ -430,8 +430,8 @@ describe("EventController", () => {
           "2025-08-11",
           "06:00",
           "07:00",
-          "America/Los_Angeles"
-        )
+          "America/Los_Angeles",
+        ),
       ).toBe("ongoing");
 
       // Advance to 14:00Z -> 07:00 PDT -> completed
@@ -442,8 +442,8 @@ describe("EventController", () => {
           "2025-08-11",
           "06:00",
           "07:00",
-          "America/Los_Angeles"
-        )
+          "America/Los_Angeles",
+        ),
       ).toBe("completed");
       vi.setSystemTime(fixedNow);
     });
@@ -454,7 +454,7 @@ describe("EventController", () => {
         endDate: string,
         time: string,
         endTime: string,
-        tz?: string
+        tz?: string,
       ) => "upcoming" | "ongoing" | "completed";
 
       // Event: Aug 11 2025 16:00-18:00 America/Los_Angeles (PDT, UTC-7)
@@ -465,31 +465,31 @@ describe("EventController", () => {
       // 19:00Z (12:00 PDT) -> upcoming
       vi.setSystemTime(new Date("2025-08-11T19:00:00Z"));
       expect(
-        getEventStatusNew("2025-08-11", "2025-08-11", "16:00", "18:00", tz)
+        getEventStatusNew("2025-08-11", "2025-08-11", "16:00", "18:00", tz),
       ).toBe("upcoming");
 
       // 20:30Z (13:30 PDT) -> still upcoming
       vi.setSystemTime(new Date("2025-08-11T20:30:00Z"));
       expect(
-        getEventStatusNew("2025-08-11", "2025-08-11", "16:00", "18:00", tz)
+        getEventStatusNew("2025-08-11", "2025-08-11", "16:00", "18:00", tz),
       ).toBe("upcoming");
 
       // 23:00Z (16:00 PDT) -> start -> ongoing
       vi.setSystemTime(new Date("2025-08-11T23:00:00Z"));
       expect(
-        getEventStatusNew("2025-08-11", "2025-08-11", "16:00", "18:00", tz)
+        getEventStatusNew("2025-08-11", "2025-08-11", "16:00", "18:00", tz),
       ).toBe("ongoing");
 
       // 00:59Z next day (17:59 PDT) -> ongoing
       vi.setSystemTime(new Date("2025-08-12T00:59:00Z"));
       expect(
-        getEventStatusNew("2025-08-11", "2025-08-11", "16:00", "18:00", tz)
+        getEventStatusNew("2025-08-11", "2025-08-11", "16:00", "18:00", tz),
       ).toBe("ongoing");
 
       // 01:00Z (18:00 PDT) -> completed
       vi.setSystemTime(new Date("2025-08-12T01:00:00Z"));
       expect(
-        getEventStatusNew("2025-08-11", "2025-08-11", "16:00", "18:00", tz)
+        getEventStatusNew("2025-08-11", "2025-08-11", "16:00", "18:00", tz),
       ).toBe("completed");
 
       vi.setSystemTime(fixedNow);
@@ -504,7 +504,7 @@ describe("EventController", () => {
         endDate: string,
         time: string,
         endTime: string,
-        tz?: string
+        tz?: string,
       ) => "upcoming" | "ongoing" | "completed";
 
       // Base fixedNow = 2025-08-11T12:00:00Z from earlier test setup (ensured by outer describe).
@@ -523,25 +523,25 @@ describe("EventController", () => {
       // Just before start -> upcoming
       vi.setSystemTime(new Date(localStart.getTime() - 60_000));
       expect(
-        getEventStatusNew("2025-08-11", "2025-08-11", "16:00", "18:00")
+        getEventStatusNew("2025-08-11", "2025-08-11", "16:00", "18:00"),
       ).toBe("upcoming");
 
       // At start -> ongoing
       vi.setSystemTime(localStart);
       expect(
-        getEventStatusNew("2025-08-11", "2025-08-11", "16:00", "18:00")
+        getEventStatusNew("2025-08-11", "2025-08-11", "16:00", "18:00"),
       ).toBe("ongoing");
 
       // Just before end -> ongoing
       vi.setSystemTime(new Date(localEnd.getTime() - 60_000));
       expect(
-        getEventStatusNew("2025-08-11", "2025-08-11", "16:00", "18:00")
+        getEventStatusNew("2025-08-11", "2025-08-11", "16:00", "18:00"),
       ).toBe("ongoing");
 
       // At or after end -> completed
       vi.setSystemTime(localEnd);
       expect(
-        getEventStatusNew("2025-08-11", "2025-08-11", "16:00", "18:00")
+        getEventStatusNew("2025-08-11", "2025-08-11", "16:00", "18:00"),
       ).toBe("completed");
       vi.setSystemTime(fixedNow);
     });
@@ -582,7 +582,7 @@ describe("EventController", () => {
 
       await EventController.createEvent(
         mockRequest as unknown as Request,
-        mockResponse as unknown as Response
+        mockResponse as unknown as Response,
       );
 
       expect(mockStatus).toHaveBeenCalledWith(409);
@@ -634,7 +634,7 @@ describe("EventController", () => {
           phone: "555-0000",
           name: "New User",
           avatar: "new.png",
-        })
+        }),
       );
     });
 
@@ -708,13 +708,13 @@ describe("EventController", () => {
 
       vi.mocked(Event.countDocuments).mockResolvedValue(2);
       vi.mocked(
-        ResponseBuilderService.buildEventsWithRegistrations
+        ResponseBuilderService.buildEventsWithRegistrations,
       ).mockResolvedValue(mockEvents as any);
 
       // Act
       await EventController.getAllEvents(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       // Assert
@@ -767,13 +767,13 @@ describe("EventController", () => {
       vi.mocked(Event.countDocuments).mockResolvedValue(0);
 
       vi.mocked(
-        ResponseBuilderService.buildEventsWithRegistrations
+        ResponseBuilderService.buildEventsWithRegistrations,
       ).mockResolvedValue(mockEvents as any);
 
       // Act
       await EventController.getAllEvents(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       // Assert
@@ -800,13 +800,13 @@ describe("EventController", () => {
 
       vi.mocked(Event.countDocuments).mockResolvedValue(0);
       vi.mocked(
-        ResponseBuilderService.buildEventsWithRegistrations
+        ResponseBuilderService.buildEventsWithRegistrations,
       ).mockResolvedValue([] as any);
 
       // Act
       await EventController.getAllEvents(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       // Assert
@@ -839,13 +839,13 @@ describe("EventController", () => {
 
       vi.mocked(Event.countDocuments).mockResolvedValue(0);
       vi.mocked(
-        ResponseBuilderService.buildEventsWithRegistrations
+        ResponseBuilderService.buildEventsWithRegistrations,
       ).mockResolvedValue([] as any);
 
       // Act
       await EventController.getAllEvents(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       // Assert
@@ -879,13 +879,13 @@ describe("EventController", () => {
 
       vi.mocked(Event.countDocuments).mockResolvedValue(0);
       vi.mocked(
-        ResponseBuilderService.buildEventsWithRegistrations
+        ResponseBuilderService.buildEventsWithRegistrations,
       ).mockResolvedValue([] as any);
 
       // Act
       await EventController.getAllEvents(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       // Assert
@@ -916,13 +916,13 @@ describe("EventController", () => {
 
       vi.mocked(Event.countDocuments).mockResolvedValue(0);
       vi.mocked(
-        ResponseBuilderService.buildEventsWithRegistrations
+        ResponseBuilderService.buildEventsWithRegistrations,
       ).mockResolvedValue([] as any);
 
       // Act
       await EventController.getAllEvents(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       // Assert
@@ -949,13 +949,13 @@ describe("EventController", () => {
 
       vi.mocked(Event.countDocuments).mockResolvedValue(0);
       vi.mocked(
-        ResponseBuilderService.buildEventsWithRegistrations
+        ResponseBuilderService.buildEventsWithRegistrations,
       ).mockResolvedValue([] as any);
 
       // Act
       await EventController.getAllEvents(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       // Assert
@@ -993,7 +993,7 @@ describe("EventController", () => {
       vi.mocked(Event.findByIdAndUpdate).mockResolvedValue({} as any);
       vi.mocked(Event.countDocuments).mockResolvedValue(1);
       vi.mocked(
-        ResponseBuilderService.buildEventsWithRegistrations
+        ResponseBuilderService.buildEventsWithRegistrations,
       ).mockResolvedValue(events as any);
 
       const invalidateEventCache = vi
@@ -1006,7 +1006,7 @@ describe("EventController", () => {
       // Act
       await EventController.getAllEvents(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       // Assert
@@ -1041,13 +1041,13 @@ describe("EventController", () => {
 
       vi.mocked(Event.countDocuments).mockResolvedValue(0);
       vi.mocked(
-        ResponseBuilderService.buildEventsWithRegistrations
+        ResponseBuilderService.buildEventsWithRegistrations,
       ).mockResolvedValue([] as any);
 
       // Act
       await EventController.getAllEvents(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       // Assert
@@ -1090,13 +1090,13 @@ describe("EventController", () => {
 
       vi.mocked(Event.countDocuments).mockResolvedValue(0);
       vi.mocked(
-        ResponseBuilderService.buildEventsWithRegistrations
+        ResponseBuilderService.buildEventsWithRegistrations,
       ).mockResolvedValue([] as any);
 
       // Act
       await EventController.getAllEvents(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       // Assert
@@ -1118,20 +1118,20 @@ describe("EventController", () => {
       });
 
       vi.mocked(
-        ResponseBuilderService.buildEventsWithRegistrations
+        ResponseBuilderService.buildEventsWithRegistrations,
       ).mockResolvedValue([] as any);
       vi.mocked(Event.countDocuments).mockRejectedValue(new Error("boom"));
 
       // Act
       await EventController.getAllEvents(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       // Assert
       expect(mockStatus).toHaveBeenCalledWith(500);
       expect(mockJson).toHaveBeenCalledWith(
-        expect.objectContaining({ success: false })
+        expect.objectContaining({ success: false }),
       );
     });
 
@@ -1164,13 +1164,13 @@ describe("EventController", () => {
 
       vi.mocked(Event.countDocuments).mockResolvedValue(3);
       vi.mocked(
-        ResponseBuilderService.buildEventsWithRegistrations
+        ResponseBuilderService.buildEventsWithRegistrations,
       ).mockResolvedValue(mockEvents as any);
 
       // Act
       await EventController.getAllEvents(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       // Assert
@@ -1180,7 +1180,7 @@ describe("EventController", () => {
           totalPages: 3,
           hasNext: true,
           hasPrev: false,
-        })
+        }),
       );
     });
 
@@ -1213,13 +1213,13 @@ describe("EventController", () => {
 
       vi.mocked(Event.countDocuments).mockResolvedValue(2);
       vi.mocked(
-        ResponseBuilderService.buildEventsWithRegistrations
+        ResponseBuilderService.buildEventsWithRegistrations,
       ).mockResolvedValue(mockEvents as any);
 
       // Act
       await EventController.getAllEvents(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       // Assert
@@ -1230,7 +1230,7 @@ describe("EventController", () => {
           totalPages: 2,
           hasNext: false,
           hasPrev: true,
-        })
+        }),
       );
     });
 
@@ -1248,19 +1248,19 @@ describe("EventController", () => {
       });
       vi.mocked(Event.countDocuments).mockResolvedValue(0);
       vi.mocked(
-        ResponseBuilderService.buildEventsWithRegistrations
+        ResponseBuilderService.buildEventsWithRegistrations,
       ).mockRejectedValue(new Error("boom"));
 
       // Act
       await EventController.getAllEvents(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       // Assert
       expect(mockStatus).toHaveBeenCalledWith(500);
       expect(mockJson).toHaveBeenCalledWith(
-        expect.objectContaining({ success: false })
+        expect.objectContaining({ success: false }),
       );
     });
   });
@@ -1290,13 +1290,13 @@ describe("EventController", () => {
       } as any);
 
       vi.mocked(
-        ResponseBuilderService.buildEventWithRegistrations
+        ResponseBuilderService.buildEventWithRegistrations,
       ).mockResolvedValue(mockEvent as any);
 
       // Act
       await EventController.getEventById(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       // Assert
@@ -1307,7 +1307,7 @@ describe("EventController", () => {
           data: expect.objectContaining({
             event: mockEvent,
           }),
-        })
+        }),
       );
     });
 
@@ -1322,7 +1322,7 @@ describe("EventController", () => {
       // Act
       await EventController.getEventById(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       // Assert
@@ -1331,7 +1331,7 @@ describe("EventController", () => {
         expect.objectContaining({
           success: false,
           message: "Event not found.",
-        })
+        }),
       );
     });
 
@@ -1343,7 +1343,7 @@ describe("EventController", () => {
       // Act
       await EventController.getEventById(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       // Assert
@@ -1352,7 +1352,7 @@ describe("EventController", () => {
         expect.objectContaining({
           success: false,
           message: "Invalid event ID.",
-        })
+        }),
       );
     });
 
@@ -1373,13 +1373,13 @@ describe("EventController", () => {
       } as any);
 
       vi.mocked(
-        ResponseBuilderService.buildEventWithRegistrations
+        ResponseBuilderService.buildEventWithRegistrations,
       ).mockResolvedValue(null as any);
 
       // Act
       await EventController.getEventById(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       // Assert
@@ -1388,7 +1388,7 @@ describe("EventController", () => {
         expect.objectContaining({
           success: false,
           message: "Event not found or failed to build registration data.",
-        })
+        }),
       );
     });
 
@@ -1401,7 +1401,7 @@ describe("EventController", () => {
 
       await EventController.getEventById(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       expect(mockStatus).toHaveBeenCalledWith(500);
@@ -1409,7 +1409,7 @@ describe("EventController", () => {
         expect.objectContaining({
           success: false,
           message: "Failed to retrieve event.",
-        })
+        }),
       );
     });
   });
@@ -1454,16 +1454,16 @@ describe("EventController", () => {
         select: vi.fn().mockResolvedValue([]),
       } as any);
       vi.mocked(EmailRecipientUtils.getActiveVerifiedUsers).mockResolvedValue(
-        []
+        [],
       );
       vi.mocked(
-        ResponseBuilderService.buildEventWithRegistrations
+        ResponseBuilderService.buildEventWithRegistrations,
       ).mockResolvedValue(mockEvent as any);
 
       // Act
       await EventController.createEvent(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       // Assert
@@ -1475,7 +1475,7 @@ describe("EventController", () => {
           data: expect.objectContaining({
             event: mockEvent,
           }),
-        })
+        }),
       );
     });
 
@@ -1489,7 +1489,7 @@ describe("EventController", () => {
       // Act
       await EventController.createEvent(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       // Assert
@@ -1498,7 +1498,7 @@ describe("EventController", () => {
         expect.objectContaining({
           success: false,
           message: expect.stringContaining("Missing required fields"),
-        })
+        }),
       );
     });
 
@@ -1521,7 +1521,7 @@ describe("EventController", () => {
       // Act
       await EventController.createEvent(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       // Assert
@@ -1530,7 +1530,7 @@ describe("EventController", () => {
         expect.objectContaining({
           success: false,
           message: "Insufficient permissions to create events.",
-        })
+        }),
       );
     });
 
@@ -1557,7 +1557,7 @@ describe("EventController", () => {
           // Act
           await EventController.createEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert
@@ -1604,7 +1604,7 @@ describe("EventController", () => {
           // Act
           await EventController.createEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert
@@ -1651,16 +1651,16 @@ describe("EventController", () => {
             select: vi.fn().mockResolvedValue([]),
           } as any);
           vi.mocked(
-            EmailRecipientUtils.getActiveVerifiedUsers
+            EmailRecipientUtils.getActiveVerifiedUsers,
           ).mockResolvedValue([]);
           vi.mocked(
-            ResponseBuilderService.buildEventWithRegistrations
+            ResponseBuilderService.buildEventWithRegistrations,
           ).mockResolvedValue(mockEvent as any);
 
           // Act
           await EventController.createEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert
@@ -1669,7 +1669,7 @@ describe("EventController", () => {
             expect.objectContaining({
               success: true,
               message: "Event created successfully!",
-            })
+            }),
           );
         });
 
@@ -1708,22 +1708,22 @@ describe("EventController", () => {
             select: vi.fn().mockResolvedValue([]),
           } as any);
           vi.mocked(
-            EmailRecipientUtils.getActiveVerifiedUsers
+            EmailRecipientUtils.getActiveVerifiedUsers,
           ).mockResolvedValue([]);
           vi.mocked(
-            ResponseBuilderService.buildEventWithRegistrations
+            ResponseBuilderService.buildEventWithRegistrations,
           ).mockResolvedValue(mockEvent as any);
 
           // Act
           await EventController.createEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert
           expect(mockStatus).toHaveBeenCalledWith(201);
           expect(capturedEventData.date).toBe(
-            futureDate.toISOString().split("T")[0]
+            futureDate.toISOString().split("T")[0],
           );
         });
       });
@@ -1760,7 +1760,7 @@ describe("EventController", () => {
 
           // Broadcast lists empty (no blocking)
           vi.mocked(
-            EmailRecipientUtils.getActiveVerifiedUsers
+            EmailRecipientUtils.getActiveVerifiedUsers,
           ).mockResolvedValue([]);
           vi.mocked(User.find).mockReturnValue({
             select: vi.fn().mockResolvedValue([]),
@@ -1768,12 +1768,12 @@ describe("EventController", () => {
 
           // Force builder to throw so catch assigns populatedEvent = event
           vi.mocked(
-            ResponseBuilderService.buildEventWithRegistrations
+            ResponseBuilderService.buildEventWithRegistrations,
           ).mockRejectedValue(new Error("boom-pop"));
 
           await EventController.createEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           expect(mockStatus).toHaveBeenCalledWith(201);
@@ -1784,7 +1784,7 @@ describe("EventController", () => {
               data: expect.objectContaining({
                 event: expect.objectContaining({ _id: "e-pop-1" }),
               }),
-            })
+            }),
           );
         });
 
@@ -1818,11 +1818,11 @@ describe("EventController", () => {
           vi.mocked(Event).mockImplementation(() => eventInstance);
 
           vi.mocked(
-            EmailRecipientUtils.getActiveVerifiedUsers
+            EmailRecipientUtils.getActiveVerifiedUsers,
           ).mockResolvedValue([]);
           // Return populated event with organizerDetails so co-organizer try block runs
           vi.mocked(
-            ResponseBuilderService.buildEventWithRegistrations
+            ResponseBuilderService.buildEventWithRegistrations,
           ).mockResolvedValue({
             _id: "e-co-outer-1",
             title: eventData.title,
@@ -1837,12 +1837,12 @@ describe("EventController", () => {
 
           // Throw inside co-organizer block to hit outer catch
           vi.mocked(EmailRecipientUtils.getEventCoOrganizers).mockRejectedValue(
-            new Error("boom-coorg")
+            new Error("boom-coorg"),
           );
 
           await EventController.createEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           expect(mockStatus).toHaveBeenCalledWith(201);
@@ -1886,7 +1886,7 @@ describe("EventController", () => {
 
           // Mock empty broadcast lists
           vi.mocked(
-            EmailRecipientUtils.getActiveVerifiedUsers
+            EmailRecipientUtils.getActiveVerifiedUsers,
           ).mockResolvedValue([]);
           vi.mocked(User.find).mockReturnValue({
             select: vi.fn().mockResolvedValue([]),
@@ -1894,7 +1894,7 @@ describe("EventController", () => {
 
           // Mock the response builder to return our test event
           vi.mocked(
-            ResponseBuilderService.buildEventWithRegistrations
+            ResponseBuilderService.buildEventWithRegistrations,
           ).mockResolvedValue({
             ...eventInstance,
             registrations: [],
@@ -1903,7 +1903,7 @@ describe("EventController", () => {
           // Act
           await EventController.createEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert - Should succeed with 201 status
@@ -1919,7 +1919,7 @@ describe("EventController", () => {
                   // zoomLink is not provided, so it should not be in the response
                 }),
               }),
-            })
+            }),
           );
         });
 
@@ -1947,7 +1947,7 @@ describe("EventController", () => {
           // Act
           await EventController.createEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert
@@ -1982,7 +1982,7 @@ describe("EventController", () => {
           // Act
           await EventController.createEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert - Should fail only because location is missing
@@ -2030,16 +2030,16 @@ describe("EventController", () => {
             select: vi.fn().mockResolvedValue([]),
           } as any);
           vi.mocked(
-            EmailRecipientUtils.getActiveVerifiedUsers
+            EmailRecipientUtils.getActiveVerifiedUsers,
           ).mockResolvedValue([]);
           vi.mocked(
-            ResponseBuilderService.buildEventWithRegistrations
+            ResponseBuilderService.buildEventWithRegistrations,
           ).mockResolvedValue(mockEvent as any);
 
           // Act
           await EventController.createEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert
@@ -2079,7 +2079,7 @@ describe("EventController", () => {
 
           // Mock empty broadcast lists
           vi.mocked(
-            EmailRecipientUtils.getActiveVerifiedUsers
+            EmailRecipientUtils.getActiveVerifiedUsers,
           ).mockResolvedValue([]);
           vi.mocked(User.find).mockReturnValue({
             select: vi.fn().mockResolvedValue([]),
@@ -2087,7 +2087,7 @@ describe("EventController", () => {
 
           // Mock the response builder to return our test event
           vi.mocked(
-            ResponseBuilderService.buildEventWithRegistrations
+            ResponseBuilderService.buildEventWithRegistrations,
           ).mockResolvedValue({
             ...eventInstance,
             registrations: [],
@@ -2096,7 +2096,7 @@ describe("EventController", () => {
           // Act
           await EventController.createEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert - Should succeed because zoomLink is now optional for Online events
@@ -2113,7 +2113,7 @@ describe("EventController", () => {
                   zoomLink: undefined,
                 }),
               }),
-            })
+            }),
           );
         });
       });
@@ -2137,7 +2137,7 @@ describe("EventController", () => {
           // Act
           await EventController.createEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert
@@ -2166,7 +2166,7 @@ describe("EventController", () => {
           // Act
           await EventController.createEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert
@@ -2220,16 +2220,16 @@ describe("EventController", () => {
             select: vi.fn().mockResolvedValue([]),
           } as any);
           vi.mocked(
-            EmailRecipientUtils.getActiveVerifiedUsers
+            EmailRecipientUtils.getActiveVerifiedUsers,
           ).mockResolvedValue([]);
           vi.mocked(
-            ResponseBuilderService.buildEventWithRegistrations
+            ResponseBuilderService.buildEventWithRegistrations,
           ).mockResolvedValue(mockEvent as any);
 
           // Act
           await EventController.createEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert
@@ -2289,16 +2289,16 @@ describe("EventController", () => {
             select: vi.fn().mockResolvedValue([]),
           } as any);
           vi.mocked(
-            EmailRecipientUtils.getActiveVerifiedUsers
+            EmailRecipientUtils.getActiveVerifiedUsers,
           ).mockResolvedValue([]);
           vi.mocked(
-            ResponseBuilderService.buildEventWithRegistrations
+            ResponseBuilderService.buildEventWithRegistrations,
           ).mockResolvedValue(mockEvent as any);
 
           // Act
           await EventController.createEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert
@@ -2347,16 +2347,16 @@ describe("EventController", () => {
             select: vi.fn().mockResolvedValue([]),
           } as any);
           vi.mocked(
-            EmailRecipientUtils.getActiveVerifiedUsers
+            EmailRecipientUtils.getActiveVerifiedUsers,
           ).mockResolvedValue([]);
           vi.mocked(
-            ResponseBuilderService.buildEventWithRegistrations
+            ResponseBuilderService.buildEventWithRegistrations,
           ).mockResolvedValue(mockEvent as any);
 
           // Act
           await EventController.createEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert
@@ -2397,16 +2397,16 @@ describe("EventController", () => {
             select: vi.fn().mockResolvedValue([]),
           } as any);
           vi.mocked(
-            EmailRecipientUtils.getActiveVerifiedUsers
+            EmailRecipientUtils.getActiveVerifiedUsers,
           ).mockResolvedValue([]);
           vi.mocked(
-            ResponseBuilderService.buildEventWithRegistrations
+            ResponseBuilderService.buildEventWithRegistrations,
           ).mockResolvedValue(mockEvent as any);
 
           // Act
           await EventController.createEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert
@@ -2443,7 +2443,7 @@ describe("EventController", () => {
           // Act
           await EventController.createEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert
@@ -2491,17 +2491,17 @@ describe("EventController", () => {
 
           // Make background email recipient fetch fail
           vi.mocked(
-            EmailRecipientUtils.getActiveVerifiedUsers
+            EmailRecipientUtils.getActiveVerifiedUsers,
           ).mockRejectedValue(new Error("fetch failed"));
 
           vi.mocked(
-            ResponseBuilderService.buildEventWithRegistrations
+            ResponseBuilderService.buildEventWithRegistrations,
           ).mockResolvedValue(mockEvent as any);
 
           // Act
           await EventController.createEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert – despite recipient fetch failure, creation still succeeds
@@ -2546,18 +2546,18 @@ describe("EventController", () => {
             select: vi.fn().mockResolvedValue([]),
           } as any);
           vi.mocked(
-            EmailRecipientUtils.getActiveVerifiedUsers
+            EmailRecipientUtils.getActiveVerifiedUsers,
           ).mockResolvedValue([]);
 
           // Force population to fail
           vi.mocked(
-            ResponseBuilderService.buildEventWithRegistrations
+            ResponseBuilderService.buildEventWithRegistrations,
           ).mockRejectedValue(new Error("populate broke"));
 
           // Act
           await EventController.createEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert – should still succeed with fallback event in payload
@@ -2601,12 +2601,12 @@ describe("EventController", () => {
             select: vi.fn().mockResolvedValue([]),
           } as any);
           vi.mocked(
-            EmailRecipientUtils.getActiveVerifiedUsers
+            EmailRecipientUtils.getActiveVerifiedUsers,
           ).mockResolvedValue([]);
 
           // Built event includes organizerDetails so we enter co-organizer logic
           vi.mocked(
-            ResponseBuilderService.buildEventWithRegistrations
+            ResponseBuilderService.buildEventWithRegistrations,
           ).mockResolvedValue({
             _id: "e-noco-1",
             title: eventData.title,
@@ -2618,23 +2618,23 @@ describe("EventController", () => {
 
           // But discovery returns empty
           vi.mocked(EmailRecipientUtils.getEventCoOrganizers).mockResolvedValue(
-            [] as any
+            [] as any,
           );
 
           // Act
           await EventController.createEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert
           expect(mockStatus).toHaveBeenCalledWith(201);
           // No email/system message calls when no co-organizers
           expect(
-            RoleEmailService.sendCoOrganizerAssignedEmail
+            RoleEmailService.sendCoOrganizerAssignedEmail,
           ).not.toHaveBeenCalled();
           expect(
-            UnifiedMessageController.createTargetedSystemMessage
+            UnifiedMessageController.createTargetedSystemMessage,
           ).not.toHaveBeenCalled();
         });
 
@@ -2677,12 +2677,12 @@ describe("EventController", () => {
             select: vi.fn().mockResolvedValue([{ _id: "x" }]),
           } as any);
           vi.mocked(
-            EmailRecipientUtils.getActiveVerifiedUsers
+            EmailRecipientUtils.getActiveVerifiedUsers,
           ).mockResolvedValue([]);
 
           // Built event with organizerDetails so co-organizer logic runs
           vi.mocked(
-            ResponseBuilderService.buildEventWithRegistrations
+            ResponseBuilderService.buildEventWithRegistrations,
           ).mockResolvedValue({
             _id: "e-co-1",
             title: eventData.title,
@@ -2709,7 +2709,7 @@ describe("EventController", () => {
           vi.mocked(EmailRecipientUtils.getEventCoOrganizers).mockResolvedValue(
             [
               { email: "co@example.com", firstName: "Co", lastName: "Org" },
-            ] as any
+            ] as any,
           );
 
           // Force Promise.all used for notifications to reject to hit catch branch
@@ -2720,7 +2720,7 @@ describe("EventController", () => {
           // Act
           await EventController.createEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert – still succeeds
@@ -2767,11 +2767,11 @@ describe("EventController", () => {
             select: vi.fn().mockResolvedValue([]),
           } as any);
           vi.mocked(
-            EmailRecipientUtils.getActiveVerifiedUsers
+            EmailRecipientUtils.getActiveVerifiedUsers,
           ).mockResolvedValue([]);
 
           vi.mocked(
-            ResponseBuilderService.buildEventWithRegistrations
+            ResponseBuilderService.buildEventWithRegistrations,
           ).mockResolvedValue({
             _id: "e-null-1",
             title: eventData.title,
@@ -2797,7 +2797,7 @@ describe("EventController", () => {
           vi.mocked(EmailRecipientUtils.getEventCoOrganizers).mockResolvedValue(
             [
               { email: "co@example.com", firstName: "Co", lastName: "Org" },
-            ] as any
+            ] as any,
           );
 
           // Force User.findOne to resolve null to skip targeted system message branch
@@ -2808,13 +2808,13 @@ describe("EventController", () => {
           // Act
           await EventController.createEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert
           expect(mockStatus).toHaveBeenCalledWith(201);
           expect(
-            UnifiedMessageController.createTargetedSystemMessage
+            UnifiedMessageController.createTargetedSystemMessage,
           ).not.toHaveBeenCalled();
         });
       });
@@ -2841,7 +2841,7 @@ describe("EventController", () => {
         select: vi.fn().mockResolvedValue([{ _id: "u1" }]),
       } as any);
       vi.mocked(
-        UnifiedMessageController.createTargetedSystemMessage
+        UnifiedMessageController.createTargetedSystemMessage,
       ).mockRejectedValueOnce(new Error("send failed"));
 
       // Minimal stubs for downstream
@@ -2849,7 +2849,7 @@ describe("EventController", () => {
       // If direct prototype save mock doesn't exist, patch Event as constructor mock:
       vi.mocked(Event as any).mockImplementationOnce(function (
         this: any,
-        d: any
+        d: any,
       ) {
         Object.assign(this, d, { _id: "e-sysfail" });
         this.save = vi.fn().mockResolvedValue(undefined);
@@ -2857,7 +2857,7 @@ describe("EventController", () => {
       } as any);
 
       vi.mocked(
-        ResponseBuilderService.buildEventWithRegistrations
+        ResponseBuilderService.buildEventWithRegistrations,
       ).mockResolvedValue({
         _id: "e-sysfail",
         organizerDetails: [],
@@ -2865,12 +2865,12 @@ describe("EventController", () => {
 
       // No email recipients so email block .then runs with empty results
       vi.mocked(EmailRecipientUtils.getActiveVerifiedUsers).mockResolvedValue(
-        [] as any
+        [] as any,
       );
 
       await EventController.createEvent(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       // Allow any microtasks from Promise.all to settle
@@ -2878,7 +2878,7 @@ describe("EventController", () => {
 
       expect(mockStatus).toHaveBeenCalledWith(201);
       expect(mockJson).toHaveBeenCalledWith(
-        expect.objectContaining({ success: true })
+        expect.objectContaining({ success: true }),
       );
     });
 
@@ -2902,7 +2902,7 @@ describe("EventController", () => {
       // Event constructor
       vi.mocked(Event as any).mockImplementationOnce(function (
         this: any,
-        d: any
+        d: any,
       ) {
         Object.assign(this, d, { _id: "e-noco" });
         this.save = vi.fn().mockResolvedValue(undefined);
@@ -2916,12 +2916,12 @@ describe("EventController", () => {
 
       // Email recipients none
       vi.mocked(EmailRecipientUtils.getActiveVerifiedUsers).mockResolvedValue(
-        [] as any
+        [] as any,
       );
 
       // Populate event to include organizerDetails
       vi.mocked(
-        ResponseBuilderService.buildEventWithRegistrations
+        ResponseBuilderService.buildEventWithRegistrations,
       ).mockResolvedValue({
         _id: "e-noco",
         organizerDetails: [{ userId: "u2" }],
@@ -2929,12 +2929,12 @@ describe("EventController", () => {
 
       // Co-organizers resolution returns empty array
       vi.mocked(EmailRecipientUtils.getEventCoOrganizers).mockResolvedValue(
-        [] as any
+        [] as any,
       );
 
       await EventController.createEvent(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       await Promise.resolve();
@@ -2960,7 +2960,7 @@ describe("EventController", () => {
       // Event constructor
       vi.mocked(Event as any).mockImplementationOnce(function (
         this: any,
-        d: any
+        d: any,
       ) {
         Object.assign(this, d, { _id: "e-email" });
         this.save = vi.fn().mockResolvedValue(undefined);
@@ -2980,12 +2980,12 @@ describe("EventController", () => {
 
       // First resolves true, second resolves true as well to exercise success counting
       vi.mocked(EventEmailService.sendEventCreatedEmail).mockResolvedValue(
-        true as any
+        true as any,
       );
 
       // Populate event
       vi.mocked(
-        ResponseBuilderService.buildEventWithRegistrations
+        ResponseBuilderService.buildEventWithRegistrations,
       ).mockResolvedValue({
         _id: "e-email",
         organizerDetails: [],
@@ -2993,7 +2993,7 @@ describe("EventController", () => {
 
       await EventController.createEvent(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       // Let Promise.all .then run
@@ -4456,7 +4456,7 @@ describe("EventController", () => {
       // Event constructor to capture saved data
       vi.mocked(Event as any).mockImplementationOnce(function (
         this: any,
-        d: any
+        d: any,
       ) {
         Object.assign(this, d, { _id: "e-prog1" });
         this.save = vi.fn().mockResolvedValue(undefined);
@@ -4464,7 +4464,7 @@ describe("EventController", () => {
       } as any);
 
       vi.mocked(
-        ResponseBuilderService.buildEventWithRegistrations
+        ResponseBuilderService.buildEventWithRegistrations,
       ).mockResolvedValue({
         _id: "e-prog1",
         organizerDetails: [],
@@ -4475,13 +4475,13 @@ describe("EventController", () => {
         select: vi.fn().mockResolvedValue([]),
       } as any);
       vi.mocked(EmailRecipientUtils.getActiveVerifiedUsers).mockResolvedValue(
-        [] as any
+        [] as any,
       );
 
       // Act
       await EventController.createEvent(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       // Assert
@@ -4490,7 +4490,7 @@ describe("EventController", () => {
       expect(Program.updateOne).toHaveBeenCalledTimes(2);
       expect(Program.updateOne).toHaveBeenCalledWith(
         { _id: expect.anything() },
-        { $addToSet: { events: expect.anything() } }
+        { $addToSet: { events: expect.anything() } },
       );
     });
 
@@ -4546,13 +4546,13 @@ describe("EventController", () => {
         } as any);
 
       vi.mocked(
-        ResponseBuilderService.buildEventWithRegistrations
+        ResponseBuilderService.buildEventWithRegistrations,
       ).mockResolvedValue({ id: eventId } as any);
 
       // Act
       await EventController.updateEvent(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       // Assert
@@ -4565,13 +4565,13 @@ describe("EventController", () => {
       // Check for $pull operation (removed program)
       expect(Program.updateOne).toHaveBeenCalledWith(
         expect.objectContaining({ _id: expect.anything() }),
-        expect.objectContaining({ $pull: expect.anything() })
+        expect.objectContaining({ $pull: expect.anything() }),
       );
 
       // Check for $addToSet operations (2 new programs)
       const calls = vi.mocked(Program.updateOne).mock.calls;
       const addToSetCalls = calls.filter(
-        (call: any) => call[1] && "$addToSet" in call[1]
+        (call: any) => call[1] && "$addToSet" in call[1],
       );
       expect(addToSetCalls).toHaveLength(2);
     });
@@ -4603,7 +4603,7 @@ describe("EventController", () => {
       // Act
       await EventController.deleteEvent(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       // Assert
@@ -4612,10 +4612,10 @@ describe("EventController", () => {
         expect.objectContaining({
           success: true,
           message: "Event deleted successfully!",
-        })
+        }),
       );
       expect(EventCascadeService.deleteEventFully).toHaveBeenCalledWith(
-        "event123"
+        "event123",
       );
     });
 
@@ -4627,7 +4627,7 @@ describe("EventController", () => {
       // Act
       await EventController.deleteEvent(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       // Assert
@@ -4636,7 +4636,7 @@ describe("EventController", () => {
         expect.objectContaining({
           success: false,
           message: "Event not found.",
-        })
+        }),
       );
     });
 
@@ -4650,7 +4650,7 @@ describe("EventController", () => {
           // Act
           await EventController.deleteEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert
@@ -4671,7 +4671,7 @@ describe("EventController", () => {
           // Act
           await EventController.deleteEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert
@@ -4712,13 +4712,13 @@ describe("EventController", () => {
           // Act
           await EventController.deleteEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert
           expect(mockStatus).toHaveBeenCalledWith(200);
           expect(
-            vi.mocked(EventCascadeService.deleteEventFully)
+            vi.mocked(EventCascadeService.deleteEventFully),
           ).toHaveBeenCalledWith("event123");
         });
 
@@ -4747,13 +4747,13 @@ describe("EventController", () => {
           // Act
           await EventController.deleteEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert
           expect(mockStatus).toHaveBeenCalledWith(200);
           expect(
-            vi.mocked(EventCascadeService.deleteEventFully)
+            vi.mocked(EventCascadeService.deleteEventFully),
           ).toHaveBeenCalledWith("event123");
         });
 
@@ -4784,13 +4784,13 @@ describe("EventController", () => {
           // Act
           await EventController.deleteEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert
           expect(mockStatus).toHaveBeenCalledWith(200);
           expect(
-            vi.mocked(EventCascadeService.deleteEventFully)
+            vi.mocked(EventCascadeService.deleteEventFully),
           ).toHaveBeenCalledWith("event123");
         });
 
@@ -4816,7 +4816,7 @@ describe("EventController", () => {
           // Act
           await EventController.deleteEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert
@@ -4853,7 +4853,7 @@ describe("EventController", () => {
           // Act
           await EventController.deleteEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert
@@ -4864,7 +4864,7 @@ describe("EventController", () => {
           });
           // Deletions are delegated to EventCascadeService; controller does not call Registration.deleteMany directly
           expect(EventCascadeService.deleteEventFully).toHaveBeenCalledWith(
-            "event123"
+            "event123",
           );
         });
 
@@ -4887,7 +4887,7 @@ describe("EventController", () => {
           // Act
           await EventController.deleteEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert
@@ -4925,7 +4925,7 @@ describe("EventController", () => {
           // Act
           await EventController.deleteEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert
@@ -4938,7 +4938,7 @@ describe("EventController", () => {
             deletedGuestRegistrations: 2,
           });
           expect(
-            vi.mocked(EventCascadeService.deleteEventFully)
+            vi.mocked(EventCascadeService.deleteEventFully),
           ).toHaveBeenCalledWith("event123");
         });
 
@@ -4970,7 +4970,7 @@ describe("EventController", () => {
           // Act
           await EventController.deleteEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert
@@ -4983,7 +4983,7 @@ describe("EventController", () => {
             deletedGuestRegistrations: 2,
           });
           expect(
-            vi.mocked(EventCascadeService.deleteEventFully)
+            vi.mocked(EventCascadeService.deleteEventFully),
           ).toHaveBeenCalledWith("event123");
         });
 
@@ -5007,7 +5007,7 @@ describe("EventController", () => {
               CachePatterns.invalidateEventCache(eventId);
               CachePatterns.invalidateAnalyticsCache();
               return { deletedRegistrations: 0, deletedGuestRegistrations: 0 };
-            }
+            },
           );
           vi.mocked(hasPermission)
             .mockReturnValueOnce(false) // DELETE_ANY_EVENT = false
@@ -5016,12 +5016,12 @@ describe("EventController", () => {
           // Act
           await EventController.deleteEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert
           expect(CachePatterns.invalidateEventCache).toHaveBeenCalledWith(
-            "event123"
+            "event123",
           );
           expect(CachePatterns.invalidateAnalyticsCache).toHaveBeenCalled();
         });
@@ -5045,7 +5045,7 @@ describe("EventController", () => {
               CachePatterns.invalidateEventCache(eventId);
               CachePatterns.invalidateAnalyticsCache();
               return { deletedRegistrations: 2, deletedGuestRegistrations: 0 };
-            }
+            },
           );
           vi.mocked(hasPermission)
             .mockReturnValueOnce(false) // DELETE_ANY_EVENT = false
@@ -5054,12 +5054,12 @@ describe("EventController", () => {
           // Act
           await EventController.deleteEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert
           expect(CachePatterns.invalidateEventCache).toHaveBeenCalledWith(
-            "event123"
+            "event123",
           );
           expect(CachePatterns.invalidateAnalyticsCache).toHaveBeenCalled();
         });
@@ -5081,14 +5081,14 @@ describe("EventController", () => {
 
           vi.mocked(Event.findById).mockResolvedValue(mockEvent);
           vi.mocked(EventCascadeService.deleteEventFully).mockRejectedValue(
-            new Error("Database error")
+            new Error("Database error"),
           );
           vi.mocked(hasPermission).mockReturnValue(true);
 
           // Act
           await EventController.deleteEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert
@@ -5126,7 +5126,7 @@ describe("EventController", () => {
           // Act
           await EventController.signUpForEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert
@@ -5150,7 +5150,7 @@ describe("EventController", () => {
           // Act
           await EventController.signUpForEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert
@@ -5169,7 +5169,7 @@ describe("EventController", () => {
           // Act
           await EventController.signUpForEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert
@@ -5189,7 +5189,7 @@ describe("EventController", () => {
           // Act
           await EventController.signUpForEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert
@@ -5218,7 +5218,7 @@ describe("EventController", () => {
           // Act
           await EventController.signUpForEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert
@@ -5268,19 +5268,19 @@ describe("EventController", () => {
 
           const mockSave = vi.fn().mockResolvedValue(undefined);
           vi.mocked(Registration).mockImplementation(
-            () => ({ save: mockSave } as any)
+            () => ({ save: mockSave }) as any,
           );
 
           // Act
           await EventController.signUpForEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert
           expect(mockStatus).toHaveBeenCalledWith(200);
           expect(mockJson).toHaveBeenCalledWith(
-            expect.objectContaining({ success: true })
+            expect.objectContaining({ success: true }),
           );
         });
       });
@@ -5330,18 +5330,18 @@ describe("EventController", () => {
             roleId: "role123",
           };
           vi.mocked(Registration).mockImplementation(
-            () => mockNewRegistration as any
+            () => mockNewRegistration as any,
           );
 
           // Mock ResponseBuilderService
           vi.mocked(
-            ResponseBuilderService.buildEventWithRegistrations
+            ResponseBuilderService.buildEventWithRegistrations,
           ).mockResolvedValue(mockEvent as any);
 
           // Act - This won't reach completion due to complex async flow, but will validate role permission logic
           await EventController.signUpForEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert - If we reach this point, role permission validation passed
@@ -5370,7 +5370,7 @@ describe("EventController", () => {
           // Act
           await EventController.signUpForEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           // Assert
@@ -5411,16 +5411,16 @@ describe("EventController", () => {
 
       vi.mocked(Event.findById).mockResolvedValue(mockEvent);
       vi.mocked(Registration.findOneAndDelete).mockResolvedValue(
-        mockRegistration
+        mockRegistration,
       );
       vi.mocked(
-        ResponseBuilderService.buildEventWithRegistrations
+        ResponseBuilderService.buildEventWithRegistrations,
       ).mockResolvedValue(mockEvent as any);
 
       // Act
       await EventController.cancelSignup(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       // Assert
@@ -5429,7 +5429,7 @@ describe("EventController", () => {
         expect.objectContaining({
           success: true,
           message: "Successfully cancelled signup for Zoom Host",
-        })
+        }),
       );
     });
     describe("Negative Cases", () => {
@@ -5438,7 +5438,7 @@ describe("EventController", () => {
         vi.mocked(mongoose.Types.ObjectId.isValid).mockReturnValueOnce(false);
         await EventController.cancelSignup(
           mockRequest as Request,
-          mockResponse as Response
+          mockResponse as Response,
         );
         expect(mockStatus).toHaveBeenCalledWith(400);
         expect(mockJson).toHaveBeenCalledWith({
@@ -5452,7 +5452,7 @@ describe("EventController", () => {
         (mockRequest as any).user = undefined;
         await EventController.cancelSignup(
           mockRequest as Request,
-          mockResponse as Response
+          mockResponse as Response,
         );
         expect(mockStatus).toHaveBeenCalledWith(401);
         expect(mockJson).toHaveBeenCalledWith({
@@ -5466,7 +5466,7 @@ describe("EventController", () => {
         vi.mocked(Event.findById).mockResolvedValue(null);
         await EventController.cancelSignup(
           mockRequest as Request,
-          mockResponse as Response
+          mockResponse as Response,
         );
         expect(mockStatus).toHaveBeenCalledWith(404);
         expect(mockJson).toHaveBeenCalledWith({
@@ -5482,7 +5482,7 @@ describe("EventController", () => {
         vi.mocked(Event.findById).mockResolvedValue(event as any);
         await EventController.cancelSignup(
           mockRequest as Request,
-          mockResponse as Response
+          mockResponse as Response,
         );
         expect(mockStatus).toHaveBeenCalledWith(404);
         expect(mockJson).toHaveBeenCalledWith({
@@ -5503,7 +5503,7 @@ describe("EventController", () => {
         vi.mocked(Registration.findOneAndDelete).mockResolvedValue(null);
         await EventController.cancelSignup(
           mockRequest as Request,
-          mockResponse as Response
+          mockResponse as Response,
         );
         expect(mockStatus).toHaveBeenCalledWith(400);
         expect(mockJson).toHaveBeenCalledWith({
@@ -5536,7 +5536,7 @@ describe("EventController", () => {
         // Act
         await EventController.cancelSignup(
           mockRequest as Request,
-          mockResponse as Response
+          mockResponse as Response,
         );
 
         // Assert
@@ -5545,7 +5545,7 @@ describe("EventController", () => {
           expect.objectContaining({
             success: false,
             message: "Failed to cancel signup.",
-          })
+          }),
         );
       });
     });
@@ -5586,7 +5586,7 @@ describe("EventController", () => {
       // Act
       await EventController.getUserEvents(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       // Assert
@@ -5598,7 +5598,7 @@ describe("EventController", () => {
             events: expect.any(Array),
             stats: expect.any(Object),
           }),
-        })
+        }),
       );
     });
 
@@ -5611,7 +5611,7 @@ describe("EventController", () => {
       // Act
       await EventController.getUserEvents(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       // Assert
@@ -5620,7 +5620,7 @@ describe("EventController", () => {
         expect.objectContaining({
           success: false,
           message: "Failed to retrieve user events.",
-        })
+        }),
       );
     });
 
@@ -5629,7 +5629,7 @@ describe("EventController", () => {
 
       await EventController.getUserEvents(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       expect(mockStatus).toHaveBeenCalledWith(401);
@@ -5730,7 +5730,7 @@ describe("EventController", () => {
       // Act
       await EventController.getUserEvents(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       // Assert basics
@@ -5792,7 +5792,7 @@ describe("EventController", () => {
       // Act
       await EventController.getCreatedEvents(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       // Assert
@@ -5803,7 +5803,7 @@ describe("EventController", () => {
           data: expect.objectContaining({
             events: mockEvents,
           }),
-        })
+        }),
       );
     });
 
@@ -5812,7 +5812,7 @@ describe("EventController", () => {
 
       await EventController.getCreatedEvents(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       expect(mockStatus).toHaveBeenCalledWith(401);
@@ -5829,7 +5829,7 @@ describe("EventController", () => {
 
       await EventController.getCreatedEvents(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       expect(mockStatus).toHaveBeenCalledWith(500);
@@ -5856,7 +5856,7 @@ describe("EventController", () => {
         vi.mocked(Event.findById).mockResolvedValue(null);
         await EventController.removeUserFromRole(
           mockRequest as Request,
-          mockResponse as Response
+          mockResponse as Response,
         );
         expect(mockStatus).toHaveBeenCalledWith(404);
         expect(mockJson).toHaveBeenCalledWith({
@@ -5879,7 +5879,7 @@ describe("EventController", () => {
         vi.mocked(Event.findById).mockResolvedValue(event as any);
         await EventController.removeUserFromRole(
           mockRequest as Request,
-          mockResponse as Response
+          mockResponse as Response,
         );
         expect(mockStatus).toHaveBeenCalledWith(404);
         expect(mockJson).toHaveBeenCalledWith({
@@ -5903,7 +5903,7 @@ describe("EventController", () => {
         vi.mocked(Registration.findOneAndDelete).mockResolvedValue(null);
         await EventController.removeUserFromRole(
           mockRequest as Request,
-          mockResponse as Response
+          mockResponse as Response,
         );
         expect(mockStatus).toHaveBeenCalledWith(404);
         expect(mockJson).toHaveBeenCalledWith({
@@ -5926,7 +5926,7 @@ describe("EventController", () => {
         };
         vi.mocked(Event.findById).mockResolvedValue(event as any);
         vi.mocked(Registration.findOneAndDelete).mockResolvedValue(
-          registration as any
+          registration as any,
         );
         (User.findById as any).mockReturnValue({
           lean: vi.fn().mockResolvedValue({
@@ -5938,26 +5938,26 @@ describe("EventController", () => {
         });
         await EventController.removeUserFromRole(
           mockRequest as Request,
-          mockResponse as Response
+          mockResponse as Response,
         );
         expect(mockStatus).toHaveBeenCalledWith(200);
         expect(mockJson).toHaveBeenCalledWith(
           expect.objectContaining({
             success: true,
             message: "User removed from Zoom Host successfully",
-          })
+          }),
         );
         expect(
-          (TrioNotificationService as any).createEventRoleRemovedTrio
+          (TrioNotificationService as any).createEventRoleRemovedTrio,
         ).toHaveBeenCalledWith(
           expect.objectContaining({
             roleName: "Zoom Host",
             targetUser: expect.objectContaining({ id: expect.any(String) }),
-          })
+          }),
         );
         // system message created with atcloud_role_change type
         expect(
-          UnifiedMessageController.createTargetedSystemMessage
+          UnifiedMessageController.createTargetedSystemMessage,
         ).not.toHaveBeenCalled(); // Verified in TrioNotificationService role lifecycle tests
       });
 
@@ -5975,17 +5975,17 @@ describe("EventController", () => {
         };
         vi.mocked(Event.findById).mockResolvedValue(event as any);
         vi.mocked(Registration.findOneAndDelete).mockResolvedValue(
-          registration as any
+          registration as any,
         );
 
         await EventController.removeUserFromRole(
           mockRequest as Request,
-          mockResponse as Response
+          mockResponse as Response,
         );
 
         expect(mockStatus).toHaveBeenCalledWith(500);
         expect(mockJson).toHaveBeenCalledWith(
-          expect.objectContaining({ success: false, message: "save failed" })
+          expect.objectContaining({ success: false, message: "save failed" }),
         );
       });
       describe("Lock and Concurrency Edge Cases", () => {
@@ -6033,25 +6033,25 @@ describe("EventController", () => {
             async (_key, cb) => {
               vi.mocked(Registration.countDocuments).mockResolvedValueOnce(0);
               vi.mocked(Registration.findOne).mockResolvedValueOnce(
-                null as any
+                null as any,
               );
               const mockSave = vi.fn().mockResolvedValue(undefined);
               const mockNewRegistration = { save: mockSave } as any;
               vi.mocked(Registration).mockImplementation(
-                () => mockNewRegistration
+                () => mockNewRegistration,
               );
               return await cb();
-            }
+            },
           );
 
           const updatedEvent: any = { _id: "event123", roles: mockEvent.roles };
           vi.mocked(
-            ResponseBuilderService.buildEventWithRegistrations
+            ResponseBuilderService.buildEventWithRegistrations,
           ).mockResolvedValue(updatedEvent);
 
           await EventController.signUpForEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           expect(mockStatus).toHaveBeenCalledWith(200);
@@ -6059,7 +6059,7 @@ describe("EventController", () => {
             expect.objectContaining({
               success: true,
               message: expect.stringContaining("Successfully signed up for"),
-            })
+            }),
           );
           expect(socketService.emitEventUpdate).toHaveBeenCalledWith(
             "event123",
@@ -6067,10 +6067,10 @@ describe("EventController", () => {
             expect.objectContaining({
               userId: "507f1f77bcf86cd799439011",
               roleId: "role123",
-            })
+            }),
           );
           expect(CachePatterns.invalidateEventCache).toHaveBeenCalledWith(
-            "event123"
+            "event123",
           );
           expect(CachePatterns.invalidateAnalyticsCache).toHaveBeenCalled();
         });
@@ -6095,12 +6095,12 @@ describe("EventController", () => {
           vi.mocked(Registration.countDocuments).mockResolvedValue(0);
           // Lock throws timeout
           vi.mocked(lockService.withLock).mockRejectedValue(
-            new Error("Lock timeout")
+            new Error("Lock timeout"),
           );
 
           await EventController.signUpForEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           expect(mockStatus).toHaveBeenCalledWith(503);
@@ -6134,12 +6134,12 @@ describe("EventController", () => {
             async (_key, cb) => {
               vi.mocked(Registration.countDocuments).mockResolvedValueOnce(1);
               return await cb();
-            }
+            },
           );
 
           await EventController.signUpForEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           expect(mockStatus).toHaveBeenCalledWith(400);
@@ -6176,12 +6176,12 @@ describe("EventController", () => {
                 _id: "existing",
               } as any);
               return await cb();
-            }
+            },
           );
 
           await EventController.signUpForEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           expect(mockStatus).toHaveBeenCalledWith(400);
@@ -6210,12 +6210,12 @@ describe("EventController", () => {
           vi.mocked(Event.findById).mockResolvedValue(mockEvent as any);
           vi.mocked(Registration.countDocuments).mockResolvedValue(0);
           vi.mocked(lockService.withLock).mockRejectedValue(
-            new Error("timeout")
+            new Error("timeout"),
           );
 
           await EventController.signUpForEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           expect(mockStatus).toHaveBeenCalledWith(400);
@@ -6244,12 +6244,12 @@ describe("EventController", () => {
           vi.mocked(Event.findById).mockResolvedValue(mockEvent as any);
           vi.mocked(Registration.countDocuments).mockResolvedValue(0);
           vi.mocked(lockService.withLock).mockRejectedValue(
-            new Error("db explode")
+            new Error("db explode"),
           );
 
           await EventController.signUpForEvent(
             mockRequest as Request,
-            mockResponse as Response
+            mockResponse as Response,
           );
 
           expect(mockStatus).toHaveBeenCalledWith(500);
@@ -6294,7 +6294,7 @@ describe("EventController", () => {
       mockRequest = {} as any;
       await EventController.updateAllEventStatuses(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       expect(mockStatus).toHaveBeenCalledWith(200);
@@ -6304,7 +6304,7 @@ describe("EventController", () => {
         expect.objectContaining({
           success: true,
           data: expect.objectContaining({ updatedCount: 1 }),
-        })
+        }),
       );
     });
 
@@ -6312,7 +6312,7 @@ describe("EventController", () => {
       vi.mocked(Event.find).mockRejectedValue(new Error("DB error"));
       await EventController.updateAllEventStatuses(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
       expect(mockStatus).toHaveBeenCalledWith(500);
       expect(mockJson).toHaveBeenCalledWith({
@@ -6346,14 +6346,14 @@ describe("EventController", () => {
       vi.mocked(Event.findByIdAndUpdate).mockResolvedValue({});
       await EventController.recalculateSignupCounts(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
       expect(mockStatus).toHaveBeenCalledWith(200);
       expect(vi.mocked(Event.findByIdAndUpdate)).toHaveBeenCalledTimes(1);
       expect(mockJson).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({ updatedCount: 1 }),
-        })
+        }),
       );
     });
 
@@ -6361,7 +6361,7 @@ describe("EventController", () => {
       vi.mocked(Event.find).mockRejectedValue(new Error("DB error"));
       await EventController.recalculateSignupCounts(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
       expect(mockStatus).toHaveBeenCalledWith(500);
       expect(mockJson).toHaveBeenCalledWith({
@@ -6382,7 +6382,7 @@ describe("EventController", () => {
       const event: any = {
         _id: "64d2b9f3f1a2c3e4d5f6a7b8",
         createdBy: new (mongoose as any).Types.ObjectId(
-          "64d2b9f3f1a2c3e4d5f6a7b9"
+          "64d2b9f3f1a2c3e4d5f6a7b9",
         ),
         signedUp: 3,
         organizerDetails: [],
@@ -6395,18 +6395,18 @@ describe("EventController", () => {
 
       await EventController.deleteEvent(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       expect(EventCascadeService.deleteEventFully).toHaveBeenCalledWith(
-        "64d2b9f3f1a2c3e4d5f6a7b8"
+        "64d2b9f3f1a2c3e4d5f6a7b8",
       );
       expect(mockStatus).toHaveBeenCalledWith(200);
       expect(mockJson).toHaveBeenCalledWith(
         expect.objectContaining({
           success: true,
           deletedRegistrations: 3,
-        })
+        }),
       );
     });
 
@@ -6419,7 +6419,7 @@ describe("EventController", () => {
       const event: any = {
         _id: "64d2b9f3f1a2c3e4d5f6a7b8",
         createdBy: new (mongoose as any).Types.ObjectId(
-          "64d2b9f3f1a2c3e4d5f6a7b9"
+          "64d2b9f3f1a2c3e4d5f6a7b9",
         ),
         signedUp: 2,
         organizerDetails: [],
@@ -6428,12 +6428,12 @@ describe("EventController", () => {
 
       await EventController.deleteEvent(
         mockRequest as Request,
-        mockResponse as Response
+        mockResponse as Response,
       );
 
       expect(mockStatus).toHaveBeenCalledWith(403);
       expect(mockJson).toHaveBeenCalledWith(
-        expect.objectContaining({ success: false })
+        expect.objectContaining({ success: false }),
       );
     });
   });
@@ -6450,7 +6450,7 @@ describe("EventController", () => {
         vi.mocked(mongoose.Types.ObjectId.isValid).mockReturnValueOnce(false);
         await EventController.getEventParticipants(
           mockRequest as Request,
-          mockResponse as Response
+          mockResponse as Response,
         );
         expect(mockStatus).toHaveBeenCalledWith(400);
         expect(mockJson).toHaveBeenCalledWith({
@@ -6464,7 +6464,7 @@ describe("EventController", () => {
         (mockRequest as any).user = undefined;
         await EventController.getEventParticipants(
           mockRequest as Request,
-          mockResponse as Response
+          mockResponse as Response,
         );
         expect(mockStatus).toHaveBeenCalledWith(401);
         expect(mockJson).toHaveBeenCalledWith({
@@ -6478,7 +6478,7 @@ describe("EventController", () => {
         vi.mocked(Event.findById).mockResolvedValue(null);
         await EventController.getEventParticipants(
           mockRequest as Request,
-          mockResponse as Response
+          mockResponse as Response,
         );
         expect(mockStatus).toHaveBeenCalledWith(404);
         expect(mockJson).toHaveBeenCalledWith({
@@ -6500,7 +6500,7 @@ describe("EventController", () => {
         vi.mocked(hasPermission).mockReturnValue(false);
         await EventController.getEventParticipants(
           mockRequest as Request,
-          mockResponse as Response
+          mockResponse as Response,
         );
         expect(mockStatus).toHaveBeenCalledWith(403);
         expect(mockJson).toHaveBeenCalledWith({
@@ -6533,14 +6533,14 @@ describe("EventController", () => {
         } as any);
         await EventController.getEventParticipants(
           mockRequest as Request,
-          mockResponse as Response
+          mockResponse as Response,
         );
         expect(mockStatus).toHaveBeenCalledWith(200);
         expect(mockJson).toHaveBeenCalledWith(
           expect.objectContaining({
             success: true,
             data: expect.objectContaining({ registrations: expect.any(Array) }),
-          })
+          }),
         );
       });
 
@@ -6561,7 +6561,7 @@ describe("EventController", () => {
 
         await EventController.getEventParticipants(
           mockRequest as Request,
-          mockResponse as Response
+          mockResponse as Response,
         );
 
         expect(mockStatus).toHaveBeenCalledWith(500);
@@ -6569,7 +6569,7 @@ describe("EventController", () => {
           expect.objectContaining({
             success: false,
             message: "Failed to retrieve event participants.",
-          })
+          }),
         );
       });
     });
@@ -6592,7 +6592,7 @@ describe("EventController", () => {
         vi.mocked(Event.findById).mockResolvedValue(null);
         await EventController.moveUserBetweenRoles(
           mockRequest as Request,
-          mockResponse as Response
+          mockResponse as Response,
         );
         expect(mockStatus).toHaveBeenCalledWith(404);
         expect(mockJson).toHaveBeenCalledWith({
@@ -6616,7 +6616,7 @@ describe("EventController", () => {
         vi.mocked(Event.findById).mockResolvedValue(event as any);
         await EventController.moveUserBetweenRoles(
           mockRequest as Request,
-          mockResponse as Response
+          mockResponse as Response,
         );
         expect(mockStatus).toHaveBeenCalledWith(404);
         expect(mockJson).toHaveBeenCalledWith({
@@ -6644,7 +6644,7 @@ describe("EventController", () => {
         vi.mocked(Registration.findOne).mockResolvedValue(null);
         await EventController.moveUserBetweenRoles(
           mockRequest as Request,
-          mockResponse as Response
+          mockResponse as Response,
         );
         expect(mockStatus).toHaveBeenCalledWith(404);
         expect(mockJson).toHaveBeenCalledWith({
@@ -6678,7 +6678,7 @@ describe("EventController", () => {
         vi.mocked(Registration.countDocuments).mockResolvedValue(2); // equals maxParticipants
         await EventController.moveUserBetweenRoles(
           mockRequest as Request,
-          mockResponse as Response
+          mockResponse as Response,
         );
         expect(mockStatus).toHaveBeenCalledWith(400);
         expect(mockJson).toHaveBeenCalledWith({
@@ -6712,7 +6712,7 @@ describe("EventController", () => {
         vi.mocked(Registration.findOne).mockResolvedValue(registration);
         vi.mocked(Registration.countDocuments).mockResolvedValue(0);
         vi.mocked(
-          ResponseBuilderService.buildEventWithRegistrations
+          ResponseBuilderService.buildEventWithRegistrations,
         ).mockResolvedValue(event as any);
         (User.findById as any).mockReturnValue({
           lean: vi.fn().mockResolvedValue({
@@ -6724,27 +6724,27 @@ describe("EventController", () => {
         });
         await EventController.moveUserBetweenRoles(
           mockRequest as Request,
-          mockResponse as Response
+          mockResponse as Response,
         );
         expect(mockStatus).toHaveBeenCalledWith(200);
         expect(mockJson).toHaveBeenCalledWith(
           expect.objectContaining({
             success: true,
             message: "User moved between roles successfully",
-          })
+          }),
         );
         expect(registration.roleId).toBe("role2");
         expect(
-          (TrioNotificationService as any).createEventRoleMovedTrio
+          (TrioNotificationService as any).createEventRoleMovedTrio,
         ).toHaveBeenCalledWith(
           expect.objectContaining({
             fromRoleName: "A",
             toRoleName: "B",
             targetUser: expect.objectContaining({ id: expect.any(String) }),
-          })
+          }),
         );
         expect(
-          UnifiedMessageController.createTargetedSystemMessage
+          UnifiedMessageController.createTargetedSystemMessage,
         ).not.toHaveBeenCalled(); // Verified in TrioNotificationService role lifecycle tests
       });
 
@@ -6777,7 +6777,7 @@ describe("EventController", () => {
         vi.mocked(Registration.countDocuments).mockResolvedValueOnce(3);
         await EventController.moveUserBetweenRoles(
           mockRequest as Request,
-          mockResponse as Response
+          mockResponse as Response,
         );
         expect(mockStatus).toHaveBeenCalledWith(400);
         expect(mockJson).toHaveBeenCalledWith({
@@ -6819,7 +6819,7 @@ describe("EventController", () => {
 
         await EventController.moveUserBetweenRoles(
           mockRequest as Request,
-          mockResponse as Response
+          mockResponse as Response,
         );
 
         expect(mockStatus).toHaveBeenCalledWith(500);
@@ -6827,7 +6827,7 @@ describe("EventController", () => {
           expect.objectContaining({
             success: false,
             message: "weird write error",
-          })
+          }),
         );
       });
     });
@@ -6891,7 +6891,7 @@ describe("EventController", () => {
       vi.mocked(Registration as any).mockImplementation(() => regImpl);
 
       vi.mocked(
-        ResponseBuilderService.buildEventWithRegistrations
+        ResponseBuilderService.buildEventWithRegistrations,
       ).mockResolvedValue({ _id: eventId, roles: [] } as any);
 
       const emitSpy = vi
@@ -6900,7 +6900,7 @@ describe("EventController", () => {
 
       await EventController.assignUserToRole(
         mockRequest as any,
-        mockResponse as any
+        mockResponse as any,
       );
 
       expect(mockStatus).toHaveBeenCalledWith(200);
@@ -6912,16 +6912,16 @@ describe("EventController", () => {
 
       emitSpy.mockRestore();
       expect(
-        (TrioNotificationService as any).createEventRoleAssignedTrio
+        (TrioNotificationService as any).createEventRoleAssignedTrio,
       ).toHaveBeenCalledWith(
         expect.objectContaining({
           roleName: "Common Participant (on-site)",
           targetUser: expect.objectContaining({ id: targetUserId }),
           event: expect.objectContaining({ timeZone: "America/New_York" }),
-        })
+        }),
       );
       expect(
-        UnifiedMessageController.createTargetedSystemMessage
+        UnifiedMessageController.createTargetedSystemMessage,
       ).not.toHaveBeenCalled(); // Verified in TrioNotificationService role lifecycle tests
     });
   });
@@ -6945,7 +6945,7 @@ describe("EventController", () => {
         expect.objectContaining({
           success: false,
           message: "Invalid event id",
-        })
+        }),
       );
     });
 
@@ -6963,7 +6963,7 @@ describe("EventController", () => {
         expect.objectContaining({
           success: false,
           message: "Event not found",
-        })
+        }),
       );
     });
 
@@ -7009,7 +7009,7 @@ describe("EventController", () => {
         expect.objectContaining({
           success: true,
           data: expect.objectContaining({ conflict: false }),
-        })
+        }),
       );
     });
 
@@ -7031,7 +7031,7 @@ describe("EventController", () => {
         expect.objectContaining({
           success: true,
           data: expect.objectContaining({ conflict: false }),
-        })
+        }),
       );
     });
 
@@ -7051,7 +7051,7 @@ describe("EventController", () => {
         expect.objectContaining({
           success: false,
           message: expect.stringContaining("required"),
-        })
+        }),
       );
     });
 
@@ -7076,7 +7076,7 @@ describe("EventController", () => {
         expect.objectContaining({
           success: false,
           message: "Failed to check time conflicts.",
-        })
+        }),
       );
     });
 
@@ -7110,8 +7110,139 @@ describe("EventController", () => {
           data: expect.objectContaining({
             conflict: true,
           }),
-        })
+        }),
       );
+    });
+  });
+
+  describe("findConflictingEvents static method", () => {
+    it("should find conflicting events within date range", async () => {
+      const existingEvents = [
+        {
+          _id: new mongoose.Types.ObjectId("507f1f77bcf86cd799439011"),
+          title: "Existing Event",
+          date: "2024-03-01",
+          endDate: "2024-03-01",
+          time: "10:00",
+          endTime: "12:00",
+          timeZone: "America/New_York",
+        },
+      ];
+
+      (Event.find as any).mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          lean: vi.fn().mockResolvedValue(existingEvents),
+        }),
+      });
+
+      const conflicts = await EventController.findConflictingEvents(
+        "2024-03-01",
+        "11:00",
+        "2024-03-01",
+        "13:00",
+        undefined,
+        "America/New_York",
+      );
+
+      expect(conflicts.length).toBe(1);
+      expect(conflicts[0].title).toBe("Existing Event");
+    });
+
+    it("should exclude specified event from conflicts", async () => {
+      const excludeId = "507f1f77bcf86cd799439011";
+      const existingEvents: any[] = [];
+
+      (Event.find as any).mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          lean: vi.fn().mockResolvedValue(existingEvents),
+        }),
+      });
+
+      const conflicts = await EventController.findConflictingEvents(
+        "2024-03-01",
+        "10:00",
+        "2024-03-01",
+        "12:00",
+        excludeId,
+        "America/New_York",
+      );
+
+      // Verify Event.find was called with the excludeId filter
+      expect(Event.find).toHaveBeenCalled();
+      const callArg = (Event.find as any).mock.calls[0][0];
+      expect(callArg._id).toBeDefined();
+      expect(callArg._id.$ne).toBeDefined();
+      expect(conflicts.length).toBe(0);
+    });
+
+    it("should return empty array when no conflicts exist", async () => {
+      (Event.find as any).mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          lean: vi.fn().mockResolvedValue([]),
+        }),
+      });
+
+      const conflicts = await EventController.findConflictingEvents(
+        "2024-03-01",
+        "10:00",
+        "2024-03-01",
+        "12:00",
+      );
+
+      expect(conflicts).toEqual([]);
+    });
+
+    it("should handle mocks that return arrays directly (no chain)", async () => {
+      const existingEvents = [
+        {
+          _id: new mongoose.Types.ObjectId(),
+          title: "Direct Array Event",
+          date: "2024-03-01",
+          endDate: "2024-03-01",
+          time: "10:00",
+          endTime: "12:00",
+        },
+      ];
+
+      // Simulate mock returning a promise of array directly (no select/lean chain)
+      (Event.find as any).mockResolvedValue(existingEvents);
+
+      const conflicts = await EventController.findConflictingEvents(
+        "2024-03-01",
+        "11:00",
+        "2024-03-01",
+        "13:00",
+      );
+
+      expect(conflicts.length).toBe(1);
+    });
+  });
+
+  describe("unpublishEvent delegation", () => {
+    it("should delegate to PublishingController.unpublishEvent", async () => {
+      const mockRequest = { params: { id: "event123" } } as any;
+      const mockResponse = { status: mockStatus, json: mockJson } as any;
+
+      // The delegation should work without mocking the importing controller
+      // Just verify no error is thrown when called
+      await EventController.unpublishEvent(mockRequest, mockResponse);
+
+      // The delegation happens via dynamic import, so the actual logic is in PublishingController
+      // Here we just verify the delegation works
+      expect(mockStatus).toHaveBeenCalled();
+    });
+  });
+
+  describe("hasRegistrations delegation", () => {
+    it("should delegate to MaintenanceController.hasRegistrations", async () => {
+      const mockRequest = { params: { id: "event123" } } as any;
+      const mockResponse = { status: mockStatus, json: mockJson } as any;
+
+      // Call the delegation method
+      await EventController.hasRegistrations(mockRequest, mockResponse);
+
+      // The delegation happens via dynamic import
+      expect(mockStatus).toHaveBeenCalled();
     });
   });
 });

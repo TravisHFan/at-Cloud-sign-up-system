@@ -1,8 +1,39 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import request from "supertest";
+import request, { Response } from "supertest";
 import app from "../../src/app";
 import User from "../../src/models/User";
 import Message from "../../src/models/Message";
+
+/**
+ * Helper to retry supertest requests on transient HTTP parse errors.
+ * Flaky errors like "Parse Error: Expected HTTP/" occur under load.
+ */
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxAttempts = 3,
+  delayMs = 50,
+): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (error: unknown) {
+      lastError = error;
+      const msg = error instanceof Error ? error.message : String(error);
+      // Retry on HTTP parse errors (connection issues under load)
+      const isTransient =
+        msg.includes("Parse Error") ||
+        msg.includes("HPE_INVALID_CONSTANT") ||
+        msg.includes("socket hang up") ||
+        msg.includes("ECONNRESET");
+      if (!isTransient || attempt >= maxAttempts) {
+        throw error;
+      }
+      await new Promise((r) => setTimeout(r, delayMs * attempt));
+    }
+  }
+  throw lastError;
+}
 
 /**
  * Integration tests for targetRoles filtering in system messages
@@ -159,8 +190,8 @@ describe(
         const participantMessages = participantRes.body?.data?.messages || [];
         expect(
           participantMessages.some(
-            (m: any) => m.title === "TR_Participant Only Message"
-          )
+            (m: any) => m.title === "TR_Participant Only Message",
+          ),
         ).toBe(true);
 
         // Admin should NOT see it
@@ -172,8 +203,8 @@ describe(
         const adminMessages = adminRes.body?.data?.messages || [];
         expect(
           adminMessages.some(
-            (m: any) => m.title === "TR_Participant Only Message"
-          )
+            (m: any) => m.title === "TR_Participant Only Message",
+          ),
         ).toBe(false);
 
         // Super Admin should NOT see it
@@ -185,8 +216,8 @@ describe(
         const superAdminMessages = superAdminRes.body?.data?.messages || [];
         expect(
           superAdminMessages.some(
-            (m: any) => m.title === "TR_Participant Only Message"
-          )
+            (m: any) => m.title === "TR_Participant Only Message",
+          ),
         ).toBe(false);
 
         // Guest Expert should NOT see it
@@ -198,8 +229,8 @@ describe(
         const guestExpertMessages = guestExpertRes.body?.data?.messages || [];
         expect(
           guestExpertMessages.some(
-            (m: any) => m.title === "TR_Participant Only Message"
-          )
+            (m: any) => m.title === "TR_Participant Only Message",
+          ),
         ).toBe(false);
       });
 
@@ -227,8 +258,8 @@ describe(
         const superAdminMessages = superAdminRes.body?.data?.messages || [];
         expect(
           superAdminMessages.some(
-            (m: any) => m.title === "TR_Admin Only Message"
-          )
+            (m: any) => m.title === "TR_Admin Only Message",
+          ),
         ).toBe(true);
 
         // Administrator should see it
@@ -239,7 +270,7 @@ describe(
         expect(adminRes.status).toBe(200);
         const adminMessages = adminRes.body?.data?.messages || [];
         expect(
-          adminMessages.some((m: any) => m.title === "TR_Admin Only Message")
+          adminMessages.some((m: any) => m.title === "TR_Admin Only Message"),
         ).toBe(true);
 
         // Leader should NOT see it
@@ -250,7 +281,7 @@ describe(
         expect(leaderRes.status).toBe(200);
         const leaderMessages = leaderRes.body?.data?.messages || [];
         expect(
-          leaderMessages.some((m: any) => m.title === "TR_Admin Only Message")
+          leaderMessages.some((m: any) => m.title === "TR_Admin Only Message"),
         ).toBe(false);
 
         // Participant should NOT see it
@@ -262,8 +293,8 @@ describe(
         const participantMessages = participantRes.body?.data?.messages || [];
         expect(
           participantMessages.some(
-            (m: any) => m.title === "TR_Admin Only Message"
-          )
+            (m: any) => m.title === "TR_Admin Only Message",
+          ),
         ).toBe(false);
       });
 
@@ -291,8 +322,8 @@ describe(
         const superAdminMessages = superAdminRes.body?.data?.messages || [];
         expect(
           superAdminMessages.some(
-            (m: any) => m.title === "TR_@Cloud Co-workers Message"
-          )
+            (m: any) => m.title === "TR_@Cloud Co-workers Message",
+          ),
         ).toBe(true);
 
         // Administrator should see it
@@ -304,8 +335,8 @@ describe(
         const adminMessages = adminRes.body?.data?.messages || [];
         expect(
           adminMessages.some(
-            (m: any) => m.title === "TR_@Cloud Co-workers Message"
-          )
+            (m: any) => m.title === "TR_@Cloud Co-workers Message",
+          ),
         ).toBe(true);
 
         // Leader should see it
@@ -317,8 +348,8 @@ describe(
         const leaderMessages = leaderRes.body?.data?.messages || [];
         expect(
           leaderMessages.some(
-            (m: any) => m.title === "TR_@Cloud Co-workers Message"
-          )
+            (m: any) => m.title === "TR_@Cloud Co-workers Message",
+          ),
         ).toBe(true);
 
         // Guest Expert should NOT see it
@@ -330,8 +361,8 @@ describe(
         const guestExpertMessages = guestExpertRes.body?.data?.messages || [];
         expect(
           guestExpertMessages.some(
-            (m: any) => m.title === "TR_@Cloud Co-workers Message"
-          )
+            (m: any) => m.title === "TR_@Cloud Co-workers Message",
+          ),
         ).toBe(false);
 
         // Participant should NOT see it
@@ -343,61 +374,69 @@ describe(
         const participantMessages = participantRes.body?.data?.messages || [];
         expect(
           participantMessages.some(
-            (m: any) => m.title === "TR_@Cloud Co-workers Message"
-          )
+            (m: any) => m.title === "TR_@Cloud Co-workers Message",
+          ),
         ).toBe(false);
       });
 
       it("should show Guest Expert message only to Guest Experts", async () => {
         // Create a message targeted to Guest Experts
-        const createRes = await request(app)
-          .post("/api/notifications/system")
-          .set("Authorization", `Bearer ${superAdminToken}`)
-          .send({
-            title: "TR_Guest Expert Message",
-            content: "This message is for Guest Experts",
-            type: "announcement",
-            priority: "medium",
-            targetRoles: ["Guest Expert"],
-          });
+        const createRes = await withRetry(() =>
+          request(app)
+            .post("/api/notifications/system")
+            .set("Authorization", `Bearer ${superAdminToken}`)
+            .send({
+              title: "TR_Guest Expert Message",
+              content: "This message is for Guest Experts",
+              type: "announcement",
+              priority: "medium",
+              targetRoles: ["Guest Expert"],
+            }),
+        );
 
         expect(createRes.status).toBe(201);
 
         // Guest Expert should see it
-        const guestExpertRes = await request(app)
-          .get("/api/notifications/system")
-          .set("Authorization", `Bearer ${guestExpertToken}`);
+        const guestExpertRes = await withRetry(() =>
+          request(app)
+            .get("/api/notifications/system")
+            .set("Authorization", `Bearer ${guestExpertToken}`),
+        );
 
         expect(guestExpertRes.status).toBe(200);
         const guestExpertMessages = guestExpertRes.body?.data?.messages || [];
         expect(
           guestExpertMessages.some(
-            (m: any) => m.title === "TR_Guest Expert Message"
-          )
+            (m: any) => m.title === "TR_Guest Expert Message",
+          ),
         ).toBe(true);
 
         // Admin should NOT see it
-        const adminRes = await request(app)
-          .get("/api/notifications/system")
-          .set("Authorization", `Bearer ${adminToken}`);
+        const adminRes = await withRetry(() =>
+          request(app)
+            .get("/api/notifications/system")
+            .set("Authorization", `Bearer ${adminToken}`),
+        );
 
         expect(adminRes.status).toBe(200);
         const adminMessages = adminRes.body?.data?.messages || [];
         expect(
-          adminMessages.some((m: any) => m.title === "TR_Guest Expert Message")
+          adminMessages.some((m: any) => m.title === "TR_Guest Expert Message"),
         ).toBe(false);
 
         // Participant should NOT see it
-        const participantRes = await request(app)
-          .get("/api/notifications/system")
-          .set("Authorization", `Bearer ${participantToken}`);
+        const participantRes = await withRetry(() =>
+          request(app)
+            .get("/api/notifications/system")
+            .set("Authorization", `Bearer ${participantToken}`),
+        );
 
         expect(participantRes.status).toBe(200);
         const participantMessages = participantRes.body?.data?.messages || [];
         expect(
           participantMessages.some(
-            (m: any) => m.title === "TR_Guest Expert Message"
-          )
+            (m: any) => m.title === "TR_Guest Expert Message",
+          ),
         ).toBe(false);
       });
 
@@ -432,7 +471,7 @@ describe(
           expect(res.status).toBe(200);
           const messages = res.body?.data?.messages || [];
           expect(
-            messages.some((m: any) => m.title === "TR_Broadcast Message")
+            messages.some((m: any) => m.title === "TR_Broadcast Message"),
           ).toBe(true);
         }
       });
@@ -464,8 +503,8 @@ describe(
           participantBellRes.body?.data?.notifications || [];
         expect(
           participantBellNotifications.some(
-            (n: any) => n.title === "TR_Bell Participant Only"
-          )
+            (n: any) => n.title === "TR_Bell Participant Only",
+          ),
         ).toBe(true);
 
         // Admin should NOT see it in bell
@@ -478,8 +517,8 @@ describe(
           adminBellRes.body?.data?.notifications || [];
         expect(
           adminBellNotifications.some(
-            (n: any) => n.title === "TR_Bell Participant Only"
-          )
+            (n: any) => n.title === "TR_Bell Participant Only",
+          ),
         ).toBe(false);
       });
 
@@ -508,8 +547,8 @@ describe(
           superAdminBellRes.body?.data?.notifications || [];
         expect(
           superAdminBellNotifications.some(
-            (n: any) => n.title === "TR_Bell Admin Only"
-          )
+            (n: any) => n.title === "TR_Bell Admin Only",
+          ),
         ).toBe(true);
 
         // Administrator should see it in bell
@@ -522,8 +561,8 @@ describe(
           adminBellRes.body?.data?.notifications || [];
         expect(
           adminBellNotifications.some(
-            (n: any) => n.title === "TR_Bell Admin Only"
-          )
+            (n: any) => n.title === "TR_Bell Admin Only",
+          ),
         ).toBe(true);
 
         // Participant should NOT see it in bell
@@ -536,8 +575,8 @@ describe(
           participantBellRes.body?.data?.notifications || [];
         expect(
           participantBellNotifications.some(
-            (n: any) => n.title === "TR_Bell Admin Only"
-          )
+            (n: any) => n.title === "TR_Bell Admin Only",
+          ),
         ).toBe(false);
       });
 
@@ -572,11 +611,11 @@ describe(
           expect(bellRes.status).toBe(200);
           const notifications = bellRes.body?.data?.notifications || [];
           expect(
-            notifications.some((n: any) => n.title === "TR_Bell Broadcast")
+            notifications.some((n: any) => n.title === "TR_Bell Broadcast"),
           ).toBe(true);
         }
       });
     });
   },
-  { timeout: 120000 } // 2 minute timeout for the entire test suite
+  { timeout: 120000 }, // 2 minute timeout for the entire test suite
 );

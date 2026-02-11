@@ -106,6 +106,27 @@ describe("ValidationHelper - Unit Tests", () => {
         expect.objectContaining({ ipCidr: expect.any(String) }),
       );
     });
+
+    it("should fall back to socket.remoteAddress when req.ip is undefined", () => {
+      mockReq.ip = undefined as unknown as string;
+      mockReq.socket = { remoteAddress: "10.20.30.40" } as any;
+
+      ValidationHelper.validateSlug(
+        undefined,
+        mockLog,
+        mockReq as Request,
+        mockRes as Response,
+      );
+
+      expect(mockLog.warn).toHaveBeenCalledWith(
+        "Public registration validation failure",
+        undefined,
+        expect.objectContaining({
+          reason: "missing_slug",
+          ipCidr: "10.20.30.0/24",
+        }),
+      );
+    });
   });
 
   describe("validateRoleId", () => {
@@ -154,6 +175,28 @@ describe("ValidationHelper - Unit Tests", () => {
         expect.objectContaining({
           reason: "missing_roleId",
           slug: "important-event",
+        }),
+      );
+    });
+
+    it("should fall back to socket.remoteAddress when req.ip is undefined", () => {
+      mockReq.ip = undefined as unknown as string;
+      mockReq.socket = { remoteAddress: "172.16.0.55" } as any;
+
+      ValidationHelper.validateRoleId(
+        undefined,
+        "event-slug",
+        mockLog,
+        mockReq as Request,
+        mockRes as Response,
+      );
+
+      expect(mockLog.warn).toHaveBeenCalledWith(
+        "Public registration validation failure",
+        undefined,
+        expect.objectContaining({
+          reason: "missing_roleId",
+          ipCidr: "172.16.0.0/24",
         }),
       );
     });
@@ -277,6 +320,29 @@ describe("ValidationHelper - Unit Tests", () => {
 
       expect(result).toBe(true);
     });
+
+    it("should fall back to socket.remoteAddress when req.ip is undefined", () => {
+      mockReq.ip = undefined as unknown as string;
+      mockReq.socket = { remoteAddress: "192.168.100.1" } as any;
+
+      ValidationHelper.validateAttendee(
+        undefined,
+        "event-slug",
+        "role-123",
+        mockLog,
+        mockReq as Request,
+        mockRes as Response,
+      );
+
+      expect(mockLog.warn).toHaveBeenCalledWith(
+        "Public registration validation failure",
+        undefined,
+        expect.objectContaining({
+          reason: "missing_attendee_fields",
+          ipCidr: "192.168.100.0/24",
+        }),
+      );
+    });
   });
 
   describe("validateConsent", () => {
@@ -364,6 +430,29 @@ describe("ValidationHelper - Unit Tests", () => {
         }),
       );
     });
+
+    it("should fall back to socket.remoteAddress when req.ip is undefined", () => {
+      mockReq.ip = undefined as unknown as string;
+      mockReq.socket = { remoteAddress: "10.1.2.3" } as any;
+
+      ValidationHelper.validateConsent(
+        { termsAccepted: false },
+        "event-slug",
+        "role-123",
+        mockLog,
+        mockReq as Request,
+        mockRes as Response,
+      );
+
+      expect(mockLog.warn).toHaveBeenCalledWith(
+        "Public registration validation failure",
+        undefined,
+        expect.objectContaining({
+          reason: "missing_consent",
+          ipCidr: "10.1.2.0/24",
+        }),
+      );
+    });
   });
 
   describe("validateRole", () => {
@@ -418,6 +507,29 @@ describe("ValidationHelper - Unit Tests", () => {
           reason: "role_not_found",
           slug: "important-event",
           roleId: "nonexistent-role",
+        }),
+      );
+    });
+
+    it("should fall back to socket.remoteAddress when req.ip is undefined", () => {
+      mockReq.ip = undefined as unknown as string;
+      mockReq.socket = { remoteAddress: "172.31.0.100" } as any;
+
+      ValidationHelper.validateRole(
+        undefined,
+        "role-123",
+        "event-slug",
+        mockLog,
+        mockReq as Request,
+        mockRes as Response,
+      );
+
+      expect(mockLog.warn).toHaveBeenCalledWith(
+        "Public registration validation failure",
+        undefined,
+        expect.objectContaining({
+          reason: "role_not_found",
+          ipCidr: "172.31.0.0/24",
         }),
       );
     });

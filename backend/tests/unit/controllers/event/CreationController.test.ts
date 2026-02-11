@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { Request, Response } from "express";
 import { CreationController } from "../../../../src/controllers/event/CreationController";
+import { AuthenticatedRequest } from "../../../../src/types/api";
 
 // Mock dependencies
 vi.mock("../../../../src/models", () => ({
@@ -101,7 +102,7 @@ vi.mock("../../../../src/services", () => ({
 import { hasPermission } from "../../../../src/utils/roleUtils";
 
 describe("CreationController", () => {
-  let req: Partial<Request>;
+  let req: Partial<AuthenticatedRequest>;
   let res: Partial<Response>;
   let jsonMock: ReturnType<typeof vi.fn>;
   let statusMock: ReturnType<typeof vi.fn>;
@@ -118,7 +119,7 @@ describe("CreationController", () => {
         _id: "user-id-123",
         role: "admin",
       },
-    } as unknown as Partial<Request>;
+    } as unknown as Partial<AuthenticatedRequest>;
 
     res = {
       status: statusMock,

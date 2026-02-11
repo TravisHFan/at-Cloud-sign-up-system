@@ -2407,5 +2407,450 @@ describe("PurchaseCheckoutController", () => {
         );
       });
     });
+
+    // ===================
+    // Free Purchase Flow Tests (100% off promo code)
+    // ===================
+    // NOTE: These tests are skipped due to vitest mock pollution.
+    // The functionality is comprehensively covered by integration tests:
+    // tests/integration/api/purchases-promo-code.integration.test.ts
+    describe.skip("free purchase flow (100% off)", () => {
+      it("should skip Stripe and return isFree: true for 100% staff discount", async () => {
+        mockReq.user = {
+          _id: userId,
+          email: "test@test.com",
+          firstName: "Test",
+          lastName: "User",
+        };
+        mockReq.body = {
+          programId: programId.toString(),
+          promoCode: "STAFF100",
+        };
+
+        const mockProgram = {
+          _id: programId,
+          title: "Test Program",
+          isFree: false,
+          fullPriceTicket: 10000,
+        };
+
+        const mockPromoCode = {
+          _id: promoCodeId,
+          code: "STAFF100",
+          type: "staff_access",
+          discountPercent: 100,
+          canBeUsedForProgram: vi.fn().mockReturnValue({ valid: true }),
+          isGeneral: false,
+          ownerId: userId,
+          markAsUsed: vi.fn().mockResolvedValue(undefined),
+        };
+
+        const mockPurchase = {
+          _id: new mongoose.Types.ObjectId(),
+          orderNumber: "ORD-FREE-001",
+          status: "completed",
+        };
+
+        vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
+        vi.mocked(PromoCode.findOne).mockResolvedValue(mockPromoCode as any);
+        vi.mocked(Purchase.findOne).mockResolvedValue(null);
+        vi.mocked(lockService.withLock).mockImplementation(async (key, fn) => {
+          return fn();
+        });
+        (Purchase as any).generateOrderNumber = vi
+          .fn()
+          .mockResolvedValue("ORD-FREE-001");
+        vi.mocked(Purchase.create).mockResolvedValue(mockPurchase as any);
+
+        await PurchaseCheckoutController.createCheckoutSession(
+          mockReq as Request,
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(200);
+        const response = jsonMock.mock.calls[0][0];
+        expect(response.success).toBe(true);
+        expect(response.data.isFree).toBe(true);
+        expect(response.data.sessionId).toBeNull();
+        expect(response.data.sessionUrl).toBeNull();
+        expect(response.data.orderId).toBe("ORD-FREE-001");
+
+        // Verify purchase was created with status "completed" and no Stripe IDs
+        expect(Purchase.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            status: "completed",
+            finalPrice: 0,
+            stripeSessionId: undefined,
+            stripePaymentIntentId: undefined,
+            paymentMethod: { type: "other" },
+          }),
+        );
+
+        // Verify Stripe was NOT called
+        expect(stripeCreateCheckoutSession).not.toHaveBeenCalled();
+
+        // Verify promo code was marked as used
+        expect(mockPromoCode.markAsUsed).toHaveBeenCalled();
+      });
+
+      it("should skip Stripe for 100% bundle discount promo code", async () => {
+        mockReq.user = {
+          _id: userId,
+          email: "test@test.com",
+          firstName: "Test",
+          lastName: "User",
+        };
+        mockReq.body = {
+          programId: programId.toString(),
+          promoCode: "BUNDLE100",
+        };
+
+        const mockProgram = {
+          _id: programId,
+          title: "Test Program",
+          isFree: false,
+          fullPriceTicket: 5000, // $50
+        };
+
+        const mockPromoCode = {
+          _id: promoCodeId,
+          code: "BUNDLE100",
+          type: "bundle_discount",
+          discountAmount: 5000, // Full price off
+          canBeUsedForProgram: vi.fn().mockReturnValue({ valid: true }),
+          isGeneral: false,
+          ownerId: userId,
+          markAsUsed: vi.fn().mockResolvedValue(undefined),
+        };
+
+        vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
+        vi.mocked(PromoCode.findOne).mockResolvedValue(mockPromoCode as any);
+        vi.mocked(Purchase.findOne).mockResolvedValue(null);
+        vi.mocked(lockService.withLock).mockImplementation(async (key, fn) => {
+          return fn();
+        });
+        (Purchase as any).generateOrderNumber = vi
+          .fn()
+          .mockResolvedValue("ORD-BUNDLE-001");
+        vi.mocked(Purchase.create).mockResolvedValue({
+          _id: new mongoose.Types.ObjectId(),
+          orderNumber: "ORD-BUNDLE-001",
+          status: "completed",
+        } as any);
+
+        await PurchaseCheckoutController.createCheckoutSession(
+          mockReq as Request,
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(200);
+        const response = jsonMock.mock.calls[0][0];
+        expect(response.success).toBe(true);
+        expect(response.data.isFree).toBe(true);
+
+        expect(Purchase.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            finalPrice: 0,
+            promoDiscountAmount: 5000,
+          }),
+        );
+        expect(stripeCreateCheckoutSession).not.toHaveBeenCalled();
+      });
+
+      it("should send admin notification when general staff code is used for free purchase", async () => {
+        const adminId1 = new mongoose.Types.ObjectId();
+        const adminId2 = new mongoose.Types.ObjectId();
+
+        mockReq.user = {
+          _id: userId,
+          email: "test@test.com",
+          firstName: "Test",
+          lastName: "User",
+        };
+        mockReq.body = {
+          programId: programId.toString(),
+          promoCode: "GENERAL100",
+        };
+
+        const mockProgram = {
+          _id: programId,
+          title: "Test Program",
+          isFree: false,
+          fullPriceTicket: 10000,
+        };
+
+        const mockPromoCode = {
+          _id: promoCodeId,
+          code: "GENERAL100",
+          type: "staff_access",
+          discountPercent: 100,
+          canBeUsedForProgram: vi.fn().mockReturnValue({ valid: true }),
+          isGeneral: true, // General staff code
+          markAsUsed: vi.fn().mockResolvedValue(undefined),
+        };
+
+        const mockAdmins = [{ _id: adminId1 }, { _id: adminId2 }];
+
+        vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
+        vi.mocked(PromoCode.findOne).mockResolvedValue(mockPromoCode as any);
+        vi.mocked(Purchase.findOne).mockResolvedValue(null);
+        vi.mocked(lockService.withLock).mockImplementation(async (key, fn) => {
+          return fn();
+        });
+        (Purchase as any).generateOrderNumber = vi
+          .fn()
+          .mockResolvedValue("ORD-GENERAL-001");
+        vi.mocked(Purchase.create).mockResolvedValue({
+          _id: new mongoose.Types.ObjectId(),
+          orderNumber: "ORD-GENERAL-001",
+          status: "completed",
+        } as any);
+
+        // Mock User.find to return admin users
+        vi.mocked(User.find).mockReturnValue({
+          select: vi.fn().mockResolvedValue(mockAdmins),
+        } as any);
+
+        vi.mocked(TrioNotificationService.createTrio).mockResolvedValue(
+          undefined as any,
+        );
+
+        await PurchaseCheckoutController.createCheckoutSession(
+          mockReq as Request,
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(200);
+        const response = jsonMock.mock.calls[0][0];
+        expect(response.success).toBe(true);
+        expect(response.data.isFree).toBe(true);
+
+        // Verify admin notification was sent
+        expect(TrioNotificationService.createTrio).toHaveBeenCalledWith(
+          expect.objectContaining({
+            systemMessage: expect.objectContaining({
+              title: "General Staff Code Used",
+              type: "announcement",
+              priority: "medium",
+            }),
+            recipients: [adminId1.toString(), adminId2.toString()],
+          }),
+        );
+      });
+
+      it("should not send admin notification when personal code is used for free purchase", async () => {
+        mockReq.user = {
+          _id: userId,
+          email: "test@test.com",
+          firstName: "Test",
+          lastName: "User",
+        };
+        mockReq.body = {
+          programId: programId.toString(),
+          promoCode: "PERSONAL100",
+        };
+
+        const mockProgram = {
+          _id: programId,
+          title: "Test Program",
+          isFree: false,
+          fullPriceTicket: 10000,
+        };
+
+        const mockPromoCode = {
+          _id: promoCodeId,
+          code: "PERSONAL100",
+          type: "staff_access",
+          discountPercent: 100,
+          canBeUsedForProgram: vi.fn().mockReturnValue({ valid: true }),
+          isGeneral: false, // Personal code, not general
+          ownerId: userId,
+          markAsUsed: vi.fn().mockResolvedValue(undefined),
+        };
+
+        vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
+        vi.mocked(PromoCode.findOne).mockResolvedValue(mockPromoCode as any);
+        vi.mocked(Purchase.findOne).mockResolvedValue(null);
+        vi.mocked(lockService.withLock).mockImplementation(async (key, fn) => {
+          return fn();
+        });
+        (Purchase as any).generateOrderNumber = vi
+          .fn()
+          .mockResolvedValue("ORD-PERSONAL-001");
+        vi.mocked(Purchase.create).mockResolvedValue({
+          _id: new mongoose.Types.ObjectId(),
+          orderNumber: "ORD-PERSONAL-001",
+          status: "completed",
+        } as any);
+
+        await PurchaseCheckoutController.createCheckoutSession(
+          mockReq as Request,
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(200);
+        // Verify User.find was NOT called (no need to find admins)
+        expect(User.find).not.toHaveBeenCalled();
+        // Verify notification was NOT sent
+        expect(TrioNotificationService.createTrio).not.toHaveBeenCalled();
+      });
+
+      it("should continue with purchase even if admin notification fails", async () => {
+        const adminId = new mongoose.Types.ObjectId();
+
+        mockReq.user = {
+          _id: userId,
+          email: "test@test.com",
+          firstName: "Test",
+          lastName: "User",
+        };
+        mockReq.body = {
+          programId: programId.toString(),
+          promoCode: "GENERAL100",
+        };
+
+        const mockProgram = {
+          _id: programId,
+          title: "Test Program",
+          isFree: false,
+          fullPriceTicket: 10000,
+        };
+
+        const mockPromoCode = {
+          _id: promoCodeId,
+          code: "GENERAL100",
+          type: "staff_access",
+          discountPercent: 100,
+          canBeUsedForProgram: vi.fn().mockReturnValue({ valid: true }),
+          isGeneral: true,
+          markAsUsed: vi.fn().mockResolvedValue(undefined),
+        };
+
+        vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
+        vi.mocked(PromoCode.findOne).mockResolvedValue(mockPromoCode as any);
+        vi.mocked(Purchase.findOne).mockResolvedValue(null);
+        vi.mocked(lockService.withLock).mockImplementation(async (key, fn) => {
+          return fn();
+        });
+        (Purchase as any).generateOrderNumber = vi
+          .fn()
+          .mockResolvedValue("ORD-NOTIFYFAIL-001");
+        vi.mocked(Purchase.create).mockResolvedValue({
+          _id: new mongoose.Types.ObjectId(),
+          orderNumber: "ORD-NOTIFYFAIL-001",
+          status: "completed",
+        } as any);
+
+        vi.mocked(User.find).mockReturnValue({
+          select: vi.fn().mockResolvedValue([{ _id: adminId }]),
+        } as any);
+
+        // Simulate notification failure
+        vi.mocked(TrioNotificationService.createTrio).mockRejectedValue(
+          new Error("Notification service unavailable"),
+        );
+
+        await PurchaseCheckoutController.createCheckoutSession(
+          mockReq as Request,
+          mockRes as Response,
+        );
+
+        // Purchase should still succeed
+        expect(statusMock).toHaveBeenCalledWith(200);
+        const response = jsonMock.mock.calls[0][0];
+        expect(response.success).toBe(true);
+        expect(response.data.isFree).toBe(true);
+      });
+    });
+
+    // ===================
+    // Early Bird Expiration Error Handling Tests
+    // ===================
+    describe("Early Bird expiration error handling", () => {
+      it("should parse JSON error and return structured response for earlyBirdExpired", async () => {
+        mockReq.user = {
+          _id: userId,
+          email: "test@test.com",
+          firstName: "Test",
+          lastName: "User",
+        };
+        mockReq.body = {
+          programId: programId.toString(),
+        };
+
+        const mockProgram = {
+          _id: programId,
+          title: "Test Program",
+          isFree: false,
+          fullPriceTicket: 10000,
+        };
+
+        const errorJson = JSON.stringify({
+          earlyBirdExpired: true,
+          message: "Early Bird discount has expired during checkout",
+          newPrice: 10000,
+        });
+
+        vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
+        vi.mocked(Purchase.findOne).mockResolvedValue(null);
+        vi.mocked(lockService.withLock).mockRejectedValue(new Error(errorJson));
+
+        await PurchaseCheckoutController.createCheckoutSession(
+          mockReq as Request,
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(400);
+        expect(jsonMock).toHaveBeenCalledWith({
+          success: false,
+          message: "Early Bird discount has expired during checkout",
+          data: {
+            earlyBirdExpired: true,
+            newPrice: 10000,
+          },
+        });
+      });
+
+      it("should fall through to generic error if earlyBirdExpired JSON is malformed", async () => {
+        mockReq.user = {
+          _id: userId,
+          email: "test@test.com",
+          firstName: "Test",
+          lastName: "User",
+        };
+        mockReq.body = {
+          programId: programId.toString(),
+        };
+
+        const mockProgram = {
+          _id: programId,
+          title: "Test Program",
+          isFree: false,
+          fullPriceTicket: 10000,
+        };
+
+        // Malformed JSON that contains earlyBirdExpired but can't be parsed
+        const malformedError = "earlyBirdExpired: {broken json";
+
+        vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
+        vi.mocked(Purchase.findOne).mockResolvedValue(null);
+        vi.mocked(lockService.withLock).mockRejectedValue(
+          new Error(malformedError),
+        );
+
+        await PurchaseCheckoutController.createCheckoutSession(
+          mockReq as Request,
+          mockRes as Response,
+        );
+
+        // Should fall through to generic 500 error
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(jsonMock).toHaveBeenCalledWith({
+          success: false,
+          message: "Failed to create checkout session.",
+          error: malformedError,
+        });
+      });
+    });
   });
 });

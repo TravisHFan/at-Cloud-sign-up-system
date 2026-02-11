@@ -1766,4 +1766,9 @@ describe("EventQueryController", () => {
       expect(jsonMock).toHaveBeenCalled();
     });
   });
+
+  // Note: The production caching path (lines 181-266) is intentionally skipped
+  // in unit tests because it checks process.env.VITEST === "true". This path
+  // uses CachePatterns.getEventListingOrdering for optimized ID-based caching
+  // and should be tested via integration tests if needed.
 });

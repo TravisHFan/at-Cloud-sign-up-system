@@ -390,6 +390,38 @@ describe("BatchOperationsController", () => {
         expect(statusMock).toHaveBeenCalledWith(200);
       });
 
+      it("should await select result when lean is not available", async () => {
+        const events = [
+          {
+            _id: new mongoose.Types.ObjectId(),
+            date: "2024-01-01",
+            time: "10:00",
+            endTime: "12:00",
+            status: "completed",
+          },
+        ];
+
+        // Mock where select returns a promise directly (no lean method)
+        const mockSelect = vi.fn().mockResolvedValue(events);
+        const mockFind = vi.fn().mockReturnValue({
+          select: mockSelect,
+        });
+
+        vi.mocked(Event.find).mockImplementation(mockFind);
+        vi.mocked(EventController.getEventStatus).mockReturnValue("upcoming");
+        vi.mocked(Event.findByIdAndUpdate).mockResolvedValue({} as any);
+
+        await BatchOperationsController.updateAllEventStatuses(
+          mockReq as Request,
+          mockRes as Response,
+        );
+
+        expect(mockSelect).toHaveBeenCalledWith(
+          "_id date endDate time endTime status timeZone",
+        );
+        expect(statusMock).toHaveBeenCalledWith(200);
+      });
+
       it("should fallback to original query when select chain throws", async () => {
         const events = [
           {

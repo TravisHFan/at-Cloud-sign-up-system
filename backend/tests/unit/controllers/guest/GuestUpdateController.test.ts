@@ -334,6 +334,39 @@ describe("GuestUpdateController", () => {
         expect(mockGuest.phone).toBeUndefined();
         expect(statusMock).toHaveBeenCalledWith(200);
       });
+
+      it("should update phone when valid string provided", async () => {
+        const mockGuest = createMockGuest();
+        vi.mocked(GuestRegistration.findById).mockResolvedValue(
+          mockGuest as any,
+        );
+        mockReq.body = { phone: "555-123-4567" };
+
+        await GuestUpdateController.updateGuestRegistration(
+          mockReq as unknown as Request,
+          mockRes as Response,
+        );
+
+        expect(mockGuest.phone).toBe("555-123-4567");
+        expect(statusMock).toHaveBeenCalledWith(200);
+      });
+
+      it("should handle whitespace-only phone as empty", async () => {
+        const mockGuest = createMockGuest();
+        vi.mocked(GuestRegistration.findById).mockResolvedValue(
+          mockGuest as any,
+        );
+        mockReq.body = { phone: "   " };
+
+        await GuestUpdateController.updateGuestRegistration(
+          mockReq as unknown as Request,
+          mockRes as Response,
+        );
+
+        // Whitespace only should be treated as empty (undefined)
+        expect(mockGuest.phone).toBeUndefined();
+        expect(statusMock).toHaveBeenCalledWith(200);
+      });
     });
   });
 });

@@ -14,7 +14,7 @@ class NotificationService {
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
 
@@ -46,6 +46,8 @@ class NotificationService {
         if (response.status === 401) {
           localStorage.removeItem("authToken");
           handleSessionExpired();
+          // Return early - do NOT throw as SessionExpiredModal handles this
+          throw new Error("Session expired");
         }
         throw new Error(data.message || `HTTP ${response.status}`);
       }
@@ -99,7 +101,7 @@ class NotificationService {
       response.data?.notifications || []
     ).map((notification: BackendBellNotification) => {
       const sysType: SystemMessageType = isSystemMessageType(
-        notification.type ?? ""
+        notification.type ?? "",
       )
         ? (notification.type as SystemMessageType)
         : "announcement";

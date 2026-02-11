@@ -67,7 +67,7 @@ describe("RoleEmailService - Role Email Operations", () => {
     }
     if (anyMailer.default?.createTransport) {
       vi.mocked(anyMailer.default.createTransport).mockReturnValue(
-        mockTransporter
+        mockTransporter,
       );
     }
 
@@ -106,7 +106,7 @@ describe("RoleEmailService - Role Email Operations", () => {
       const result = await RoleEmailService.sendPromotionNotificationToUser(
         email,
         userData,
-        changedBy
+        changedBy,
       );
 
       // Assert
@@ -142,7 +142,7 @@ describe("RoleEmailService - Role Email Operations", () => {
       await RoleEmailService.sendPromotionNotificationToUser(
         email,
         userData,
-        changedBy
+        changedBy,
       );
 
       // Assert
@@ -172,7 +172,7 @@ describe("RoleEmailService - Role Email Operations", () => {
       const result = await RoleEmailService.sendPromotionNotificationToUser(
         email,
         userData,
-        changedBy
+        changedBy,
       );
 
       // Assert
@@ -199,12 +199,42 @@ describe("RoleEmailService - Role Email Operations", () => {
       await RoleEmailService.sendPromotionNotificationToUser(
         email,
         userData,
-        changedBy
+        changedBy,
       );
 
       // Assert
       const emailCall = mockTransporter.sendMail.mock.calls[0][0];
       expect(emailCall.html).toContain("http://localhost:5173");
+    });
+
+    it("should handle unknown/custom role with default guidance", async () => {
+      // Arrange - Test with an unknown role to hit default case in getRoleWelcomeContent
+      const email = "user@example.com";
+      const userData = {
+        firstName: "John",
+        lastName: "Doe",
+        oldRole: "Participant",
+        newRole: "CustomRole", // Unknown role hits default case
+      };
+      const changedBy = {
+        firstName: "Admin",
+        lastName: "User",
+        role: "Super Admin",
+      };
+
+      // Act
+      const result = await RoleEmailService.sendPromotionNotificationToUser(
+        email,
+        userData,
+        changedBy,
+      );
+
+      // Assert
+      expect(result).toBe(true);
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain("CustomRole");
+      // Default welcome message content
+      expect(emailCall.html).toContain("Welcome to your new role");
     });
   });
 
@@ -231,7 +261,7 @@ describe("RoleEmailService - Role Email Operations", () => {
         adminEmail,
         adminName,
         userData,
-        changedBy
+        changedBy,
       );
 
       // Assert
@@ -268,7 +298,7 @@ describe("RoleEmailService - Role Email Operations", () => {
         adminEmail,
         adminName,
         userData,
-        changedBy
+        changedBy,
       );
 
       // Assert
@@ -302,7 +332,7 @@ describe("RoleEmailService - Role Email Operations", () => {
         userEmail,
         userData,
         changedBy,
-        reason
+        reason,
       );
 
       // Assert
@@ -338,7 +368,7 @@ describe("RoleEmailService - Role Email Operations", () => {
       const result = await RoleEmailService.sendDemotionNotificationToUser(
         userEmail,
         userData,
-        changedBy
+        changedBy,
       );
 
       // Assert
@@ -371,7 +401,7 @@ describe("RoleEmailService - Role Email Operations", () => {
       await RoleEmailService.sendDemotionNotificationToUser(
         userEmail,
         userData,
-        changedBy
+        changedBy,
       );
 
       // Assert
@@ -401,7 +431,7 @@ describe("RoleEmailService - Role Email Operations", () => {
       const result = await RoleEmailService.sendDemotionNotificationToUser(
         userEmail,
         userData,
-        changedBy
+        changedBy,
       );
 
       // Assert
@@ -438,7 +468,7 @@ describe("RoleEmailService - Role Email Operations", () => {
         adminName,
         userData,
         changedBy,
-        reason
+        reason,
       );
 
       // Assert
@@ -469,7 +499,7 @@ describe("RoleEmailService - Role Email Operations", () => {
       // Act
       const result = await RoleEmailService.sendAtCloudRoleChangeToUser(
         userEmail,
-        userData
+        userData,
       );
 
       // Assert
@@ -544,7 +574,7 @@ describe("RoleEmailService - Role Email Operations", () => {
       const result = await RoleEmailService.sendAtCloudRoleChangeToAdmins(
         adminEmail,
         adminName,
-        userData
+        userData,
       );
 
       // Assert
@@ -577,7 +607,7 @@ describe("RoleEmailService - Role Email Operations", () => {
       const result = await RoleEmailService.sendNewLeaderSignupEmail(
         adminEmail,
         adminName,
-        newLeaderData
+        newLeaderData,
       );
 
       // Assert
@@ -608,7 +638,7 @@ describe("RoleEmailService - Role Email Operations", () => {
       await RoleEmailService.sendNewLeaderSignupEmail(
         adminEmail,
         adminName,
-        newLeaderData
+        newLeaderData,
       );
 
       // Assert
@@ -634,7 +664,7 @@ describe("RoleEmailService - Role Email Operations", () => {
       const result = await RoleEmailService.sendAtCloudRoleAssignedToAdmins(
         adminEmail,
         adminName,
-        userData
+        userData,
       );
 
       // Assert
@@ -664,7 +694,7 @@ describe("RoleEmailService - Role Email Operations", () => {
       await RoleEmailService.sendAtCloudRoleAssignedToAdmins(
         adminEmail,
         adminName,
-        userData
+        userData,
       );
 
       // Assert
@@ -686,7 +716,7 @@ describe("RoleEmailService - Role Email Operations", () => {
       const result = await RoleEmailService.sendAtCloudRoleAssignedToAdmins(
         "admin@example.com",
         "Admin",
-        userData
+        userData,
       );
 
       // Assert
@@ -712,7 +742,7 @@ describe("RoleEmailService - Role Email Operations", () => {
       const result = await RoleEmailService.sendAtCloudRoleRemovedToAdmins(
         adminEmail,
         adminName,
-        userData
+        userData,
       );
 
       // Assert
@@ -742,7 +772,7 @@ describe("RoleEmailService - Role Email Operations", () => {
       await RoleEmailService.sendAtCloudRoleRemovedToAdmins(
         adminEmail,
         adminName,
-        userData
+        userData,
       );
 
       // Assert
@@ -765,7 +795,7 @@ describe("RoleEmailService - Role Email Operations", () => {
       const result = await RoleEmailService.sendAtCloudRoleRemovedToAdmins(
         "admin@example.com",
         "Admin",
-        userData
+        userData,
       );
 
       // Assert
@@ -800,7 +830,7 @@ describe("RoleEmailService - Role Email Operations", () => {
         coOrganizerEmail,
         assignedUser,
         eventData,
-        assignedBy
+        assignedBy,
       );
 
       // Assert
@@ -840,7 +870,7 @@ describe("RoleEmailService - Role Email Operations", () => {
         coOrganizerEmail,
         assignedUser,
         eventData,
-        assignedBy
+        assignedBy,
       );
 
       // Assert
@@ -848,6 +878,38 @@ describe("RoleEmailService - Role Email Operations", () => {
       expect(emailCall.html).toContain("Workshop Series");
       expect(emailCall.html).toContain("2:00 PM");
       expect(emailCall.html).toContain("Community Hall");
+    });
+
+    it("should return false when email sending fails", async () => {
+      // Arrange
+      mockTransporter.sendMail.mockRejectedValue(new Error("SMTP Error"));
+      const coOrganizerEmail = "fail@example.com";
+      const assignedUser = {
+        firstName: "Test",
+        lastName: "User",
+      };
+      const eventData = {
+        title: "Test Event",
+        date: "2025-12-20",
+        time: "09:00",
+        endTime: "17:00",
+        location: "Test Location",
+      };
+      const assignedBy = {
+        firstName: "Admin",
+        lastName: "User",
+      };
+
+      // Act
+      const result = await RoleEmailService.sendCoOrganizerAssignedEmail(
+        coOrganizerEmail,
+        assignedUser,
+        eventData,
+        assignedBy,
+      );
+
+      // Assert - returns false on failure (EmailServiceFacade catches errors)
+      expect(result).toBe(false);
     });
   });
 
@@ -871,7 +933,7 @@ describe("RoleEmailService - Role Email Operations", () => {
       await RoleEmailService.sendPromotionNotificationToUser(
         email,
         userData,
-        changedBy
+        changedBy,
       );
 
       // Assert
@@ -890,7 +952,7 @@ describe("RoleEmailService - Role Email Operations", () => {
           oldRole: "Participant",
           newRole: "Leader",
         },
-        { firstName: "Admin", lastName: "1", role: "Super Admin" }
+        { firstName: "Admin", lastName: "1", role: "Super Admin" },
       );
 
       await RoleEmailService.sendAtCloudRoleChangeToUser("user2@example.com", {
@@ -911,7 +973,7 @@ describe("RoleEmailService - Role Email Operations", () => {
           email: "leader@example.com",
           roleInAtCloud: "Leader",
           signupDate: "2025-12-15",
-        }
+        },
       );
 
       // Assert

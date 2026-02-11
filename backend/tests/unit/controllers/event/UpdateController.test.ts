@@ -930,4 +930,252 @@ describe("UpdateController", () => {
       expect(statusMock).toHaveBeenCalledWith(200);
     });
   });
+
+  describe("updateYoutubeUrl", () => {
+    let statusMock: ReturnType<typeof vi.fn>;
+    let jsonMock: ReturnType<typeof vi.fn>;
+    let req: Partial<Request>;
+    let res: Partial<Response>;
+
+    beforeEach(() => {
+      jsonMock = vi.fn();
+      statusMock = vi.fn().mockReturnValue({ json: jsonMock });
+      res = {
+        status: statusMock as unknown as Response["status"],
+        json: jsonMock as unknown as Response["json"],
+      };
+      req = {
+        params: { id: "507f1f77bcf86cd799439011" },
+        body: { youtubeUrl: "https://www.youtube.com/watch?v=test123" },
+        user: {
+          _id: "user-id-123",
+          role: "Administrator",
+          email: "admin@test.com",
+        } as any,
+        ip: "127.0.0.1",
+        get: vi.fn().mockReturnValue("test-agent"),
+      };
+    });
+
+    it("should return 400 for invalid event ID", async () => {
+      req.params = { id: "invalid-id" };
+
+      await UpdateController.updateYoutubeUrl(req as Request, res as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(400);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: false,
+        message: "Invalid event ID.",
+      });
+    });
+
+    it("should return 401 if user is not authenticated", async () => {
+      req.user = undefined;
+
+      await UpdateController.updateYoutubeUrl(req as Request, res as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(401);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: false,
+        message: "Authentication required.",
+      });
+    });
+
+    it("should return 404 if event is not found", async () => {
+      vi.mocked(Event.findById).mockResolvedValue(null);
+
+      await UpdateController.updateYoutubeUrl(req as Request, res as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(404);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: false,
+        message: "Event not found.",
+      });
+    });
+
+    it("should return 400 if event is not completed", async () => {
+      vi.mocked(Event.findById).mockResolvedValue({
+        _id: "507f1f77bcf86cd799439011",
+        status: "upcoming",
+        createdBy: "user-id-123",
+        save: vi.fn(),
+      } as any);
+
+      await UpdateController.updateYoutubeUrl(req as Request, res as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(400);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: false,
+        message: "YouTube URL can only be added to completed events.",
+      });
+    });
+
+    it("should return 403 if user lacks permission", async () => {
+      vi.mocked(Event.findById).mockResolvedValue({
+        _id: "507f1f77bcf86cd799439011",
+        status: "completed",
+        createdBy: "other-user-id",
+        organizerDetails: [],
+        save: vi.fn(),
+      } as any);
+      req.user = {
+        _id: "user-id-123",
+        role: "Participant",
+        email: "participant@test.com",
+      } as any;
+
+      await UpdateController.updateYoutubeUrl(req as Request, res as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(403);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: false,
+        message:
+          "You do not have permission to update this event's YouTube URL.",
+      });
+    });
+
+    it("should return 400 for invalid YouTube URL format", async () => {
+      vi.mocked(Event.findById).mockResolvedValue({
+        _id: "507f1f77bcf86cd799439011",
+        status: "completed",
+        createdBy: "user-id-123",
+        organizerDetails: [],
+        save: vi.fn(),
+      } as any);
+      req.body = { youtubeUrl: "https://vimeo.com/123456" };
+
+      await UpdateController.updateYoutubeUrl(req as Request, res as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(400);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: false,
+        message: "Invalid YouTube URL. Please provide a valid YouTube link.",
+      });
+    });
+
+    it("should update YouTube URL successfully for admin", async () => {
+      const mockEvent: any = {
+        _id: "507f1f77bcf86cd799439011",
+        status: "completed",
+        createdBy: "other-user-id",
+        organizerDetails: [],
+        save: vi.fn(),
+      };
+      vi.mocked(Event.findById).mockResolvedValue(mockEvent as any);
+      vi.mocked(CachePatterns.invalidateEventCache).mockResolvedValue(
+        undefined,
+      );
+      vi.mocked(
+        ResponseBuilderService.buildEventWithRegistrations,
+      ).mockResolvedValue({ _id: "507f1f77bcf86cd799439011" } as any);
+
+      await UpdateController.updateYoutubeUrl(req as Request, res as Response);
+
+      expect(mockEvent.save).toHaveBeenCalled();
+      expect(mockEvent.youtubeUrl).toBe(
+        "https://www.youtube.com/watch?v=test123",
+      );
+      expect(statusMock).toHaveBeenCalledWith(200);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          message: "YouTube URL updated successfully.",
+        }),
+      );
+    });
+
+    it("should update YouTube URL for event creator", async () => {
+      const mockEvent: any = {
+        _id: "507f1f77bcf86cd799439011",
+        status: "completed",
+        createdBy: "user-id-123",
+        organizerDetails: [],
+        save: vi.fn(),
+      };
+      vi.mocked(Event.findById).mockResolvedValue(mockEvent as any);
+      req.user = {
+        _id: "user-id-123",
+        role: "Participant",
+        email: "member@test.com",
+      } as any;
+
+      await UpdateController.updateYoutubeUrl(req as Request, res as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(200);
+    });
+
+    it("should update YouTube URL for co-organizer", async () => {
+      const mockEvent: any = {
+        _id: "507f1f77bcf86cd799439011",
+        status: "completed",
+        createdBy: "other-user-id",
+        organizerDetails: [{ userId: "user-id-123" }],
+        save: vi.fn(),
+      };
+      vi.mocked(Event.findById).mockResolvedValue(mockEvent as any);
+      req.user = {
+        _id: "user-id-123",
+        role: "Participant",
+        email: "member@test.com",
+      } as any;
+
+      await UpdateController.updateYoutubeUrl(req as Request, res as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(200);
+    });
+
+    it("should clear YouTube URL when empty value provided", async () => {
+      const mockEvent = {
+        _id: "507f1f77bcf86cd799439011",
+        status: "completed",
+        createdBy: "user-id-123",
+        organizerDetails: [],
+        youtubeUrl: "https://www.youtube.com/watch?v=old",
+        save: vi.fn(),
+      };
+      vi.mocked(Event.findById).mockResolvedValue(mockEvent as any);
+      req.body = { youtubeUrl: "" };
+
+      await UpdateController.updateYoutubeUrl(req as Request, res as Response);
+
+      expect(mockEvent.youtubeUrl).toBeUndefined();
+      expect(statusMock).toHaveBeenCalledWith(200);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          message: "YouTube URL removed successfully.",
+        }),
+      );
+    });
+
+    it("should accept youtu.be short URLs", async () => {
+      const mockEvent: any = {
+        _id: "507f1f77bcf86cd799439011",
+        status: "completed",
+        createdBy: "user-id-123",
+        organizerDetails: [],
+        save: vi.fn(),
+      };
+      vi.mocked(Event.findById).mockResolvedValue(mockEvent as any);
+      req.body = { youtubeUrl: "https://youtu.be/test123" };
+
+      await UpdateController.updateYoutubeUrl(req as Request, res as Response);
+
+      expect(mockEvent.youtubeUrl).toBe("https://youtu.be/test123");
+      expect(statusMock).toHaveBeenCalledWith(200);
+    });
+
+    it("should return 500 on database error", async () => {
+      vi.mocked(Event.findById).mockRejectedValue(new Error("Database error"));
+      vi.spyOn(console, "error").mockImplementation(() => {});
+
+      await UpdateController.updateYoutubeUrl(req as Request, res as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(500);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: false,
+        message: "Failed to update YouTube URL.",
+      });
+    });
+  });
 });

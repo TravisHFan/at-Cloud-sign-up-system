@@ -56,7 +56,7 @@ class SystemMessageService {
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
 
@@ -88,6 +88,8 @@ class SystemMessageService {
         if (response.status === 401) {
           localStorage.removeItem("authToken");
           handleSessionExpired();
+          // Return early - do NOT throw as SessionExpiredModal handles this
+          throw new Error("Session expired");
         }
         throw new Error(data.message || `HTTP ${response.status}`);
       }
@@ -157,7 +159,7 @@ class SystemMessageService {
   async getUnreadCount(): Promise<number> {
     try {
       const response = await this.request<{ systemMessages: number }>(
-        "/notifications/unread-counts"
+        "/notifications/unread-counts",
       );
       return response.data?.systemMessages || 0;
     } catch (error) {
@@ -202,7 +204,7 @@ class SystemMessageService {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(message),
-      }
+      },
     );
 
     if (!response.success || !response.data) {
@@ -219,7 +221,7 @@ class SystemMessageService {
         `/notifications/system/${messageId}`,
         {
           method: "DELETE",
-        }
+        },
       );
       return response.success;
     } catch (error) {

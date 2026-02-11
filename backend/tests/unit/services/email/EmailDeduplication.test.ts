@@ -294,4 +294,73 @@ describe("EmailDeduplication - Unit Tests", () => {
       expect(EmailDeduplication.isDuplicate(options)).toBe(false);
     });
   });
+
+  describe("Edge cases - key generation", () => {
+    beforeEach(() => {
+      process.env.EMAIL_DEDUP_ENABLE = "true";
+      process.env.EMAIL_DEDUP_TTL_MS = "60000";
+    });
+
+    it("should handle empty array for to field", () => {
+      const options = {
+        to: [] as string[],
+        subject: "Test Subject",
+        html: "<p>Test content</p>",
+      };
+
+      // Should not throw and should generate a key with empty email
+      expect(EmailDeduplication.isDuplicate(options)).toBe(false);
+      expect(EmailDeduplication.isDuplicate(options)).toBe(true);
+    });
+
+    it("should handle undefined to field gracefully", () => {
+      const options = {
+        to: undefined as unknown as string,
+        subject: "Test Subject",
+        html: "<p>Test content</p>",
+      };
+
+      expect(EmailDeduplication.isDuplicate(options)).toBe(false);
+      expect(EmailDeduplication.isDuplicate(options)).toBe(true);
+    });
+
+    it("should handle missing subject", () => {
+      const options = {
+        to: "test@example.com",
+        subject: undefined as unknown as string,
+        html: "<p>Test content</p>",
+      };
+
+      expect(EmailDeduplication.isDuplicate(options)).toBe(false);
+      expect(EmailDeduplication.isDuplicate(options)).toBe(true);
+    });
+
+    it("should handle missing html content", () => {
+      const options = {
+        to: "test@example.com",
+        subject: "Test Subject",
+        html: undefined as unknown as string,
+      };
+
+      expect(EmailDeduplication.isDuplicate(options)).toBe(false);
+      expect(EmailDeduplication.isDuplicate(options)).toBe(true);
+    });
+
+    it("should differentiate emails with whitespace in addresses", () => {
+      const options1 = {
+        to: " test@example.com ",
+        subject: "Test",
+        html: "<p>Content</p>",
+      };
+      const options2 = {
+        to: "test@example.com",
+        subject: "Test",
+        html: "<p>Content</p>",
+      };
+
+      expect(EmailDeduplication.isDuplicate(options1)).toBe(false);
+      // Trimming should make them the same key
+      expect(EmailDeduplication.isDuplicate(options2)).toBe(true);
+    });
+  });
 });

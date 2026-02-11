@@ -19,7 +19,7 @@ export class BaseApiClient {
    */
   protected async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
 
@@ -87,7 +87,7 @@ export class BaseApiClient {
             const retryOptions: RequestInit = {
               ...options,
               body: cloneBodyIfNeeded(
-                options.body as BodyInit | null | undefined
+                options.body as BodyInit | null | undefined,
               ),
             };
             const retryConfig: RequestInit = {
@@ -121,6 +121,8 @@ export class BaseApiClient {
             // Refresh failed; clear token and trigger session expiration prompt
             localStorage.removeItem("authToken");
             handleSessionExpired();
+            // Return early - do NOT throw or continue as SessionExpiredModal handles this
+            return Promise.reject(new Error("Session expired"));
           }
         }
 
@@ -168,7 +170,7 @@ export class BaseApiClient {
           // Format as newline-separated for better readability in modal
           const formattedErrors = errorMessages.join("\n");
           const err = new Error(
-            formattedErrors || data.message || "Validation failed"
+            formattedErrors || data.message || "Validation failed",
           ) as Error & {
             status?: number;
             validationErrors?: string[];
@@ -179,12 +181,14 @@ export class BaseApiClient {
         }
 
         const err = new Error(
-          data?.message || `HTTP ${response.status}`
+          data?.message || `HTTP ${response.status}`,
         ) as Error & { status?: number };
         err.status = response.status;
         if (err.status === 401) {
           // Fallback path if we landed here without triggering above branch
           handleSessionExpired();
+          // Return early - do NOT throw as SessionExpiredModal handles this
+          return Promise.reject(new Error("Session expired"));
         }
         throw err;
       }
