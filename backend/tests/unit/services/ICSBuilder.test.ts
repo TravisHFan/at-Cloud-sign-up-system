@@ -151,5 +151,30 @@ describe("ICSBuilder", () => {
       expect(result.content).toContain("SUMMARY:Role-based Event — Presenter");
       expect(result.content).toContain("DESCRIPTION:Lead the presentation");
     });
+
+    it("should fallback to naive conversion when endTime is missing", () => {
+      const mockEvent = {
+        _id: "test-event-id-7",
+        title: "Event Without End Time",
+        date: "2024-06-15",
+        endDate: "2024-06-15",
+        time: "14:00",
+        // endTime is intentionally omitted to trigger fallback
+        location: "Test Location",
+        purpose: "Testing fallback behavior",
+        timeZone: "America/Los_Angeles",
+      };
+
+      const result = buildRegistrationICS({
+        event: mockEvent,
+        attendeeEmail: "test7@example.com",
+      });
+
+      // Should still produce valid ICS with DTSTART and DTEND
+      expect(result.content).toMatch(/DTSTART:\d{8}T\d{6}Z/);
+      // DTEND should fallback to using startTime since endTime is missing
+      expect(result.content).toMatch(/DTEND:\d{8}T\d{6}Z/);
+      expect(result.content).toContain("SUMMARY:Event Without End Time");
+    });
   });
 });

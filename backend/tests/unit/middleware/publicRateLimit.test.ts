@@ -471,6 +471,53 @@ describe("publicRateLimit Middleware", () => {
       );
     });
 
+    it("should handle unknown IP gracefully for shortlink creation", () => {
+      mockReq.ip = undefined;
+      mockReq.socket = {};
+
+      vi.mocked(RateLimiterService.consume).mockReturnValue({
+        allowed: true,
+        remaining: 10,
+        limit: 20,
+      });
+
+      shortLinkCreationRateLimit(
+        asReq(mockReq),
+        asRes(mockRes),
+        mockNext
+      );
+
+      expect(RateLimiterService.consume).toHaveBeenCalledWith(
+        expect.objectContaining({
+          key: expect.stringContaining("slcreate"),
+        })
+      );
+      expect(mockNext).toHaveBeenCalled();
+    });
+
+    it("should use socket.remoteAddress for shortlink when req.ip is undefined", () => {
+      mockReq.ip = undefined;
+      mockReq.socket = { remoteAddress: "172.16.0.1" };
+
+      vi.mocked(RateLimiterService.consume).mockReturnValue({
+        allowed: true,
+        remaining: 10,
+        limit: 20,
+      });
+
+      shortLinkCreationRateLimit(
+        asReq(mockReq),
+        asRes(mockRes),
+        mockNext
+      );
+
+      expect(RateLimiterService.consume).toHaveBeenCalledWith(
+        expect.objectContaining({
+          key: "slcreate:ip:172.16.0.1",
+        })
+      );
+    });
+
     it("should handle Prometheus counter errors gracefully", () => {
       vi.mocked(registrationAttemptCounter.inc).mockImplementation(() => {
         throw new Error("Prometheus error");

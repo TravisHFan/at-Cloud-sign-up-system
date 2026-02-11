@@ -143,6 +143,27 @@ describe("Logger - JSON format output", () => {
 
     expect(parsed.context).toBe("SpecificContext");
   });
+
+  it("should handle unserializable metadata in JSON format by assigning '[unserializable]'", () => {
+    const logger = createLogger("UnserializableTest", LogLevel.DEBUG);
+
+    // Create a circular reference that cannot be serialized
+    const circular: Record<string, unknown> = { name: "test" };
+    circular.self = circular;
+
+    // This should not throw - it should handle gracefully and log
+    expect(() => {
+      logger.info("Message with circular", undefined, circular);
+    }).not.toThrow();
+
+    expect(infoSpy).toHaveBeenCalled();
+    const output = infoSpy.mock.calls[0][0] as string;
+    const parsed = JSON.parse(output);
+
+    // Should have replaced the metadata with "[unserializable]"
+    expect(parsed.metadata).toBe("[unserializable]");
+    expect(parsed.message).toBe("Message with circular");
+  });
 });
 
 describe("Logger - production external service", () => {

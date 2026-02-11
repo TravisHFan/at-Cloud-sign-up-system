@@ -70,6 +70,26 @@ describe("TokenService - Dynamic Token Expiry Fix", () => {
       expect(actualDuration).toBeGreaterThan(1209590000); // Allow 10s tolerance
       expect(actualDuration).toBeLessThan(1209610000);
     });
+
+    it("should parse years correctly", () => {
+      process.env.JWT_REFRESH_EXPIRE = "1y";
+      const tokens = TokenService.generateTokenPair(mockUser);
+      const actualDuration = tokens.refreshTokenExpires.getTime() - Date.now();
+
+      // Should be approximately 1 year = 365 days = 31536000000ms
+      expect(actualDuration).toBeGreaterThan(31535990000); // Allow 10s tolerance
+      expect(actualDuration).toBeLessThan(31536010000);
+    });
+
+    it("should parse explicit seconds correctly (e.g., 60s)", () => {
+      process.env.JWT_ACCESS_EXPIRE = "60s";
+      const tokens = TokenService.generateTokenPair(mockUser);
+      const actualDuration = tokens.accessTokenExpires.getTime() - Date.now();
+
+      // Should be approximately 60 seconds minus 30s clock skew = 30s = 30000ms
+      expect(actualDuration).toBeGreaterThan(20000); // Allow 10s tolerance
+      expect(actualDuration).toBeLessThan(40000);
+    });
   });
 
   describe("Environment variable integration", () => {

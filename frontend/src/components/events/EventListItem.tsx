@@ -63,7 +63,7 @@ export default function EventListItem({
             .includes(currentUser?.firstName?.toLowerCase() || "") &&
           organizer.name
             .toLowerCase()
-            .includes(currentUser?.lastName?.toLowerCase() || "")
+            .includes(currentUser?.lastName?.toLowerCase() || ""),
       ) ||
       // Check if user is the event creator
       event.createdBy === currentUserId ||
@@ -71,7 +71,7 @@ export default function EventListItem({
       event.organizer
         ?.toLowerCase()
         .includes(
-          `${currentUser?.firstName} ${currentUser?.lastName}`.toLowerCase()
+          `${currentUser?.firstName} ${currentUser?.lastName}`.toLowerCase(),
         );
 
     return isCurrentUserOrganizer;
@@ -139,9 +139,10 @@ export default function EventListItem({
 
   const getActionButton = () => {
     if (type === "passed") {
+      const hasRecording = !!event.youtubeUrl;
       return (
         <Button
-          variant="outline"
+          variant={hasRecording ? "success" : "outline"}
           onClick={() => {
             if (isGuest) {
               // For guests, navigate to registration page even for passed events
@@ -151,7 +152,7 @@ export default function EventListItem({
             }
           }}
         >
-          View Details
+          {hasRecording ? "Play Recording" : "View Details"}
         </Button>
       );
     }
@@ -274,7 +275,7 @@ export default function EventListItem({
                 event.time,
                 event.endTime,
                 event.timeZone,
-                event.endDate
+                event.endDate,
               )}
             </span>
             {event.timeZone ? (

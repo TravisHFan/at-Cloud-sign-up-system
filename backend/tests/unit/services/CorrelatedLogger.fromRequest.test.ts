@@ -37,7 +37,7 @@ describe("CorrelatedLogger.fromRequest", () => {
       get: vi
         .fn()
         .mockImplementation((h: string) =>
-          h === "User-Agent" ? "agent/1.0" : undefined
+          h === "User-Agent" ? "agent/1.0" : undefined,
         ),
       user: { id: "u-1" },
     } as unknown as Request;
@@ -106,5 +106,30 @@ describe("CorrelatedLogger.fromRequest", () => {
     expect(msg).toContain("primitive meta");
     expect(msg).toContain("Metadata");
     expect(msg).toContain('"data": "extra"');
+  });
+
+  it("handles array header values by taking first element", () => {
+    // Simulate a request with array header values (as HttpIncomingMessage can have)
+    // and no working `get` method, forcing fallback to direct header access
+    const req = {
+      correlationId: "cid-array",
+      method: "POST",
+      path: "/array-test",
+      ip: "10.0.0.1",
+      // No `get` method - force fallback to headers object
+      headers: {
+        "user-agent": ["agent/1.0", "agent/2.0"] as string[], // Array header value
+      },
+      user: { id: "u-arr" },
+    } as unknown as Request;
+
+    const clog = CorrelatedLogger.fromRequest(req, "ArrayCtx");
+    clog.info("array header test");
+
+    expect(console.info).toHaveBeenCalledTimes(1);
+    const msg = (console.info as any).mock.calls[0][0] as string;
+    // Should take the first element "agent/1.0" from the array
+    expect(msg).toContain("agent/1.0");
+    expect(msg).not.toContain("agent/2.0");
   });
 });

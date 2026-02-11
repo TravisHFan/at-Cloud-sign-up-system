@@ -25,7 +25,7 @@ export interface ILogger {
     message: string,
     error?: Error,
     context?: string,
-    metadata?: unknown
+    metadata?: unknown,
   ): void;
   warn(message: string, context?: string, metadata?: unknown): void;
   info(message: string, context?: string, metadata?: unknown): void;
@@ -35,7 +35,7 @@ export interface ILogger {
     message: string,
     context?: string,
     metadata?: unknown,
-    error?: Error
+    error?: Error,
   ): void;
 }
 
@@ -46,7 +46,7 @@ export class Logger implements ILogger {
 
   private constructor(
     context: string = "Application",
-    logLevel: LogLevel = LogLevel.INFO
+    logLevel: LogLevel = LogLevel.INFO,
   ) {
     this.context = context;
     this.currentLogLevel = logLevel;
@@ -149,16 +149,7 @@ export class Logger implements ILogger {
         context: entry.context || this.context,
       };
       if (entry.metadata) {
-        // Avoid serialization explosions by shallow spreading
-        try {
-          if (typeof entry.metadata === "object" && entry.metadata !== null) {
-            out.metadata = entry.metadata;
-          } else {
-            out.metadata = entry.metadata;
-          }
-        } catch {
-          out.metadata = "[unserializable]";
-        }
+        out.metadata = entry.metadata;
       }
       if (entry.error) {
         out.error = {
@@ -166,7 +157,13 @@ export class Logger implements ILogger {
           stack: entry.error.stack,
         };
       }
-      console[consoleMethod](JSON.stringify(out));
+      try {
+        console[consoleMethod](JSON.stringify(out));
+      } catch {
+        // Handle circular references or other serialization issues
+        out.metadata = "[unserializable]";
+        console[consoleMethod](JSON.stringify(out));
+      }
     } else {
       const formatted = this.formatLogEntry(entry);
       console[consoleMethod](formatted);
@@ -195,7 +192,7 @@ export class Logger implements ILogger {
     message: string,
     context?: string,
     metadata?: unknown,
-    error?: Error
+    error?: Error,
   ): void {
     const entry: LogEntry = {
       timestamp: new Date(),
@@ -216,7 +213,7 @@ export class Logger implements ILogger {
     message: string,
     error?: Error,
     context?: string,
-    metadata?: unknown
+    metadata?: unknown,
   ): void {
     this.log(LogLevel.ERROR, message, context, metadata, error);
   }
@@ -251,7 +248,7 @@ export class Logger implements ILogger {
     statusCode: number,
     responseTime: number,
     userAgent?: string,
-    ip?: string
+    ip?: string,
   ): void {
     const metadata = {
       method,
@@ -267,7 +264,7 @@ export class Logger implements ILogger {
       level,
       `${method} ${url} - ${statusCode} (${responseTime}ms)`,
       "HTTP",
-      metadata
+      metadata,
     );
   }
 
@@ -278,7 +275,7 @@ export class Logger implements ILogger {
     operation: string,
     collection: string,
     duration: number,
-    error?: Error
+    error?: Error,
   ): void {
     const metadata = {
       operation,
@@ -291,13 +288,13 @@ export class Logger implements ILogger {
         `Database operation failed: ${operation} on ${collection}`,
         error,
         "Database",
-        metadata
+        metadata,
       );
     } else {
       this.debug(
         `Database operation: ${operation} on ${collection} (${duration}ms)`,
         "Database",
-        metadata
+        metadata,
       );
     }
   }
@@ -310,7 +307,7 @@ export class Logger implements ILogger {
     userId?: string,
     email?: string,
     ip?: string,
-    success: boolean = true
+    success: boolean = true,
   ): void {
     const metadata = {
       event,
@@ -325,7 +322,7 @@ export class Logger implements ILogger {
       level,
       `Authentication event: ${event} ${success ? "succeeded" : "failed"}`,
       "Authentication",
-      metadata
+      metadata,
     );
   }
 
@@ -337,7 +334,7 @@ export class Logger implements ILogger {
     userId: string,
     resourceType?: string,
     resourceId?: string,
-    details?: unknown
+    details?: unknown,
   ): void {
     const metadata = {
       action,
@@ -357,7 +354,7 @@ export class Logger implements ILogger {
     event: string,
     component: string,
     details?: unknown,
-    error?: Error
+    error?: Error,
   ): void {
     const metadata = {
       event,
@@ -370,7 +367,7 @@ export class Logger implements ILogger {
         `System event: ${event} in ${component}`,
         error,
         "System",
-        metadata
+        metadata,
       );
     } else {
       this.info(`System event: ${event} in ${component}`, "System", metadata);
@@ -383,7 +380,7 @@ export class Logger implements ILogger {
   public logPerformance(
     operation: string,
     duration: number,
-    metadata?: Record<string, unknown>
+    metadata?: Record<string, unknown>,
   ): void {
     const perfMetadata = {
       operation,
@@ -396,7 +393,7 @@ export class Logger implements ILogger {
       level,
       `Performance: ${operation} took ${duration}ms`,
       "Performance",
-      perfMetadata
+      perfMetadata,
     );
   }
 
@@ -416,7 +413,7 @@ export class Logger implements ILogger {
    * Create a performance wrapper for async functions
    */
   public withPerformanceLogging<
-    T extends (...args: unknown[]) => Promise<unknown>
+    T extends (...args: unknown[]) => Promise<unknown>,
   >(fn: T, operationName: string): T {
     return (async (...args: unknown[]) => {
       const endTimer = this.startTimer(operationName);
@@ -429,7 +426,7 @@ export class Logger implements ILogger {
         this.error(
           `Operation failed: ${operationName}`,
           error as Error,
-          "Performance"
+          "Performance",
         );
         throw error;
       }

@@ -582,6 +582,15 @@ describe("Event Creation Validation Rules", () => {
       expect(purposeErrors.length).toBeGreaterThan(0);
       expect(purposeErrors[0].msg).toContain("1000");
     });
+
+    it("should accept whitespace-only purpose as optional empty value", async () => {
+      const result = await runValidation(validateEventCreation, {
+        ...validEventData,
+        purpose: "     ",
+      });
+      const purposeErrors = result.errors.filter((e) => e.path === "purpose");
+      expect(purposeErrors).toHaveLength(0);
+    });
   });
 
   describe("agenda validation", () => {
@@ -646,6 +655,24 @@ describe("Event Creation Validation Rules", () => {
       const agendaErrors = result.errors.filter((e) => e.path === "agenda");
       expect(agendaErrors.length).toBeGreaterThan(0);
       expect(agendaErrors[0].msg).toContain("2000");
+    });
+
+    it("should accept whitespace-only agenda as optional empty value", async () => {
+      const result = await runValidation(validateEventCreation, {
+        ...validEventData,
+        agenda: "     ",
+      });
+      const agendaErrors = result.errors.filter((e) => e.path === "agenda");
+      expect(agendaErrors).toHaveLength(0);
+    });
+
+    it("should accept null agenda as optional", async () => {
+      const result = await runValidation(validateEventCreation, {
+        ...validEventData,
+        agenda: null,
+      });
+      const agendaErrors = result.errors.filter((e) => e.path === "agenda");
+      expect(agendaErrors).toHaveLength(0);
     });
   });
 
@@ -1068,6 +1095,24 @@ describe("Event Creation Validation Rules", () => {
       });
       const flyerErrors = result.errors.filter((e) => e.path === "flyerUrl");
       expect(flyerErrors.length).toBeGreaterThan(0);
+    });
+
+    it("should accept null flyerUrl as optional", async () => {
+      const result = await runValidation(validateEventCreation, {
+        ...validEventData,
+        flyerUrl: null,
+      });
+      const flyerErrors = result.errors.filter((e) => e.path === "flyerUrl");
+      expect(flyerErrors).toHaveLength(0);
+    });
+
+    it("should accept whitespace-only flyerUrl as empty value", async () => {
+      const result = await runValidation(validateEventCreation, {
+        ...validEventData,
+        flyerUrl: "   ",
+      });
+      const flyerErrors = result.errors.filter((e) => e.path === "flyerUrl");
+      expect(flyerErrors).toHaveLength(0);
     });
   });
 
