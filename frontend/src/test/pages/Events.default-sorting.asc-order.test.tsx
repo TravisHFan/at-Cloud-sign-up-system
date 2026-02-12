@@ -288,7 +288,7 @@ describe("Default event sorting (chronological asc)", () => {
     expect(titles[1]).toMatch(/Older Completed/);
   });
 
-  it("My Events page sorts by earliest date first", async () => {
+  it("My Events page sorts by latest date first (reverse chronological)", async () => {
     render(
       <MemoryRouter initialEntries={["/my-events"]}>
         <NotificationProvider>
@@ -308,11 +308,11 @@ describe("Default event sorting (chronological asc)", () => {
       "Beta Meetup",
       "Zeta Gathering",
     ]);
-    // My events uses same data as upcoming for this test
+    // My events sorts by date descending (latest first): Zeta (20th), Beta (15th), Alpha (10th)
     expect(titles.slice(0, 3)).toEqual([
-      expect.stringMatching(/Alpha Workshop/),
-      expect.stringMatching(/Beta Meetup/),
       expect.stringMatching(/Zeta Gathering/),
+      expect.stringMatching(/Beta Meetup/),
+      expect.stringMatching(/Alpha Workshop/),
     ]);
   });
 });

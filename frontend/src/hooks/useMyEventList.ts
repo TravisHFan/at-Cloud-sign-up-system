@@ -9,8 +9,8 @@ interface UseMyEventListProps {
 export function useMyEventList({ events }: UseMyEventListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState<"date" | "title" | "organizer">("date");
-  // Default chronological (earliest to latest)
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  // Default reverse-chronological (latest to earliest)
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [filter, setFilter] = useState<"all" | "upcoming" | "passed">("all");
   const navigate = useNavigate();
 
@@ -83,7 +83,7 @@ export function useMyEventList({ events }: UseMyEventListProps) {
       setSortBy(field);
       // Set default sort order
       if (field === "date") {
-        setSortOrder("asc"); // Earliest first for dates (chronological)
+        setSortOrder("desc"); // Latest first for dates (reverse-chronological)
       } else {
         setSortOrder("asc"); // A-Z for text fields
       }
