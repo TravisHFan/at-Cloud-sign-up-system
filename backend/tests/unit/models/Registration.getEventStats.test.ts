@@ -76,4 +76,40 @@ describe("Registration.getEventStats (unit)", () => {
     // Two aggregate calls made with match on eventId
     expect(agg).toHaveBeenCalledTimes(2);
   });
+
+  it("returns activeCount=0 when a role has no active status entries", async () => {
+    const eventId = new mongoose.Types.ObjectId();
+
+    const statusCounts = [
+      { _id: "waitlisted", count: 5 },
+      { _id: "attended", count: 2 },
+    ];
+
+    // Role with only waitlisted/attended, no 'active' status
+    const roleStats = [
+      {
+        _id: { roleId: "r1", roleName: "Role No Active" },
+        statusCounts: [
+          { status: "waitlisted", count: 3 },
+          { status: "attended", count: 2 },
+        ],
+        totalCount: 5,
+      },
+    ];
+
+    vi.spyOn(Registration as any, "aggregate")
+      .mockResolvedValueOnce(statusCounts as any)
+      .mockResolvedValueOnce(roleStats as any);
+
+    const stats = await (Registration as any).getEventStats(eventId);
+
+    // Global counts - no 'active' status at all
+    expect(stats.activeRegistrations).toBe(0);
+    expect(stats.waitlistedRegistrations).toBe(5);
+
+    // Per-role activeCount falls back to 0 when .find() returns undefined
+    expect(stats.registrationsByRole).toHaveLength(1);
+    expect(stats.registrationsByRole[0].activeCount).toBe(0);
+    expect(stats.registrationsByRole[0].registeredCount).toBe(5);
+  });
 });

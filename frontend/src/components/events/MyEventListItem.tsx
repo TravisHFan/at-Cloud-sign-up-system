@@ -2,7 +2,7 @@ import {
   safeFormatDate,
   formatEventDateTimeRangeInViewerTZ,
 } from "../../utils/eventStatsUtils";
-import { Badge } from "../ui";
+import { Badge, Button } from "../ui";
 import { useNavigate } from "react-router-dom";
 import type {
   MyEventItemData,
@@ -263,12 +263,35 @@ export default function MyEventListItem({ item }: MyEventListItemProps) {
             {item.event.type} • {item.event.format}
           </span>
         </div>
-        <button
-          onClick={() => navigate(`/dashboard/event/${item.event.id}`)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 font-medium transition-colors"
-        >
-          View Details
-        </button>
+        <div className="flex items-center space-x-2">
+          {item.isPassedEvent ? (
+            // Past events: View Details (white/outline), Play Recordings (green) if available
+            <>
+              <Button
+                variant="outline"
+                onClick={() => navigate(`/dashboard/event/${item.event.id}`)}
+              >
+                View Details
+              </Button>
+              {item.event.youtubeUrl && (
+                <Button
+                  variant="success"
+                  onClick={() => navigate(`/dashboard/event/${item.event.id}`)}
+                >
+                  Play Recordings
+                </Button>
+              )}
+            </>
+          ) : (
+            // Upcoming events: blue View Details button
+            <button
+              onClick={() => navigate(`/dashboard/event/${item.event.id}`)}
+              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 font-medium transition-colors"
+            >
+              View Details
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

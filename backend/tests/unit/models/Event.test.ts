@@ -51,7 +51,7 @@ describe("Event Model", () => {
         const event = new Event({});
         const error = event.validateSync();
         expect(error?.errors?.time?.message).toBe(
-          "Event start time is required"
+          "Event start time is required",
         );
       });
 
@@ -59,7 +59,7 @@ describe("Event Model", () => {
         const event = new Event({});
         const error = event.validateSync();
         expect(error?.errors?.endTime?.message).toBe(
-          "Event end time is required"
+          "Event end time is required",
         );
       });
 
@@ -67,7 +67,7 @@ describe("Event Model", () => {
         const event = new Event({});
         const error = event.validateSync();
         expect(error?.errors?.organizer?.message).toBe(
-          "Organizer information is required"
+          "Organizer information is required",
         );
       });
 
@@ -75,7 +75,7 @@ describe("Event Model", () => {
         const event = new Event({});
         const error = event.validateSync();
         expect(error?.errors?.createdBy?.message).toBe(
-          "Event creator is required"
+          "Event creator is required",
         );
       });
 
@@ -106,7 +106,7 @@ describe("Event Model", () => {
         });
         const error = event.validateSync();
         expect(error?.errors?.roles?.message).toBe(
-          "Event must have at least one role"
+          "Event must have at least one role",
         );
       });
     });
@@ -117,7 +117,7 @@ describe("Event Model", () => {
         const event = new Event({ title: longTitle });
         const error = event.validateSync();
         expect(error?.errors?.title?.message).toBe(
-          "Event title cannot exceed 200 characters"
+          "Event title cannot exceed 200 characters",
         );
       });
 
@@ -126,7 +126,7 @@ describe("Event Model", () => {
         const event = new Event({ type: invalidType });
         const error = event.validateSync();
         expect(error?.errors?.type?.message).toBe(
-          "Event type must be one of: Conference, Webinar, Effective Communication Workshop, Mentor Circle"
+          "Event type must be one of: Conference, Webinar, Effective Communication Workshop, Mentor Circle",
         );
       });
 
@@ -134,7 +134,7 @@ describe("Event Model", () => {
         const event = new Event({ date: "invalid-date" });
         const error = event.validateSync();
         expect(error?.errors?.date?.message).toBe(
-          "Date must be in YYYY-MM-DD format"
+          "Date must be in YYYY-MM-DD format",
         );
       });
 
@@ -148,7 +148,7 @@ describe("Event Model", () => {
         const event = new Event({ time: "invalid-time" });
         const error = event.validateSync();
         expect(error?.errors?.time?.message).toBe(
-          "Time must be in HH:MM format"
+          "Time must be in HH:MM format",
         );
       });
 
@@ -162,7 +162,7 @@ describe("Event Model", () => {
         const event = new Event({ endTime: "invalid-time" });
         const error = event.validateSync();
         expect(error?.errors?.endTime?.message).toBe(
-          "End time must be in HH:MM format"
+          "End time must be in HH:MM format",
         );
       });
 
@@ -180,7 +180,7 @@ describe("Event Model", () => {
         });
         const error = event.validateSync();
         expect(error?.errors?.location?.message).toBe(
-          "Location cannot exceed 200 characters"
+          "Location cannot exceed 200 characters",
         );
       });
 
@@ -189,7 +189,7 @@ describe("Event Model", () => {
         const event = new Event({ organizer: longOrganizer });
         const error = event.validateSync();
         expect(error?.errors?.organizer?.message).toBe(
-          "Organizer information cannot exceed 300 characters"
+          "Organizer information cannot exceed 300 characters",
         );
       });
 
@@ -198,7 +198,7 @@ describe("Event Model", () => {
         const event = new Event({ purpose: longPurpose });
         const error = event.validateSync();
         expect(error?.errors?.purpose?.message).toBe(
-          "Purpose cannot exceed 1000 characters"
+          "Purpose cannot exceed 1000 characters",
         );
       });
 
@@ -206,7 +206,7 @@ describe("Event Model", () => {
         const event = new Event({ format: "Invalid Format" });
         const error = event.validateSync();
         expect(error?.errors?.format?.message).toBe(
-          "Format must be one of: In-person, Online, or Hybrid Participation"
+          "Format must be one of: In-person, Online, or Hybrid Participation",
         );
       });
 
@@ -223,7 +223,7 @@ describe("Event Model", () => {
         const event = new Event({ status: "invalid-status" });
         const error = event.validateSync();
         expect(error?.errors?.status?.message).toContain(
-          "is not a valid enum value"
+          "is not a valid enum value",
         );
       });
 
@@ -264,7 +264,7 @@ describe("Event Model", () => {
         const event = new Event({ zoomLink: "invalid-url" });
         const error = event.validateSync();
         expect(error?.errors?.zoomLink?.message).toBe(
-          "Zoom link must be a valid URL"
+          "Zoom link must be a valid URL",
         );
       });
 
@@ -297,7 +297,7 @@ describe("Event Model", () => {
       });
       const error = event.validateSync();
       expect(error?.errors["roles.0.name"]?.message).toBe(
-        "Role name cannot exceed 100 characters"
+        "Role name cannot exceed 100 characters",
       );
     });
 
@@ -315,7 +315,7 @@ describe("Event Model", () => {
       });
       const error = event.validateSync();
       expect(error?.errors["roles.0.description"]?.message).toBe(
-        "Role description cannot exceed 1000 characters"
+        "Role description cannot exceed 1000 characters",
       );
     });
 
@@ -332,7 +332,7 @@ describe("Event Model", () => {
       });
       const error = event.validateSync();
       expect(error?.errors["roles.0.maxParticipants"]?.message).toBe(
-        "Maximum participants must be at least 1"
+        "Maximum participants must be at least 1",
       );
     });
 
@@ -349,7 +349,7 @@ describe("Event Model", () => {
       });
       const error = event.validateSync();
       expect(error?.errors["roles.0.maxParticipants"]?.message).toBe(
-        "Maximum participants cannot exceed 100"
+        "Maximum participants cannot exceed 100",
       );
     });
 
@@ -543,6 +543,54 @@ describe("Event Model", () => {
       expect(event["24hReminderSent"]).toBe(false);
       expect(event.hostedBy).toBe("@Cloud Marketplace Ministry");
     });
+
+    it("should default endDate to date when not provided", () => {
+      const event = new Event({
+        title: "Test Event",
+        type: "Effective Communication Workshop",
+        date: "2025-12-25",
+        time: "10:00",
+        endTime: "12:00",
+        organizer: "Test Organizer",
+        createdBy: new mongoose.Types.ObjectId(),
+        format: "Online",
+        roles: [
+          {
+            id: "role-1",
+            name: "Participant",
+            description: "Event participant",
+            maxParticipants: 20,
+          },
+        ],
+        // endDate is NOT provided - should default to date
+      });
+
+      expect(event.endDate).toBe("2025-12-25");
+    });
+
+    it("should use explicit endDate when provided", () => {
+      const event = new Event({
+        title: "Multi-day Event",
+        type: "Conference",
+        date: "2025-12-25",
+        endDate: "2025-12-27",
+        time: "10:00",
+        endTime: "12:00",
+        organizer: "Test Organizer",
+        createdBy: new mongoose.Types.ObjectId(),
+        format: "Online",
+        roles: [
+          {
+            id: "role-1",
+            name: "Participant",
+            description: "Event participant",
+            maxParticipants: 20,
+          },
+        ],
+      });
+
+      expect(event.endDate).toBe("2025-12-27");
+    });
   });
 
   describe("JSON Transformation", () => {
@@ -580,7 +628,7 @@ describe("Event Model", () => {
       const event = new Event({ agenda: longAgenda });
       const error = event.validateSync();
       expect(error?.errors?.agenda?.message).toBe(
-        "Agenda cannot exceed 2000 characters"
+        "Agenda cannot exceed 2000 characters",
       );
     });
 
@@ -589,7 +637,7 @@ describe("Event Model", () => {
       const event = new Event({ disclaimer: longDisclaimer });
       const error = event.validateSync();
       expect(error?.errors?.disclaimer?.message).toBe(
-        "Disclaimer cannot exceed 1000 characters"
+        "Disclaimer cannot exceed 1000 characters",
       );
     });
 
@@ -600,7 +648,7 @@ describe("Event Model", () => {
       const event = new Event({ hostedBy: longHostedBy });
       const error = event.validateSync();
       expect(error?.errors?.hostedBy?.message).toBe(
-        "Hosted by information cannot exceed 200 characters"
+        "Hosted by information cannot exceed 200 characters",
       );
     });
 
@@ -609,7 +657,7 @@ describe("Event Model", () => {
       const event = new Event({ requirements: longRequirements });
       const error = event.validateSync();
       expect(error?.errors?.requirements?.message).toBe(
-        "Requirements cannot exceed 500 characters"
+        "Requirements cannot exceed 500 characters",
       );
     });
 
@@ -618,7 +666,7 @@ describe("Event Model", () => {
       const event = new Event({ materials: longMaterials });
       const error = event.validateSync();
       expect(error?.errors?.materials?.message).toBe(
-        "Materials cannot exceed 500 characters"
+        "Materials cannot exceed 500 characters",
       );
     });
   });
@@ -727,6 +775,127 @@ describe("Event Model", () => {
       const event = new Event({ ...baseEvent, timeZone: "Invalid" });
       const error = event.validateSync();
       expect(error?.errors?.timeZone).toBeDefined();
+    });
+  });
+
+  describe("URL Validators", () => {
+    describe("flyerUrl Validator", () => {
+      const flyerUrlValidator = (value: string | undefined | null): boolean => {
+        if (value === undefined || value === null || value === "") return true;
+        const v = String(value).trim();
+        if (!v) return true;
+        return /^https?:\/\//.test(v) || v.startsWith("/uploads/");
+      };
+
+      it("should accept undefined flyerUrl", () => {
+        expect(flyerUrlValidator(undefined)).toBe(true);
+      });
+
+      it("should accept null flyerUrl", () => {
+        expect(flyerUrlValidator(null)).toBe(true);
+      });
+
+      it("should accept empty string flyerUrl", () => {
+        expect(flyerUrlValidator("")).toBe(true);
+      });
+
+      it("should accept whitespace-only flyerUrl", () => {
+        expect(flyerUrlValidator("   ")).toBe(true);
+      });
+
+      it("should accept http flyerUrl", () => {
+        expect(flyerUrlValidator("http://example.com/flyer.jpg")).toBe(true);
+      });
+
+      it("should accept https flyerUrl", () => {
+        expect(flyerUrlValidator("https://cdn.example.com/flyer.png")).toBe(true);
+      });
+
+      it("should accept /uploads/ path flyerUrl", () => {
+        expect(flyerUrlValidator("/uploads/images/event-flyer.jpg")).toBe(true);
+      });
+
+      it("should reject relative path without /uploads/", () => {
+        expect(flyerUrlValidator("images/flyer.jpg")).toBe(false);
+      });
+
+      it("should reject ftp URL", () => {
+        expect(flyerUrlValidator("ftp://files.example.com/flyer.jpg")).toBe(false);
+      });
+    });
+
+    describe("secondaryFlyerUrl Validator", () => {
+      const secondaryFlyerUrlValidator = (value: string | undefined | null): boolean => {
+        if (value === undefined || value === null || value === "") return true;
+        const v = String(value).trim();
+        if (!v) return true;
+        return /^https?:\/\//.test(v) || v.startsWith("/uploads/");
+      };
+
+      it("should accept undefined secondaryFlyerUrl", () => {
+        expect(secondaryFlyerUrlValidator(undefined)).toBe(true);
+      });
+
+      it("should accept valid https secondaryFlyerUrl", () => {
+        expect(secondaryFlyerUrlValidator("https://example.com/secondary.png")).toBe(true);
+      });
+
+      it("should accept /uploads/ path for secondaryFlyerUrl", () => {
+        expect(secondaryFlyerUrlValidator("/uploads/images/secondary.jpg")).toBe(true);
+      });
+
+      it("should reject invalid secondaryFlyerUrl", () => {
+        expect(secondaryFlyerUrlValidator("not-a-valid-url")).toBe(false);
+      });
+    });
+
+    describe("youtubeUrl Validator", () => {
+      const youtubeUrlValidator = (value: string | undefined | null): boolean => {
+        if (value === undefined || value === null || value === "") return true;
+        const v = String(value).trim();
+        if (!v) return true;
+        return /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//.test(v);
+      };
+
+      it("should accept undefined youtubeUrl", () => {
+        expect(youtubeUrlValidator(undefined)).toBe(true);
+      });
+
+      it("should accept null youtubeUrl", () => {
+        expect(youtubeUrlValidator(null)).toBe(true);
+      });
+
+      it("should accept empty string youtubeUrl", () => {
+        expect(youtubeUrlValidator("")).toBe(true);
+      });
+
+      it("should accept valid youtube.com URL", () => {
+        expect(youtubeUrlValidator("https://youtube.com/watch?v=abc123")).toBe(true);
+      });
+
+      it("should accept valid www.youtube.com URL", () => {
+        expect(youtubeUrlValidator("https://www.youtube.com/watch?v=abc123")).toBe(true);
+      });
+
+      it("should accept valid youtu.be short URL", () => {
+        expect(youtubeUrlValidator("https://youtu.be/abc123")).toBe(true);
+      });
+
+      it("should accept http youtube URL", () => {
+        expect(youtubeUrlValidator("http://youtube.com/watch?v=xyz789")).toBe(true);
+      });
+
+      it("should reject non-YouTube URL", () => {
+        expect(youtubeUrlValidator("https://vimeo.com/12345")).toBe(false);
+      });
+
+      it("should reject random string", () => {
+        expect(youtubeUrlValidator("not-a-youtube-url")).toBe(false);
+      });
+
+      it("should reject other video sites", () => {
+        expect(youtubeUrlValidator("https://dailymotion.com/video/123")).toBe(false);
+      });
     });
   });
 

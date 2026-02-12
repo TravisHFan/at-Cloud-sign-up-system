@@ -269,7 +269,8 @@ class PurchaseRefundController {
     );
     const daysRemaining = REFUND_WINDOW_DAYS - daysElapsed;
 
-    // Check if purchase is completed
+    // Check if purchase is completed or in refund_failed state
+    // Note: "refunded" status is also caught here - Only completed/refund_failed purchases can be refunded
     if (
       purchase.status !== "completed" &&
       purchase.status !== "refund_failed"
@@ -277,16 +278,6 @@ class PurchaseRefundController {
       return {
         isEligible: false,
         reason: `Purchase status is "${purchase.status}". Only completed purchases can be refunded.`,
-        purchaseDate,
-        refundDeadline,
-      };
-    }
-
-    // Check if already refunded
-    if (purchase.status === "refunded") {
-      return {
-        isEligible: false,
-        reason: "This purchase has already been refunded.",
         purchaseDate,
         refundDeadline,
       };

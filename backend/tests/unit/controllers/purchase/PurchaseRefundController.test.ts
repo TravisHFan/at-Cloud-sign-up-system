@@ -229,6 +229,34 @@ describe("PurchaseRefundController", () => {
         expect(response.data.isEligible).toBe(false);
         expect(response.data.reason).toContain("pending");
       });
+
+      it("should return not eligible for already refunded purchase", async () => {
+        const recentDate = new Date();
+        recentDate.setDate(recentDate.getDate() - 5); // 5 days ago
+
+        const mockPurchase = {
+          _id: mockPurchaseId,
+          userId: { toString: () => mockUserId },
+          status: "refunded",
+          purchaseDate: recentDate,
+        };
+
+        vi.mocked(Purchase.findById).mockReturnValue({
+          populate: vi.fn().mockResolvedValue(mockPurchase),
+        } as any);
+
+        await PurchaseRefundController.checkRefundEligibility(
+          mockReq as any,
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(200);
+        const response = jsonMock.mock.calls[0][0];
+        expect(response.success).toBe(true);
+        expect(response.data.isEligible).toBe(false);
+        // Status "refunded" falls through the first check (not completed/refund_failed)
+        expect(response.data.reason).toContain("refunded");
+      });
     });
 
     describe("Error Handling", () => {
@@ -621,6 +649,54 @@ describe("PurchaseRefundController", () => {
         expect(mockPurchase.refundFailureReason).toBe("Unknown error");
         const response = jsonMock.mock.calls[0][0];
         expect(response.error).toBe("Unknown error");
+      });
+
+      it("should continue even if sendRefundFailedEmail throws", async () => {
+        const recentDate = new Date();
+        recentDate.setDate(recentDate.getDate() - 5);
+
+        const mockPurchase: any = {
+          _id: { toString: () => mockPurchaseId },
+          userId: { toString: () => mockUserId },
+          status: "completed",
+          purchaseDate: recentDate,
+          finalPrice: 5000,
+          stripePaymentIntentId: "pi_test123",
+          orderNumber: "ORD-12345",
+          programId: { title: "Test Program" },
+          billingInfo: { email: "user@test.com", fullName: "Test User" },
+          refundFailureReason: null,
+          save: vi.fn().mockResolvedValue(undefined),
+        };
+
+        vi.mocked(Purchase.findById).mockReturnValue({
+          populate: vi.fn().mockResolvedValue(mockPurchase),
+        } as any);
+
+        vi.mocked(
+          PurchaseEmailService.sendRefundInitiatedEmail,
+        ).mockResolvedValue(true);
+        vi.mocked(processRefund).mockRejectedValue(new Error("Stripe error"));
+        // sendRefundFailedEmail throws
+        vi.mocked(PurchaseEmailService.sendRefundFailedEmail).mockRejectedValue(
+          new Error("Email service down"),
+        );
+
+        await PurchaseRefundController.initiateRefund(
+          mockReq as any,
+          mockRes as Response,
+        );
+
+        // Should still return 500 error response even if email fails
+        expect(statusMock).toHaveBeenCalledWith(500);
+        const response = jsonMock.mock.calls[0][0];
+        expect(response.success).toBe(false);
+        expect(response.message).toContain("Failed to process refund");
+        // Verify email error was logged
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          "Failed to send refund failed email:",
+          expect.any(Error),
+        );
       });
     });
 

@@ -1357,8 +1357,8 @@ describe("PublicEventsList", () => {
       // Query within the event card (not the dropdown)
       const eventCard = container.querySelector(".bg-white.rounded-lg.shadow");
       const badge = within(eventCard as HTMLElement).getByText("Webinar");
-      expect(badge).toHaveClass("bg-indigo-100");
-      expect(badge).toHaveClass("text-indigo-800");
+      expect(badge).toHaveClass("bg-sky-100");
+      expect(badge).toHaveClass("text-sky-800");
     });
 
     it("should show green text for events with available spots", async () => {

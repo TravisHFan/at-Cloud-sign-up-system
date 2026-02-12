@@ -595,6 +595,41 @@ describe("ValidationService", () => {
           false
         );
       });
+
+      it("should reject non-string email", () => {
+        const result = ValidationService.validateUserUpdate({ email: 123 });
+        expect(result.isValid).toBe(false);
+        expect(result.errors).toContain("Email must be a string");
+      });
+
+      it("should reject non-string username", () => {
+        const result = ValidationService.validateUserUpdate({ username: 456 });
+        expect(result.isValid).toBe(false);
+        expect(result.errors).toContain("Username must be a string");
+      });
+
+      it("should reject non-string firstName", () => {
+        const result = ValidationService.validateUserUpdate({ firstName: true });
+        expect(result.isValid).toBe(false);
+        expect(result.errors).toContain("First name must be a string");
+      });
+
+      it("should reject non-string lastName", () => {
+        const result = ValidationService.validateUserUpdate({ lastName: [] });
+        expect(result.isValid).toBe(false);
+        expect(result.errors).toContain("Last name must be a string");
+      });
+
+      it("should reject non-string phone", () => {
+        const result = ValidationService.validateUserUpdate({ phone: {} });
+        expect(result.isValid).toBe(false);
+        expect(result.errors).toContain("Phone must be a string");
+      });
+
+      it("should validate phone string content", () => {
+        const result = ValidationService.validateUserUpdate({ phone: "555-1234" });
+        expect(result.isValid).toBe(true);
+      });
     });
 
     describe("validateEventCreation", () => {

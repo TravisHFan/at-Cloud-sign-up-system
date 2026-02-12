@@ -100,7 +100,7 @@ export class MaintenanceController {
         .populate({
           path: "eventId",
           select:
-            "title date endDate time endTime timeZone location format status type organizer createdAt roles",
+            "title date endDate time endTime timeZone location format status type organizer createdAt roles youtubeUrl",
         })
         .sort({ registrationDate: -1 }); // Most recent first
 
@@ -123,6 +123,7 @@ export class MaintenanceController {
             organizer?: string;
             createdAt?: Date | string;
             roles?: Array<{ id: string; name: string; description?: string }>;
+            youtubeUrl?: string;
           };
           // Use unified status logic (timezone + endDate aware) instead of naive local Date parse
           // Provide safe fallbacks: if endDate absent use start date; if endTime absent use start time
@@ -165,6 +166,7 @@ export class MaintenanceController {
               type: event.type,
               organizer: event.organizer,
               createdAt: event.createdAt,
+              youtubeUrl: event.youtubeUrl,
             },
             registration: {
               id: reg._id,

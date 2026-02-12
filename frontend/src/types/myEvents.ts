@@ -26,6 +26,7 @@ export interface MyEventItemData {
     organizer: string;
     timeZone?: string;
     createdAt: string;
+    youtubeUrl?: string;
   };
   registrations: MyEventRegistration[];
   isPassedEvent: boolean;
@@ -56,6 +57,7 @@ export interface MyEventRegistrationItem {
     organizer: string;
     timeZone?: string;
     createdAt: string;
+    youtubeUrl?: string;
   };
   registration: MyEventRegistration;
   isPassedEvent: boolean;

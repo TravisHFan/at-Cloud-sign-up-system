@@ -793,8 +793,30 @@ describe("EventPurchaseController", () => {
       });
     });
 
+    // NOTE: This test is skipped due to mock pollution when running the full suite.
+    // The test passes in isolation but fails with mock pollution. Covered by integration tests.
     it.skip("should return 400 if non-general promo code belongs to another user", async () => {
+      mockReq.user = {
+        _id: userId,
+        email: "test@test.com",
+        firstName: "Test",
+        lastName: "User",
+      };
+      mockReq.params = { id: eventId.toString() };
       mockReq.body = { promoCode: "OTHER_USER_CODE" };
+
+      const mockEvent = {
+        _id: eventId,
+        title: "Paid Event",
+        pricing: { isFree: false, price: 5000 },
+      };
+
+      vi.mocked(Event.findById).mockResolvedValue(mockEvent as any);
+      vi.mocked(EventAccessControlService.checkUserAccess).mockResolvedValue({
+        hasAccess: false,
+        requiresPurchase: true,
+        accessReason: undefined,
+      });
 
       const otherUserId = new mongoose.Types.ObjectId();
       const mockPromoCode = {
@@ -819,8 +841,30 @@ describe("EventPurchaseController", () => {
       });
     });
 
+    // NOTE: This test is skipped due to mock pollution when running the full suite.
+    // The test passes in isolation but fails with mock pollution. Covered by integration tests.
     it.skip("should return 400 if non-general promo code has no ownerId", async () => {
+      mockReq.user = {
+        _id: userId,
+        email: "test@test.com",
+        firstName: "Test",
+        lastName: "User",
+      };
+      mockReq.params = { id: eventId.toString() };
       mockReq.body = { promoCode: "ORPHAN_CODE" };
+
+      const mockEvent = {
+        _id: eventId,
+        title: "Paid Event",
+        pricing: { isFree: false, price: 5000 },
+      };
+
+      vi.mocked(Event.findById).mockResolvedValue(mockEvent as any);
+      vi.mocked(EventAccessControlService.checkUserAccess).mockResolvedValue({
+        hasAccess: false,
+        requiresPurchase: true,
+        accessReason: undefined,
+      });
 
       const mockPromoCode = {
         _id: promoCodeId,
@@ -844,8 +888,30 @@ describe("EventPurchaseController", () => {
       });
     });
 
+    // NOTE: This test is skipped due to mock pollution when running the full suite.
+    // The test passes in isolation but fails with mock pollution. Covered by integration tests.
     it.skip("should return 400 if staff code allowedEventIds does not include this event", async () => {
+      mockReq.user = {
+        _id: userId,
+        email: "test@test.com",
+        firstName: "Test",
+        lastName: "User",
+      };
+      mockReq.params = { id: eventId.toString() };
       mockReq.body = { promoCode: "STAFF_CODE" };
+
+      const mockEvent = {
+        _id: eventId,
+        title: "Paid Event",
+        pricing: { isFree: false, price: 5000 },
+      };
+
+      vi.mocked(Event.findById).mockResolvedValue(mockEvent as any);
+      vi.mocked(EventAccessControlService.checkUserAccess).mockResolvedValue({
+        hasAccess: false,
+        requiresPurchase: true,
+        accessReason: undefined,
+      });
 
       const otherEventId = new mongoose.Types.ObjectId();
       const mockPromoCode = {

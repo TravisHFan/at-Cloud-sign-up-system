@@ -280,6 +280,36 @@ describe("BatchOperationsController", () => {
           undefined,
         );
       });
+
+      it("should handle direct array return from mocked find", async () => {
+        const event1 = {
+          _id: new mongoose.Types.ObjectId(),
+          date: "2024-01-01",
+          time: "10:00",
+          endTime: "12:00",
+          status: "upcoming",
+        };
+
+        // Mock find() to return array directly (no select/lean chain)
+        // This covers the "mocked implementation might return an array directly" path
+        vi.mocked(Event.find).mockResolvedValue([event1] as any);
+
+        vi.mocked(EventController.getEventStatus).mockReturnValue("completed");
+        vi.mocked(Event.findByIdAndUpdate).mockResolvedValue({} as any);
+
+        await BatchOperationsController.updateAllEventStatuses(
+          mockReq as Request,
+          mockRes as Response,
+        );
+
+        // Should still succeed using the direct array
+        expect(statusMock).toHaveBeenCalledWith(200);
+        expect(jsonMock).toHaveBeenCalledWith({
+          success: true,
+          message: "Updated 1 event statuses.",
+          data: { updatedCount: 1 },
+        });
+      });
     });
 
     describe("cache invalidation", () => {

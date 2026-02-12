@@ -1,25 +1,13 @@
 // auth.normalizeUsername.test.ts - Unit tests for normalizeUsername middleware
 import { describe, test, expect, vi, beforeEach } from "vitest";
 import type { Request, Response, NextFunction } from "express";
+import { normalizeUsername } from "../../../src/routes/auth";
 
-// Test the normalizeUsername middleware behavior directly
-// Without importing the actual route (which has heavy dependencies)
+// Test the normalizeUsername middleware from the actual route
 describe("normalizeUsername middleware logic", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
-
-  // Replicate the normalizeUsername function logic from auth.ts
-  const normalizeUsername = (
-    req: Request,
-    _res: Response,
-    next: NextFunction
-  ): void => {
-    if (typeof req.body?.username === "string") {
-      req.body.username = req.body.username.toLowerCase().trim();
-    }
-    next();
-  };
 
   test("should lowercase and trim username string", () => {
     const req = { body: { username: "  TestUser  " } } as unknown as Request;

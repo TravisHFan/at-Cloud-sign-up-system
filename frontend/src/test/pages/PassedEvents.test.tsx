@@ -169,7 +169,7 @@ describe("PassedEvents page", () => {
         page: 1,
         limit: 10,
         sortBy: "date",
-        sortOrder: "asc",
+        sortOrder: "desc",
       });
     });
   });

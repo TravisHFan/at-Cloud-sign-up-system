@@ -17,7 +17,8 @@ import {
 const router = Router();
 
 // Normalize username to lowercase on registration to match Option C rules
-const normalizeUsername = (
+// Exported for unit testing
+export const normalizeUsername = (
   req: Request,
   _res: Response,
   next: NextFunction
