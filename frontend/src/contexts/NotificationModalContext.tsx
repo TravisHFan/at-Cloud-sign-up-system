@@ -6,6 +6,7 @@ import React, {
   useMemo,
 } from "react";
 import NotificationModal from "../components/common/NotificationModal";
+import { isSessionExpiredPromptShown } from "../services/session";
 
 interface NotificationOptions {
   title: string;
@@ -67,6 +68,8 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
     (options: NotificationOptions) => {
       // If locked, ignore attempts to replace until current modal is closed
       if (locked) return;
+      // Suppress error notifications when session has expired (SessionExpiredModal handles it)
+      if (options.type === "error" && isSessionExpiredPromptShown()) return;
       setNotification(options);
       if (options.lockUntilClose) setLocked(true);
     },

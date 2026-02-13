@@ -52,6 +52,12 @@ export function handleSessionExpired(): void {
   }
 }
 
+// Check if session expired prompt has already been shown
+// (used by NotificationModalContext to suppress error toasts during logout)
+export function isSessionExpiredPromptShown(): boolean {
+  return sessionPromptShown;
+}
+
 // For tests or resets (not used in production runtime)
 export function __resetSessionPromptFlag() {
   sessionPromptShown = false;

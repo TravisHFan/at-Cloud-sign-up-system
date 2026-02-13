@@ -23,8 +23,13 @@ export default function SessionExpiredModal() {
 
   const handleClose = () => {
     setIsOpen(false);
-    // Navigate to login page, preserving original destination so user returns after login
-    navigate("/login", { state: { from: location } });
+    // If already on login page (due to ProtectedRoute redirect), reload to ensure clean state
+    if (location.pathname === "/login") {
+      window.location.reload();
+    } else {
+      // Navigate to login page, preserving original destination so user returns after login
+      navigate("/login", { state: { from: location } });
+    }
   };
 
   return (
