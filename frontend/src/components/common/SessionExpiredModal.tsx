@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { onSessionExpired } from "../../services/session";
 import AlertModal from "./AlertModal";
 
@@ -9,7 +9,6 @@ import AlertModal from "./AlertModal";
  */
 export default function SessionExpiredModal() {
   const [isOpen, setIsOpen] = useState(false);
-  const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
@@ -23,13 +22,14 @@ export default function SessionExpiredModal() {
 
   const handleClose = () => {
     setIsOpen(false);
-    // If already on login page (due to ProtectedRoute redirect), reload to ensure clean state
-    if (location.pathname === "/login") {
-      window.location.reload();
-    } else {
-      // Navigate to login page, preserving original destination so user returns after login
-      navigate("/login", { state: { from: location } });
+    // Store the original location so user can return after login
+    if (location.pathname !== "/login") {
+      sessionStorage.setItem("returnUrl", location.pathname + location.search);
     }
+    // Use hard navigation to force full app reload.
+    // This ensures AuthContext re-initializes with no token, avoiding
+    // race conditions where stale currentUser state redirects back.
+    window.location.href = "/login";
   };
 
   return (

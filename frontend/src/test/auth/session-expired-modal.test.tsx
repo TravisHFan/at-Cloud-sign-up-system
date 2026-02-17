@@ -8,11 +8,10 @@ import {
   __resetSessionPromptFlag,
 } from "../../services/session";
 
-// Mock useNavigate and useLocation
-const mockNavigate = vi.fn();
+// Mock useLocation
 const mockLocation = {
   pathname: "/dashboard/event/123",
-  search: "",
+  search: "?tab=details",
   hash: "",
   state: null,
   key: "test",
@@ -21,27 +20,41 @@ vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual("react-router-dom");
   return {
     ...actual,
-    useNavigate: () => mockNavigate,
     useLocation: () => mockLocation,
   };
 });
 
 describe("SessionExpiredModal", () => {
+  // Store original window.location
+  const originalLocation = window.location;
+
   beforeEach(() => {
     __resetSessionPromptFlag();
-    mockNavigate.mockClear();
     localStorage.setItem("authToken", "test-token");
+    sessionStorage.clear();
+
+    // Mock window.location.href
+    Object.defineProperty(window, "location", {
+      writable: true,
+      value: { ...originalLocation, href: "" },
+    });
   });
 
   afterEach(() => {
     localStorage.clear();
+    sessionStorage.clear();
+    // Restore window.location
+    Object.defineProperty(window, "location", {
+      writable: true,
+      value: originalLocation,
+    });
   });
 
   it("shows custom modal when session expires", async () => {
     render(
       <BrowserRouter>
         <SessionExpiredModal />
-      </BrowserRouter>
+      </BrowserRouter>,
     );
 
     // Initially, modal should not be visible
@@ -56,18 +69,18 @@ describe("SessionExpiredModal", () => {
     });
 
     expect(
-      screen.getByText("Your session has expired. Please login again.")
+      screen.getByText("Your session has expired. Please login again."),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Login" })).toBeInTheDocument();
   });
 
-  it("navigates to login when Login button is clicked", async () => {
+  it("redirects to login and stores return URL when Login button is clicked", async () => {
     const user = userEvent.setup();
 
     render(
       <BrowserRouter>
         <SessionExpiredModal />
-      </BrowserRouter>
+      </BrowserRouter>,
     );
 
     // Trigger session expiration
@@ -82,17 +95,20 @@ describe("SessionExpiredModal", () => {
     const loginButton = screen.getByRole("button", { name: "Login" });
     await user.click(loginButton);
 
-    // Verify navigation was called with state to preserve original destination
-    expect(mockNavigate).toHaveBeenCalledWith("/login", {
-      state: { from: mockLocation },
-    });
+    // Verify returnUrl is stored in sessionStorage for post-login redirect
+    expect(sessionStorage.getItem("returnUrl")).toBe(
+      "/dashboard/event/123?tab=details",
+    );
+
+    // Verify hard navigation to login page was triggered
+    expect(window.location.href).toBe("/login");
   });
 
   it("only shows modal once even if handleSessionExpired is called multiple times", async () => {
     render(
       <BrowserRouter>
         <SessionExpiredModal />
-      </BrowserRouter>
+      </BrowserRouter>,
     );
 
     // Call handleSessionExpired multiple times
@@ -114,7 +130,7 @@ describe("SessionExpiredModal", () => {
     render(
       <BrowserRouter>
         <SessionExpiredModal />
-      </BrowserRouter>
+      </BrowserRouter>,
     );
 
     expect(localStorage.getItem("authToken")).toBe("test-token");
