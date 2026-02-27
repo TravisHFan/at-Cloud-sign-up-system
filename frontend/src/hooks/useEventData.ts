@@ -71,6 +71,7 @@ type BackendEventLike = {
   workshopGroupTopics?: EventData["workshopGroupTopics"];
   flyerUrl?: string;
   secondaryFlyerUrl?: string;
+  youtubeUrl?: string;
   // Paid events
   pricing?: { isFree: boolean; price?: number };
   // Programs integration
@@ -240,7 +241,7 @@ export function useEventData({
                 (role.registrations?.length ||
                   role.currentSignups?.length ||
                   0),
-              0
+              0,
             ) ||
             0,
           totalSlots:
@@ -248,7 +249,7 @@ export function useEventData({
             (eventData.roles || []).reduce(
               (sum: number, role: BackendRole) =>
                 sum + (role.maxParticipants || 0),
-              0
+              0,
             ) ||
             0,
           createdBy: eventData.createdBy,
@@ -272,6 +273,8 @@ export function useEventData({
           pricing: (
             eventData as { pricing?: { isFree: boolean; price?: number } }
           ).pricing,
+          // YouTube video URL for completed events with recordings
+          youtubeUrl: eventData.youtubeUrl,
         };
 
         setEvent(convertedEvent);
@@ -312,7 +315,7 @@ export function useEventData({
                 onClick: () => navigate("/dashboard"),
                 variant: "primary",
               },
-            }
+            },
           );
           setEvent(null);
         } else {
@@ -325,7 +328,7 @@ export function useEventData({
                 onClick: () => window.location.reload(),
                 variant: "primary",
               },
-            }
+            },
           );
           navigate("/dashboard");
         }
@@ -520,13 +523,13 @@ export function useEventData({
                   (role.registrations?.length ||
                     role.currentSignups?.length ||
                     0),
-                0
+                0,
               ) || 0,
             totalSlots:
               (e.roles || []).reduce(
                 (sum: number, role: BackendRole) =>
                   sum + (role.maxParticipants || 0),
-                0
+                0,
               ) || 0,
             createdBy: e.createdBy,
             createdAt: e.createdAt,
@@ -638,14 +641,14 @@ export function useEventData({
               `You were removed from ${roleName}`,
               {
                 title: "Event Update",
-              }
+              },
             );
           } else if (uid !== currentUserId) {
             notificationRef.current.info(
               `Someone was removed from ${roleName}`,
               {
                 title: "Event Updated",
-              }
+              },
             );
           }
           break;
@@ -658,7 +661,7 @@ export function useEventData({
           ) {
             notificationRef.current.info(
               `You were moved from ${fromRoleName} to ${toRoleName}`,
-              { title: "Event Update" }
+              { title: "Event Update" },
             );
           } else if (uid !== currentUserId) {
             notificationRef.current.info(`Someone was moved between roles`, {
@@ -706,7 +709,7 @@ export function useEventData({
             `A guest was moved from ${fromRoleName || fromRoleId} to ${
               toRoleName || toRoleId
             }`,
-            { title: "Event Updated" }
+            { title: "Event Updated" },
           );
           break;
         }
@@ -715,7 +718,7 @@ export function useEventData({
       // Always refetch fresh event for viewer-specific privacy (ensures email/phone visibility is correct without page refresh)
       try {
         const fresh = (await eventService.getEvent(
-          id
+          id,
         )) as unknown as BackendEventLike;
         if (isComponentMounted) {
           setEvent((prev) => {
@@ -781,13 +784,13 @@ export function useEventData({
                     (role.registrations?.length ||
                       role.currentSignups?.length ||
                       0),
-                  0
+                  0,
                 ) || 0,
               totalSlots:
                 fresh.roles?.reduce(
                   (sum: number, role: BackendRole) =>
                     sum + (role.maxParticipants || 0),
-                  0
+                  0,
                 ) || 0,
               createdBy: fresh.createdBy,
               createdAt: fresh.createdAt,
@@ -840,18 +843,18 @@ export function useEventData({
                 // Build human readable missing fields using the helper (defensive: rely on current viewerScopedEvent values)
                 const missing =
                   getMissingNecessaryFieldsForPublishFrontend(
-                    viewerScopedEvent
+                    viewerScopedEvent,
                   );
                 const readable = missing.map(
-                  (m) => PUBLISH_FIELD_LABELS[m] || m
+                  (m) => PUBLISH_FIELD_LABELS[m] || m,
                 );
                 notificationRef.current.warning(
                   readable.length
                     ? `Event automatically unpublished: missing ${readable.join(
-                        ", "
+                        ", ",
                       )}`
                     : "Event automatically unpublished due to missing required fields",
-                  { title: "Auto-unpublished" }
+                  { title: "Auto-unpublished" },
                 );
               }
               prevPublishRef.current = viewerScopedEvent.publish;
