@@ -301,13 +301,13 @@ export default function EventDetail() {
 
         {/* Event Details */}
         <EventBasicDetails event={event} />
+        {/* YouTube Video Player (optional) - for completed events with recordings */}
+        <YouTubePlayer event={event} />
         <EventHostAndPurpose event={event} />
         {/* Description removed */}
         <EventCapacityAndAgenda event={event} />
         {/* Event Flyer (optional) - now supports carousel for multiple flyers */}
         <FlyerDisplay event={event} />
-        {/* YouTube Video Player (optional) - for completed events with recordings */}
-        <YouTubePlayer event={event} />
         <div className="space-y-4">
           {/* Organizer Contact Information */}
           <div>
