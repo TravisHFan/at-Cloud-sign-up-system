@@ -9,7 +9,7 @@ import PricingSection from "../components/EditProgram/PricingSection";
 import PricingConfirmationModal from "../components/EditProgram/PricingConfirmationModal";
 import ProgramFormFields from "../components/EditProgram/ProgramFormFields";
 import LoadingSpinner from "../components/common/LoadingSpinner";
-import { programService } from "../services/api";
+import { programService, purchaseService } from "../services/api";
 import { type ProgramType } from "../constants/programTypes";
 
 interface Mentor {
@@ -127,6 +127,8 @@ export default function EditProgram() {
   const [originalMentors, setOriginalMentors] = useState<Mentor[]>([]);
   // Store original program data including mentors to check permissions
   const [programMentorIds, setProgramMentorIds] = useState<string[]>([]);
+  // Track if current user is the program creator
+  const [isCreator, setIsCreator] = useState(false);
 
   const {
     register,
@@ -342,32 +344,32 @@ export default function EditProgram() {
         setValue("hostedBy", program.hostedBy || "@Cloud Marketplace Ministry");
         setValue(
           "startYear",
-          program.period?.startYear || currentYear.toString()
+          program.period?.startYear || currentYear.toString(),
         );
         setValue(
           "startMonth",
           program.period?.startMonth &&
             monthCodeToName[program.period.startMonth]
             ? monthCodeToName[program.period.startMonth]
-            : program.period?.startMonth || ""
+            : program.period?.startMonth || "",
         );
         setValue("endYear", program.period?.endYear || currentYear.toString());
         setValue(
           "endMonth",
           program.period?.endMonth && monthCodeToName[program.period.endMonth]
             ? monthCodeToName[program.period.endMonth]
-            : program.period?.endMonth || ""
+            : program.period?.endMonth || "",
         );
         setValue("introduction", program.introduction || "");
         setValue("flyerUrl", program.flyerUrl || "");
         setOriginalFlyerUrl(program.flyerUrl || null);
         // Set isFree based on backend data (convert boolean to string)
-        setValue("isFree", program.isFree ?? false ? "true" : "false");
+        setValue("isFree", (program.isFree ?? false) ? "true" : "false");
         if (program.earlyBirdDeadline) {
           // Keep as YYYY-MM-DD for input
           setValue(
             "earlyBirdDeadline",
-            program.earlyBirdDeadline.split("T")[0]
+            program.earlyBirdDeadline.split("T")[0],
           );
         } else {
           setValue("earlyBirdDeadline", "");
@@ -375,19 +377,19 @@ export default function EditProgram() {
         // Pricing - convert cents to dollars for display
         setValue(
           "fullPriceTicket",
-          ((program.fullPriceTicket as number | undefined) ?? 0) / 100
+          ((program.fullPriceTicket as number | undefined) ?? 0) / 100,
         );
         setValue(
           "classRepDiscount",
-          ((program.classRepDiscount as number | undefined) ?? 0) / 100
+          ((program.classRepDiscount as number | undefined) ?? 0) / 100,
         );
         setValue(
           "earlyBirdDiscount",
-          ((program.earlyBirdDiscount as number | undefined) ?? 0) / 100
+          ((program.earlyBirdDiscount as number | undefined) ?? 0) / 100,
         );
         setValue(
           "classRepLimit",
-          (program.classRepLimit as number | undefined) ?? 0
+          (program.classRepLimit as number | undefined) ?? 0,
         );
 
         // Store original pricing values for change detection (keep in cents)
@@ -427,13 +429,13 @@ export default function EditProgram() {
         // Load unified mentors for all program types
         if (program.mentors) {
           const transformedMentors = program.mentors.map(
-            transformMentorFromBackend
+            transformMentorFromBackend,
           );
           setMentors(transformedMentors);
           setOriginalMentors(transformedMentors);
           // Store mentor user IDs for permission checking
           setProgramMentorIds(
-            program.mentors.map((m: { userId: string }) => m.userId)
+            program.mentors.map((m: { userId: string }) => m.userId),
           );
         }
       } catch (error) {
@@ -448,6 +450,24 @@ export default function EditProgram() {
       cancelled = true;
     };
   }, [id, setValue, navigate]);
+
+  // Check if current user is the program creator
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const result = await purchaseService.checkProgramAccess(id);
+        if (cancelled) return;
+        setIsCreator(result.reason === "creator");
+      } catch (error) {
+        console.error("Failed to check program access:", error);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   // Unified mentor change handler for all program types
   const handleMentorsChange = (newMentors: Mentor[]) => {
@@ -547,12 +567,12 @@ export default function EditProgram() {
   };
 
   // Check if user needs the restricted access overlay
-  // Allow Super Admin, Administrator, and program mentors to edit
+  // Allow Super Admin, Administrator, program mentors, and program creator to edit
   const isAdmin =
     currentUser?.role === "Super Admin" ||
     currentUser?.role === "Administrator";
   const isMentor = currentUser?.id && programMentorIds.includes(currentUser.id);
-  const shouldShowRestrictedOverlay = !isAdmin && !isMentor;
+  const shouldShowRestrictedOverlay = !isAdmin && !isMentor && !isCreator;
 
   if (loading) {
     // Standardized dashboard loading: centered, fullscreen, larger spinner
@@ -589,8 +609,9 @@ export default function EditProgram() {
               </h2>
               <p className="text-sm text-gray-600">
                 To edit programs, you need Administrator, Super Admin
-                privileges, or be assigned as a mentor for this program. Please
-                contact your system administrators to request access.
+                privileges, be the program creator, or be assigned as a mentor
+                for this program. Please contact your system administrators to
+                request access.
               </p>
             </div>
           </div>

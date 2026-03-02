@@ -43,19 +43,19 @@ class PurchasesApiClient extends BaseApiClient {
 
   async getMyPendingPurchases(): Promise<unknown[]> {
     const res = await this.request<unknown[]>(
-      `/purchases/my-pending-purchases`
+      `/purchases/my-pending-purchases`,
     );
     return res.data || [];
   }
 
   async retryPurchase(
-    purchaseId: string
+    purchaseId: string,
   ): Promise<{ sessionId: string; sessionUrl: string }> {
     const res = await this.request<{ sessionId: string; sessionUrl: string }>(
       `/purchases/retry/${purchaseId}`,
       {
         method: "POST",
-      }
+      },
     );
     return res.data || { sessionId: "", sessionUrl: "" };
   }
@@ -68,7 +68,7 @@ class PurchasesApiClient extends BaseApiClient {
 
   async verifySession(sessionId: string): Promise<unknown> {
     const res = await this.request<unknown>(
-      `/purchases/verify-session/${sessionId}`
+      `/purchases/verify-session/${sessionId}`,
     );
     return res.data;
   }
@@ -85,11 +85,23 @@ class PurchasesApiClient extends BaseApiClient {
 
   async checkProgramAccess(programId: string): Promise<{
     hasAccess: boolean;
-    reason: "admin" | "mentor" | "free" | "purchased" | "not_purchased";
+    reason:
+      | "admin"
+      | "creator"
+      | "mentor"
+      | "free"
+      | "purchased"
+      | "not_purchased";
   }> {
     const res = await this.request<{
       hasAccess: boolean;
-      reason: "admin" | "mentor" | "free" | "purchased" | "not_purchased";
+      reason:
+        | "admin"
+        | "creator"
+        | "mentor"
+        | "free"
+        | "purchased"
+        | "not_purchased";
     }>(`/purchases/check-access/${programId}`);
     return res.data || { hasAccess: false, reason: "not_purchased" };
   }
@@ -266,7 +278,7 @@ const purchasesApiClient = new PurchasesApiClient();
 export const purchasesService = {
   // User operations
   createCheckoutSession: (
-    params: Parameters<typeof purchasesApiClient.createCheckoutSession>[0]
+    params: Parameters<typeof purchasesApiClient.createCheckoutSession>[0],
   ) => purchasesApiClient.createCheckoutSession(params),
   getMyPurchases: () => purchasesApiClient.getMyPurchases(),
   getMyPendingPurchases: () => purchasesApiClient.getMyPendingPurchases(),
@@ -289,7 +301,7 @@ export const purchasesService = {
 
   // Admin operations
   getAllPurchasesAdmin: (
-    params: Parameters<typeof purchasesApiClient.getAllPurchasesAdmin>[0]
+    params: Parameters<typeof purchasesApiClient.getAllPurchasesAdmin>[0],
   ) => purchasesApiClient.getAllPurchasesAdmin(params),
   getPaymentStats: () => purchasesApiClient.getPaymentStats(),
 };
