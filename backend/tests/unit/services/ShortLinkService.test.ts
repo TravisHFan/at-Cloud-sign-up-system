@@ -137,14 +137,15 @@ describe("ShortLinkService", () => {
     }
   });
 
-  it("resolveKey returns expired when previously existed but invalid now", async () => {
-    (ShortLink.getActiveByKey as any).mockResolvedValue(null);
-    (ShortLink as any)._store.findOneValue = {
-      key: "abc",
+  it("resolveKey returns active even when isExpired flag is set (no expiration check)", async () => {
+    // getActiveByKey no longer checks isExpired, so it returns the link
+    (ShortLink.getActiveByKey as any).mockResolvedValue({
+      targetSlug: "my-event",
+      eventId: new Types.ObjectId(eventId),
       isExpired: true,
-    };
+    });
     const result = await ShortLinkService.resolveKey("abc");
-    expect(result.status).toBe("expired");
+    expect(result.status).toBe("active");
   });
 
   it("resolveKey returns not_found when unknown", async () => {

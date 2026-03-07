@@ -58,7 +58,6 @@ export function useShortLink(eventId?: string) {
     copy,
     resetCaches,
     hasActive: state.status?.state === "active",
-    isExpired: state.status?.state === "expired",
   };
 }
 

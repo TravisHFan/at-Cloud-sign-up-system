@@ -89,57 +89,13 @@ describe("ShareModal", () => {
         publicSlug="my-event"
         isOpen={true}
         onClose={() => {}}
-      />
+      />,
     );
 
     expect(screen.getByText(/Generating/i)).toBeInTheDocument();
 
     await screen.findByDisplayValue("/s/abc123");
     expect(screen.getByText(/Status:/)).toHaveTextContent("active");
-  });
-
-  it("handles expired status display", async () => {
-    mockFetchSequence([
-      // create
-      {
-        status: 201,
-        body: {
-          success: true,
-          created: true,
-          data: {
-            key: "zzz999",
-            eventId: "evt1",
-            slug: "my-event",
-            expiresAt: "2025-12-01T00:00:00.000Z",
-            url: "/s/zzz999",
-          },
-        },
-      },
-      // status expired
-      {
-        status: 410,
-        body: {
-          success: false,
-          status: "expired",
-          message: "Short link expired",
-        },
-      },
-    ]);
-
-    render(
-      <ShareModal
-        eventId="evt1"
-        publicSlug="my-event"
-        isOpen={true}
-        onClose={() => {}}
-      />
-    );
-
-    await screen.findByDisplayValue("/s/zzz999");
-    // There are two 'expired' texts (status line + alert). Assert status line specifically.
-    const statusLine = screen.getByText(/Status:/);
-    expect(statusLine).toHaveTextContent(/expired/i);
-    expect(screen.getByText(/has expired/i)).toBeInTheDocument();
   });
 
   it("copies short link to clipboard", async () => {
@@ -175,7 +131,7 @@ describe("ShareModal", () => {
         publicSlug="my-event"
         isOpen={true}
         onClose={() => {}}
-      />
+      />,
     );
 
     await screen.findByDisplayValue("/s/copy1");
@@ -198,7 +154,7 @@ describe("ShareModal", () => {
         publicSlug="bad"
         isOpen={true}
         onClose={() => {}}
-      />
+      />,
     );
 
     await waitFor(() => {

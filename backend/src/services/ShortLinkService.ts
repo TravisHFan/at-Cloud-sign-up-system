@@ -10,7 +10,6 @@ import {
   shortLinkCacheMissCounter,
   shortLinkCacheEvictionCounter,
   shortLinkCacheEntriesGauge,
-  shortLinkCacheStaleEvictionCounter,
   shortLinkExpireCounter,
 } from "./PrometheusMetricsService";
 
@@ -22,7 +21,7 @@ const MAX = parseInt(process.env.SHORTLINK_CACHE_MAX || "3000", 10);
 const TTL_MS = parseInt(process.env.SHORTLINK_CACHE_TTL_MS || "300000", 10); // 5m
 const NEG_TTL_MS = parseInt(
   process.env.SHORTLINK_CACHE_NEGATIVE_TTL_MS || "30000",
-  10
+  10,
 ); // 30s
 
 // Store active links: key -> { slug, eventId, expiresAtMs }
@@ -61,7 +60,7 @@ export type ShortLinkCreationResult = {
 // Allow 3-16 characters to give some headroom while keeping links concise.
 const MAX_CUSTOM_KEY = 16;
 const CUSTOM_KEY_REGEX = new RegExp(
-  `^[a-z0-9][a-z0-9-_]{2,${MAX_CUSTOM_KEY - 1}}$`
+  `^[a-z0-9][a-z0-9-_]{2,${MAX_CUSTOM_KEY - 1}}$`,
 );
 function loadReserved(): Set<string> {
   // Provide a sane default set so tests relying on certain keys being reserved
@@ -79,7 +78,7 @@ function loadReserved(): Set<string> {
     raw
       .split(/[\s,]+/)
       .map((s) => s.trim().toLowerCase())
-      .filter(Boolean)
+      .filter(Boolean),
   );
 }
 const RESERVED_KEYS = loadReserved();
@@ -123,14 +122,14 @@ export class ShortLinkService {
   static async getOrCreateForEvent(
     eventId: string,
     userId: string,
-    customKey?: string
+    customKey?: string,
   ): Promise<ShortLinkCreationResult> {
     if (!Types.ObjectId.isValid(eventId)) {
       throw new Error("Invalid eventId");
     }
 
     const event = await Event.findById(eventId).select(
-      "publish publicSlug roles date endDate time endTime timeZone"
+      "publish publicSlug roles date endDate time endTime timeZone",
     );
     if (!event) {
       throw new Error("Event not found");
@@ -141,7 +140,7 @@ export class ShortLinkService {
     const hasPublicRole =
       Array.isArray(event.roles) &&
       event.roles.some(
-        (r: { openToPublic?: boolean }) => r.openToPublic === true
+        (r: { openToPublic?: boolean }) => r.openToPublic === true,
       );
     if (!hasPublicRole) {
       throw new Error("Event has no public roles");
@@ -245,13 +244,13 @@ export class ShortLinkService {
 
   /**
    * Resolve key into redirect target.
-   * Returns: { status: "active" | "expired" | "not_found", slug?: string }
+   * Returns: { status: "active" | "not_found", slug?: string }
+   * Short links always redirect – no expiration check.
    */
   static async resolveKey(
-    key: string
+    key: string,
   ): Promise<
     | { status: "active"; slug: string; eventId: string }
-    | { status: "expired" }
     | { status: "not_found" }
   > {
     // 1. Attempt cache lookup
@@ -263,23 +262,12 @@ export class ShortLinkService {
           return { status: "not_found" };
         }
         if (value) {
-          // If cached entry has passed its own expiry, evict and treat as miss (will fall through to DB logic below)
-          if (value.expiresAtMs <= Date.now()) {
-            try {
-              shortLinkCache.delete(key);
-              updateEntriesGauge();
-              try {
-                shortLinkCacheStaleEvictionCounter.inc({ reason: "expired" });
-              } catch {}
-            } catch {}
-          } else {
-            shortLinkCacheHitCounter.inc({ type: "positive" });
-            return {
-              status: "active",
-              slug: value.slug,
-              eventId: value.eventId,
-            };
-          }
+          shortLinkCacheHitCounter.inc({ type: "positive" });
+          return {
+            status: "active",
+            slug: value.slug,
+            eventId: value.eventId,
+          };
         }
         // fall through as miss
         shortLinkCacheMissCounter.inc();
@@ -295,7 +283,7 @@ export class ShortLinkService {
         const evicted = shortLinkCache.set(key, {
           slug: link.targetSlug,
           eventId: link.eventId.toString(),
-          expiresAtMs: link.expiresAt?.getTime?.() || Date.now(),
+          expiresAtMs: link.expiresAt?.getTime?.() || Date.now() + 86400000,
         });
         updateEntriesGauge();
         recordEvictions(evicted);
@@ -306,17 +294,11 @@ export class ShortLinkService {
         eventId: link.eventId.toString(),
       };
     }
-    // Check if it ever existed (for 410 vs 404 differentiation)
-    const anyLink = await ShortLink.findOne({ key }).select(
-      "isExpired expiresAt"
-    );
-    if (!anyLink) {
-      try {
-        shortLinkCache.setNegative(key);
-      } catch {}
-      return { status: "not_found" };
-    }
-    return { status: "expired" };
+    // Key never existed
+    try {
+      shortLinkCache.setNegative(key);
+    } catch {}
+    return { status: "not_found" };
   }
 
   /** Mark all links for an event as temporarily expired (e.g. on unpublish).
@@ -326,7 +308,7 @@ export class ShortLinkService {
     if (!Types.ObjectId.isValid(eventId)) return 0;
     const res = await ShortLink.updateMany(
       { eventId: new Types.ObjectId(eventId), isExpired: false },
-      { $set: { isExpired: true } }
+      { $set: { isExpired: true } },
     );
     log.info("Marked short links as expired for event (unpublish)", undefined, {
       eventId,

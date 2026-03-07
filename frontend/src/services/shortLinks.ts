@@ -13,7 +13,6 @@ export interface ShortLinkRecord {
 
 export type ShortLinkStatus =
   | { state: "active"; slug: string; eventId: string }
-  | { state: "expired" }
   | { state: "not_found" };
 
 interface CreateResponse {
@@ -39,7 +38,7 @@ const statusCache = new Map<string, { status: ShortLinkStatus; ts: number }>(); 
 const STATUS_TTL_MS = 15_000; // 15s is enough for UI freshness without hammering
 
 export async function getOrCreateShortLink(
-  eventId: string
+  eventId: string,
 ): Promise<ShortLinkRecord> {
   if (createCache.has(eventId)) return createCache.get(eventId)!;
   // Auth: endpoint requires organizer privileges; include bearer token + credentials
@@ -57,7 +56,7 @@ export async function getOrCreateShortLink(
   if (!res.ok) {
     const text = await res.text();
     throw new Error(
-      `Short link create failed (${res.status})${text ? ": " + text : ""}`
+      `Short link create failed (${res.status})${text ? ": " + text : ""}`,
     );
   }
   const json = (await res.json()) as CreateResponse;
@@ -73,7 +72,7 @@ export async function getOrCreateShortLink(
 }
 
 export async function getShortLinkStatus(
-  key: string
+  key: string,
 ): Promise<ShortLinkStatus> {
   const now = Date.now();
   const cached = statusCache.get(key);
@@ -87,7 +86,7 @@ export async function getShortLinkStatus(
     {
       headers,
       credentials: "include",
-    }
+    },
   );
   if (res.status === 200) {
     const json = (await res.json()) as StatusActiveResponse;
@@ -99,12 +98,6 @@ export async function getShortLinkStatus(
     statusCache.set(key, { status, ts: now });
     return status;
   }
-  if (res.status === 410) {
-    await res.json(); // consume body for consistency (message not needed in UI cache)
-    const status: ShortLinkStatus = { state: "expired" };
-    statusCache.set(key, { status, ts: now });
-    return status;
-  }
   if (res.status === 404) {
     const status: ShortLinkStatus = { state: "not_found" };
     statusCache.set(key, { status, ts: now });
@@ -112,12 +105,12 @@ export async function getShortLinkStatus(
   }
   const text = await res.text();
   throw new Error(
-    `Status request failed (${res.status})${text ? ": " + text : ""}`
+    `Status request failed (${res.status})${text ? ": " + text : ""}`,
   );
 }
 
 export async function ensureShortLink(
-  eventId: string
+  eventId: string,
 ): Promise<{ record: ShortLinkRecord; status: ShortLinkStatus }> {
   const record = await getOrCreateShortLink(eventId);
   const status = await getShortLinkStatus(record.key);

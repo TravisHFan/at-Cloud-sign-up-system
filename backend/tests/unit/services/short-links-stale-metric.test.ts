@@ -8,11 +8,9 @@ import User from "../../../src/models/User";
 import mongoose from "mongoose";
 import app from "../../../src/app";
 import request from "supertest";
-import { prometheusRegistry } from "../../../src/services/PrometheusMetricsService";
 
-// This is a lightweight (still uses DB models) unit-style test focusing specifically on the stale eviction metric
-// without needing the broader integration suite assertions. It runs faster than full integration because it
-// only exercises one narrow path and minimal endpoints.
+// Short links no longer expire — this test verifies that links always resolve
+// regardless of isExpired flag or expiresAt date.
 
 async function ensureConnection() {
   if (mongoose.connection.readyState === 0) {
@@ -23,7 +21,7 @@ async function ensureConnection() {
   }
 }
 
-describe("ShortLinkService stale eviction metric (unit focus)", () => {
+describe("ShortLinkService always resolves (no expiration)", () => {
   beforeEach(async () => {
     await ensureConnection();
     await Promise.all([
@@ -34,8 +32,8 @@ describe("ShortLinkService stale eviction metric (unit focus)", () => {
     ShortLinkTestHooks.clearCache();
   });
 
-  it("increments short_link_cache_stale_evictions_total when a stale cached entry is encountered", async () => {
-    // Create minimal event + user via direct model use rather than helper to keep this tight
+  it("resolves link as active even when isExpired is true and expiresAt is past", async () => {
+    // Create minimal event + user via direct model use
     const user = await User.create({
       username: "slmetric_user",
       email: "slmetric_user@example.com",
@@ -53,11 +51,10 @@ describe("ShortLinkService stale eviction metric (unit focus)", () => {
       description: "Metric Event Desc",
       publish: true,
       format: "Online",
-      organizer: "Org", // schema expects string (object used elsewhere for extended organizer details)
+      organizer: "Org",
       type: "Webinar",
       createdBy: user._id,
       publicSlug: "metric-event",
-      // Use a far-future date so the event is unquestionably active relative to current test runtime
       date: "2099-01-01",
       endDate: "2099-01-01",
       time: "10:00",
@@ -73,7 +70,7 @@ describe("ShortLinkService stale eviction metric (unit focus)", () => {
       ],
     } as any);
 
-    // Create short link through service path (HTTP) to populate cache consistent with real flow
+    // Create short link through HTTP
     const createRes = await request(app)
       .post(`/api/public/short-links`)
       .set({ Authorization: `Bearer test-${user._id}` })
@@ -81,35 +78,22 @@ describe("ShortLinkService stale eviction metric (unit focus)", () => {
       .expect(201);
     const key = createRes.body.data.key as string;
 
-    // Prime cache (ensure link still active in DB)
-    const beforeMetrics = await prometheusRegistry.getSingleMetricAsString(
-      "short_link_cache_stale_evictions_total"
-    );
+    // Prime cache
     await request(app).get(`/api/public/short-links/${key}`).expect(200);
 
     // Force stale in cache
     ShortLinkTestHooks.forceCacheExpiry(key);
 
-    // Expire DB record to drive 410 on second lookup
+    // Mark DB record as expired with past expiresAt
     await ShortLink.updateMany(
       { key },
-      { $set: { isExpired: true, expiresAt: new Date(Date.now() - 1000) } }
+      { $set: { isExpired: true, expiresAt: new Date(Date.now() - 1000) } },
     );
-    const beforeMatch = beforeMetrics.match(
-      /short_link_cache_stale_evictions_total\{reason="expired"}\s+(\d+)/
-    );
-    const beforeVal = beforeMatch ? parseInt(beforeMatch[1], 10) : 0;
 
-    await request(app).get(`/api/public/short-links/${key}`).expect(410);
-
-    const afterMetrics = await prometheusRegistry.getSingleMetricAsString(
-      "short_link_cache_stale_evictions_total"
-    );
-    const afterMatch = afterMetrics.match(
-      /short_link_cache_stale_evictions_total\{reason="expired"}\s+(\d+)/
-    );
-    const afterVal = afterMatch ? parseInt(afterMatch[1], 10) : 0;
-
-    expect(afterVal).toBe(beforeVal + 1);
+    // Should still resolve as active (200), not expired (410)
+    const res = await request(app)
+      .get(`/api/public/short-links/${key}`)
+      .expect(200);
+    expect(res.body.data?.status).toBe("active");
   });
 });

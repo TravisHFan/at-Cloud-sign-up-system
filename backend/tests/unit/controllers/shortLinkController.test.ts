@@ -738,40 +738,6 @@ describe("ShortLinkController", () => {
       });
     });
 
-    describe("expired link", () => {
-      it("should return 410 for expired short link", async () => {
-        mockReq.params = { key: "expired123" };
-
-        const mockEndTimer = vi.fn();
-        vi.mocked(shortLinkResolveDuration.startTimer).mockReturnValue(
-          mockEndTimer,
-        );
-
-        vi.mocked(ShortLinkService.resolveKey).mockResolvedValue({
-          status: "expired",
-        } as any);
-
-        await ShortLinkController.resolve(
-          mockReq as Request,
-          mockRes as Response,
-        );
-
-        expect(statusMock).toHaveBeenCalledWith(410);
-        expect(jsonMock).toHaveBeenCalledWith({
-          success: false,
-          status: "expired",
-          message: "Short link expired",
-        });
-        expect(shortLinkResolveCounter.inc).toHaveBeenCalledWith({
-          status: "expired",
-        });
-        expect(mockEndTimer).toHaveBeenCalledWith({ status: "expired" });
-        expect(ShortLinkMetricsService.increment).toHaveBeenCalledWith(
-          "resolved_expired",
-        );
-      });
-    });
-
     describe("not found", () => {
       it("should return 404 for non-existent short link", async () => {
         mockReq.params = { key: "notfound" };

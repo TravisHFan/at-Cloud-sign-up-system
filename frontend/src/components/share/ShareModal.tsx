@@ -101,12 +101,6 @@ export const ShareModal: React.FC<ShareModalProps> = ({
               </div>
             )}
           </div>
-
-          {status?.state === "expired" && (
-            <div className="rounded bg-amber-50 p-2 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-              This short link has expired (event has ended).
-            </div>
-          )}
         </div>
         <div className="flex justify-end border-t border-gray-200 px-4 py-2 dark:border-gray-700">
           <button
@@ -118,7 +112,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
         </div>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 };
 

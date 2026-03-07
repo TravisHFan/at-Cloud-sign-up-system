@@ -70,19 +70,16 @@ const shortLinkSchema = new Schema<IShortLink>(
   {
     versionKey: false,
     timestamps: false, // we explicitly store createdAt only; updatedAt not needed
-  }
+  },
 );
 
 // Static helpers
+// Short links always redirect – no expiration check needed.
 shortLinkSchema.statics.getActiveByKey = function (
   this: mongoose.Model<IShortLink>,
-  key: string
+  key: string,
 ) {
-  return this.findOne({
-    key,
-    isExpired: false,
-    expiresAt: { $gt: new Date() },
-  });
+  return this.findOne({ key });
 };
 
 const ShortLink =

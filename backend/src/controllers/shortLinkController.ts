@@ -42,7 +42,7 @@ export class ShortLinkController {
       const result = await ShortLinkService.getOrCreateForEvent(
         eventId,
         userId,
-        customKey
+        customKey,
       );
 
       // Generate full URL for short links
@@ -53,7 +53,7 @@ export class ShortLinkController {
         // Explicit base URL from environment (production)
         fullUrl = `${process.env.PUBLIC_SHORT_BASE_URL.replace(
           /\/$/,
-          ""
+          "",
         )}${shortPath}`;
       } else {
         // Auto-detect base URL from request context (development)
@@ -178,19 +178,6 @@ export class ShortLinkController {
             slug: result.slug,
             eventId: result.eventId,
           },
-        });
-        return;
-      }
-      if (result.status === "expired") {
-        ShortLinkMetricsService.increment("resolved_expired");
-        try {
-          shortLinkResolveCounter.inc({ status: "expired" });
-          endTimer({ status: "expired" });
-        } catch {}
-        res.status(410).json({
-          success: false,
-          status: "expired",
-          message: "Short link expired",
         });
         return;
       }

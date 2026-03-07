@@ -30,7 +30,6 @@ const ShortLinkRedirect: React.FC = () => {
   const [state, setState] = useState<
     | { type: "loading" }
     | { type: "error"; message: string }
-    | { type: "expired" }
     | { type: "not_found" }
   >({ type: "loading" });
 
@@ -49,17 +48,13 @@ const ShortLinkRedirect: React.FC = () => {
           {
             signal: controller.signal,
             headers: { Accept: "application/json" },
-          }
+          },
         );
         const json = (await res.json().catch(() => ({}))) as ResolveResponse;
         if (aborted) return;
         if (res.ok && json?.data?.status === "active" && json.data.slug) {
           // Navigate to public event page; replace so the short link doesn't linger in history.
           navigate(`/p/${json.data.slug}`, { replace: true });
-          return;
-        }
-        if (res.status === 410 || json.status === "expired") {
-          setState({ type: "expired" });
           return;
         }
         if (res.status === 404 || json.status === "not_found") {
@@ -94,15 +89,6 @@ const ShortLinkRedirect: React.FC = () => {
           <div className="text-sm text-gray-600 dark:text-gray-400">
             Key: <code>{key}</code>
           </div>
-        </div>
-      )}
-      {state.type === "expired" && (
-        <div className="max-w-md space-y-3">
-          <h1 className="text-xl font-semibold">Link Expired</h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            The short link you used has expired. Please request a new share link
-            from the event page.
-          </p>
         </div>
       )}
       {state.type === "not_found" && (

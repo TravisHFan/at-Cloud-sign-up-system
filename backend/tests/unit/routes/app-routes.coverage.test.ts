@@ -68,20 +68,20 @@ describe("app.ts branch coverage", () => {
       expect(res.status).toBe(302);
       expect(res.headers.location).toContain("/p/test-event-slug");
       expect(ShortLinkMetricsService.increment).toHaveBeenCalledWith(
-        "redirect_active"
+        "redirect_active",
       );
     });
 
-    it("returns 410 for expired short link", async () => {
+    it("returns 404 for previously-expired short link (no expiration check)", async () => {
       vi.mocked(ShortLinkService.resolveKey).mockResolvedValue({
-        status: "expired",
+        status: "not_found",
       });
 
       const res = await request(app).get("/s/expired123");
-      expect(res.status).toBe(410);
-      expect(res.text).toBe("Short link expired");
+      expect(res.status).toBe(404);
+      expect(res.text).toBe("Short link not found");
       expect(ShortLinkMetricsService.increment).toHaveBeenCalledWith(
-        "redirect_expired"
+        "redirect_not_found",
       );
     });
 
@@ -94,13 +94,13 @@ describe("app.ts branch coverage", () => {
       expect(res.status).toBe(404);
       expect(res.text).toBe("Short link not found");
       expect(ShortLinkMetricsService.increment).toHaveBeenCalledWith(
-        "redirect_not_found"
+        "redirect_not_found",
       );
     });
 
     it("returns 500 on service error", async () => {
       vi.mocked(ShortLinkService.resolveKey).mockRejectedValue(
-        new Error("DB error")
+        new Error("DB error"),
       );
 
       const res = await request(app).get("/s/broken");
@@ -182,7 +182,7 @@ describe("app.ts branch coverage", () => {
         .set("Origin", "http://localhost:5173");
       // The file may not exist, but headers should be set
       expect(res.headers["access-control-allow-origin"]).toBe(
-        "http://localhost:5173"
+        "http://localhost:5173",
       );
       expect(res.headers["cross-origin-resource-policy"]).toBe("cross-origin");
     });

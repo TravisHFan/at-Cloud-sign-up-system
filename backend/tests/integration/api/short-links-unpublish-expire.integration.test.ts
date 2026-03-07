@@ -1,5 +1,6 @@
 /**
- * Integration test: short link becomes expired after event unpublish.
+ * Integration test: short links always redirect even after event unpublish.
+ * Expiration checks are removed — links persist and resolve as active.
  */
 import request from "supertest";
 import mongoose from "mongoose";
@@ -42,14 +43,14 @@ async function authHeaders() {
   return { user, headers: { Authorization: `Bearer test-${user._id}` } };
 }
 
-describe("Short Link expiration via unpublish", () => {
+describe("Short Link persistence after unpublish", () => {
   beforeEach(async () => {
     await ShortLink.deleteMany({});
     await Event.deleteMany({});
     await User.deleteMany({});
   });
 
-  it("returns 410 after event is unpublished", async () => {
+  it("still resolves after event is unpublished (no expiration check)", async () => {
     // Ensure we act as the creator (Administrator) so unpublish is authorized
     const creatorId = await ensureCreatorUser();
     const creatorHeaders = { Authorization: `Bearer test-admin-${creatorId}` };
@@ -73,18 +74,19 @@ describe("Short Link expiration via unpublish", () => {
       .send({})
       .expect(200);
 
-    // Now status should be expired (410)
-    const expired = await request(app)
+    // Short link should still resolve (200 active, not 410)
+    const res = await request(app)
       .get(`/api/public/short-links/${key}`)
-      .expect(410);
+      .expect(200);
 
-    expect(expired.body.status || expired.body.data?.status).toBe("expired");
+    expect(res.body.data?.status).toBe("active");
 
-    // Redirect should also 410
-    await request(app).get(`/s/${key}`).expect(410);
+    // Redirect should still work (302)
+    const redirectRes = await request(app).get(`/s/${key}`).expect(302);
+    expect(redirectRes.headers.location).toContain(event.publicSlug);
   });
 
-  it("restores the same short link after event is republished", async () => {
+  it("restores the same short link key after event is republished", async () => {
     // Ensure we act as the creator (Administrator)
     const creatorId = await ensureCreatorUser();
     const creatorHeaders = { Authorization: `Bearer test-admin-${creatorId}` };
@@ -110,10 +112,10 @@ describe("Short Link expiration via unpublish", () => {
       .send({})
       .expect(200);
 
-    // Confirm status is expired
+    // Short link still resolves even after unpublish
     await request(app)
       .get(`/api/public/short-links/${originalKey}`)
-      .expect(410);
+      .expect(200);
 
     // Republish event directly in DB (simulates publish action)
     await Event.findByIdAndUpdate(event._id, {

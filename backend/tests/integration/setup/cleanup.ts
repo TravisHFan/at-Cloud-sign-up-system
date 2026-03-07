@@ -137,3 +137,99 @@ export async function getConnectionStats() {
     return null;
   }
 }
+
+/**
+ * TEST EMAIL PATTERNS - Used to identify test users
+ * These patterns match emails created by test utilities:
+ * - @example.com (from createTestUser.ts)
+ * - @test.dev (from registrationFactory.ts)
+ * - @test.com (from various tests)
+ */
+export const TEST_EMAIL_PATTERNS = [
+  /@example\.com$/i,
+  /@test\.dev$/i,
+  /@test\.com$/i,
+];
+
+/**
+ * SAFE cleanup: Only deletes users with test email patterns
+ * Real users (with real email domains) are NEVER deleted.
+ *
+ * @returns Object with counts of deleted test users
+ */
+export async function cleanupTestUsersOnly(): Promise<{
+  deletedCount: number;
+  skippedRealUsers: number;
+}> {
+  try {
+    // Build regex pattern to match any test email domain
+    const testEmailRegex = {
+      $or: TEST_EMAIL_PATTERNS.map((pattern) => ({
+        email: { $regex: pattern.source, $options: "i" },
+      })),
+    };
+
+    // Count how many users would NOT be deleted (real users)
+    const totalUsers = await User.countDocuments({});
+    const testUserCount = await User.countDocuments(testEmailRegex);
+    const skippedRealUsers = totalUsers - testUserCount;
+
+    if (skippedRealUsers > 0) {
+      console.log(
+        `[Safe Cleanup] Preserving ${skippedRealUsers} real user(s) with non-test emails`,
+      );
+    }
+
+    // Only delete users matching test email patterns
+    const result = await User.deleteMany(testEmailRegex);
+
+    console.log(
+      `[Safe Cleanup] Deleted ${result.deletedCount} test user(s) matching test email patterns`,
+    );
+
+    await sleep(50);
+
+    return {
+      deletedCount: result.deletedCount,
+      skippedRealUsers,
+    };
+  } catch (error) {
+    console.error("[Safe Cleanup] Error cleaning test users:", error);
+    throw error;
+  }
+}
+
+/**
+ * SAFE comprehensive cleanup for globalTeardown
+ * Cleans all test data but preserves real users
+ */
+export async function safeCleanupAllTestData(): Promise<void> {
+  try {
+    console.log("[Safe Cleanup] Starting safe test data cleanup...");
+
+    // 1. Clean dependent documents first (these are all test data)
+    await Promise.all([
+      Registration.deleteMany({}),
+      GuestRegistration.deleteMany({}),
+    ]);
+    await sleep(50);
+
+    // 2. Clean event-related documents
+    await Promise.all([ShortLink.deleteMany({}), Message.deleteMany({})]);
+    await sleep(50);
+
+    // 3. Clean main documents
+    await Promise.all([Event.deleteMany({}), Program.deleteMany({})]);
+    await sleep(50);
+
+    // 4. SAFE user cleanup - only test users
+    const { deletedCount, skippedRealUsers } = await cleanupTestUsersOnly();
+
+    console.log(
+      `[Safe Cleanup] Complete. Test users removed: ${deletedCount}, Real users preserved: ${skippedRealUsers}`,
+    );
+  } catch (error) {
+    console.error("[Safe Cleanup] Error during safe cleanup:", error);
+    throw error;
+  }
+}

@@ -61,7 +61,7 @@ app.use(
   compression({
     level: 6,
     threshold: 1024,
-  })
+  }),
 );
 
 // Request monitoring (early)
@@ -170,12 +170,12 @@ app.use(
     res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
     res.setHeader(
       "Access-Control-Allow-Headers",
-      "Content-Type, Authorization, Accept"
+      "Content-Type, Authorization, Accept",
     );
     if (!res.getHeader("Cache-Control")) {
       res.setHeader(
         "Cache-Control",
-        "public, max-age=3600, stale-while-revalidate=300"
+        "public, max-age=3600, stale-while-revalidate=300",
       );
     }
     if (req.method === "OPTIONS") {
@@ -183,7 +183,7 @@ app.use(
       return;
     }
     next();
-  }
+  },
 );
 app.use("/uploads", express.static(staticUploadPath));
 
@@ -229,14 +229,6 @@ app.get("/s/:key", async (req, res) => {
         }
       }
       res.redirect(302, redirectTarget);
-      return;
-    }
-    if (result.status === "expired") {
-      ShortLinkMetricsService.increment("redirect_expired");
-      try {
-        shortLinkRedirectCounter.inc({ status: "expired" });
-      } catch {}
-      res.status(410).send("Short link expired");
       return;
     }
     ShortLinkMetricsService.increment("redirect_not_found");

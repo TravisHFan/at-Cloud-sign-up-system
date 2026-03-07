@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { useEffect, useState, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import apiClient from "../services/api";
@@ -28,6 +29,7 @@ export default function PublicEvent() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorModalMessage, setErrorModalMessage] = useState("");
+  const [showPastEventModal, setShowPastEventModal] = useState(false);
   // Ref to the registration section so we can scroll/focus after role selection
   const registerSectionRef = useRef<HTMLElement | null>(null);
   // Use shared singleton client (avoids duplicate configuration)
@@ -97,6 +99,15 @@ export default function PublicEvent() {
     }
   }, [data?.isAuthenticated, data?.id, navigate]);
 
+  // Show modal when viewing a past event
+  useEffect(() => {
+    if (!data) return;
+    const endDate = new Date(data.end);
+    if (!isNaN(endDate.getTime()) && endDate.getTime() < Date.now()) {
+      setShowPastEventModal(true);
+    }
+  }, [data]);
+
   if (loading) {
     return (
       <div
@@ -128,7 +139,7 @@ export default function PublicEvent() {
     data.time,
     data.endTime,
     data.timeZone,
-    data.endDate
+    data.endDate,
   );
 
   // Removed derivedTagline fallback to prevent duplicate purpose rendering under title.
@@ -229,7 +240,7 @@ export default function PublicEvent() {
               onClick={async () => {
                 try {
                   const response = await fetch(
-                    `/api/events/${data.id}/calendar`
+                    `/api/events/${data.id}/calendar`,
                   );
                   if (!response.ok) {
                     throw new Error("Failed to download calendar file");
@@ -241,7 +252,7 @@ export default function PublicEvent() {
                   link.href = url;
                   link.download = `${data.title.replace(
                     /[^a-zA-Z0-9]/g,
-                    "_"
+                    "_",
                   )}.ics`;
                   document.body.appendChild(link);
                   link.click();
@@ -419,14 +430,14 @@ export default function PublicEvent() {
                     isSelected
                       ? "border-blue-500 bg-blue-50"
                       : isFull
-                      ? `${
-                          isSingleRole ? "" : "border-gray-200"
-                        } bg-gray-50 opacity-60`
-                      : `${
-                          isSingleRole
-                            ? ""
-                            : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
-                        }`
+                        ? `${
+                            isSingleRole ? "" : "border-gray-200"
+                          } bg-gray-50 opacity-60`
+                        : `${
+                            isSingleRole
+                              ? ""
+                              : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
+                          }`
                   }`}
                   onClick={() => {
                     if (isFull || submitting) return;
@@ -486,8 +497,8 @@ export default function PublicEvent() {
                               capacityPercentage >= 90
                                 ? "bg-red-500"
                                 : capacityPercentage >= 70
-                                ? "bg-yellow-500"
-                                : "bg-green-500"
+                                  ? "bg-yellow-500"
+                                  : "bg-green-500"
                             }`}
                             style={{ width: `${capacityPercentage}%` }}
                           />
@@ -523,17 +534,17 @@ export default function PublicEvent() {
                         isSelected
                           ? "bg-blue-600 text-white border-blue-600"
                           : isFull
-                          ? "bg-gray-200 text-gray-500 border-gray-200 cursor-not-allowed"
-                          : "bg-white text-blue-700 border-blue-300 hover:bg-blue-50"
+                            ? "bg-gray-200 text-gray-500 border-gray-200 cursor-not-allowed"
+                            : "bg-white text-blue-700 border-blue-300 hover:bg-blue-50"
                       }`}
                     >
                       {isSelected
                         ? "Selected"
                         : isFull
-                        ? "Full"
-                        : isSingleRole
-                        ? "Get a Ticket"
-                        : "Select This Role"}
+                          ? "Full"
+                          : isSingleRole
+                            ? "Get a Ticket"
+                            : "Select This Role"}
                     </button>
                   </div>
                 </div>
@@ -601,7 +612,7 @@ export default function PublicEvent() {
                                 ...r,
                                 capacityRemaining: r.capacityRemaining - 1,
                               }
-                            : r
+                            : r,
                         ),
                       };
                     });
@@ -644,14 +655,14 @@ export default function PublicEvent() {
                             } for this event. To change roles, visit this event in your dashboard and remove one role before adding another.`
                           : `This email already has ${roleLimit} role${
                               roleLimit !== "1" ? "s" : ""
-                            } registered for this event. Log in to your account to manage or swap roles (remove one before adding another).`
+                            } registered for this event. Log in to your account to manage or swap roles (remove one before adding another).`,
                       );
                     } else {
                       // Guest (email-only) with 1-role limit
                       setResultMsg(
                         roleLimit === "1"
                           ? "You've already registered for this event. If you need to change your role, please contact the event organizer."
-                          : `You've already registered for the maximum number of roles (${roleLimit}) for this event. If you need to make changes, please contact the event organizer.`
+                          : `You've already registered for the maximum number of roles (${roleLimit}) for this event. If you need to make changes, please contact the event organizer.`,
                       );
                     }
                   } else {
@@ -776,7 +787,7 @@ export default function PublicEvent() {
                     const isGuestLimit = lc.includes("maximum number of roles");
                     const isUserLimit =
                       lc.includes(
-                        "you have already registered for the maximum"
+                        "you have already registered for the maximum",
                       ) || lc.includes("this email already has 3 roles");
                     if (!(isGuestLimit || isUserLimit)) return null;
                     return (
@@ -840,6 +851,49 @@ export default function PublicEvent() {
         type="error"
         buttonText="Cancel"
       />
+
+      {/* Past Event Modal */}
+      {showPastEventModal &&
+        createPortal(
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+            data-testid="past-event-modal-overlay"
+          >
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="p-2 rounded-full bg-blue-50">
+                  <Icon name="info-circle" className="w-6 h-6 text-blue-600" />
+                </div>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Past Event
+                </h2>
+              </div>
+              <p className="text-sm text-gray-600 mb-6">
+                This is a past event. Please log in to view event details and
+                watch YouTube replays for this and other past events.
+              </p>
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowPastEventModal(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  data-testid="past-event-modal-cancel"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() =>
+                    navigate(`/login?redirect=/dashboard/event/${data.id}`)
+                  }
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  data-testid="past-event-modal-login"
+                >
+                  Login
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

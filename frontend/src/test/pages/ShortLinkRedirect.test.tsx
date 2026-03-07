@@ -30,7 +30,7 @@ describe("ShortLinkRedirect page", () => {
         <Routes>
           <Route path="/s/:key" element={<ShortLinkRedirect />} />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     expect(screen.getByText(/resolving link/i)).toBeInTheDocument();
@@ -57,7 +57,7 @@ describe("ShortLinkRedirect page", () => {
         <Routes>
           <Route path="/s/:key" element={<ShortLinkRedirect />} />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     await waitFor(() => {
@@ -67,14 +67,14 @@ describe("ShortLinkRedirect page", () => {
     });
   });
 
-  it("shows expired state for HTTP 410 response", async () => {
+  it("shows not found state for HTTP 410 response (legacy expired)", async () => {
     mockFetch.mockResolvedValue({
       ok: false,
       status: 410,
       json: async () => ({
         success: false,
-        status: "expired",
-        message: "Link has expired",
+        status: "not_found",
+        message: "Link not found",
       }),
     } as Response);
 
@@ -83,41 +83,11 @@ describe("ShortLinkRedirect page", () => {
         <Routes>
           <Route path="/s/:key" element={<ShortLinkRedirect />} />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/link expired/i)).toBeInTheDocument();
-    });
-
-    expect(
-      screen.getByText(/the short link you used has expired/i)
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(/please request a new share link/i)
-    ).toBeInTheDocument();
-  });
-
-  it("shows expired state when response status is 'expired'", async () => {
-    mockFetch.mockResolvedValue({
-      ok: false,
-      status: 200,
-      json: async () => ({
-        success: false,
-        status: "expired",
-      }),
-    } as Response);
-
-    render(
-      <MemoryRouter initialEntries={["/s/exp456"]}>
-        <Routes>
-          <Route path="/s/:key" element={<ShortLinkRedirect />} />
-        </Routes>
-      </MemoryRouter>
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText(/link expired/i)).toBeInTheDocument();
+      expect(screen.getByText(/link not found/i)).toBeInTheDocument();
     });
   });
 
@@ -137,7 +107,7 @@ describe("ShortLinkRedirect page", () => {
         <Routes>
           <Route path="/s/:key" element={<ShortLinkRedirect />} />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     await waitFor(() => {
@@ -145,10 +115,10 @@ describe("ShortLinkRedirect page", () => {
     });
 
     expect(
-      screen.getByText(/we couldn't find a published event/i)
+      screen.getByText(/we couldn't find a published event/i),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/double-check the url or request a fresh share link/i)
+      screen.getByText(/double-check the url or request a fresh share link/i),
     ).toBeInTheDocument();
   });
 
@@ -167,7 +137,7 @@ describe("ShortLinkRedirect page", () => {
         <Routes>
           <Route path="/s/:key" element={<ShortLinkRedirect />} />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     await waitFor(() => {
@@ -183,7 +153,7 @@ describe("ShortLinkRedirect page", () => {
         <Routes>
           <Route path="/s/:key" element={<ShortLinkRedirect />} />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     await waitFor(() => {
@@ -191,7 +161,7 @@ describe("ShortLinkRedirect page", () => {
     });
 
     expect(
-      screen.getByText(/network error resolving short link/i)
+      screen.getByText(/network error resolving short link/i),
     ).toBeInTheDocument();
     expect(screen.getByText(/network connection failed/i)).toBeInTheDocument();
   });
@@ -211,7 +181,7 @@ describe("ShortLinkRedirect page", () => {
         <Routes>
           <Route path="/s/:key" element={<ShortLinkRedirect />} />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     await waitFor(() => {
@@ -219,7 +189,7 @@ describe("ShortLinkRedirect page", () => {
     });
 
     expect(
-      screen.getByText(/database connection timeout/i)
+      screen.getByText(/database connection timeout/i),
     ).toBeInTheDocument();
   });
 
@@ -229,7 +199,7 @@ describe("ShortLinkRedirect page", () => {
         <Routes>
           <Route path="/s/:key?" element={<ShortLinkRedirect />} />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     await waitFor(() => {
@@ -247,7 +217,7 @@ describe("ShortLinkRedirect page", () => {
         <Routes>
           <Route path="/s/:key" element={<ShortLinkRedirect />} />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     // Wait for initial error
@@ -274,7 +244,7 @@ describe("ShortLinkRedirect page", () => {
         <Routes>
           <Route path="/s/:key" element={<ShortLinkRedirect />} />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     await waitFor(() => {
@@ -282,7 +252,7 @@ describe("ShortLinkRedirect page", () => {
     });
 
     expect(
-      screen.getByText(/unexpected response \(status 500\)/i)
+      screen.getByText(/unexpected response \(status 500\)/i),
     ).toBeInTheDocument();
   });
 
@@ -294,7 +264,7 @@ describe("ShortLinkRedirect page", () => {
         <Routes>
           <Route path="/s/:key" element={<ShortLinkRedirect />} />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     expect(screen.getByText(/short link client fallback/i)).toBeInTheDocument();
@@ -316,7 +286,7 @@ describe("ShortLinkRedirect page", () => {
         <Routes>
           <Route path="/s/:key" element={<ShortLinkRedirect />} />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     unmount();
