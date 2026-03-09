@@ -40,7 +40,7 @@ describe("Uploads API - Integration Tests", () => {
     if (mongoose.connection.readyState === 0) {
       await mongoose.connect(
         process.env.MONGODB_TEST_URI ||
-          "mongodb://127.0.0.1:27017/atcloud-signup-test"
+          "mongodb://127.0.0.1:27017/atcloud-signup-test",
       );
       openedLocal = true;
     }
@@ -57,14 +57,14 @@ describe("Uploads API - Integration Tests", () => {
     // Verify test image exists (copy from project if needed)
     const sourceImagePath = path.join(
       __dirname,
-      "../../../../frontend/dist/Cloud-removebg.png"
+      "../../../../frontend/dist/Cloud-removebg.png",
     );
     if (!fs.existsSync(validImagePath)) {
       if (fs.existsSync(sourceImagePath)) {
         fs.copyFileSync(sourceImagePath, validImagePath);
       } else {
         throw new Error(
-          `Source image not found at ${sourceImagePath}. Cannot create test fixture.`
+          `Source image not found at ${sourceImagePath}. Cannot create test fixture.`,
         );
       }
     }
@@ -99,7 +99,7 @@ describe("Uploads API - Integration Tests", () => {
 
     if (!adminRegister.body.success) {
       throw new Error(
-        `Admin registration failed: ${adminRegister.body.message}`
+        `Admin registration failed: ${adminRegister.body.message}`,
       );
     }
 
@@ -144,7 +144,7 @@ describe("Uploads API - Integration Tests", () => {
 
     if (!leaderRegister.body.success) {
       throw new Error(
-        `Leader registration failed: ${leaderRegister.body.message}`
+        `Leader registration failed: ${leaderRegister.body.message}`,
       );
     }
 
@@ -189,7 +189,7 @@ describe("Uploads API - Integration Tests", () => {
 
     if (!memberRegister.body.success) {
       throw new Error(
-        `Member registration failed: ${memberRegister.body.message}`
+        `Member registration failed: ${memberRegister.body.message}`,
       );
     }
 
@@ -445,7 +445,7 @@ describe("Uploads API - Integration Tests", () => {
               if (attempt < maxRetries - 1) {
                 // Wait a bit before retrying (exponential backoff)
                 await new Promise((resolve) =>
-                  setTimeout(resolve, 100 * Math.pow(2, attempt))
+                  setTimeout(resolve, 100 * Math.pow(2, attempt)),
                 );
                 continue;
               }
@@ -465,46 +465,11 @@ describe("Uploads API - Integration Tests", () => {
       });
 
       it("should reject non-admin users (leaders)", async () => {
-        // Add retry logic to handle EPIPE errors (socket issues)
-        let response;
-        let lastError;
-        const maxRetries = 3;
-
-        for (let attempt = 0; attempt < maxRetries; attempt++) {
-          try {
-            response = await request(app)
-              .post("/api/uploads/avatar")
-              .set("Authorization", `Bearer ${leaderToken}`)
-              .attach("avatar", validImagePath)
-              .timeout(5000); // 5 second timeout
-
-            // If we got a response, break out of retry loop
-            break;
-          } catch (error: any) {
-            lastError = error;
-            // Only retry on EPIPE or network errors
-            if (
-              error.code === "EPIPE" ||
-              error.code === "ECONNRESET" ||
-              error.message?.includes("socket")
-            ) {
-              if (attempt < maxRetries - 1) {
-                // Wait a bit before retrying (exponential backoff)
-                await new Promise((resolve) =>
-                  setTimeout(resolve, 100 * Math.pow(2, attempt))
-                );
-                continue;
-              }
-            }
-            // If it's not a network error or we're out of retries, throw
-            throw error;
-          }
-        }
-
-        // If we never got a response, throw the last error
-        if (!response) {
-          throw lastError;
-        }
+        // Don't attach a file — requireAdmin rejects before multer runs,
+        // and sending a file causes EPIPE when the server closes early.
+        const response = await request(app)
+          .post("/api/uploads/avatar")
+          .set("Authorization", `Bearer ${leaderToken}`);
 
         expect(response.status).toBe(403);
         expect(response.body.success).toBe(false);
@@ -661,7 +626,7 @@ describe("Uploads API - Integration Tests", () => {
 
       // Some requests should succeed, but if limit is exceeded, expect 429
       const rateLimitedResponses = responses.filter(
-        (r) => r && r.status === 429
+        (r) => r && r.status === 429,
       );
 
       // Just verify that rate limiting is active
@@ -698,7 +663,7 @@ describe("Uploads API - Integration Tests", () => {
 
       // Some requests should succeed, but if limit is exceeded, expect 429
       const rateLimitedResponses = responses.filter(
-        (r) => r && r.status === 429
+        (r) => r && r.status === 429,
       );
 
       if (rateLimitedResponses.length > 0 && rateLimitedResponses[0].body) {

@@ -50,6 +50,7 @@ export interface GuestSummary {
   id?: string;
   _id?: string;
   fullName: string;
+  gender?: "male" | "female";
   email?: string;
   phone?: string;
   notes?: string;

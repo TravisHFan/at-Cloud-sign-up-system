@@ -8,13 +8,12 @@ import ShortLinkService, {
 import ShortLink from "../../../src/models/ShortLink";
 import Event from "../../../src/models/Event";
 import User from "../../../src/models/User";
-import { prometheusRegistry } from "../../../src/services/PrometheusMetricsService";
 import { createPublishedEvent } from "../../test-utils/eventTestHelpers";
 import { ensureIntegrationDB } from "../setup/connect";
 
 /**
- * Focused integration test: ensure a cached positive entry that has passed its per-link expiry
- * is evicted lazily on read and increments stale eviction counter, returning 410.
+ * Short links no longer expire. This test verifies that stale cached entries
+ * still resolve successfully (200 active) after cache expiry is forced.
  */
 
 beforeAll(async () => {
@@ -53,7 +52,7 @@ describe("Short Links stale cached entry eviction", () => {
     ShortLinkTestHooks.clearCache();
   });
 
-  it("evicts stale cached positive entry on lookup and reports metric", async () => {
+  it("resolves link as active even after cache expiry is forced", async () => {
     const { headers } = await authHeaders();
     const event = await createPublishedEvent();
     // Create short link (active)
@@ -70,33 +69,16 @@ describe("Short Links stale cached entry eviction", () => {
     // Force the cached entry's per-link expiry into the past without touching DB record
     ShortLinkTestHooks.forceCacheExpiry(key);
 
-    // Capture metric value before
-    const beforeMetrics = await prometheusRegistry.getSingleMetricAsString(
-      "short_link_cache_stale_evictions_total"
-    );
-    const beforeMatch = beforeMetrics.match(
-      /short_link_cache_stale_evictions_total\{reason="expired"}\s+(\d+)/
-    );
-    const beforeVal = beforeMatch ? parseInt(beforeMatch[1], 10) : 0;
-
-    // Also expire in DB so that post-eviction path returns 410 (expired vs 404)
+    // Mark DB record as expired with past expiresAt
     await ShortLink.updateMany(
       { key },
-      { $set: { isExpired: true, expiresAt: new Date(Date.now() - 1000) } }
+      { $set: { isExpired: true, expiresAt: new Date(Date.now() - 1000) } },
     );
 
-    // Second lookup should detect stale cached entry (expiresAtMs past), evict, increment metric,
-    // then DB lookup sees expired document -> 410
-    await request(app).get(`/api/public/short-links/${key}`).expect(410);
-
-    const afterMetrics = await prometheusRegistry.getSingleMetricAsString(
-      "short_link_cache_stale_evictions_total"
-    );
-    const afterMatch = afterMetrics.match(
-      /short_link_cache_stale_evictions_total\{reason="expired"}\s+(\d+)/
-    );
-    const afterVal = afterMatch ? parseInt(afterMatch[1], 10) : 0;
-
-    expect(afterVal).toBe(beforeVal + 1);
+    // Should still resolve as active (200), not expired (410)
+    const res = await request(app)
+      .get(`/api/public/short-links/${key}`)
+      .expect(200);
+    expect(res.body.data?.status).toBe("active");
   });
 });

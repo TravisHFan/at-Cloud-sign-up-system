@@ -1,5 +1,5 @@
 import type { EventData } from "../types/event";
-import { eventService } from "../services/api";
+import { eventService, guestService } from "../services/api";
 import { apiFetch } from "../lib/apiClient";
 import * as XLSX from "xlsx";
 
@@ -57,7 +57,7 @@ export function useEventActions({
         "Failed to download calendar file. Please try again.",
         {
           title: "Download Failed",
-        }
+        },
       );
     }
   };
@@ -75,16 +75,47 @@ export function useEventActions({
           "First Name": signup.firstName || "",
           "Last Name": signup.lastName || "",
           Username: signup.username,
+          Email: signup.email || "",
+          Phone: signup.phone || "",
           "System Authorization Level": signup.systemAuthorizationLevel || "",
           "Role in @Cloud": signup.roleInAtCloud || "",
           Gender: signup.gender || "",
           "Event Role": role.name,
           "Role Description": role.description,
           "Signup Notes": signup.notes || "",
-          "User ID": signup.userId,
         });
       });
     });
+
+    // Fetch guest registrations and add to signup data
+    let guestCount = 0;
+    try {
+      const guestsResult = await guestService.getEventGuests(event.id);
+      if (guestsResult.guests.length > 0) {
+        // Build a roleId → roleName lookup from event roles
+        const roleMap = new Map(event.roles.map((r) => [r.id, r.name]));
+
+        guestsResult.guests.forEach((guest) => {
+          signupData.push({
+            "First Name": guest.fullName,
+            "Last Name": "",
+            Username: "(Guest)",
+            Email: guest.email || "",
+            Phone: guest.phone || "",
+            "System Authorization Level": "",
+            "Role in @Cloud": "",
+            Gender: guest.gender || "",
+            "Event Role": roleMap.get(guest.roleId) || "",
+            "Role Description": "",
+            "Signup Notes": guest.notes || "",
+          });
+        });
+        guestCount = guestsResult.guests.length;
+      }
+    } catch (err) {
+      console.error("Failed to fetch guests for export:", err);
+      // Continue with export even if guests fetch fails
+    }
 
     // Create workbook
     const wb = XLSX.utils.book_new();
@@ -127,7 +158,7 @@ export function useEventActions({
         {
           title: "No Data to Export",
           autoCloseDelay: 4000,
-        }
+        },
       );
       return;
     }
@@ -136,7 +167,7 @@ export function useEventActions({
     const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
     const filename = `${event.title.replace(
       /\s+/g,
-      "_"
+      "_",
     )}_signups_${today}.xlsx`;
 
     // Write and download the file
@@ -144,10 +175,14 @@ export function useEventActions({
 
     // Build success message
     const parts: string[] = [];
-    if (signupData.length > 0) {
+    const registeredCount = signupData.length - guestCount;
+    if (registeredCount > 0) {
       parts.push(
-        `${signupData.length} signup${signupData.length !== 1 ? "s" : ""}`
+        `${registeredCount} signup${registeredCount !== 1 ? "s" : ""}`,
       );
+    }
+    if (guestCount > 0) {
+      parts.push(`${guestCount} guest${guestCount !== 1 ? "s" : ""}`);
     }
     if (purchaseCount > 0) {
       parts.push(`${purchaseCount} purchase${purchaseCount !== 1 ? "s" : ""}`);
@@ -182,7 +217,7 @@ export function useEventActions({
             onClick: () => navigate("/dashboard/upcoming"),
             variant: "primary",
           },
-        }
+        },
       );
 
       // Navigate back to upcoming events
@@ -274,7 +309,7 @@ export function useEventActions({
             },
             variant: "secondary",
           },
-        }
+        },
       );
 
       // Close management mode if open

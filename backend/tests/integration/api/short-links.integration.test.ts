@@ -130,7 +130,7 @@ describe("Short Links API", () => {
     expect(statusRes.body.data.slug).toBe(event.publicSlug);
   });
 
-  it("GET status returns 410 for expired key", async () => {
+  it("GET status returns 200 (active) even for DB-expired key (no expiration)", async () => {
     const { headers } = await authHeaders();
     const event = await createPublishedEvent();
     const createRes = await request(app)
@@ -140,16 +140,17 @@ describe("Short Links API", () => {
       .expect(201);
     const key = createRes.body.data.key;
 
-    // Expire it directly
+    // Mark as expired in DB — should have no effect since expiration is removed
     await ShortLink.updateMany(
       { key },
-      { $set: { isExpired: true, expiresAt: new Date(Date.now() - 1000) } }
+      { $set: { isExpired: true, expiresAt: new Date(Date.now() - 1000) } },
     );
-    // Clear cache so that manual DB expiration is reflected (production expiration
-    // uses service which invalidates cache; this simulates that behavior for the test)
     ShortLinkTestHooks.clearCache();
 
-    await request(app).get(`/api/public/short-links/${key}`).expect(410);
+    const res = await request(app)
+      .get(`/api/public/short-links/${key}`)
+      .expect(200);
+    expect(res.body.data.status).toBe("active");
   });
 
   it("GET status returns 404 for unknown key", async () => {
@@ -178,7 +179,7 @@ describe("Short Links Redirect /s/:key", () => {
     expect(res.headers.location).toMatch(new RegExp(event.publicSlug));
   });
 
-  it("returns 410 for expired key redirect", async () => {
+  it("redirects (302) even for DB-expired key (no expiration)", async () => {
     const { headers } = await authHeaders();
     const event = await createPublishedEvent();
     const createRes = await request(app)
@@ -189,11 +190,12 @@ describe("Short Links Redirect /s/:key", () => {
     const key = createRes.body.data.key;
     await ShortLink.updateMany(
       { key },
-      { $set: { isExpired: true, expiresAt: new Date(Date.now() - 1000) } }
+      { $set: { isExpired: true, expiresAt: new Date(Date.now() - 1000) } },
     );
     ShortLinkTestHooks.clearCache();
 
-    await request(app).get(`/s/${key}`).expect(410);
+    const res = await request(app).get(`/s/${key}`).expect(302);
+    expect(res.headers.location).toMatch(new RegExp(event.publicSlug));
   });
 
   it("returns 404 for unknown key redirect", async () => {
