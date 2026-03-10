@@ -277,7 +277,7 @@ export default function EventDetail() {
         setShowShareModal={setShowShareModal}
         setShowDeletionModal={setShowDeletionModal}
         handleDownloadCalendar={handleDownloadCalendar}
-        showGetTicketButton={showRestrictedView}
+        showGetTicketButton={showRestrictedView && !isPassedEvent}
       />
       <div className="bg-white rounded-lg shadow-sm p-6 space-y-6">
         {/* Thank you message for users who purchased the event */}
@@ -527,34 +527,37 @@ export default function EventDetail() {
           </div>
 
           {/* Pricing Section for Paid Events - Show when user needs to purchase */}
-          {showRestrictedView && event.pricing && !event.pricing.isFree && (
-            <div className="border-t pt-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Pricing
-              </h3>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-2xl font-bold text-gray-900">
-                      ${(event.pricing.price! / 100).toFixed(2)}
-                    </p>
-                    <p className="text-sm text-gray-600 mt-1">per ticket</p>
+          {showRestrictedView &&
+            !isPassedEvent &&
+            event.pricing &&
+            !event.pricing.isFree && (
+              <div className="border-t pt-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Pricing
+                </h3>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <p className="text-2xl font-bold text-gray-900">
+                        ${(event.pricing.price! / 100).toFixed(2)}
+                      </p>
+                      <p className="text-sm text-gray-600 mt-1">per ticket</p>
+                    </div>
+                    <Icon name="lock" className="w-12 h-12 text-blue-600" />
                   </div>
-                  <Icon name="lock" className="w-12 h-12 text-blue-600" />
+                  <p className="text-gray-700 mb-4">
+                    Purchase a ticket to view full event details, access meeting
+                    information, and register for roles.
+                  </p>
+                  <button
+                    onClick={() => navigate(`/dashboard/events/${id}/purchase`)}
+                    className="w-full bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 font-semibold transition-colors"
+                  >
+                    Get Ticket Now
+                  </button>
                 </div>
-                <p className="text-gray-700 mb-4">
-                  Purchase a ticket to view full event details, access meeting
-                  information, and register for roles.
-                </p>
-                <button
-                  onClick={() => navigate(`/dashboard/events/${id}/purchase`)}
-                  className="w-full bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 font-semibold transition-colors"
-                >
-                  Get Ticket Now
-                </button>
               </div>
-            </div>
-          )}
+            )}
 
           {/* All content below this point is hidden for users who need to purchase */}
           {!showRestrictedView && (

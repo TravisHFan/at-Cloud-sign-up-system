@@ -359,13 +359,20 @@ export default function PublicEvent() {
                 </div>
                 <p className="text-sm text-gray-600">per ticket</p>
               </div>
-              <Link
-                to={`/login?redirect=/dashboard/event/${data.id}`}
-                className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-lg hover:shadow-xl transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                <Icon name="ticket" className="mr-2" />
-                Get Ticket Now
-              </Link>
+              {(() => {
+                const endDate = new Date(data.end);
+                const isPast =
+                  !isNaN(endDate.getTime()) && endDate.getTime() < Date.now();
+                return isPast ? null : (
+                  <Link
+                    to={`/login?redirect=/dashboard/event/${data.id}`}
+                    className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-lg hover:shadow-xl transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  >
+                    <Icon name="ticket" className="mr-2" />
+                    Get Ticket Now
+                  </Link>
+                );
+              })()}
             </div>
             <div className="mt-4 pt-4 border-t border-blue-200">
               <p className="text-sm text-gray-700">
