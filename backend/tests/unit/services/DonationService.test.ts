@@ -255,6 +255,42 @@ describe("DonationService", () => {
         }),
       );
     });
+
+    it("should set pendingExpiresAt ~30 days in the future", async () => {
+      const mockUser = {
+        _id: mockUserId,
+        email: "test@example.com",
+        stripeCustomerId: "cus_test123",
+      };
+
+      mockFindById.mockResolvedValue(mockUser);
+      mockCreate.mockResolvedValue({ _id: mockDonationId });
+
+      const before = new Date();
+      await DonationService.createDonation({
+        userId: mockUserId,
+        amount: 5000,
+        type: "one-time" as DonationType,
+        giftDate: new Date("2025-12-25"),
+      });
+      const after = new Date();
+
+      const createdData = mockCreate.mock.calls[0][0];
+      expect(createdData.pendingExpiresAt).toBeInstanceOf(Date);
+
+      // Should be ~30 days from now (within a few seconds tolerance)
+      const expectedMin = new Date(before);
+      expectedMin.setDate(expectedMin.getDate() + 30);
+      const expectedMax = new Date(after);
+      expectedMax.setDate(expectedMax.getDate() + 30);
+
+      expect(createdData.pendingExpiresAt.getTime()).toBeGreaterThanOrEqual(
+        expectedMin.getTime() - 1000,
+      );
+      expect(createdData.pendingExpiresAt.getTime()).toBeLessThanOrEqual(
+        expectedMax.getTime() + 1000,
+      );
+    });
   });
 
   describe("getUserDonationHistory", () => {

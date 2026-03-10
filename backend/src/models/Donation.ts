@@ -49,6 +49,9 @@ export interface IDonation extends Document {
     last4?: string;
   };
 
+  // Auto-cleanup for stale pending donations (TTL)
+  pendingExpiresAt?: Date;
+
   // Metadata
   createdAt: Date;
   updatedAt: Date;
@@ -159,10 +162,15 @@ const DonationSchema = new Schema<IDonation>(
       cardBrand: String,
       last4: String,
     },
+
+    // TTL field: when set, MongoDB auto-deletes the document after this date
+    pendingExpiresAt: {
+      type: Date,
+    },
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 // Indexes for efficient queries
@@ -170,9 +178,12 @@ DonationSchema.index({ userId: 1, status: 1 });
 DonationSchema.index({ userId: 1, type: 1 });
 DonationSchema.index({ nextPaymentDate: 1 });
 
+// TTL index: auto-delete pending donations 30 days after creation
+DonationSchema.index({ pendingExpiresAt: 1 }, { expireAfterSeconds: 0 });
+
 // Virtual for calculating remaining occurrences if not set
 DonationSchema.virtual("calculatedRemainingOccurrences").get(function (
-  this: IDonation
+  this: IDonation,
 ) {
   if (this.endAfterOccurrences && this.currentOccurrence !== undefined) {
     return Math.max(0, this.endAfterOccurrences - this.currentOccurrence);

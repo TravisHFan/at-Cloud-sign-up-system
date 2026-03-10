@@ -120,6 +120,7 @@ describe("DonationWebhookController", () => {
           stripeCustomerId: null,
           stripeSubscriptionId: null,
           status: "pending",
+          pendingExpiresAt: new Date(),
           endDate: null,
           save: vi.fn(),
         };
@@ -138,6 +139,7 @@ describe("DonationWebhookController", () => {
         expect(mockDonation.stripeCustomerId).toBe("cus_123");
         expect(mockDonation.stripeSubscriptionId).toBe("sub_123");
         expect(mockDonation.status).toBe("active");
+        expect(mockDonation.pendingExpiresAt).toBeUndefined();
         expect(mockDonation.save).toHaveBeenCalled();
       });
 
@@ -206,6 +208,7 @@ describe("DonationWebhookController", () => {
           amount: 2500,
           type: "one-time",
           status: "pending",
+          pendingExpiresAt: new Date(),
           save: vi.fn(),
         };
 
@@ -254,6 +257,7 @@ describe("DonationWebhookController", () => {
         });
 
         expect(mockDonation.status).toBe("completed");
+        expect(mockDonation.pendingExpiresAt).toBeUndefined();
         expect(mockDonation.save).toHaveBeenCalled();
       });
 

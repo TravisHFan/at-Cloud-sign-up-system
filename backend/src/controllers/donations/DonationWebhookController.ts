@@ -23,14 +23,14 @@ export default class DonationWebhookController {
    * Processes both one-time and recurring donation checkouts
    */
   static async handleDonationCheckout(
-    session: Stripe.Checkout.Session
+    session: Stripe.Checkout.Session,
   ): Promise<void> {
     const donationId = session.metadata?.donationId;
     const userId = session.metadata?.userId;
 
     if (!donationId || !userId) {
       console.error(
-        "Missing donationId or userId in checkout session metadata"
+        "Missing donationId or userId in checkout session metadata",
       );
       return;
     }
@@ -48,6 +48,9 @@ export default class DonationWebhookController {
       donation.stripeCustomerId = session.customer as string;
     }
 
+    // Payment confirmed — clear the TTL so MongoDB won't auto-delete
+    donation.pendingExpiresAt = undefined;
+
     // For subscription mode, get subscription ID
     if (session.mode === "subscription" && session.subscription) {
       donation.stripeSubscriptionId = session.subscription as string;
@@ -63,7 +66,7 @@ export default class DonationWebhookController {
       if (donation.endDate) {
         try {
           const cancelAt = Math.floor(
-            new Date(donation.endDate).getTime() / 1000
+            new Date(donation.endDate).getTime() / 1000,
           );
 
           const { stripe } = await import("../../services/stripeService");
@@ -71,10 +74,10 @@ export default class DonationWebhookController {
             donation.stripeSubscriptionId as string,
             {
               cancel_at: cancelAt,
-            }
+            },
           );
           console.log(
-            `Subscription ${donation.stripeSubscriptionId} scheduled to cancel at ${donation.endDate}`
+            `Subscription ${donation.stripeSubscriptionId} scheduled to cancel at ${donation.endDate}`,
           );
         } catch (error) {
           console.error("Error scheduling subscription cancellation:", error);
@@ -126,13 +129,12 @@ export default class DonationWebhookController {
 
       // Send donation receipt email
       try {
-        const { DonationEmailService } = await import(
-          "../../services/email/domains/DonationEmailService"
-        );
+        const { DonationEmailService } =
+          await import("../../services/email/domains/DonationEmailService");
 
         // Get user info for email
         const user = await import("../../models/User").then((m) =>
-          m.default.findById(userId)
+          m.default.findById(userId),
         );
         const userEmail = session.customer_details?.email || user?.email || "";
         const userName =
@@ -162,7 +164,7 @@ export default class DonationWebhookController {
    * Records transaction and updates last gift date
    */
   static async handleInvoicePaymentSucceeded(
-    invoice: Stripe.Invoice
+    invoice: Stripe.Invoice,
   ): Promise<void> {
     // Get subscription ID from invoice
     const subscriptionId =
@@ -206,7 +208,7 @@ export default class DonationWebhookController {
       });
       if (existingTransaction) {
         console.log(
-          `Transaction already recorded for payment intent ${paymentIntentId}, skipping`
+          `Transaction already recorded for payment intent ${paymentIntentId}, skipping`,
         );
         return;
       }
@@ -268,13 +270,12 @@ export default class DonationWebhookController {
 
     // Send donation receipt email for recurring payment
     try {
-      const { DonationEmailService } = await import(
-        "../../services/email/domains/DonationEmailService"
-      );
+      const { DonationEmailService } =
+        await import("../../services/email/domains/DonationEmailService");
 
       // Get user info for email
       const user = await import("../../models/User").then((m) =>
-        m.default.findById(donation.userId)
+        m.default.findById(donation.userId),
       );
 
       // Try to get customer email from Stripe if not in our database
@@ -283,7 +284,7 @@ export default class DonationWebhookController {
         try {
           const { stripe } = await import("../../services/stripeService");
           const customer = await stripe.customers.retrieve(
-            donation.stripeCustomerId as string
+            donation.stripeCustomerId as string,
           );
           if (
             customer &&
@@ -318,7 +319,7 @@ export default class DonationWebhookController {
         console.log(`Recurring donation receipt email sent to ${userEmail}`);
       } else {
         console.warn(
-          `No email found for user ${donation.userId}, skipping receipt email`
+          `No email found for user ${donation.userId}, skipping receipt email`,
         );
       }
     } catch (error) {
@@ -332,7 +333,7 @@ export default class DonationWebhookController {
    * Marks donation as failed
    */
   static async handleInvoicePaymentFailed(
-    invoice: Stripe.Invoice
+    invoice: Stripe.Invoice,
   ): Promise<void> {
     const subscriptionId =
       typeof (invoice as unknown as { subscription?: string | { id?: string } })
@@ -408,7 +409,7 @@ export default class DonationWebhookController {
    * Updates donation status based on subscription state
    */
   static async handleSubscriptionUpdated(
-    subscription: Stripe.Subscription
+    subscription: Stripe.Subscription,
   ): Promise<void> {
     const donation = await Donation.findOne({
       stripeSubscriptionId: subscription.id,
@@ -450,7 +451,7 @@ export default class DonationWebhookController {
    * Marks donation as cancelled
    */
   static async handleSubscriptionDeleted(
-    subscription: Stripe.Subscription
+    subscription: Stripe.Subscription,
   ): Promise<void> {
     const donation = await Donation.findOne({
       stripeSubscriptionId: subscription.id,

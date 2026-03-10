@@ -89,7 +89,7 @@ describe("Donation Model", () => {
           status: "pending" as DonationStatus,
           giftDate: new Date(),
           stripeCustomerId: "cus_test",
-        })
+        }),
       ).rejects.toThrow();
     });
 
@@ -101,7 +101,7 @@ describe("Donation Model", () => {
           status: "pending" as DonationStatus,
           giftDate: new Date(),
           stripeCustomerId: "cus_test",
-        })
+        }),
       ).rejects.toThrow();
     });
 
@@ -113,7 +113,7 @@ describe("Donation Model", () => {
           status: "pending" as DonationStatus,
           giftDate: new Date(),
           stripeCustomerId: "cus_test",
-        })
+        }),
       ).rejects.toThrow();
     });
 
@@ -125,7 +125,7 @@ describe("Donation Model", () => {
           type: "one-time" as DonationType,
           status: "pending" as DonationStatus,
           giftDate: new Date(),
-        })
+        }),
       ).rejects.toThrow();
     });
 
@@ -138,7 +138,7 @@ describe("Donation Model", () => {
           status: "pending" as DonationStatus,
           giftDate: new Date(),
           stripeCustomerId: "cus_test",
-        })
+        }),
       ).rejects.toThrow();
     });
 
@@ -151,7 +151,7 @@ describe("Donation Model", () => {
           status: "pending" as DonationStatus,
           giftDate: new Date(),
           stripeCustomerId: "cus_test",
-        })
+        }),
       ).rejects.toThrow();
     });
   });
@@ -194,7 +194,7 @@ describe("Donation Model", () => {
           status: "pending" as DonationStatus,
           giftDate: new Date(),
           stripeCustomerId: "cus_test",
-        })
+        }),
       ).rejects.toThrow();
     });
   });
@@ -236,7 +236,7 @@ describe("Donation Model", () => {
           startDate: new Date(),
           nextPaymentDate: new Date(),
           stripeCustomerId: "cus_test",
-        })
+        }),
       ).rejects.toThrow();
     });
   });
@@ -276,7 +276,7 @@ describe("Donation Model", () => {
           status: "invalid_status" as DonationStatus,
           giftDate: new Date(),
           stripeCustomerId: "cus_test",
-        })
+        }),
       ).rejects.toThrow();
     });
   });
@@ -406,10 +406,56 @@ describe("Donation Model", () => {
     it("should have userId index for efficient queries", async () => {
       const indexes = await Donation.collection.getIndexes();
       const userIdIndex = Object.values(indexes).find((index: any) =>
-        index.some((field: any) => field[0] === "userId")
+        index.some((field: any) => field[0] === "userId"),
       );
 
       expect(userIdIndex).toBeDefined();
+    });
+
+    it("should have TTL index on pendingExpiresAt for auto-cleanup", async () => {
+      const indexes = await Donation.collection.getIndexes();
+      const ttlIndex = Object.entries(indexes).find(
+        ([, fields]: [string, any]) =>
+          fields.some((field: any) => field[0] === "pendingExpiresAt"),
+      );
+
+      expect(ttlIndex).toBeDefined();
+    });
+  });
+
+  describe("pendingExpiresAt field", () => {
+    it("should accept a Date value for pendingExpiresAt", async () => {
+      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      const donation = await Donation.create({
+        userId: testUserId,
+        amount: 5000,
+        type: "one-time" as DonationType,
+        status: "pending" as DonationStatus,
+        giftDate: new Date(),
+        stripeCustomerId: "cus_test",
+        pendingExpiresAt: expiresAt,
+      });
+
+      expect(donation.pendingExpiresAt).toBeInstanceOf(Date);
+      expect(donation.pendingExpiresAt!.getTime()).toBe(expiresAt.getTime());
+    });
+
+    it("should allow unsetting pendingExpiresAt", async () => {
+      const donation = await Donation.create({
+        userId: testUserId,
+        amount: 5000,
+        type: "one-time" as DonationType,
+        status: "pending" as DonationStatus,
+        giftDate: new Date(),
+        stripeCustomerId: "cus_test",
+        pendingExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      });
+
+      donation.pendingExpiresAt = undefined;
+      await donation.save();
+
+      const found = await Donation.findById(donation._id);
+      expect(found!.pendingExpiresAt).toBeUndefined();
     });
   });
 });

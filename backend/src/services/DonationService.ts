@@ -70,6 +70,11 @@ class DonationService {
     // For now, we'll set a placeholder - this will be updated when Stripe checkout completes
     const stripeCustomerId = user.stripeCustomerId || "pending";
 
+    // Auto-delete pending donations after 30 days
+    const PENDING_TTL_DAYS = 30;
+    const pendingExpiresAt = new Date();
+    pendingExpiresAt.setDate(pendingExpiresAt.getDate() + PENDING_TTL_DAYS);
+
     const donationData: Partial<IDonation> = {
       userId: user._id,
       amount,
@@ -82,6 +87,7 @@ class DonationService {
       endAfterOccurrences,
       currentOccurrence: 0,
       stripeCustomerId,
+      pendingExpiresAt,
     };
 
     // Calculate remaining occurrences if specified
@@ -106,7 +112,7 @@ class DonationService {
     page: number = 1,
     limit: number = 20,
     sortBy: string = "giftDate",
-    sortOrder: string = "desc"
+    sortOrder: string = "desc",
   ): Promise<{
     transactions: IDonationTransaction[];
     pending: IDonation[];
@@ -214,7 +220,7 @@ class DonationService {
   async updateDonation(
     donationId: string,
     userId: string,
-    updates: Partial<CreateDonationParams>
+    updates: Partial<CreateDonationParams>,
   ): Promise<IDonation> {
     const donation = await Donation.findOne({
       _id: donationId,
@@ -233,7 +239,7 @@ class DonationService {
     if (updates.amount !== undefined) {
       if (updates.amount < 100 || updates.amount > 99999900) {
         throw new ValidationError(
-          "Amount must be between $1.00 and $999,999.00"
+          "Amount must be between $1.00 and $999,999.00",
         );
       }
       donation.amount = updates.amount;
@@ -385,7 +391,7 @@ class DonationService {
         if (donation.remainingOccurrences !== undefined) {
           donation.remainingOccurrences = Math.max(
             0,
-            donation.remainingOccurrences - 1
+            donation.remainingOccurrences - 1,
           );
         }
 
@@ -393,7 +399,7 @@ class DonationService {
         if (donation.frequency && donation.nextPaymentDate) {
           donation.nextPaymentDate = this.calculateNextPaymentDate(
             donation.nextPaymentDate,
-            donation.frequency
+            donation.frequency,
           );
         }
 
@@ -421,7 +427,7 @@ class DonationService {
    */
   private calculateNextPaymentDate(
     currentDate: Date,
-    frequency: DonationFrequency
+    frequency: DonationFrequency,
   ): Date {
     switch (frequency) {
       case "weekly":
@@ -448,7 +454,7 @@ class DonationService {
     startDate: Date,
     endCondition:
       | { type: "date"; endDate: Date }
-      | { type: "occurrences"; count: number }
+      | { type: "occurrences"; count: number },
   ): { totalGifts: number; totalAmount: number; endDate: Date } {
     if (endCondition.type === "occurrences") {
       return {
@@ -457,14 +463,14 @@ class DonationService {
         endDate: this.calculateEndDateFromOccurrences(
           startDate,
           frequency,
-          endCondition.count
+          endCondition.count,
         ),
       };
     } else {
       const gifts = this.calculateOccurrencesBetweenDates(
         startDate,
         endCondition.endDate,
-        frequency
+        frequency,
       );
       return {
         totalGifts: gifts,
@@ -480,7 +486,7 @@ class DonationService {
   private calculateEndDateFromOccurrences(
     startDate: Date,
     frequency: DonationFrequency,
-    occurrences: number
+    occurrences: number,
   ): Date {
     let endDate = new Date(startDate);
 
@@ -511,7 +517,7 @@ class DonationService {
   private calculateOccurrencesBetweenDates(
     startDate: Date,
     endDate: Date,
-    frequency: DonationFrequency
+    frequency: DonationFrequency,
   ): number {
     const start = new Date(startDate).getTime();
     const end = new Date(endDate).getTime();
@@ -545,7 +551,7 @@ class DonationService {
     page: number = 1,
     limit: number = 20,
     search: string = "",
-    statusFilter: string = "all"
+    statusFilter: string = "all",
   ): Promise<{
     donations: Array<{
       _id: string;
