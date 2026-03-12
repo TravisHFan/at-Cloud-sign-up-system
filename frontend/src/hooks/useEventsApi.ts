@@ -117,6 +117,7 @@ export function useEvents({
               materials: event.materials,
               status: event.status,
               publish: event.publish,
+              publicSlug: event.publicSlug,
               endDate: event.endDate,
               timeZone: event.timeZone,
             }))

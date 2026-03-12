@@ -236,8 +236,10 @@ function UpcomingEventsCard() {
             <Link
               key={event.id}
               to={
-                isGuest && event.publicSlug
-                  ? `/p/${event.publicSlug}`
+                isGuest
+                  ? event.publicSlug
+                    ? `/p/${event.publicSlug}`
+                    : "/events"
                   : `/dashboard/event/${event.id}`
               }
               className="block rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
