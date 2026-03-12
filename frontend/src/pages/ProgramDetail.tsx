@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { programService, purchaseService } from "../services/api";
 import type { EventData } from "../types/event";
@@ -64,6 +64,15 @@ export default function ProgramDetail({
   const navigate = useNavigate();
   const { hasRole, currentUser } = useAuth();
   const notification = useToastReplacement();
+  const [showLoginModal, setShowLoginModal] = useState(false);
+
+  const handleEnrollClick = useCallback(() => {
+    if (currentUser) {
+      navigate(`/dashboard/programs/${id}/enroll`);
+    } else {
+      setShowLoginModal(true);
+    }
+  }, [currentUser, navigate, id]);
 
   // Listen for real-time avatar updates to refresh mentor avatars
   const avatarUpdateCounter = useAvatarUpdates();
@@ -214,7 +223,7 @@ export default function ProgramDetail({
     return () => {
       cancelled = true;
     };
-  }, [id, currentUser?.id]);
+  }, [id, currentUser]);
 
   // Connect to WebSocket for real-time updates
   useEffect(() => {
@@ -465,172 +474,145 @@ export default function ProgramDetail({
   if (!program) return <div className="text-center">Program not found.</div>;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 min-h-full">
-      <DeleteProgramModal
-        isOpen={showDeleteModal}
-        showFinalConfirm={showFinalConfirm}
-        isDeleting={isDeleting}
-        linkedEventsCount={linkedEventsCount}
-        deleteCascade={deleteCascade}
-        onCascadeChange={setDeleteCascade}
-        onProceedToFinalConfirm={onProceedToFinalConfirm}
-        onConfirmDelete={onConfirmDelete}
-        onCancel={cancelDelete}
-      />
+    <>
+      <div className="max-w-5xl mx-auto space-y-6 min-h-full">
+        <DeleteProgramModal
+          isOpen={showDeleteModal}
+          showFinalConfirm={showFinalConfirm}
+          isDeleting={isDeleting}
+          linkedEventsCount={linkedEventsCount}
+          deleteCascade={deleteCascade}
+          onCascadeChange={setDeleteCascade}
+          onProceedToFinalConfirm={onProceedToFinalConfirm}
+          onConfirmDelete={onConfirmDelete}
+          onCancel={cancelDelete}
+        />
 
-      <ProgramHeader
-        programId={id!}
-        title={program.title}
-        programType={program.programType}
-        period={program.period}
-        canEdit={
-          hasRole(["Administrator", "Super Admin"]) ||
-          // Program creator (Leader who created this program)
-          accessReason === "creator" ||
-          // Mentors assigned to this program
-          (program.mentors?.some(
-            (mentor: { userId: string }) => mentor.userId === currentUser?.id,
-          ) ??
-            false)
-        }
-        canDelete={
-          hasRole(["Administrator", "Super Admin"]) ||
-          // Program creator can delete their own program
-          accessReason === "creator"
-        }
-        canCreateEvent={
-          // Admin and Super Admin can always create events
-          hasRole(["Administrator", "Super Admin"]) ||
-          // Program creator can create events
-          accessReason === "creator" ||
-          // Leaders can create events in programs they have access to
-          (hasRole(["Leader"]) && hasAccess === true)
-        }
-        canEmail={
-          // Super Admin and Administrator can always email participants
-          hasRole(["Administrator", "Super Admin"]) ||
-          // Program creator can email participants
-          accessReason === "creator" ||
-          // Leaders can email if they are a Mentor or Class Rep of this program
-          (hasRole(["Leader"]) &&
-            ((program.mentors?.some(
+        <ProgramHeader
+          programId={id!}
+          title={program.title}
+          programType={program.programType}
+          period={program.period}
+          canEdit={
+            hasRole(["Administrator", "Super Admin"]) ||
+            // Program creator (Leader who created this program)
+            accessReason === "creator" ||
+            // Mentors assigned to this program
+            (program.mentors?.some(
               (mentor: { userId: string }) => mentor.userId === currentUser?.id,
             ) ??
-              false) ||
-              isCurrentUserClassRep))
-        }
-        onDelete={openDelete}
-        onEmailParticipants={openEmailModal}
-      />
-
-      <ProgramIntroSection
-        programId={id!}
-        introduction={program.introduction}
-        flyerUrl={program.flyerUrl}
-        isFree={program.isFree}
-        hasAccess={hasAccess}
-        accessReason={accessReason}
-      />
-
-      {/* Mentors section */}
-      <ProgramMentors
-        mentors={program.mentors || []}
-        currentUserId={currentUser?.id || null}
-        currentUserRole={currentUser?.role || null}
-        accessReason={accessReason}
-      />
-
-      {/* Program Participants (Mentees & Class Representatives) - Only shown for paid programs */}
-      {program && !program.isFree && (
-        <ProgramParticipants programId={program.id} program={program} />
-      )}
-
-      {/* Pricing panel (UI label changed to Tuition; internal naming unchanged) */}
-      <ProgramPricing
-        isFree={program.isFree}
-        fullPriceTicket={program.fullPriceTicket}
-        classRepDiscount={program.classRepDiscount}
-        earlyBirdDiscount={program.earlyBirdDiscount}
-        classRepLimit={program.classRepLimit}
-        classRepCount={program.classRepCount}
-        earlyBirdDeadline={program.earlyBirdDeadline}
-        hasAccess={hasAccess}
-        accessReason={accessReason}
-        onEnrollClick={() =>
-          navigate(currentUser ? `/dashboard/programs/${id}/enroll` : "/login")
-        }
-        pricing={program.pricing}
-      />
-
-      {/* Events in program */}
-      <ProgramEventsList
-        events={events}
-        pageEvents={pageEvents}
-        page={page}
-        totalPages={totalPages}
-        pageInput={pageInput}
-        pageHelper={pageHelper}
-        announceText={announceText}
-        sortDir={sortDir}
-        isListLoading={isListLoading}
-        serverPaginationEnabled={serverPaginationEnabled}
-        serverPageEvents={serverPageEvents}
-        onSortChange={setSortDir}
-        onPageChange={setPageSafe}
-        onPageInputChange={(value) => {
-          setPageInput(value);
-          // show helper for invalid or out-of-range
-          const n = Number(value);
-          if (Number.isNaN(n)) {
-            setPageHelper("Enter a number between 1 and " + totalPages);
-          } else if (n < 1 || n > totalPages) {
-            setPageHelper(`Page must be between 1 and ${totalPages}`);
-          } else {
-            setPageHelper("");
+              false)
           }
-        }}
-        onPageInputBlur={() => {
-          const n = Number(pageInput);
-          if (!Number.isNaN(n)) {
-            const clamped = Math.max(1, Math.min(totalPages, n));
-            setPageSafe(clamped);
-            // If input was previously marked out-of-range or is out-of-range now,
-            // announce clamping even if the browser/JSDOM auto-clamped the value.
-            const wasOutOfRange =
-              n < 1 || n > totalPages || (pageHelper ?? "").length > 0;
-            setAnnounceText(
-              wasOutOfRange || clamped !== n
-                ? `Clamped to page ${clamped} of ${totalPages}`
-                : `Moved to page ${clamped} of ${totalPages}`,
-            );
-            setPageHelper("");
-          } else {
-            setPageInput(String(page));
-            setAnnounceText(
-              `Invalid page. Staying on page ${page} of ${totalPages}`,
-            );
-            setPageHelper("Enter a number between 1 and " + totalPages);
+          canDelete={
+            hasRole(["Administrator", "Super Admin"]) ||
+            // Program creator can delete their own program
+            accessReason === "creator"
           }
-        }}
-        onPageInputKeyDown={(e) => {
-          if (e.key === "Enter") {
+          canCreateEvent={
+            // Admin and Super Admin can always create events
+            hasRole(["Administrator", "Super Admin"]) ||
+            // Program creator can create events
+            accessReason === "creator" ||
+            // Leaders can create events in programs they have access to
+            (hasRole(["Leader"]) && hasAccess === true)
+          }
+          canEmail={
+            // Super Admin and Administrator can always email participants
+            hasRole(["Administrator", "Super Admin"]) ||
+            // Program creator can email participants
+            accessReason === "creator" ||
+            // Leaders can email if they are a Mentor or Class Rep of this program
+            (hasRole(["Leader"]) &&
+              ((program.mentors?.some(
+                (mentor: { userId: string }) =>
+                  mentor.userId === currentUser?.id,
+              ) ??
+                false) ||
+                isCurrentUserClassRep))
+          }
+          onDelete={openDelete}
+          onEmailParticipants={openEmailModal}
+        />
+
+        <ProgramIntroSection
+          programId={id!}
+          introduction={program.introduction}
+          flyerUrl={program.flyerUrl}
+          isFree={program.isFree}
+          hasAccess={hasAccess}
+          accessReason={accessReason}
+        />
+
+        {/* Mentors section */}
+        <ProgramMentors
+          mentors={program.mentors || []}
+          currentUserId={currentUser?.id || null}
+          currentUserRole={currentUser?.role || null}
+          accessReason={accessReason}
+        />
+
+        {/* Program Participants (Mentees & Class Representatives) - Only shown for paid programs */}
+        {program && !program.isFree && (
+          <ProgramParticipants programId={program.id} program={program} />
+        )}
+
+        {/* Pricing panel (UI label changed to Tuition; internal naming unchanged) */}
+        <ProgramPricing
+          isFree={program.isFree}
+          fullPriceTicket={program.fullPriceTicket}
+          classRepDiscount={program.classRepDiscount}
+          earlyBirdDiscount={program.earlyBirdDiscount}
+          classRepLimit={program.classRepLimit}
+          classRepCount={program.classRepCount}
+          earlyBirdDeadline={program.earlyBirdDeadline}
+          hasAccess={hasAccess}
+          accessReason={accessReason}
+          onEnrollClick={handleEnrollClick}
+          pricing={program.pricing}
+        />
+
+        {/* Events in program */}
+        <ProgramEventsList
+          events={events}
+          pageEvents={pageEvents}
+          page={page}
+          totalPages={totalPages}
+          pageInput={pageInput}
+          pageHelper={pageHelper}
+          announceText={announceText}
+          sortDir={sortDir}
+          isListLoading={isListLoading}
+          serverPaginationEnabled={serverPaginationEnabled}
+          serverPageEvents={serverPageEvents}
+          onSortChange={setSortDir}
+          onPageChange={setPageSafe}
+          onPageInputChange={(value) => {
+            setPageInput(value);
+            // show helper for invalid or out-of-range
+            const n = Number(value);
+            if (Number.isNaN(n)) {
+              setPageHelper("Enter a number between 1 and " + totalPages);
+            } else if (n < 1 || n > totalPages) {
+              setPageHelper(`Page must be between 1 and ${totalPages}`);
+            } else {
+              setPageHelper("");
+            }
+          }}
+          onPageInputBlur={() => {
             const n = Number(pageInput);
             if (!Number.isNaN(n)) {
               const clamped = Math.max(1, Math.min(totalPages, n));
-              // debounce commit by 300ms
-              if (pageDebounceId) window.clearTimeout(pageDebounceId);
-              const id = window.setTimeout(() => {
-                setPageSafe(clamped);
-                const wasOutOfRange =
-                  n < 1 || n > totalPages || (pageHelper ?? "").length > 0;
-                setAnnounceText(
-                  wasOutOfRange || clamped !== n
-                    ? `Clamped to page ${clamped} of ${totalPages}`
-                    : `Moved to page ${clamped} of ${totalPages}`,
-                );
-                setPageHelper("");
-              }, 300);
-              setPageDebounceId(id);
+              setPageSafe(clamped);
+              // If input was previously marked out-of-range or is out-of-range now,
+              // announce clamping even if the browser/JSDOM auto-clamped the value.
+              const wasOutOfRange =
+                n < 1 || n > totalPages || (pageHelper ?? "").length > 0;
+              setAnnounceText(
+                wasOutOfRange || clamped !== n
+                  ? `Clamped to page ${clamped} of ${totalPages}`
+                  : `Moved to page ${clamped} of ${totalPages}`,
+              );
+              setPageHelper("");
             } else {
               setPageInput(String(page));
               setAnnounceText(
@@ -638,120 +620,176 @@ export default function ProgramDetail({
               );
               setPageHelper("Enter a number between 1 and " + totalPages);
             }
-          }
-        }}
-        onEventClick={(eventId) => navigate(`/dashboard/event/${eventId}`)}
-        getEventStatus={getEventStatus}
-      />
+          }}
+          onPageInputKeyDown={(e) => {
+            if (e.key === "Enter") {
+              const n = Number(pageInput);
+              if (!Number.isNaN(n)) {
+                const clamped = Math.max(1, Math.min(totalPages, n));
+                // debounce commit by 300ms
+                if (pageDebounceId) window.clearTimeout(pageDebounceId);
+                const id = window.setTimeout(() => {
+                  setPageSafe(clamped);
+                  const wasOutOfRange =
+                    n < 1 || n > totalPages || (pageHelper ?? "").length > 0;
+                  setAnnounceText(
+                    wasOutOfRange || clamped !== n
+                      ? `Clamped to page ${clamped} of ${totalPages}`
+                      : `Moved to page ${clamped} of ${totalPages}`,
+                  );
+                  setPageHelper("");
+                }, 300);
+                setPageDebounceId(id);
+              } else {
+                setPageInput(String(page));
+                setAnnounceText(
+                  `Invalid page. Staying on page ${page} of ${totalPages}`,
+                );
+                setPageHelper("Enter a number between 1 and " + totalPages);
+              }
+            }
+          }}
+          onEventClick={(eventId) => navigate(`/dashboard/event/${eventId}`)}
+          getEventStatus={getEventStatus}
+        />
 
-      {/* Email Participants Modal */}
-      <EmailParticipantsModal
-        isOpen={emailModal.open}
-        title={program.title}
-        emailModal={emailModal}
-        setEmailModal={setEmailModal}
-        emailEditorRef={emailEditorRef}
-        applyEditorCommand={applyEditorCommand}
-        onSend={async () => {
-          const subject = emailModal.subject.trim();
-          const bodyHtml = emailModal.bodyHtml.trim();
+        {/* Email Participants Modal */}
+        <EmailParticipantsModal
+          isOpen={emailModal.open}
+          title={program.title}
+          emailModal={emailModal}
+          setEmailModal={setEmailModal}
+          emailEditorRef={emailEditorRef}
+          applyEditorCommand={applyEditorCommand}
+          onSend={async () => {
+            const subject = emailModal.subject.trim();
+            const bodyHtml = emailModal.bodyHtml.trim();
 
-          if (!subject || !bodyHtml) {
-            notification.error("Subject and message are required.", {
-              title: "Missing Fields",
-            });
-            return;
-          }
+            if (!subject || !bodyHtml) {
+              notification.error("Subject and message are required.", {
+                title: "Missing Fields",
+              });
+              return;
+            }
 
-          try {
-            setEmailModal((m) => ({ ...m, sending: true }));
-            const res = await programService.sendProgramEmails(id!, {
-              subject,
-              bodyHtml,
-              includeMentors: emailModal.recipients.includeMentors,
-              includeClassReps: emailModal.recipients.includeClassReps,
-              includeMentees: emailModal.recipients.includeMentees,
-            });
+            try {
+              setEmailModal((m) => ({ ...m, sending: true }));
+              const res = await programService.sendProgramEmails(id!, {
+                subject,
+                bodyHtml,
+                includeMentors: emailModal.recipients.includeMentors,
+                includeClassReps: emailModal.recipients.includeClassReps,
+                includeMentees: emailModal.recipients.includeMentees,
+              });
 
-            const count: number =
-              typeof res.recipientCount === "number"
-                ? res.recipientCount
-                : typeof res.sent === "number"
-                  ? res.sent
-                  : 0;
+              const count: number =
+                typeof res.recipientCount === "number"
+                  ? res.recipientCount
+                  : typeof res.sent === "number"
+                    ? res.sent
+                    : 0;
 
-            notification.success(
-              count > 0
-                ? `Email sent to ${count} recipient${count === 1 ? "" : "s"}.`
-                : "No recipients found for this program.",
-              { title: "Email Sent" },
-            );
+              notification.success(
+                count > 0
+                  ? `Email sent to ${count} recipient${count === 1 ? "" : "s"}.`
+                  : "No recipients found for this program.",
+                { title: "Email Sent" },
+              );
 
-            closeEmailModal();
-          } catch (e: unknown) {
-            const message =
-              e instanceof Error ? e.message : "Failed to send emails.";
-            notification.error(message, { title: "Send Failed" });
-            setEmailModal((m) => ({ ...m, sending: false }));
-          }
-        }}
-        onClose={closeEmailModal}
-        renderRecipientOptions={() => (
-          <>
-            <label className="inline-flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                checked={emailModal.recipients.includeMentors}
-                onChange={(e) =>
-                  setEmailModal((m) => ({
-                    ...m,
-                    recipients: {
-                      ...m.recipients,
-                      includeMentors: e.target.checked,
-                    },
-                  }))
-                }
-              />
-              Include Mentors
-            </label>
-            <label className="inline-flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                checked={emailModal.recipients.includeClassReps}
-                onChange={(e) =>
-                  setEmailModal((m) => ({
-                    ...m,
-                    recipients: {
-                      ...m.recipients,
-                      includeClassReps: e.target.checked,
-                    },
-                  }))
-                }
-              />
-              Include Class Representatives
-            </label>
-            <label className="inline-flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                checked={emailModal.recipients.includeMentees}
-                onChange={(e) =>
-                  setEmailModal((m) => ({
-                    ...m,
-                    recipients: {
-                      ...m.recipients,
-                      includeMentees: e.target.checked,
-                    },
-                  }))
-                }
-              />
-              Include Mentees
-            </label>
-          </>
-        )}
-      />
-    </div>
+              closeEmailModal();
+            } catch (e: unknown) {
+              const message =
+                e instanceof Error ? e.message : "Failed to send emails.";
+              notification.error(message, { title: "Send Failed" });
+              setEmailModal((m) => ({ ...m, sending: false }));
+            }
+          }}
+          onClose={closeEmailModal}
+          renderRecipientOptions={() => (
+            <>
+              <label className="inline-flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  checked={emailModal.recipients.includeMentors}
+                  onChange={(e) =>
+                    setEmailModal((m) => ({
+                      ...m,
+                      recipients: {
+                        ...m.recipients,
+                        includeMentors: e.target.checked,
+                      },
+                    }))
+                  }
+                />
+                Include Mentors
+              </label>
+              <label className="inline-flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  checked={emailModal.recipients.includeClassReps}
+                  onChange={(e) =>
+                    setEmailModal((m) => ({
+                      ...m,
+                      recipients: {
+                        ...m.recipients,
+                        includeClassReps: e.target.checked,
+                      },
+                    }))
+                  }
+                />
+                Include Class Representatives
+              </label>
+              <label className="inline-flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  checked={emailModal.recipients.includeMentees}
+                  onChange={(e) =>
+                    setEmailModal((m) => ({
+                      ...m,
+                      recipients: {
+                        ...m.recipients,
+                        includeMentees: e.target.checked,
+                      },
+                    }))
+                  }
+                />
+                Include Mentees
+              </label>
+            </>
+          )}
+        />
+      </div>
+
+      {/* Guest Login Modal */}
+      {showLoginModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm mx-4 w-full">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Login Required
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Please log in or create an account to complete your enrollment.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowLoginModal(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => navigate("/login")}
+                className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-md transition-colors"
+              >
+                Login
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

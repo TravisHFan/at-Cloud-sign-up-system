@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
 
 interface ProgramIntroSectionProps {
   programId: string;
@@ -42,6 +44,8 @@ export default function ProgramIntroSection({
   accessReason,
 }: ProgramIntroSectionProps) {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   return (
     <>
@@ -91,9 +95,13 @@ export default function ProgramIntroSection({
                 ) : (
                   <div className="mt-6">
                     <button
-                      onClick={() =>
-                        navigate(`/dashboard/programs/${programId}/enroll`)
-                      }
+                      onClick={() => {
+                        if (currentUser) {
+                          navigate(`/dashboard/programs/${programId}/enroll`);
+                        } else {
+                          setShowLoginModal(true);
+                        }
+                      }}
                       className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-8 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
                     >
                       <span>Enroll Now</span>
@@ -130,6 +138,34 @@ export default function ProgramIntroSection({
               alt="Program flyer"
               className="w-full max-w-2xl h-auto rounded border border-gray-200 object-contain"
             />
+          </div>
+        </div>
+      )}
+
+      {/* Guest Login Modal */}
+      {showLoginModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm mx-4 w-full">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Login Required
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Please log in or create an account to complete your enrollment.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowLoginModal(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => navigate("/login")}
+                className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-md transition-colors"
+              >
+                Login
+              </button>
+            </div>
           </div>
         </div>
       )}

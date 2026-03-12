@@ -3,7 +3,7 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
 } from "@heroicons/react/24/outline";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { programService, purchaseService } from "../services/api";
 import { useAuth } from "../hooks/useAuth";
@@ -136,9 +136,22 @@ const formatTimeSpan = (period?: {
 export default function Programs() {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const [programs, setPrograms] = useState<ProgramCard[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleEnrollClick = useCallback(
+    (e: React.MouseEvent, programId: string) => {
+      e.stopPropagation();
+      if (currentUser) {
+        navigate(`/dashboard/programs/${programId}/enroll`);
+      } else {
+        setShowLoginModal(true);
+      }
+    },
+    [currentUser, navigate],
+  );
 
   // Controller visibility state
   const [showController, setShowController] = useState<boolean>(false);
@@ -341,309 +354,332 @@ export default function Programs() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Programs</h1>
-              <p className="mt-2 text-gray-600">
-                Multi-month program series comprising various events and
-                activities.
-              </p>
-            </div>
-            <button
-              onClick={() => setShowController(!showController)}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-all duration-200 text-sm font-medium text-gray-700"
-            >
-              {showController ? (
-                <>
-                  <ChevronUpIcon className="w-4 h-4" />
-                  Hide Controls
-                </>
-              ) : (
-                <>
-                  <ChevronDownIcon className="w-4 h-4" />
-                  Show Controls
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Status banners */}
-        {error && (
-          <div className="mb-4 rounded border border-red-200 bg-red-50 text-red-700 px-4 py-3">
-            {error}
-          </div>
-        )}
-
-        {/* Controller Section */}
-        {showController && (
-          <div className="mb-6 bg-white rounded-lg border border-gray-200 overflow-hidden">
-            {/* Filter Zone */}
-            <div className="p-4 bg-blue-50 border-b border-blue-100">
-              <h3 className="text-sm font-semibold text-blue-800 mb-3 flex items-center gap-2">
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.707A1 1 0 013 7V4z"
-                  />
-                </svg>
-                Filters
-              </h3>
-              <div className="flex flex-wrap gap-4">
-                {/* Filter by Year */}
-                <div className="flex items-center gap-2">
-                  <label
-                    htmlFor="filter-year"
-                    className="text-sm font-medium text-gray-700"
-                  >
-                    Start Year:
-                  </label>
-                  <select
-                    id="filter-year"
-                    value={filterYear}
-                    onChange={(e) => setFilterYear(e.target.value)}
-                    className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="all">All Years</option>
-                    {availableYears.map((year) => (
-                      <option key={year} value={year}>
-                        {year}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Filter by Program Type */}
-                <div className="flex items-center gap-2">
-                  <label
-                    htmlFor="filter-type"
-                    className="text-sm font-medium text-gray-700"
-                  >
-                    Program Type:
-                  </label>
-                  <select
-                    id="filter-type"
-                    value={filterType}
-                    onChange={(e) => setFilterType(e.target.value)}
-                    className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="all">All Types</option>
-                    {availableTypes.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+    <>
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Programs</h1>
+                <p className="mt-2 text-gray-600">
+                  Multi-month program series comprising various events and
+                  activities.
+                </p>
               </div>
-            </div>
-
-            {/* Sorter Zone */}
-            <div className="p-4 bg-green-50">
-              <h3 className="text-sm font-semibold text-green-800 mb-3 flex items-center gap-2">
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 5v4m4-4v4m4-4v4"
-                  />
-                </svg>
-                Sort Options
-              </h3>
-              <div className="flex flex-wrap gap-4 items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <label
-                    htmlFor="sort-order"
-                    className="text-sm font-medium text-gray-700"
-                  >
-                    Sort by Start Time:
-                  </label>
-                  <select
-                    id="sort-order"
-                    value={sortOrder}
-                    onChange={(e) =>
-                      setSortOrder(e.target.value as "asc" | "desc")
-                    }
-                    className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  >
-                    <option value="asc">Ascending</option>
-                    <option value="desc">Descending</option>
-                  </select>
-                </div>
-
-                {/* Results count */}
-                <div className="text-sm text-gray-500">
-                  {programs.length} program{programs.length !== 1 ? "s" : ""}{" "}
-                  found
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Programs Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {/* Program Cards */}
-          {(loading ? [] : programs).map((program) => {
-            const colors = getProgramTypeColors(program.type);
-            const showEnrollButton =
-              !program.isFree &&
-              program.hasAccess === false &&
-              program.accessReason === "not_purchased";
-
-            return (
-              <div
-                key={program.id}
-                className={`rounded-lg shadow-sm border transition-all duration-300 group ${colors.card} ${colors.shadow} relative`}
-                style={{ aspectRatio: "3/4" }} // Height > Width
+              <button
+                onClick={() => setShowController(!showController)}
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-all duration-200 text-sm font-medium text-gray-700"
               >
+                {showController ? (
+                  <>
+                    <ChevronUpIcon className="w-4 h-4" />
+                    Hide Controls
+                  </>
+                ) : (
+                  <>
+                    <ChevronDownIcon className="w-4 h-4" />
+                    Show Controls
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Status banners */}
+          {error && (
+            <div className="mb-4 rounded border border-red-200 bg-red-50 text-red-700 px-4 py-3">
+              {error}
+            </div>
+          )}
+
+          {/* Controller Section */}
+          {showController && (
+            <div className="mb-6 bg-white rounded-lg border border-gray-200 overflow-hidden">
+              {/* Filter Zone */}
+              <div className="p-4 bg-blue-50 border-b border-blue-100">
+                <h3 className="text-sm font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.707A1 1 0 013 7V4z"
+                    />
+                  </svg>
+                  Filters
+                </h3>
+                <div className="flex flex-wrap gap-4">
+                  {/* Filter by Year */}
+                  <div className="flex items-center gap-2">
+                    <label
+                      htmlFor="filter-year"
+                      className="text-sm font-medium text-gray-700"
+                    >
+                      Start Year:
+                    </label>
+                    <select
+                      id="filter-year"
+                      value={filterYear}
+                      onChange={(e) => setFilterYear(e.target.value)}
+                      className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="all">All Years</option>
+                      {availableYears.map((year) => (
+                        <option key={year} value={year}>
+                          {year}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Filter by Program Type */}
+                  <div className="flex items-center gap-2">
+                    <label
+                      htmlFor="filter-type"
+                      className="text-sm font-medium text-gray-700"
+                    >
+                      Program Type:
+                    </label>
+                    <select
+                      id="filter-type"
+                      value={filterType}
+                      onChange={(e) => setFilterType(e.target.value)}
+                      className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="all">All Types</option>
+                      {availableTypes.map((type) => (
+                        <option key={type} value={type}>
+                          {type}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sorter Zone */}
+              <div className="p-4 bg-green-50">
+                <h3 className="text-sm font-semibold text-green-800 mb-3 flex items-center gap-2">
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 5v4m4-4v4m4-4v4"
+                    />
+                  </svg>
+                  Sort Options
+                </h3>
+                <div className="flex flex-wrap gap-4 items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <label
+                      htmlFor="sort-order"
+                      className="text-sm font-medium text-gray-700"
+                    >
+                      Sort by Start Time:
+                    </label>
+                    <select
+                      id="sort-order"
+                      value={sortOrder}
+                      onChange={(e) =>
+                        setSortOrder(e.target.value as "asc" | "desc")
+                      }
+                      className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    >
+                      <option value="asc">Ascending</option>
+                      <option value="desc">Descending</option>
+                    </select>
+                  </div>
+
+                  {/* Results count */}
+                  <div className="text-sm text-gray-500">
+                    {programs.length} program{programs.length !== 1 ? "s" : ""}{" "}
+                    found
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Programs Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {/* Program Cards */}
+            {(loading ? [] : programs).map((program) => {
+              const colors = getProgramTypeColors(program.type);
+              const showEnrollButton =
+                !program.isFree &&
+                program.hasAccess === false &&
+                program.accessReason === "not_purchased";
+
+              return (
                 <div
-                  onClick={() => handleProgramClick(program)}
-                  className="p-6 h-full flex flex-col justify-between cursor-pointer"
+                  key={program.id}
+                  className={`rounded-lg shadow-sm border transition-all duration-300 group ${colors.card} ${colors.shadow} relative`}
+                  style={{ aspectRatio: "3/4" }} // Height > Width
                 >
-                  {/* Program Type Badge */}
-                  <div className="mb-4">
-                    <span
-                      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${colors.badge}`}
-                    >
-                      {program.type}
-                    </span>
-                  </div>
-
-                  {/* Program Content */}
-                  <div className="flex-1">
-                    <h3
-                      className={`text-xl font-bold text-gray-900 transition-colors ${colors.title}`}
-                    >
-                      {program.name}
-                    </h3>
-                    <p className="mt-4 text-sm text-gray-700 leading-relaxed font-medium">
-                      {program.timeSpan}
-                    </p>
-                  </div>
-
-                  {/* Bottom Info */}
-                  <div className="mt-6 pt-4 border-t border-white/30 relative">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-600 uppercase tracking-wider font-bold">
-                        Program Series
+                  <div
+                    onClick={() => handleProgramClick(program)}
+                    className="p-6 h-full flex flex-col justify-between cursor-pointer"
+                  >
+                    {/* Program Type Badge */}
+                    <div className="mb-4">
+                      <span
+                        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${colors.badge}`}
+                      >
+                        {program.type}
                       </span>
-                      {!program.isFree && !showEnrollButton && (
-                        <div
-                          className={`w-3 h-3 rounded-full transition-colors ${colors.dot}`}
-                        ></div>
-                      )}
                     </div>
-                    {/* Free program check mark */}
-                    {program.isFree && (
-                      <img
-                        src="/check.svg"
-                        alt="Free Program"
-                        className="w-8 h-8 text-green-600 absolute -bottom-2 -right-2"
-                      />
-                    )}
-                    {/* Enrolled/Access granted check mark (for paid programs user has access to) */}
-                    {!program.isFree &&
-                      program.hasAccess &&
-                      (program.accessReason === "purchased" ||
-                        program.accessReason === "admin" ||
-                        program.accessReason === "mentor") && (
+
+                    {/* Program Content */}
+                    <div className="flex-1">
+                      <h3
+                        className={`text-xl font-bold text-gray-900 transition-colors ${colors.title}`}
+                      >
+                        {program.name}
+                      </h3>
+                      <p className="mt-4 text-sm text-gray-700 leading-relaxed font-medium">
+                        {program.timeSpan}
+                      </p>
+                    </div>
+
+                    {/* Bottom Info */}
+                    <div className="mt-6 pt-4 border-t border-white/30 relative">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-600 uppercase tracking-wider font-bold">
+                          Program Series
+                        </span>
+                        {!program.isFree && !showEnrollButton && (
+                          <div
+                            className={`w-3 h-3 rounded-full transition-colors ${colors.dot}`}
+                          ></div>
+                        )}
+                      </div>
+                      {/* Free program check mark */}
+                      {program.isFree && (
                         <img
                           src="/check.svg"
-                          alt="Enrolled"
+                          alt="Free Program"
                           className="w-8 h-8 text-green-600 absolute -bottom-2 -right-2"
                         />
                       )}
-                    {/* Enroll Button - positioned like check mark */}
-                    {showEnrollButton && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(
-                            currentUser
-                              ? `/dashboard/programs/${program.id}/enroll`
-                              : "/login",
-                          );
-                        }}
-                        className="absolute -bottom-2 -right-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold py-2 px-4 rounded-md shadow-md hover:shadow-lg transition-all duration-200"
-                      >
-                        Enroll
-                      </button>
-                    )}
+                      {/* Enrolled/Access granted check mark (for paid programs user has access to) */}
+                      {!program.isFree &&
+                        program.hasAccess &&
+                        (program.accessReason === "purchased" ||
+                          program.accessReason === "admin" ||
+                          program.accessReason === "mentor") && (
+                          <img
+                            src="/check.svg"
+                            alt="Enrolled"
+                            className="w-8 h-8 text-green-600 absolute -bottom-2 -right-2"
+                          />
+                        )}
+                      {/* Enroll Button - positioned like check mark */}
+                      {showEnrollButton && (
+                        <button
+                          onClick={(e) => handleEnrollClick(e, program.id)}
+                          className="absolute -bottom-2 -right-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold py-2 px-4 rounded-md shadow-md hover:shadow-lg transition-all duration-200"
+                        >
+                          Enroll
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
+              );
+            })}
+
+            {/* Loading placeholder (when some programs already rendered) */}
+            {loading && programs.length > 0 && (
+              <div className="col-span-1 sm:col-span-2 lg:grid-cols-3 xl:col-span-4 flex justify-center items-center min-h-48">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
               </div>
-            );
-          })}
+            )}
 
-          {/* Loading placeholder (when some programs already rendered) */}
-          {loading && programs.length > 0 && (
-            <div className="col-span-1 sm:col-span-2 lg:grid-cols-3 xl:col-span-4 flex justify-center items-center min-h-48">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            </div>
-          )}
+            {/* Empty state (when not loading and no programs) */}
+            {!loading && programs.length === 0 && (
+              <div className="col-span-1 sm:col-span-2 lg:col-span-3 xl:col-span-4">
+                <div className="rounded-lg border border-gray-200 bg-white p-8 text-center text-gray-700">
+                  <p className="font-medium">No programs found.</p>
+                  {canCreateProgram ? (
+                    <p className="text-sm text-gray-500 mt-1">
+                      Click "Create Program" to add your first program.
+                    </p>
+                  ) : (
+                    <p className="text-sm text-gray-500 mt-1">
+                      Programs will appear here once they are created.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
 
-          {/* Empty state (when not loading and no programs) */}
-          {!loading && programs.length === 0 && (
-            <div className="col-span-1 sm:col-span-2 lg:col-span-3 xl:col-span-4">
-              <div className="rounded-lg border border-gray-200 bg-white p-8 text-center text-gray-700">
-                <p className="font-medium">No programs found.</p>
-                {canCreateProgram ? (
-                  <p className="text-sm text-gray-500 mt-1">
-                    Click "Create Program" to add your first program.
+            {/* Create Program Button - Visible to Super Admin, Administrator, and Leader */}
+            {canCreateProgram && (
+              <div
+                onClick={handleCreateProgram}
+                className="bg-gradient-to-br from-slate-50 to-gray-100 rounded-lg shadow-sm border-2 border-dashed border-gray-300 hover:border-green-400 hover:from-green-50 hover:to-emerald-100 transition-all duration-300 cursor-pointer group flex items-center justify-center hover:shadow-green-200/50"
+                style={{ aspectRatio: "3/4" }} // Height > Width
+              >
+                <div className="text-center">
+                  <PlusIcon className="w-12 h-12 text-gray-400 group-hover:text-green-600 transition-colors mx-auto mb-4" />
+                  <p className="text-base font-semibold text-gray-700 group-hover:text-green-700 transition-colors">
+                    Create Program
                   </p>
-                ) : (
-                  <p className="text-sm text-gray-500 mt-1">
-                    Programs will appear here once they are created.
+                  <p className="text-sm text-gray-500 mt-2 group-hover:text-green-600 transition-colors">
+                    Add a new program series
                   </p>
-                )}
+                </div>
               </div>
-            </div>
-          )}
-
-          {/* Create Program Button - Visible to Super Admin, Administrator, and Leader */}
-          {canCreateProgram && (
-            <div
-              onClick={handleCreateProgram}
-              className="bg-gradient-to-br from-slate-50 to-gray-100 rounded-lg shadow-sm border-2 border-dashed border-gray-300 hover:border-green-400 hover:from-green-50 hover:to-emerald-100 transition-all duration-300 cursor-pointer group flex items-center justify-center hover:shadow-green-200/50"
-              style={{ aspectRatio: "3/4" }} // Height > Width
-            >
-              <div className="text-center">
-                <PlusIcon className="w-12 h-12 text-gray-400 group-hover:text-green-600 transition-colors mx-auto mb-4" />
-                <p className="text-base font-semibold text-gray-700 group-hover:text-green-700 transition-colors">
-                  Create Program
-                </p>
-                <p className="text-sm text-gray-500 mt-2 group-hover:text-green-600 transition-colors">
-                  Add a new program series
-                </p>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Guest Login Modal */}
+      {showLoginModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm mx-4 w-full">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Login Required
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Please log in or create an account to complete your enrollment.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowLoginModal(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => navigate("/login")}
+                className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-md transition-colors"
+              >
+                Login
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

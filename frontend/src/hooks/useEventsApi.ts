@@ -99,13 +99,13 @@ export function useEvents({
                 (event.roles || []).reduce(
                   (total: number, role: EventRole) =>
                     total + (role.currentSignups?.length || 0),
-                  0
+                  0,
                 ) || 0,
               totalSlots:
                 (event.roles || []).reduce(
                   (total: number, role: EventRole) =>
                     total + (role.maxParticipants || 0),
-                  0
+                  0,
                 ) || 0,
               createdBy: (event as EventData).createdBy || event.organizer,
               createdAt: event.createdAt,
@@ -116,6 +116,7 @@ export function useEvents({
               requirements: event.requirements,
               materials: event.materials,
               status: event.status,
+              publish: event.publish,
               endDate: event.endDate,
               timeZone: event.timeZone,
             }))
@@ -136,7 +137,7 @@ export function useEvents({
         setLoading(false);
       }
     },
-    [notification]
+    [notification],
   );
 
   const refreshEvents = useCallback(async () => {
@@ -147,21 +148,21 @@ export function useEvents({
     async (page: number) => {
       await fetchEvents({ page });
     },
-    [fetchEvents]
+    [fetchEvents],
   );
 
   const searchEvents = useCallback(
     async (searchTerm: string) => {
       await fetchEvents({ search: searchTerm, page: 1 });
     },
-    [fetchEvents]
+    [fetchEvents],
   );
 
   const filterEvents = useCallback(
     async (filters: { status?: string; type?: string }) => {
       await fetchEvents({ ...filters, page: 1 });
     },
-    [fetchEvents]
+    [fetchEvents],
   );
 
   // Auto-load events on mount - only run once
@@ -228,13 +229,13 @@ export function useEvent(eventId: string) {
           (response.roles || []).reduce(
             (total: number, role: EventRole) =>
               total + (role.currentSignups?.length || 0),
-            0
+            0,
           ) || 0,
         totalSlots:
           (response.roles || []).reduce(
             (total: number, role: EventRole) =>
               total + (role.maxParticipants || 0),
-            0
+            0,
           ) || 0,
         createdBy: response.createdBy || response.organizer,
         createdAt: response.createdAt,
@@ -323,7 +324,7 @@ export function useUserEvents(page: number = 1, limit: number = 10) {
       };
       const responseUnknown = (await eventService.getUserEvents(
         page,
-        limit
+        limit,
       )) as unknown;
       if (
         responseUnknown &&
@@ -426,13 +427,13 @@ export function useCreatedEvents() {
               (event.roles || []).reduce(
                 (total: number, role: EventRole) =>
                   total + (role.currentSignups?.length || 0),
-                0
+                0,
               ) || 0,
             totalSlots:
               (event.roles || []).reduce(
                 (total: number, role: EventRole) =>
                   total + (role.maxParticipants || 0),
-                0
+                0,
               ) || 0,
             createdBy: event.createdBy || event.organizer,
             createdAt: event.createdAt,
