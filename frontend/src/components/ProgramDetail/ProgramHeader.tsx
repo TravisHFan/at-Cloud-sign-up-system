@@ -50,7 +50,7 @@ export default function ProgramHeader({
   const [shareButtonText, setShareButtonText] = useState("Share");
 
   const handleShare = async () => {
-    const publicUrl = `${window.location.origin}/pr/${programId}`;
+    const publicUrl = `${window.location.origin}/dashboard/programs/${programId}`;
     try {
       await navigator.clipboard.writeText(publicUrl);
       setShareButtonText("Copied!");

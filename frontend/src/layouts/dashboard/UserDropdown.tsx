@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import ConfirmLogoutModal from "../../components/common/ConfirmLogoutModal";
 import { Link, useNavigate } from "react-router-dom";
-import { ChevronDownIcon } from "@heroicons/react/24/outline";
+import { ChevronDownIcon, UserCircleIcon } from "@heroicons/react/24/outline";
 import {
   getAvatarUrlWithCacheBust,
   getAvatarAlt,
@@ -18,10 +18,11 @@ interface User {
 }
 
 interface UserDropdownProps {
-  user: User;
+  user: User | null;
+  isGuest: boolean;
 }
 
-export default function UserDropdown({ user }: UserDropdownProps) {
+export default function UserDropdown({ user, isGuest }: UserDropdownProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -56,6 +57,53 @@ export default function UserDropdown({ user }: UserDropdownProps) {
     }
   };
 
+  // Guest dropdown
+  if (isGuest) {
+    return (
+      <div className="relative flex-shrink-0" ref={dropdownRef}>
+        <button
+          onClick={() => setDropdownOpen(!dropdownOpen)}
+          className="flex items-center space-x-2 sm:space-x-3 text-gray-700 hover:text-gray-900 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          <UserCircleIcon className="h-8 w-8 text-gray-400" />
+          <div className="text-left hidden sm:block">
+            <div className="text-sm font-medium text-gray-900">Guest</div>
+          </div>
+          <ChevronDownIcon className="w-4 h-4 flex-shrink-0" />
+        </button>
+
+        {dropdownOpen && (
+          <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50">
+            <div className="py-1">
+              <Link
+                to="/login"
+                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                onClick={() => setDropdownOpen(false)}
+              >
+                Login
+              </Link>
+              <Link
+                to="/signup"
+                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                onClick={() => setDropdownOpen(false)}
+              >
+                Sign Up
+              </Link>
+              <Link
+                to="/dashboard/donate"
+                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                onClick={() => setDropdownOpen(false)}
+              >
+                Donate
+              </Link>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Authenticated user dropdown
   return (
     <div className="relative flex-shrink-0" ref={dropdownRef}>
       <button
@@ -64,15 +112,15 @@ export default function UserDropdown({ user }: UserDropdownProps) {
       >
         <img
           className="h-8 w-8 rounded-full object-cover"
-          src={getAvatarUrlWithCacheBust(user.avatar, user.gender)}
-          alt={getAvatarAlt(user.firstName, user.lastName, !!user.avatar)}
+          src={getAvatarUrlWithCacheBust(user!.avatar, user!.gender)}
+          alt={getAvatarAlt(user!.firstName, user!.lastName, !!user!.avatar)}
         />
         <div className="text-left hidden sm:block">
           <div className="text-sm font-medium text-gray-900 truncate max-w-24 lg:max-w-none">
-            {user.firstName} {user.lastName}
+            {user!.firstName} {user!.lastName}
           </div>
           <div className="text-xs text-gray-500">
-            {user.systemAuthorizationLevel}
+            {user!.systemAuthorizationLevel}
           </div>
         </div>
         <ChevronDownIcon className="w-4 h-4 flex-shrink-0" />

@@ -4,6 +4,7 @@ import { useAuth } from "../../hooks/useAuth";
 
 export default function GettingStartedSection() {
   const { currentUser } = useAuth();
+  const isGuest = !currentUser;
   const role = currentUser?.role ?? "Participant";
 
   const resolveLink = (title: string): string | undefined => {
@@ -13,6 +14,7 @@ export default function GettingStartedSection() {
       case "Explore Community Events":
         return "/dashboard/upcoming";
       case "Connect & Collaborate":
+        if (isGuest) return "/login";
         if (["Super Admin", "Administrator", "Leader"].includes(role)) {
           return "/dashboard/management"; // Management / Community
         }
@@ -27,13 +29,19 @@ export default function GettingStartedSection() {
     }
   };
 
+  // Guests only see 2 steps
+  const GUEST_TITLES = ["Explore Community Events", "Connect & Collaborate"];
+  const visibleSteps = isGuest
+    ? gettingStartedSteps.filter((s) => GUEST_TITLES.includes(s.title))
+    : gettingStartedSteps;
+
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <h3 className="text-lg font-semibold text-gray-900 mb-4">
         Getting Started with @Cloud
       </h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {gettingStartedSteps.map((step) => (
+        {visibleSteps.map((step) => (
           <GettingStartedStep
             key={step.stepNumber}
             stepNumber={step.stepNumber}

@@ -250,7 +250,19 @@ export default function Programs() {
 
   // Check access for each program (after programs are set)
   useEffect(() => {
-    if (programs.length === 0 || !currentUser) return;
+    if (programs.length === 0 || !currentUser) {
+      // Guest visitors: mark paid programs as "not_purchased" so Enroll button shows
+      if (!currentUser && programs.length > 0) {
+        setPrograms((prev) =>
+          prev.map((p) =>
+            p.isFree
+              ? p
+              : { ...p, hasAccess: false, accessReason: "not_purchased" },
+          ),
+        );
+      }
+      return;
+    }
 
     // Check access for all programs in parallel
     const checkAllAccess = async () => {
@@ -570,7 +582,11 @@ export default function Programs() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`/dashboard/programs/${program.id}/enroll`);
+                          navigate(
+                            currentUser
+                              ? `/dashboard/programs/${program.id}/enroll`
+                              : "/login",
+                          );
                         }}
                         className="absolute -bottom-2 -right-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold py-2 px-4 rounded-md shadow-md hover:shadow-lg transition-all duration-200"
                       >

@@ -49,20 +49,29 @@ export default function DonationPage() {
       {/* Give Button */}
       <div className="flex gap-3">
         <button
-          onClick={() => setIsGiveModalOpen(true)}
+          onClick={() => {
+            if (!currentUser) {
+              sessionStorage.setItem("returnUrl", "/dashboard/donate");
+              navigate("/login");
+            } else {
+              setIsGiveModalOpen(true);
+            }
+          }}
           className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm hover:shadow-md"
         >
           <PlusIcon className="w-5 h-5" />
           <span>Give</span>
         </button>
 
-        <button
-          onClick={() => navigate("/dashboard/donation-receipt")}
-          className="bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm hover:shadow-md"
-        >
-          <DocumentTextIcon className="w-5 h-5" />
-          <span>Get Receipt</span>
-        </button>
+        {currentUser && (
+          <button
+            onClick={() => navigate("/dashboard/donation-receipt")}
+            className="bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm hover:shadow-md"
+          >
+            <DocumentTextIcon className="w-5 h-5" />
+            <span>Get Receipt</span>
+          </button>
+        )}
 
         {/* Login Button - Only show if user is not logged in */}
         {!currentUser && (

@@ -34,7 +34,15 @@ export default function Home() {
               Sign Up
             </Link>
           </div>
-          {/* Guest self-registration entry point removed intentionally */}
+          {/* Enter as Guest */}
+          <div>
+            <Link
+              to="/dashboard/welcome"
+              className="text-gray-500 hover:text-gray-700 underline text-sm transition-colors"
+            >
+              Enter as a Guest
+            </Link>
+          </div>
         </div>
       </div>
     </div>

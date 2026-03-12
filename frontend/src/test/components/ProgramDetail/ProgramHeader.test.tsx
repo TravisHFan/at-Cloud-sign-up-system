@@ -64,7 +64,7 @@ describe("ProgramHeader - Share Button", () => {
 
     await waitFor(() => {
       expect(mockWriteText).toHaveBeenCalledWith(
-        "https://example.com/pr/507f1f77bcf86cd799439011",
+        "https://example.com/dashboard/programs/507f1f77bcf86cd799439011",
       );
     });
   });

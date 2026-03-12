@@ -1,6 +1,9 @@
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify("0.0.0-test"),
+  },
   test: {
     // Use threads pool but force singleThread to minimize memory in Node 22
     pool: "threads",

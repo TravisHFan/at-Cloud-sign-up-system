@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { NotificationProvider } from "./contexts/NotificationContext";
 import { NotificationProvider as NotificationModalProvider } from "./contexts/NotificationModalContext";
@@ -47,7 +47,6 @@ import AssignmentRejection from "./pages/AssignmentRejection";
 import GuestDecline from "./pages/GuestDecline";
 import PublicEvent from "./pages/PublicEvent";
 import PublicEventsList from "./pages/PublicEventsList";
-import PublicProgram from "./pages/PublicProgram";
 import ShortLinkRedirect from "./pages/ShortLinkRedirect";
 import ConfigureRolesTemplates from "./pages/ConfigureRolesTemplates";
 import CreateRolesTemplate from "./pages/CreateRolesTemplate";
@@ -61,6 +60,13 @@ import DonationReceipt from "./pages/DonationReceipt";
 import SessionExpiredModal from "./components/common/SessionExpiredModal";
 import EventPurchase from "./pages/EventPurchase";
 import EventPurchaseSuccess from "./pages/EventPurchaseSuccess";
+import { useParams } from "react-router-dom";
+
+/** Redirect legacy /pr/:id to /dashboard/programs/:id */
+function PrRedirect() {
+  const { id } = useParams();
+  return <Navigate to={`/dashboard/programs/${id}`} replace />;
+}
 
 function App() {
   return (
@@ -351,8 +357,8 @@ function App() {
             <Route path="/events" element={<PublicEventsList />} />
             {/* Public published event page (unauthenticated) */}
             <Route path="/p/:slug" element={<PublicEvent />} />
-            {/* Public program page (unauthenticated, auto-public) */}
-            <Route path="/pr/:id" element={<PublicProgram />} />
+            {/* Legacy /pr/:id → redirect to dashboard programs */}
+            <Route path="/pr/:id" element={<PrRedirect />} />
             {/* SPA fallback for short link resolution (dev / proxy safety) */}
             <Route path="/s/:key" element={<ShortLinkRedirect />} />
           </Routes>

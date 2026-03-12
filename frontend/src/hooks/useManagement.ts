@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import type { SystemAuthorizationLevel, User } from "../types/management";
 import { useRoleStats } from "./useRoleStats";
-import { useUserStats } from "./useUsersApi";
+import { useCommunityStats } from "./useUsersApi";
 import { useUserPermissions } from "./useUserPermissions";
 import { useAuth } from "./useAuth";
 import { MANAGEMENT_CONFIG } from "../config/managementConstants";
@@ -83,16 +83,9 @@ export function useManagement(providedUsers?: User[]) {
   // 1) Page-derived stats (fallback)
   const pageRoleStats = useRoleStats(users);
 
-  // Determine if user has permission to view system analytics
-  const canViewSystemAnalytics =
-    currentUserRole === "Super Admin" ||
-    currentUserRole === "Administrator" ||
-    currentUserRole === "Leader";
-
-  // 2) Backend-wide stats for the whole collection (fetch for all Community page users)
-  const { stats: backendStats, loading: backendStatsLoading } = useUserStats(
-    canViewSystemAnalytics
-  );
+  // 2) Backend-wide stats for the whole collection (all authenticated users can fetch)
+  const { stats: backendStats, loading: backendStatsLoading } =
+    useCommunityStats();
 
   // Map backend stats shape to RoleStats for UI cards; fallback to page stats while loading
   const roleStats = useMemo(() => {
@@ -147,7 +140,7 @@ export function useManagement(providedUsers?: User[]) {
   // Handle user actions with confirmation dialogs
   const showPromoteConfirmation = (
     user: User,
-    newRole: SystemAuthorizationLevel
+    newRole: SystemAuthorizationLevel,
   ) => {
     const roleHierarchy = {
       Participant: "Participant",
@@ -177,7 +170,7 @@ export function useManagement(providedUsers?: User[]) {
 
   const showDemoteConfirmation = (
     user: User,
-    newRole: SystemAuthorizationLevel
+    newRole: SystemAuthorizationLevel,
   ) => {
     const roleHierarchy = {
       Participant: "Participant",
@@ -316,7 +309,7 @@ Deletion Impact Analysis:
               {
                 title: "User Promoted",
                 autoCloseDelay: 4000,
-              }
+              },
             );
           }
           break;
@@ -329,7 +322,7 @@ Deletion Impact Analysis:
               {
                 title: "User Demoted",
                 autoCloseDelay: 4000,
-              }
+              },
             );
           }
           break;
@@ -340,7 +333,7 @@ Deletion Impact Analysis:
             {
               title: "User Deleted",
               autoCloseDelay: 5000,
-            }
+            },
           );
           break;
         case "deactivate":
@@ -350,7 +343,7 @@ Deletion Impact Analysis:
             {
               title: "User Deactivated",
               autoCloseDelay: 4000,
-            }
+            },
           );
           break;
         case "reactivate":
@@ -360,7 +353,7 @@ Deletion Impact Analysis:
             {
               title: "User Reactivated",
               autoCloseDelay: 4000,
-            }
+            },
           );
           break;
       }
@@ -380,7 +373,7 @@ Deletion Impact Analysis:
             },
             variant: "primary",
           },
-        }
+        },
       );
     } finally {
       setIsProcessing(false);
@@ -396,7 +389,7 @@ Deletion Impact Analysis:
   // Legacy handlers - replaced with confirmation dialogs
   const handlePromoteUser = (
     userId: string,
-    newRole: SystemAuthorizationLevel
+    newRole: SystemAuthorizationLevel,
   ) => {
     const user = users.find((u) => u.id === userId);
     if (user) {
@@ -406,7 +399,7 @@ Deletion Impact Analysis:
 
   const handleDemoteUser = (
     userId: string,
-    newRole: SystemAuthorizationLevel
+    newRole: SystemAuthorizationLevel,
   ) => {
     const user = users.find((u) => u.id === userId);
     if (user) {
@@ -442,7 +435,7 @@ Deletion Impact Analysis:
     handleDemoteUser,
     handleDeleteUser,
     handleDeactivateUser,
-    handleReactivateUser
+    handleReactivateUser,
   );
 
   // Close dropdown when clicking outside

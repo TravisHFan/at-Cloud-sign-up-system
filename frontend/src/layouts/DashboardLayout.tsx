@@ -6,19 +6,22 @@ import { useAuth } from "../hooks/useAuth";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 
 /**
- * Routes that have public fallbacks for unauthenticated users.
- * Instead of redirecting to login, these routes redirect to their public versions.
+ * Routes that unauthenticated "guest" visitors may access.
+ * Any other /dashboard/* path redirects to /login.
  */
-const PUBLIC_FALLBACK_ROUTES: Array<{
-  pattern: RegExp;
-  getPublicPath: (match: RegExpMatchArray) => string;
-}> = [
-  {
-    // /dashboard/programs/:id → /pr/:id
-    pattern: /^\/dashboard\/programs\/([a-f0-9]{24})$/i,
-    getPublicPath: (match) => `/pr/${match[1]}`,
-  },
+const GUEST_ALLOWED_PATTERNS: RegExp[] = [
+  /^\/dashboard\/?$/i, // index (Programs)
+  /^\/dashboard\/welcome\/?$/i,
+  /^\/dashboard\/programs\/?$/i,
+  /^\/dashboard\/programs\/[a-f0-9]{24}\/?$/i, // program detail
+  /^\/dashboard\/upcoming\/?$/i,
+  /^\/dashboard\/passed\/?$/i,
+  /^\/dashboard\/donate\/?$/i,
 ];
+
+function isGuestAllowedRoute(pathname: string): boolean {
+  return GUEST_ALLOWED_PATTERNS.some((p) => p.test(pathname));
+}
 
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -30,33 +33,30 @@ export default function DashboardLayout() {
     return <LoadingSpinner />;
   }
 
-  // Redirect to login if user is not authenticated, preserving original destination
-  if (!currentUser) {
-    // Check if this route has a public fallback
-    for (const { pattern, getPublicPath } of PUBLIC_FALLBACK_ROUTES) {
-      const match = location.pathname.match(pattern);
-      if (match) {
-        return <Navigate to={getPublicPath(match)} replace />;
-      }
-    }
-    // Default: redirect to login with return URL
+  const isGuest = !currentUser;
+
+  // Redirect to login if guest tries to access a non-allowed route
+  if (isGuest && !isGuestAllowedRoute(location.pathname)) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
-
-  const user = currentUser;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Fixed Header */}
       <Header
-        user={{
-          firstName: user.firstName,
-          lastName: user.lastName,
-          username: user.username,
-          systemAuthorizationLevel: user.role,
-          gender: user.gender,
-          avatar: user.avatar || null,
-        }}
+        user={
+          isGuest
+            ? null
+            : {
+                firstName: currentUser.firstName,
+                lastName: currentUser.lastName,
+                username: currentUser.username,
+                systemAuthorizationLevel: currentUser.role,
+                gender: currentUser.gender,
+                avatar: currentUser.avatar || null,
+              }
+        }
+        isGuest={isGuest}
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
       />
@@ -64,7 +64,7 @@ export default function DashboardLayout() {
       <div className="flex flex-1">
         {/* Fixed Sidebar */}
         <Sidebar
-          userRole={user.role}
+          userRole={isGuest ? "guest" : currentUser.role}
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
         />

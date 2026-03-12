@@ -139,6 +139,20 @@ class UsersApiClient extends BaseApiClient {
   // ========== User Stats and Analytics ==========
 
   /**
+   * Get community-level statistics (all authenticated users)
+   * @returns Community statistics object (totals, role distribution)
+   */
+  async getCommunityStats(): Promise<unknown> {
+    const response = await this.request<unknown>("/users/community-stats");
+
+    if (response.data) {
+      return response.data;
+    }
+
+    throw new Error(response.message || "Failed to get community stats");
+  }
+
+  /**
    * Get user statistics (Admin only)
    * @returns User statistics object
    */
@@ -328,6 +342,7 @@ export const usersService = {
 
   // Stats and analytics
   getUserStats: () => usersApiClient.getUserStats(),
+  getCommunityStats: () => usersApiClient.getCommunityStats(),
 
   // Role management
   updateUserRole: (userId: string, role: string) =>

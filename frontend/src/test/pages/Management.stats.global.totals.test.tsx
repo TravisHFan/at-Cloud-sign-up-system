@@ -24,12 +24,12 @@ vi.mock("../../services/api", async () => {
             i < 2
               ? "Administrator"
               : i < 3
-              ? "Super Admin"
-              : i < 6
-              ? "Leader"
-              : i < 8
-              ? "Guest Expert"
-              : "Participant",
+                ? "Super Admin"
+                : i < 6
+                  ? "Leader"
+                  : i < 8
+                    ? "Guest Expert"
+                    : "Participant",
           roleInAtCloud: i % 2 === 0 ? "Coach" : null,
           isAtCloudLeader: i % 3 === 0,
           avatar: null,
@@ -67,6 +67,19 @@ vi.mock("../../services/api", async () => {
           },
         },
       }),
+      getCommunityStats: vi.fn().mockResolvedValue({
+        stats: {
+          totalUsers: 50,
+          atCloudLeaders: 18,
+          roleDistribution: {
+            "Super Admin": 3,
+            Administrator: 7,
+            Leader: 15,
+            "Guest Expert": 5,
+            Participant: 20,
+          },
+        },
+      }),
     },
   };
 });
@@ -84,7 +97,7 @@ const renderWithProviders = (ui: React.ReactElement) =>
           <NotificationProvider>{ui}</NotificationProvider>
         </NotificationModalProvider>
       </AuthProvider>
-    </BrowserRouter>
+    </BrowserRouter>,
   );
 
 describe("Management Page — global stats reflect entire collection", () => {
@@ -110,19 +123,19 @@ describe("Management Page — global stats reflect entire collection", () => {
     // Verify a couple of role-specific counts from mocked backend stats
     const adminsCard = await screen.findByText("Administrators");
     expect(
-      await within(adminsCard.closest("div") as HTMLElement).findByText("7")
+      await within(adminsCard.closest("div") as HTMLElement).findByText("7"),
     ).toBeInTheDocument();
 
     const leadersCard = await screen.findByText("Leaders");
     expect(
-      await within(leadersCard.closest("div") as HTMLElement).findByText("15")
+      await within(leadersCard.closest("div") as HTMLElement).findByText("15"),
     ).toBeInTheDocument();
 
     const participantsCard = await screen.findByText("Participants");
     expect(
       await within(participantsCard.closest("div") as HTMLElement).findByText(
-        "20"
-      )
+        "20",
+      ),
     ).toBeInTheDocument();
   });
 });

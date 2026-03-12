@@ -35,8 +35,10 @@ export default function EventListItem({
   isGuest = false,
 }: EventListItemProps) {
   const [showDeletionModal, setShowDeletionModal] = useState(false);
+  const [showLoginPrompt, setShowLoginPrompt] = useState<string | null>(null); // message string
   const navigate = useNavigate();
   const { currentUser } = useAuth();
+  const isGuestVisitor = !currentUser;
 
   // Check if current user can edit this event
   const canEdit = (() => {
@@ -140,6 +142,23 @@ export default function EventListItem({
   const getActionButton = () => {
     if (type === "passed") {
       const hasRecording = !!event.youtubeUrl;
+
+      // Guest visitor: prompt to login for all past events
+      if (isGuestVisitor) {
+        return (
+          <Button
+            variant={hasRecording ? "success" : "outline"}
+            onClick={() =>
+              setShowLoginPrompt(
+                "Please login to view details and watch recordings.",
+              )
+            }
+          >
+            {hasRecording ? "Play Recording" : "View Details"}
+          </Button>
+        );
+      }
+
       return (
         <Button
           variant={hasRecording ? "success" : "outline"}
@@ -193,6 +212,28 @@ export default function EventListItem({
 
     const spotsLeft = event.totalSlots - event.signedUp;
     const isFull = spotsLeft === 0;
+
+    // Guest visitor: published → public page, unpublished → login prompt
+    if (isGuestVisitor) {
+      return (
+        <Button
+          onClick={() => {
+            if (event.publish && event.publicSlug) {
+              navigate(`/p/${event.publicSlug}`);
+            } else {
+              setShowLoginPrompt(
+                "This event is not published. If you want to participate, please login.",
+              );
+            }
+          }}
+          disabled={isFull}
+          variant={isFull ? "secondary" : "primary"}
+          className={isFull ? "cursor-not-allowed" : ""}
+        >
+          {isFull ? "Full" : "View & Sign Up"}
+        </Button>
+      );
+    }
 
     return (
       <div className="flex items-center space-x-2">
@@ -378,6 +419,26 @@ export default function EventListItem({
         onCancel={handleCancelEvent}
         eventTitle={event.title}
       />
+
+      {/* Guest Login Prompt Modal */}
+      {showLoginPrompt && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+            <p className="text-gray-700 mb-6">{showLoginPrompt}</p>
+            <div className="flex justify-end space-x-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowLoginPrompt(null)}
+              >
+                Cancel
+              </Button>
+              <Button variant="primary" onClick={() => navigate("/login")}>
+                Login
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

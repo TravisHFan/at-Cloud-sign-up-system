@@ -59,6 +59,34 @@ export default function Sidebar({
 
   // Navigation items based on user role
   const getNavigationItems = (): NavigationItem[] => {
+    // Guest visitors: limited nav
+    if (userRole === "guest") {
+      return [
+        { name: "Welcome", href: "/dashboard/welcome", icon: HomeIcon },
+        {
+          name: "Programs",
+          href: "/dashboard/programs",
+          icon: RectangleStackIcon,
+        },
+        {
+          name: "Upcoming Events",
+          href: "/dashboard/upcoming",
+          icon: CalendarDaysIcon,
+        },
+        {
+          name: "Past Events",
+          href: "/dashboard/passed",
+          icon: CalendarIcon,
+        },
+        { name: "Donate", href: "/dashboard/donate", icon: HeartIcon },
+        {
+          name: "Log In",
+          href: "/login",
+          icon: ArrowRightOnRectangleIcon,
+        },
+      ];
+    }
+
     const baseItems: NavigationItem[] = [
       // Welcome as the first item
       {
@@ -120,7 +148,7 @@ export default function Sidebar({
           href: "/dashboard/income-history",
           icon: CreditCardIcon,
         },
-        { name: "Management", href: "/dashboard/management", icon: UsersIcon }
+        { name: "Management", href: "/dashboard/management", icon: UsersIcon },
       );
     } else if (userRole === "Leader") {
       baseItems.push(
@@ -134,7 +162,7 @@ export default function Sidebar({
           href: "/dashboard/configure-roles-templates",
           icon: DocumentDuplicateIcon,
         },
-        { name: "Community", href: "/dashboard/management", icon: UsersIcon }
+        { name: "Community", href: "/dashboard/management", icon: UsersIcon },
       );
     } else if (userRole === "Participant" || userRole === "Guest Expert") {
       // Participants can now see Create Event (with on-page access notice) and Community
@@ -148,7 +176,7 @@ export default function Sidebar({
           name: "Community",
           href: "/dashboard/management",
           icon: UsersIcon,
-        }
+        },
       );
     }
 

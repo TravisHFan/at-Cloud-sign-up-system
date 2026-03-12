@@ -550,7 +550,9 @@ export default function ProgramDetail({
         earlyBirdDeadline={program.earlyBirdDeadline}
         hasAccess={hasAccess}
         accessReason={accessReason}
-        onEnrollClick={() => navigate(`/dashboard/programs/${id}/enroll`)}
+        onEnrollClick={() =>
+          navigate(currentUser ? `/dashboard/programs/${id}/enroll` : "/login")
+        }
         pricing={program.pricing}
       />
 

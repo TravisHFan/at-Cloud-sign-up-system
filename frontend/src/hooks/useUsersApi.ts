@@ -155,7 +155,7 @@ export function useUserProfile(): UseUserProfileReturn {
         setLoading(false);
       }
     },
-    [profile, success, showError]
+    [profile, success, showError],
   );
 
   const refreshProfile = useCallback(async () => {
@@ -200,7 +200,7 @@ export function useUsers(options?: {
 
       try {
         const response = (await userService.getUsers(
-          params
+          params,
         )) as unknown as BackendUsersResponse;
 
         // Convert backend users format to frontend UserProfile format
@@ -231,7 +231,7 @@ export function useUsers(options?: {
             company: user.company ?? undefined,
             weeklyChurch: user.weeklyChurch ?? undefined,
             churchAddress: user.churchAddress ?? undefined,
-          })
+          }),
         );
 
         setUsers(convertedUsers);
@@ -248,14 +248,14 @@ export function useUsers(options?: {
         setLoading(false);
       }
     },
-    [showError, options?.suppressErrors]
+    [showError, options?.suppressErrors],
   );
 
   const searchUsers = useCallback(
     async (searchTerm: string) => {
       await fetchUsers({ search: searchTerm, page: 1 });
     },
-    [fetchUsers]
+    [fetchUsers],
   );
 
   const filterUsers = useCallback(
@@ -266,7 +266,7 @@ export function useUsers(options?: {
     }) => {
       await fetchUsers({ ...filters, page: 1 });
     },
-    [fetchUsers]
+    [fetchUsers],
   );
 
   // Enhanced method for advanced filtering and sorting
@@ -283,13 +283,13 @@ export function useUsers(options?: {
       // Clean up undefined values to avoid sending empty params
       const cleanParams = Object.fromEntries(
         Object.entries(params).filter(
-          ([, value]) => value !== undefined && value !== ""
-        )
+          ([, value]) => value !== undefined && value !== "",
+        ),
       );
 
       await fetchUsers(cleanParams);
     },
-    [fetchUsers]
+    [fetchUsers],
   );
 
   const loadPage = useCallback(
@@ -301,7 +301,7 @@ export function useUsers(options?: {
         gender?: string;
         sortBy?: string;
         sortOrder?: "asc" | "desc";
-      }
+      },
     ) => {
       if (currentFilters) {
         await fetchUsersWithFilters({ ...currentFilters, page });
@@ -309,7 +309,7 @@ export function useUsers(options?: {
         await fetchUsers({ page });
       }
     },
-    [fetchUsers, fetchUsersWithFilters]
+    [fetchUsers, fetchUsersWithFilters],
   );
 
   const refreshUsers = useCallback(async () => {
@@ -333,6 +333,47 @@ export function useUsers(options?: {
     fetchUsersWithFilters,
     loadPage,
     refreshUsers,
+  };
+}
+
+// Hook for getting community-level statistics (available to all authenticated users)
+export function useCommunityStats() {
+  const [stats, setStats] = useState<Record<string, unknown> | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchStats = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response =
+        (await userService.getCommunityStats()) as unknown as Record<
+          string,
+          unknown
+        >;
+      setStats(response);
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Failed to load community statistics";
+      setError(errorMessage);
+      console.error("Error fetching community stats:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
+
+  return {
+    stats,
+    loading,
+    error,
+    refreshStats: fetchStats,
   };
 }
 
@@ -392,7 +433,7 @@ export function useUser(userId: string) {
 
     try {
       const response = (await userService.getUser(
-        userId
+        userId,
       )) as unknown as BackendUserBase;
 
       // Convert backend user format to frontend UserProfile format

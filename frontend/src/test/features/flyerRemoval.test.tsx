@@ -20,6 +20,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 vi.mock("../../hooks/useUsersApi", () => ({
   useUsers: () => ({ users: [], isLoading: false, error: null }),
   useUserStats: () => ({ stats: {}, isLoading: false, error: null }),
+  useCommunityStats: () => ({ stats: {}, loading: false, error: null }),
 }));
 vi.mock("../../hooks/useOrganizersApi", () => ({
   useOrganizers: () => ({ organizers: [], isLoading: false, error: null }),
@@ -186,17 +187,16 @@ describe("Flyer removal forms", () => {
             </Routes>
           </MemoryRouter>
         </NotificationModalProvider>
-      </AuthProvider>
+      </AuthProvider>,
     );
 
     // Wait for initial flyer input to populate
-    const _flyerInputs = await screen.findAllByPlaceholderText(
-      /uploads\/images/i
-    );
+    const _flyerInputs =
+      await screen.findAllByPlaceholderText(/uploads\/images/i);
     const _flyerInput = _flyerInputs[0];
 
     expect((_flyerInput as HTMLInputElement).value).toContain(
-      "/uploads/original.png"
+      "/uploads/original.png",
     );
 
     // Click Remove button
@@ -256,7 +256,7 @@ describe("Flyer removal forms", () => {
             </Routes>
           </MemoryRouter>
         </NotificationModalProvider>
-      </AuthProvider>
+      </AuthProvider>,
     );
 
     const _flyerInput = await screen.findByPlaceholderText(/uploads\/images/i);
@@ -330,7 +330,7 @@ describe("Flyer removal forms", () => {
             </Routes>
           </MemoryRouter>
         </NotificationModalProvider>
-      </AuthProvider>
+      </AuthProvider>,
     );
 
     // Do not change value
@@ -388,11 +388,10 @@ describe("Flyer removal forms", () => {
             </Routes>
           </MemoryRouter>
         </NotificationModalProvider>
-      </AuthProvider>
+      </AuthProvider>,
     );
-    const _flyerInputs = await screen.findAllByPlaceholderText(
-      /uploads\/images/i
-    );
+    const _flyerInputs =
+      await screen.findAllByPlaceholderText(/uploads\/images/i);
     const _flyerInput = _flyerInputs[0];
 
     fireEvent.change(_flyerInput, { target: { value: "/uploads/new.png" } });
@@ -437,7 +436,7 @@ describe("Flyer removal forms", () => {
             </Routes>
           </MemoryRouter>
         </NotificationModalProvider>
-      </AuthProvider>
+      </AuthProvider>,
     );
 
     programService.updateProgram({} as any, {});
@@ -481,7 +480,7 @@ describe("Flyer removal forms", () => {
             </Routes>
           </MemoryRouter>
         </NotificationModalProvider>
-      </AuthProvider>
+      </AuthProvider>,
     );
     const _flyerInput3 = await screen.findByPlaceholderText(/uploads\/images/i);
     fireEvent.change(_flyerInput3, {

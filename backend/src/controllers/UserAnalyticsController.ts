@@ -9,6 +9,50 @@ import { hasPermission, PERMISSIONS } from "../utils/roleUtils";
  */
 export class UserAnalyticsController {
   /**
+   * Get community-level statistics (all authenticated users)
+   * Returns only aggregate counts: total, role distribution, @Cloud leaders.
+   */
+  static async getCommunityStats(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          message: "Authentication required.",
+        });
+        return;
+      }
+
+      type UserModelWithStats = typeof User & {
+        getUserStats: () => Promise<{
+          totalUsers: number;
+          atCloudLeaders: number;
+          roleDistribution: Record<string, number>;
+        }>;
+      };
+      const UserWithStats = User as unknown as UserModelWithStats;
+      const raw = await UserWithStats.getUserStats();
+
+      // Return only the non-sensitive aggregate counts
+      res.status(200).json({
+        success: true,
+        data: {
+          stats: {
+            totalUsers: raw.totalUsers,
+            atCloudLeaders: raw.atCloudLeaders,
+            roleDistribution: raw.roleDistribution,
+          },
+        },
+      });
+    } catch (error: unknown) {
+      console.error("Get community stats error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to retrieve community statistics.",
+      });
+    }
+  }
+
+  /**
    * Get user statistics (admin only)
    */
   static async getUserStats(req: Request, res: Response): Promise<void> {

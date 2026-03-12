@@ -38,7 +38,43 @@ const quickActions: QuickAction[] = [
 export default function QuickActionsCard() {
   // Get current user role from auth context
   const { currentUser } = useAuth();
-  const currentUserRole = currentUser?.role || "Participant";
+
+  // Guest quick actions
+  if (!currentUser) {
+    const guestActions: QuickAction[] = [
+      {
+        label: "Login",
+        href: "/login",
+        colorClass: "bg-blue-50 text-blue-700 hover:bg-blue-100",
+      },
+      {
+        label: "Sign Up",
+        href: "/signup",
+        colorClass: "bg-green-50 text-green-700 hover:bg-green-100",
+      },
+      {
+        label: "Donate",
+        href: "/dashboard/donate",
+        colorClass: "bg-purple-50 text-purple-700 hover:bg-purple-100",
+      },
+    ];
+
+    return (
+      <div className="space-y-3">
+        {guestActions.map((action) => (
+          <Link
+            key={action.label}
+            to={action.href}
+            className={`block w-full text-left px-4 py-2 rounded-md transition-colors ${action.colorClass}`}
+          >
+            {action.label}
+          </Link>
+        ))}
+      </div>
+    );
+  }
+
+  const currentUserRole = currentUser.role;
 
   // Filter actions based on user role
   const visibleActions = quickActions.filter((action) => {

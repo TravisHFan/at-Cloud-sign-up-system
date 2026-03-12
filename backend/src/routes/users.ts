@@ -29,7 +29,7 @@ router.put(
   "/profile",
   validateUserUpdate,
   handleValidationErrors,
-  ProfileController.updateProfile
+  ProfileController.updateProfile,
 );
 
 // Avatar upload route (ProfileController)
@@ -37,17 +37,27 @@ router.post(
   "/avatar",
   uploadLimiter,
   uploadAvatar,
-  ProfileController.uploadAvatar
+  ProfileController.uploadAvatar,
 );
 
 // Admin routes - Allow all authenticated users to view user list (community feature) (UserAdminController)
 router.get("/", UserAdminController.getAllUsers);
 router.get("/search", UserAdminController.getAllUsers); // Search endpoint (uses same logic as getAllUsers)
+
+// Community stats - available to all authenticated users who can view the Community page
+router.get(
+  "/community-stats",
+  authorizePermission(PERMISSIONS.VIEW_USER_PROFILES),
+  analyticsLimiter,
+  UserAnalyticsController.getCommunityStats,
+);
+
+// Full analytics stats - requires system analytics permission
 router.get(
   "/stats",
   authorizePermission(PERMISSIONS.VIEW_SYSTEM_ANALYTICS),
   analyticsLimiter,
-  UserAnalyticsController.getUserStats // UserAnalyticsController
+  UserAnalyticsController.getUserStats, // UserAnalyticsController
 );
 
 // Get user by ID (access control handled in controller) - MUST come after specific routes (UserAdminController)
@@ -55,7 +65,7 @@ router.get(
   "/:id",
   validateObjectId,
   handleValidationErrors,
-  UserAdminController.getUserById
+  UserAdminController.getUserById,
 );
 
 // Admin user management routes (UserAdminController)
@@ -64,28 +74,28 @@ router.put(
   validateObjectId,
   handleValidationErrors,
   requireAdmin,
-  UserAdminController.adminEditProfile
+  UserAdminController.adminEditProfile,
 );
 router.put(
   "/:id/role",
   validateObjectId,
   handleValidationErrors,
   requireAdmin,
-  UserAdminController.updateUserRole
+  UserAdminController.updateUserRole,
 );
 router.put(
   "/:id/deactivate",
   validateObjectId,
   handleValidationErrors,
   requireLeader,
-  UserAdminController.deactivateUser
+  UserAdminController.deactivateUser,
 );
 router.put(
   "/:id/reactivate",
   validateObjectId,
   handleValidationErrors,
   requireLeader,
-  UserAdminController.reactivateUser
+  UserAdminController.reactivateUser,
 );
 
 // Delete user impact analysis route (Super Admin only) (UserAdminController)
@@ -94,7 +104,7 @@ router.get(
   validateObjectId,
   handleValidationErrors,
   requireSuperAdmin,
-  UserAdminController.getUserDeletionImpact
+  UserAdminController.getUserDeletionImpact,
 );
 
 // Delete user route (Super Admin only) (UserAdminController)
@@ -103,7 +113,7 @@ router.delete(
   validateObjectId,
   handleValidationErrors,
   requireSuperAdmin,
-  UserAdminController.deleteUser
+  UserAdminController.deleteUser,
 );
 
 // Password change route (ProfileController)
@@ -111,7 +121,7 @@ router.post(
   "/:id/change-password",
   validateObjectId,
   handleValidationErrors,
-  ProfileController.changePassword
+  ProfileController.changePassword,
 );
 
 export default router;

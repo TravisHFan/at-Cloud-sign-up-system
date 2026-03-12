@@ -74,8 +74,8 @@ export default function Welcome() {
       {/* Dashboard Cards */}
       <div
         className={`grid grid-cols-1 gap-6 ${
-          currentUser?.role === "Participant"
-            ? "md:grid-cols-2" // 2 columns for Participants (no Ministry Stats)
+          !currentUser || currentUser.role === "Participant"
+            ? "md:grid-cols-2" // 2 columns for Participants / guests (no Ministry Stats)
             : "md:grid-cols-2 lg:grid-cols-3" // 3 columns for other roles
         }`}
       >
@@ -93,8 +93,8 @@ export default function Welcome() {
           <UpcomingEventsCard />
         </DashboardCard>
 
-        {/* Only show Ministry Stats for non-Participant roles */}
-        {currentUser?.role !== "Participant" && (
+        {/* Only show Ministry Stats for authenticated non-Participant roles */}
+        {currentUser && currentUser.role !== "Participant" && (
           <DashboardCard
             title="Ministry Stats"
             icon={<Icon name="bar-chart" className="text-orange-500" />}
@@ -113,13 +113,17 @@ export default function Welcome() {
 // Simple Upcoming Events Card Component
 function UpcomingEventsCard() {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
+  const isGuest = !currentUser;
   const { events, loading, error } = useEvents({
     status: "upcoming",
     pageSize: 3, // Only get the first 3 events
   });
 
-  // Get the next 3 upcoming events
-  const upcomingEvents = events.slice(0, 3);
+  // For guests: only show published events
+  const upcomingEvents = isGuest
+    ? events.filter((e) => e.publish).slice(0, 3)
+    : events.slice(0, 3);
 
   // Function to calculate days until event
   const getDaysUntilEvent = (eventDate: string): string => {
@@ -136,12 +140,12 @@ function UpcomingEventsCard() {
     const todayStart = new Date(
       now.getFullYear(),
       now.getMonth(),
-      now.getDate()
+      now.getDate(),
     );
     const eventStart = new Date(
       event.getFullYear(),
       event.getMonth(),
-      event.getDate()
+      event.getDate(),
     );
 
     const diffTime = eventStart.getTime() - todayStart.getTime();
@@ -231,7 +235,11 @@ function UpcomingEventsCard() {
           return (
             <Link
               key={event.id}
-              to={`/dashboard/event/${event.id}`}
+              to={
+                isGuest && event.publicSlug
+                  ? `/p/${event.publicSlug}`
+                  : `/dashboard/event/${event.id}`
+              }
               className="block rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
             >
               <div
@@ -247,7 +255,7 @@ function UpcomingEventsCard() {
                       event.time,
                       event.endTime,
                       event.timeZone,
-                      event.endDate
+                      event.endDate,
                     )}
                   </p>
                 </div>

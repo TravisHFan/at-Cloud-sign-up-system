@@ -61,6 +61,7 @@ export class ApiClient extends BaseApiClient {
   // Users Methods (used by session-expired.prompt.test.ts, useUsersApi.ts)
   // ============================================
   getUserStats = usersService.getUserStats;
+  getCommunityStats = usersService.getCommunityStats;
   getProfile = authService.getProfile;
 
   // ============================================

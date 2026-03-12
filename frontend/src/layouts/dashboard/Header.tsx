@@ -12,13 +12,15 @@ interface User {
 }
 
 interface HeaderProps {
-  user: User;
+  user: User | null;
+  isGuest: boolean;
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
 }
 
 export default function Header({
   user,
+  isGuest,
   sidebarOpen,
   setSidebarOpen,
 }: HeaderProps) {
@@ -58,8 +60,8 @@ export default function Header({
 
           {/* Right section: Notifications + User Avatar and Dropdown */}
           <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0 ml-2">
-            <NotificationDropdown />
-            <UserDropdown user={user} />
+            {!isGuest && <NotificationDropdown />}
+            <UserDropdown user={user} isGuest={isGuest} />
           </div>
         </div>
       </div>

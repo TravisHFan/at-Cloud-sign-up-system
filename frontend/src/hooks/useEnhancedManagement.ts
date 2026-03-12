@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import type { SystemAuthorizationLevel, User } from "../types/management";
 import { useRoleStats } from "./useRoleStats";
-import { useUserStats } from "./useUsersApi";
+import { useCommunityStats } from "./useUsersApi";
 import { useAuth } from "./useAuth";
 import { useManagementFilters } from "./useManagementFilters";
 
@@ -55,16 +55,9 @@ export function useEnhancedManagement() {
   // Page-derived stats (fallback)
   const pageRoleStats = useRoleStats(users);
 
-  // Determine if user has permission to view system analytics
-  const canViewSystemAnalytics =
-    currentUserRole === "Super Admin" ||
-    currentUserRole === "Administrator" ||
-    currentUserRole === "Leader";
-
-  // Backend-wide stats for the whole collection (fetch for all Community page users)
-  const { stats: backendStats, loading: backendStatsLoading } = useUserStats(
-    canViewSystemAnalytics
-  );
+  // Backend-wide stats for the whole collection (all authenticated users can fetch)
+  const { stats: backendStats, loading: backendStatsLoading } =
+    useCommunityStats();
 
   // Map backend stats shape to RoleStats for UI cards; fallback to page stats while loading
   const roleStats = useMemo(() => {

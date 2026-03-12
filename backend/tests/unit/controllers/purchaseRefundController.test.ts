@@ -45,8 +45,10 @@ describe("PurchaseRefundController - Unit Tests", () => {
       refundDeadline.setDate(refundDeadline.getDate() + REFUND_WINDOW_DAYS);
       refundDeadline.setHours(23, 59, 59, 999); // End of the deadline day
 
-      const daysElapsed = Math.floor(
-        (now.getTime() - purchaseDate.getTime()) / (1000 * 60 * 60 * 24)
+      // Use Math.round (not Math.floor) because DST transitions can shift
+      // midnight-to-midnight intervals by ±1 hour, making Math.floor off-by-one.
+      const daysElapsed = Math.round(
+        (now.getTime() - purchaseDate.getTime()) / (1000 * 60 * 60 * 24),
       );
       const daysRemaining = REFUND_WINDOW_DAYS - daysElapsed;
 
@@ -132,7 +134,7 @@ describe("PurchaseRefundController - Unit Tests", () => {
         expect(result.isEligible).toBe(false);
         expect(result.reason).toContain("pending");
         expect(result.reason).toContain(
-          "Only completed purchases can be refunded"
+          "Only completed purchases can be refunded",
         );
       });
 
@@ -294,7 +296,7 @@ describe("PurchaseRefundController - Unit Tests", () => {
         // Deadline is 30 days later at end of day: 2025-01-31 23:59:59.999
         const expectedDeadline = new Date("2025-02-01T07:59:59.999Z"); // End of Jan 31 in UTC
         expect(result.refundDeadline.toISOString()).toBe(
-          expectedDeadline.toISOString()
+          expectedDeadline.toISOString(),
         );
       });
 
@@ -310,7 +312,7 @@ describe("PurchaseRefundController - Unit Tests", () => {
         // Purchase date should be normalized to start of day (00:00:00.000)
         const expectedNormalizedDate = new Date("2025-01-15T08:00:00.000Z"); // Start of day in UTC-8
         expect(result.purchaseDate.toISOString()).toBe(
-          expectedNormalizedDate.toISOString()
+          expectedNormalizedDate.toISOString(),
         );
       });
 
@@ -348,7 +350,7 @@ describe("PurchaseRefundController - Unit Tests", () => {
         const result = calculateRefundEligibility(purchase);
 
         expect(result.reason).toBe(
-          "You have 1 day remaining to request a refund."
+          "You have 1 day remaining to request a refund.",
         );
       });
 
@@ -364,7 +366,7 @@ describe("PurchaseRefundController - Unit Tests", () => {
         const result = calculateRefundEligibility(purchase);
 
         expect(result.reason).toBe(
-          "You have 20 days remaining to request a refund."
+          "You have 20 days remaining to request a refund.",
         );
       });
 
@@ -377,7 +379,7 @@ describe("PurchaseRefundController - Unit Tests", () => {
         const result = calculateRefundEligibility(purchase);
 
         expect(result.reason).toBe(
-          "You have 30 days remaining to request a refund."
+          "You have 30 days remaining to request a refund.",
         );
       });
     });
@@ -431,7 +433,7 @@ describe("PurchaseRefundController - Unit Tests", () => {
 
         // Normalized to start of Jan 1, then 30 days to end of Jan 31
         expect(result.refundDeadline.toISOString()).toBe(
-          new Date("2025-02-01T07:59:59.999Z").toISOString()
+          new Date("2025-02-01T07:59:59.999Z").toISOString(),
         );
       });
 
@@ -447,7 +449,7 @@ describe("PurchaseRefundController - Unit Tests", () => {
         // Normalized to start of Jan 15, then 30 days to end of Feb 14
         const expectedDeadline = new Date("2025-02-15T07:59:59.999Z");
         expect(result.refundDeadline.toISOString()).toBe(
-          expectedDeadline.toISOString()
+          expectedDeadline.toISOString(),
         );
       });
     });
