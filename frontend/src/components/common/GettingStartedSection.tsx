@@ -41,10 +41,10 @@ export default function GettingStartedSection() {
         Getting Started with @Cloud
       </h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {visibleSteps.map((step) => (
+        {visibleSteps.map((step, index) => (
           <GettingStartedStep
             key={step.stepNumber}
-            stepNumber={step.stepNumber}
+            stepNumber={index + 1}
             title={step.title}
             description={step.description}
             color={step.color}

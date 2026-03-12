@@ -61,6 +61,9 @@ export class BaseApiClient {
 
     // First attempt
     const config = buildConfig();
+    // Track whether user had a token before this request.
+    // If not, they are a guest — suppress session-expired modal on 401.
+    const hadTokenBeforeRequest = !!localStorage.getItem("authToken");
 
     try {
       let response = await fetch(url, config);
@@ -118,11 +121,20 @@ export class BaseApiClient {
 
             if (response.ok) return data;
           } catch {
-            // Refresh failed; clear token and trigger session expiration prompt
+            // Refresh failed; clear token
             localStorage.removeItem("authToken");
-            handleSessionExpired();
-            // Return early - do NOT throw or continue as SessionExpiredModal handles this
-            return Promise.reject(new Error("Session expired"));
+            // Only show session-expired modal if user was previously authenticated.
+            // Guests (no token before request) should get a silent rejection.
+            if (hadTokenBeforeRequest) {
+              handleSessionExpired();
+            }
+            return Promise.reject(
+              new Error(
+                hadTokenBeforeRequest
+                  ? "Session expired"
+                  : "Authentication required",
+              ),
+            );
           }
         }
 
@@ -186,9 +198,16 @@ export class BaseApiClient {
         err.status = response.status;
         if (err.status === 401) {
           // Fallback path if we landed here without triggering above branch
-          handleSessionExpired();
-          // Return early - do NOT throw as SessionExpiredModal handles this
-          return Promise.reject(new Error("Session expired"));
+          if (hadTokenBeforeRequest) {
+            handleSessionExpired();
+          }
+          return Promise.reject(
+            new Error(
+              hadTokenBeforeRequest
+                ? "Session expired"
+                : "Authentication required",
+            ),
+          );
         }
         throw err;
       }

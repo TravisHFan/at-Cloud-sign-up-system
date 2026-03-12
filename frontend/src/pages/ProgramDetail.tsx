@@ -163,9 +163,15 @@ export default function ProgramDetail({
     };
   }, [id, serverPaginationEnabled, limit, sortDir, avatarUpdateCounter]);
 
-  // Check program access
+  // Check program access (skip for guests — no token means no purchase)
   useEffect(() => {
-    if (!id) return;
+    if (!id || !currentUser) {
+      if (!currentUser) {
+        setHasAccess(false);
+        setAccessReason("not_purchased");
+      }
+      return;
+    }
     let cancelled = false;
     (async () => {
       try {
@@ -184,11 +190,11 @@ export default function ProgramDetail({
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, currentUser]);
 
   // Check if current user is a class rep of this program (for email permission)
   useEffect(() => {
-    if (!id || !currentUser?.id) return;
+    if (!id || !currentUser) return;
     let cancelled = false;
     (async () => {
       try {

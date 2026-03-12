@@ -129,8 +129,22 @@ export default function DonationPage() {
 
         {/* Tab Content */}
         <div className="p-6">
-          {activeTab === "giving" && <GivingTab key={refreshKey} />}
-          {activeTab === "scheduled" && <ScheduledTab />}
+          {currentUser ? (
+            <>
+              {activeTab === "giving" && <GivingTab key={refreshKey} />}
+              {activeTab === "scheduled" && <ScheduledTab />}
+            </>
+          ) : (
+            <div className="text-center py-12 text-gray-500">
+              <p className="text-lg font-medium text-gray-700 mb-2">
+                Log in to view your donation history
+              </p>
+              <p className="text-sm">
+                Sign in to see your giving history, scheduled donations, and
+                receipts.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
