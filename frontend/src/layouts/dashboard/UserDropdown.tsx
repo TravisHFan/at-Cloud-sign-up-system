@@ -19,10 +19,13 @@ interface User {
 
 interface UserDropdownProps {
   user: User | null;
-  isGuest: boolean;
+  isGuest?: boolean;
 }
 
-export default function UserDropdown({ user, isGuest }: UserDropdownProps) {
+export default function UserDropdown({
+  user,
+  isGuest = false,
+}: UserDropdownProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);

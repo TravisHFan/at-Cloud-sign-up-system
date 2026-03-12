@@ -13,14 +13,14 @@ interface User {
 
 interface HeaderProps {
   user: User | null;
-  isGuest: boolean;
+  isGuest?: boolean;
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
 }
 
 export default function Header({
   user,
-  isGuest,
+  isGuest = false,
   sidebarOpen,
   setSidebarOpen,
 }: HeaderProps) {
