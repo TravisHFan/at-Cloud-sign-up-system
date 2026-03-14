@@ -266,7 +266,7 @@ export default function BasicEventFields({
                         options?: {
                           shouldDirty?: boolean;
                           shouldValidate?: boolean;
-                        }
+                        },
                       ) => void
                     )(
                       "__startOverlapValidation",
@@ -276,7 +276,7 @@ export default function BasicEventFields({
                           "Time overlap: this start time falls within another event. Please choose another.",
                         color: "text-red-500",
                       },
-                      { shouldDirty: false, shouldValidate: false }
+                      { shouldDirty: false, shouldValidate: false },
                     );
                   } else {
                     (
@@ -286,7 +286,7 @@ export default function BasicEventFields({
                         options?: {
                           shouldDirty?: boolean;
                           shouldValidate?: boolean;
-                        }
+                        },
                       ) => void
                     )(
                       "__startOverlapValidation",
@@ -295,7 +295,7 @@ export default function BasicEventFields({
                         message: "",
                         color: "text-green-500",
                       },
-                      { shouldDirty: false, shouldValidate: false }
+                      { shouldDirty: false, shouldValidate: false },
                     );
                   }
                 } catch {
@@ -306,7 +306,7 @@ export default function BasicEventFields({
                       options?: {
                         shouldDirty?: boolean;
                         shouldValidate?: boolean;
-                      }
+                      },
                     ) => void
                   )(
                     "__startOverlapValidation",
@@ -315,7 +315,7 @@ export default function BasicEventFields({
                       message: "",
                       color: "text-gray-500",
                     },
-                    { shouldDirty: false, shouldValidate: false }
+                    { shouldDirty: false, shouldValidate: false },
                   );
                 }
               },
@@ -387,7 +387,7 @@ export default function BasicEventFields({
                       mode: "point",
                       excludeId: id,
                       timeZone: watch("timeZone"),
-                    }
+                    },
                   );
                   if (pointResult.conflict) {
                     (
@@ -397,7 +397,7 @@ export default function BasicEventFields({
                         options?: {
                           shouldDirty?: boolean;
                           shouldValidate?: boolean;
-                        }
+                        },
                       ) => void
                     )(
                       "__endOverlapValidation",
@@ -407,7 +407,7 @@ export default function BasicEventFields({
                           "Time overlap: this end time falls within another event. Please choose another.",
                         color: "text-red-500",
                       },
-                      { shouldDirty: false, shouldValidate: false }
+                      { shouldDirty: false, shouldValidate: false },
                     );
                     return;
                   }
@@ -422,7 +422,7 @@ export default function BasicEventFields({
                       mode: "range",
                       excludeId: id,
                       timeZone: watch("timeZone"),
-                    }
+                    },
                   );
 
                   if (rangeResult.conflict) {
@@ -433,7 +433,7 @@ export default function BasicEventFields({
                         options?: {
                           shouldDirty?: boolean;
                           shouldValidate?: boolean;
-                        }
+                        },
                       ) => void
                     )(
                       "__endOverlapValidation",
@@ -443,7 +443,7 @@ export default function BasicEventFields({
                           "Time overlap: this time range overlaps an existing event. Please adjust start or end time.",
                         color: "text-red-500",
                       },
-                      { shouldDirty: false, shouldValidate: false }
+                      { shouldDirty: false, shouldValidate: false },
                     );
                   } else {
                     (
@@ -453,7 +453,7 @@ export default function BasicEventFields({
                         options?: {
                           shouldDirty?: boolean;
                           shouldValidate?: boolean;
-                        }
+                        },
                       ) => void
                     )(
                       "__endOverlapValidation",
@@ -462,7 +462,7 @@ export default function BasicEventFields({
                         message: "",
                         color: "text-green-500",
                       },
-                      { shouldDirty: false, shouldValidate: false }
+                      { shouldDirty: false, shouldValidate: false },
                     );
                   }
                 } catch {
@@ -473,7 +473,7 @@ export default function BasicEventFields({
                       options?: {
                         shouldDirty?: boolean;
                         shouldValidate?: boolean;
-                      }
+                      },
                     ) => void
                   )(
                     "__endOverlapValidation",
@@ -482,7 +482,7 @@ export default function BasicEventFields({
                       message: "",
                       color: "text-gray-500",
                     },
-                    { shouldDirty: false, shouldValidate: false }
+                    { shouldDirty: false, shouldValidate: false },
                   );
                 }
               },
@@ -594,7 +594,7 @@ export default function BasicEventFields({
           <input
             type="url"
             {...register("flyerUrl")}
-            placeholder="https://... or /uploads/images/your-file.png"
+            placeholder="Click 📎 to upload a JPG or PNG flyer"
             className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <label
@@ -664,7 +664,7 @@ export default function BasicEventFields({
           <input
             type="url"
             {...register("secondaryFlyerUrl")}
-            placeholder="https://... or /uploads/images/your-file.png"
+            placeholder="Click 📎 to upload a JPG or PNG flyer"
             className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <label
