@@ -43,6 +43,11 @@ export default function QuickActionsCard() {
   if (!currentUser) {
     const guestActions: QuickAction[] = [
       {
+        label: "View Upcoming Events",
+        href: "/dashboard/upcoming",
+        colorClass: "bg-green-50 text-green-700 hover:bg-green-100",
+      },
+      {
         label: "Login",
         href: "/login",
         colorClass: "bg-blue-50 text-blue-700 hover:bg-blue-100",

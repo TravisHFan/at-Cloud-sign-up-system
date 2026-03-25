@@ -32,6 +32,7 @@ export class EventQueryController {
         category,
         startDate,
         endDate,
+        publish,
       } = req.query;
 
       const pageNumber = parseInt(page as string);
@@ -69,6 +70,7 @@ export class EventQueryController {
         category,
         startDate,
         endDate,
+        publish,
       };
       const orderingCacheKey = `events-ordering:${JSON.stringify(
         baseFilterDescriptor,
@@ -89,6 +91,13 @@ export class EventQueryController {
             date?: { $gte?: string; $lte?: string };
             totalSlots?: { $gte?: number; $lte?: number };
           } = {};
+
+          // Publish filter (exact boolean match)
+          if (publish === "true") {
+            filter.publish = true;
+          } else if (publish === "false") {
+            filter.publish = { $ne: true };
+          }
 
           // For non-status filters, apply them directly
           if (type) {

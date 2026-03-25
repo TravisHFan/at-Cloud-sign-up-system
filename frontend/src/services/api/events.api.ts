@@ -21,6 +21,7 @@ class EventsApiClient extends BaseApiClient {
     search?: string;
     sortBy?: string;
     sortOrder?: "asc" | "desc";
+    publish?: string; // "true" or "false" filter
   }): Promise<{
     events: EventData[];
     pagination: {

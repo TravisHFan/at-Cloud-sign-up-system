@@ -19,7 +19,7 @@ export default function PublishedEvents() {
   } | null>(null);
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState<"date" | "title" | "organizer" | "type">(
-    "date"
+    "date",
   );
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [loading, setLoading] = useState(true);
@@ -40,25 +40,13 @@ export default function PublishedEvents() {
         limit: 10,
         sortBy,
         sortOrder,
+        publish: "true",
+        statuses: "upcoming,ongoing",
       });
 
-      // Filter for published events only (excluding completed/past events)
-      // Past events are not useful since they're no longer available for registration
-      const publishedEvents = resp.events.filter(
-        (event) => event.publish === true && event.status !== "completed"
-      );
-
-      setEvents(publishedEvents);
-
-      // Adjust pagination to reflect filtered results
-      // Note: This is not perfect since we're filtering client-side
-      // but it's a starting point until we add backend filtering
+      setEvents(resp.events);
       setPagination({
-        currentPage: page,
-        totalPages: Math.ceil(publishedEvents.length / 10),
-        totalEvents: publishedEvents.length,
-        hasNext: page < Math.ceil(publishedEvents.length / 10),
-        hasPrev: page > 1,
+        ...resp.pagination,
         pageSize: 10,
       });
     } catch (err: unknown) {
@@ -81,7 +69,7 @@ export default function PublishedEvents() {
 
   const handleSortChange = (
     field: "date" | "title" | "organizer" | "type",
-    order: "asc" | "desc"
+    order: "asc" | "desc",
   ) => {
     setSortBy(field);
     setSortOrder(order);

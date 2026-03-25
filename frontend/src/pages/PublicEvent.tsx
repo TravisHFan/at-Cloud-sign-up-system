@@ -2,6 +2,7 @@ import { createPortal } from "react-dom";
 import { useEffect, useState, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import apiClient from "../services/api";
+import { apiUrl } from "../lib/apiClient";
 import { Icon } from "../components/common";
 import { ShareModal } from "../components/share/ShareModal";
 import AlertModal from "../components/common/AlertModal";
@@ -240,7 +241,7 @@ export default function PublicEvent() {
               onClick={async () => {
                 try {
                   const response = await fetch(
-                    `/api/events/${data.id}/calendar`,
+                    apiUrl(`/events/${data.id}/calendar`),
                   );
                   if (!response.ok) {
                     throw new Error("Failed to download calendar file");

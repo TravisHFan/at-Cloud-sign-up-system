@@ -191,8 +191,9 @@ describe("Flyer removal forms", () => {
     );
 
     // Wait for initial flyer input to populate
-    const _flyerInputs =
-      await screen.findAllByPlaceholderText(/uploads\/images/i);
+    const _flyerInputs = await screen.findAllByPlaceholderText(
+      /upload a JPG or PNG flyer/i,
+    );
     const _flyerInput = _flyerInputs[0];
 
     expect((_flyerInput as HTMLInputElement).value).toContain(
@@ -259,7 +260,9 @@ describe("Flyer removal forms", () => {
       </AuthProvider>,
     );
 
-    const _flyerInput = await screen.findByPlaceholderText(/uploads\/images/i);
+    const _flyerInput = await screen.findByPlaceholderText(
+      /upload a JPG or PNG flyer/i,
+    );
 
     if (!(_flyerInput as HTMLInputElement).value) {
       await new Promise((r) => setTimeout(r, 15));
@@ -390,8 +393,9 @@ describe("Flyer removal forms", () => {
         </NotificationModalProvider>
       </AuthProvider>,
     );
-    const _flyerInputs =
-      await screen.findAllByPlaceholderText(/uploads\/images/i);
+    const _flyerInputs = await screen.findAllByPlaceholderText(
+      /upload a JPG or PNG flyer/i,
+    );
     const _flyerInput = _flyerInputs[0];
 
     fireEvent.change(_flyerInput, { target: { value: "/uploads/new.png" } });
@@ -482,7 +486,9 @@ describe("Flyer removal forms", () => {
         </NotificationModalProvider>
       </AuthProvider>,
     );
-    const _flyerInput3 = await screen.findByPlaceholderText(/uploads\/images/i);
+    const _flyerInput3 = await screen.findByPlaceholderText(
+      /upload a JPG or PNG flyer/i,
+    );
     fireEvent.change(_flyerInput3, {
       target: { value: "/uploads/prog-new.png" },
     });
