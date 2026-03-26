@@ -80,6 +80,12 @@ export default function EventListItem({
   })();
   const getStatusBadge = () => {
     const statusBadge = getEventStatusBadge(event.status || "active", type);
+
+    // For upcoming (not ongoing) published events, show "Published" instead of "Active"
+    if (type === "upcoming" && !isEventOngoing() && event.publish) {
+      return <Badge variant="info">Published</Badge>;
+    }
+
     return (
       <Badge
         variant={statusBadge.className.includes("red") ? "error" : "success"}
@@ -215,6 +221,11 @@ export default function EventListItem({
 
     // Guest visitor: published → public page, unpublished → login prompt
     if (isGuestVisitor) {
+      const guestVariant = isFull
+        ? "secondary"
+        : event.publish
+          ? "primary"
+          : "secondary";
       return (
         <Button
           onClick={() => {
@@ -227,7 +238,7 @@ export default function EventListItem({
             }
           }}
           disabled={isFull}
-          variant={isFull ? "secondary" : "primary"}
+          variant={guestVariant}
           className={isFull ? "cursor-not-allowed" : ""}
         >
           {isFull ? "Full" : "View & Sign Up"}

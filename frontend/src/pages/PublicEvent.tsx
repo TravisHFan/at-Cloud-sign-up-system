@@ -212,7 +212,7 @@ export default function PublicEvent() {
           </div>
           <div className="flex items-center gap-3 mb-4">
             <Link
-              to="/events"
+              to="/dashboard/upcoming"
               className="inline-flex items-center h-10 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 order-1"
             >
               <Icon name="arrow-left" className="w-4 h-4 mr-2" />
