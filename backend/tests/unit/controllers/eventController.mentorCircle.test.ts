@@ -104,6 +104,10 @@ vi.mock("../../../src/services", () => ({
   },
 }));
 
+vi.mock("../../../src/utils/publicSlug", () => ({
+  generateUniquePublicSlug: vi.fn().mockResolvedValue("mock-slug-1234"),
+}));
+
 describe("EventController - programLabels array handling", () => {
   let mockReq: any;
   let mockRes: any;
@@ -147,7 +151,7 @@ describe("EventController - programLabels array handling", () => {
     };
 
     vi.mocked(Event as unknown as any).mockImplementation(
-      () => mockEvent as any
+      () => mockEvent as any,
     );
     // When controller calls Event.find(...).select(...).lean(), return [] to avoid conflicts
     vi.mocked((Event as unknown as any).find).mockReturnValue({
@@ -156,7 +160,7 @@ describe("EventController - programLabels array handling", () => {
       }),
     } as any);
     vi.mocked((Program as unknown as any).updateOne).mockResolvedValue(
-      {} as any
+      {} as any,
     );
   });
 
@@ -193,7 +197,7 @@ describe("EventController - programLabels array handling", () => {
 
     // Verify Program was queried
     expect((Program as unknown as any).findById).toHaveBeenCalledWith(
-      programId
+      programId,
     );
 
     // Verify Event was created with programLabels
@@ -207,7 +211,7 @@ describe("EventController - programLabels array handling", () => {
       { _id: programId },
       expect.objectContaining({
         $addToSet: expect.objectContaining({ events: "event-id" }),
-      })
+      }),
     );
   });
 
@@ -228,10 +232,10 @@ describe("EventController - programLabels array handling", () => {
             id === programId1
               ? mockProgram1
               : id === programId2
-              ? mockProgram2
-              : mockProgram3
+                ? mockProgram2
+                : mockProgram3,
           ),
-      })
+      }),
     );
 
     mockReq.body = {
@@ -243,13 +247,13 @@ describe("EventController - programLabels array handling", () => {
 
     // Verify all programs were queried
     expect((Program as unknown as any).findById).toHaveBeenCalledWith(
-      programId1
+      programId1,
     );
     expect((Program as unknown as any).findById).toHaveBeenCalledWith(
-      programId2
+      programId2,
     );
     expect((Program as unknown as any).findById).toHaveBeenCalledWith(
-      programId3
+      programId3,
     );
 
     // Verify Event was created with all programLabels
@@ -257,7 +261,7 @@ describe("EventController - programLabels array handling", () => {
       .calls[0][0] as any;
     expect(eventConstructorArgs.programLabels).toHaveLength(3);
     expect(
-      eventConstructorArgs.programLabels.map((id: any) => id.toString())
+      eventConstructorArgs.programLabels.map((id: any) => id.toString()),
     ).toEqual([programId1, programId2, programId3]);
 
     // Verify all Program.events were updated
@@ -266,19 +270,19 @@ describe("EventController - programLabels array handling", () => {
       { _id: programId1 },
       expect.objectContaining({
         $addToSet: expect.objectContaining({ events: "event-id" }),
-      })
+      }),
     );
     expect((Program as unknown as any).updateOne).toHaveBeenCalledWith(
       { _id: programId2 },
       expect.objectContaining({
         $addToSet: expect.objectContaining({ events: "event-id" }),
-      })
+      }),
     );
     expect((Program as unknown as any).updateOne).toHaveBeenCalledWith(
       { _id: programId3 },
       expect.objectContaining({
         $addToSet: expect.objectContaining({ events: "event-id" }),
-      })
+      }),
     );
   });
 
@@ -296,7 +300,7 @@ describe("EventController - programLabels array handling", () => {
       expect.objectContaining({
         success: false,
         message: expect.stringMatching(/invalid/i),
-      })
+      }),
     );
   });
 
@@ -320,7 +324,7 @@ describe("EventController - programLabels array handling", () => {
       expect.objectContaining({
         success: false,
         message: expect.stringMatching(/not found/i),
-      })
+      }),
     );
   });
 
@@ -342,7 +346,7 @@ describe("EventController - programLabels array handling", () => {
     // Verify only valid program was queried
     expect((Program as unknown as any).findById).toHaveBeenCalledTimes(1);
     expect((Program as unknown as any).findById).toHaveBeenCalledWith(
-      validProgramId
+      validProgramId,
     );
 
     // Verify Event was created with only valid programLabel
@@ -350,7 +354,7 @@ describe("EventController - programLabels array handling", () => {
       .calls[0][0] as any;
     expect(eventConstructorArgs.programLabels).toHaveLength(1);
     expect(eventConstructorArgs.programLabels[0].toString()).toBe(
-      validProgramId
+      validProgramId,
     );
   });
 

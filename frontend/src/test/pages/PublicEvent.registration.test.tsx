@@ -29,6 +29,7 @@ vi.mock("../../services/api", () => {
       time: "09:00",
       endTime: "10:00",
       timeZone: "America/New_York",
+      registrationOpen: true,
     }),
     registerForPublicEvent: vi.fn().mockResolvedValue({
       registrationId: "reg123",
@@ -47,7 +48,7 @@ function renderWithSlug(slug: string) {
       <Routes>
         <Route path="/p/:slug" element={<PublicEvent />} />
       </Routes>
-    </MemoryRouter>
+    </MemoryRouter>,
   );
 }
 
@@ -63,14 +64,14 @@ describe("PublicEvent registration form", () => {
     await screen.findByText("Public Test Event");
     // Tagline should render
     expect(screen.getByTestId("public-event-tagline")).toHaveTextContent(
-      /inspiring tagline/i
+      /inspiring tagline/i,
     );
     // Hosted by line
     expect(screen.getByTestId("public-event-hosted-by")).toHaveTextContent(
-      /Hosted by @Cloud Marketplace Ministry/
+      /Hosted by @Cloud Marketplace Ministry/,
     );
     expect(
-      screen.getByTestId("public-event-hosted-by").querySelector("img")
+      screen.getByTestId("public-event-hosted-by").querySelector("img"),
     ).not.toBeNull();
 
     // Select role (single-role event shows "Get a Ticket")
@@ -89,7 +90,7 @@ describe("PublicEvent registration form", () => {
     });
 
     fireEvent.click(
-      screen.getByRole("button", { name: "Submit Registration" })
+      screen.getByRole("button", { name: "Submit Registration" }),
     );
 
     await waitFor(() => {
@@ -101,7 +102,7 @@ describe("PublicEvent registration form", () => {
       expect.objectContaining({
         roleId: "r1",
         attendee: expect.objectContaining({ email: "jane@example.com" }),
-      })
+      }),
     );
   });
 
@@ -115,10 +116,10 @@ describe("PublicEvent registration form", () => {
     renderWithSlug("public-test-event");
     await screen.findByText("Public Test Event");
     expect(screen.getByTestId("public-event-hosted-by")).toHaveTextContent(
-      /Hosted by @Cloud Marketplace Ministry/
+      /Hosted by @Cloud Marketplace Ministry/,
     );
     expect(
-      screen.getByTestId("public-event-hosted-by").querySelector("img")
+      screen.getByTestId("public-event-hosted-by").querySelector("img"),
     ).not.toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Get a Ticket" }));
@@ -132,14 +133,14 @@ describe("PublicEvent registration form", () => {
       target: { value: "+1 555 0200" },
     });
     fireEvent.click(
-      screen.getByRole("button", { name: "Submit Registration" })
+      screen.getByRole("button", { name: "Submit Registration" }),
     );
 
     // Heading should match exact phrase
     await screen.findByText(/^Already registered for this role$/i);
     // Descriptive duplicate paragraph should also render
     expect(
-      screen.getByText(/You already registered for this role/i)
+      screen.getByText(/You already registered for this role/i),
     ).toBeInTheDocument();
   });
 
@@ -153,7 +154,7 @@ describe("PublicEvent registration form", () => {
     await screen.findByText("Public Test Event");
 
     const registerSection = await screen.findByTestId(
-      "public-event-registration-form"
+      "public-event-registration-form",
     );
     const roleButton = screen.getByRole("button", { name: "Get a Ticket" });
     expect(document.activeElement).not.toBe(registerSection);
@@ -176,7 +177,7 @@ describe("PublicEvent registration form", () => {
     if (scrollSpy.mock.calls.length === 0) {
       // Provide diagnostic output but do NOT fail the test; some jsdom runs may swallow scroll calls.
       console.warn(
-        "scrollIntoView spy not called — focus succeeded (acceptable)"
+        "scrollIntoView spy not called — focus succeeded (acceptable)",
       );
     }
   });

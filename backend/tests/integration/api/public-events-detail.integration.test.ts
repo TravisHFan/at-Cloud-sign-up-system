@@ -85,7 +85,7 @@ describe("Public Event Detail Integration Tests", () => {
               openToPublic: true,
             },
           ],
-        })
+        }),
       );
 
       const response = await request(app)
@@ -109,7 +109,7 @@ describe("Public Event Detail Integration Tests", () => {
           time: "14:00",
           endTime: "16:00",
           publicSlug: "public-seminar",
-        })
+        }),
       );
 
       const response = await request(app)
@@ -132,7 +132,7 @@ describe("Public Event Detail Integration Tests", () => {
       expect(response.body.message).toBe("Public event not found");
     });
 
-    it("should return 404 for unpublished events", async () => {
+    it("should return 200 with registrationOpen false for unpublished events", async () => {
       await Event.create(
         createTestEvent({
           title: "Private Event",
@@ -141,15 +141,15 @@ describe("Public Event Detail Integration Tests", () => {
           endTime: "10:00",
           publish: false,
           publicSlug: "private-event-slug",
-        })
+        }),
       );
 
       const response = await request(app)
         .get("/api/public/events/private-event-slug")
-        .expect(404);
+        .expect(200);
 
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe("Public event not found");
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.registrationOpen).toBe(false);
     });
 
     it("should return 400 for missing slug", async () => {
@@ -192,7 +192,7 @@ describe("Public Event Detail Integration Tests", () => {
               openToPublic: false,
             },
           ],
-        })
+        }),
       );
 
       const response = await request(app)
@@ -203,7 +203,7 @@ describe("Public Event Detail Integration Tests", () => {
       expect(response.body.data.roles).toBeDefined();
       // Only open roles should be visible
       const openRoles = response.body.data.roles.filter(
-        (r: any) => r.openToPublic
+        (r: any) => r.openToPublic,
       );
       expect(openRoles.length).toBeGreaterThanOrEqual(0);
     });
@@ -216,7 +216,7 @@ describe("Public Event Detail Integration Tests", () => {
           endTime: "17:00",
           flyerUrl: "https://example.com/main-flyer.jpg",
           secondaryFlyerUrl: "https://example.com/secondary-flyer.jpg",
-        })
+        }),
       );
 
       const response = await request(app)
@@ -225,10 +225,10 @@ describe("Public Event Detail Integration Tests", () => {
 
       expect(response.body.success).toBe(true);
       expect(response.body.data.flyerUrl).toBe(
-        "https://example.com/main-flyer.jpg"
+        "https://example.com/main-flyer.jpg",
       );
       expect(response.body.data.secondaryFlyerUrl).toBe(
-        "https://example.com/secondary-flyer.jpg"
+        "https://example.com/secondary-flyer.jpg",
       );
     });
 
@@ -238,7 +238,7 @@ describe("Public Event Detail Integration Tests", () => {
           title: "Timezone Test Event",
           publicSlug: "timezone-test",
           timeZone: "America/New_York",
-        })
+        }),
       );
 
       const response = await request(app)
@@ -260,7 +260,7 @@ describe("Public Event Detail Integration Tests", () => {
           endDate: "2025-12-17",
           time: "09:00",
           endTime: "17:00",
-        })
+        }),
       );
 
       const response = await request(app)
@@ -280,7 +280,7 @@ describe("Public Event Detail Integration Tests", () => {
           location: "Main Hall",
           description: "A comprehensive workshop",
           capacity: 100,
-        })
+        }),
       );
 
       const response = await request(app)

@@ -43,6 +43,7 @@ describe("PublicEvent - Single Role UI", () => {
       },
     ],
     isAuthenticated: false,
+    registrationOpen: true,
   };
 
   const mockMultiRoleEventData = {
@@ -73,18 +74,19 @@ describe("PublicEvent - Single Role UI", () => {
       },
     ],
     isAuthenticated: false,
+    registrationOpen: true,
   };
 
   it("should show 'Reserve a Spot' heading for single role events", async () => {
     const apiClient = await import("../../services/api");
     (apiClient.default.getPublicEvent as any).mockResolvedValue(
-      mockSingleRoleEventData
+      mockSingleRoleEventData,
     );
 
     render(
       <BrowserRouter>
         <PublicEvent />
-      </BrowserRouter>
+      </BrowserRouter>,
     );
 
     // Wait for component to load and check heading
@@ -95,13 +97,13 @@ describe("PublicEvent - Single Role UI", () => {
   it("should show 'Available Roles' heading for multiple role events", async () => {
     const apiClient = await import("../../services/api");
     (apiClient.default.getPublicEvent as any).mockResolvedValue(
-      mockMultiRoleEventData
+      mockMultiRoleEventData,
     );
 
     render(
       <BrowserRouter>
         <PublicEvent />
-      </BrowserRouter>
+      </BrowserRouter>,
     );
 
     // Wait for component to load and check heading
@@ -112,13 +114,13 @@ describe("PublicEvent - Single Role UI", () => {
   it("should show 'Get a Ticket' button for single role events", async () => {
     const apiClient = await import("../../services/api");
     (apiClient.default.getPublicEvent as any).mockResolvedValue(
-      mockSingleRoleEventData
+      mockSingleRoleEventData,
     );
 
     render(
       <BrowserRouter>
         <PublicEvent />
-      </BrowserRouter>
+      </BrowserRouter>,
     );
 
     // Wait for component to load and check button text
@@ -129,13 +131,13 @@ describe("PublicEvent - Single Role UI", () => {
   it("should show 'Select This Role' button for multiple role events", async () => {
     const apiClient = await import("../../services/api");
     (apiClient.default.getPublicEvent as any).mockResolvedValue(
-      mockMultiRoleEventData
+      mockMultiRoleEventData,
     );
 
     render(
       <BrowserRouter>
         <PublicEvent />
-      </BrowserRouter>
+      </BrowserRouter>,
     );
 
     // Wait for component to load and check button text
@@ -146,13 +148,13 @@ describe("PublicEvent - Single Role UI", () => {
   it("should not show role selection message for single role events", async () => {
     const apiClient = await import("../../services/api");
     (apiClient.default.getPublicEvent as any).mockResolvedValue(
-      mockSingleRoleEventData
+      mockSingleRoleEventData,
     );
 
     render(
       <BrowserRouter>
         <PublicEvent />
-      </BrowserRouter>
+      </BrowserRouter>,
     );
 
     // Wait for component to load
@@ -160,27 +162,27 @@ describe("PublicEvent - Single Role UI", () => {
 
     // Should not show role selection message
     expect(
-      screen.queryByText("Select a role above to begin registration.")
+      screen.queryByText("Select a role above to begin registration."),
     ).not.toBeInTheDocument();
   });
 
   it("should show role selection message for multiple role events", async () => {
     const apiClient = await import("../../services/api");
     (apiClient.default.getPublicEvent as any).mockResolvedValue(
-      mockMultiRoleEventData
+      mockMultiRoleEventData,
     );
 
     render(
       <BrowserRouter>
         <PublicEvent />
-      </BrowserRouter>
+      </BrowserRouter>,
     );
 
     // Wait for component to load and check message (text includes line break, so use partial match)
     expect(
       await screen.findByText("Select a role above to begin registration.", {
         exact: false,
-      })
+      }),
     ).toBeInTheDocument();
   });
 });

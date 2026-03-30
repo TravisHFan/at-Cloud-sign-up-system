@@ -9,6 +9,7 @@ vi.mock("../../../src/models", () => ({
   Event: {
     findById: vi.fn(),
     find: vi.fn(),
+    updateOne: vi.fn(),
   },
   Registration: {
     find: vi.fn(),
@@ -18,6 +19,10 @@ vi.mock("../../../src/models", () => ({
     findById: vi.fn(),
     find: vi.fn(),
   },
+}));
+
+vi.mock("../../../src/utils/publicSlug", () => ({
+  generateUniquePublicSlug: vi.fn().mockResolvedValue("mock-slug-1234"),
 }));
 
 vi.mock("../../../src/services/RegistrationQueryService", () => ({
@@ -95,9 +100,8 @@ describe("ResponseBuilderService - branch polish", () => {
       select: vi.fn().mockResolvedValue(null),
     } as any);
 
-    const res = await ResponseBuilderService.buildEventWithRegistrations(
-      eventId
-    );
+    const res =
+      await ResponseBuilderService.buildEventWithRegistrations(eventId);
     expect(res).toBeTruthy();
     expect((res as any).organizerDetails[0].email).toBe("old@x.com");
     expect((res as any).organizerDetails[0].phone).toBe("old");
@@ -143,7 +147,7 @@ describe("ResponseBuilderService - branch polish", () => {
 
     const res = await ResponseBuilderService.buildUserSignupStatus(
       userId,
-      eventId
+      eventId,
     );
     expect(res).toBeTruthy();
     expect(res!.isRegistered).toBe(true);

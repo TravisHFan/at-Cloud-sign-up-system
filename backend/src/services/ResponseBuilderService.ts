@@ -8,6 +8,7 @@
 import { Event, Registration, User } from "../models";
 import { Types } from "mongoose";
 import { createLogger } from "./LoggerService";
+import { generateUniquePublicSlug } from "../utils/publicSlug";
 import { RegistrationQueryService } from "./RegistrationQueryService";
 import {
   EventWithRegistrationData,
@@ -435,7 +436,7 @@ export class ResponseBuilderService {
         // Publish metadata (needed for organizer UI to persist state across refresh)
         publish: (event as { publish?: boolean }).publish === true,
         publishedAt: (event as { publishedAt?: Date }).publishedAt || null,
-        publicSlug: (event as { publicSlug?: string }).publicSlug || undefined,
+        publicSlug: await ResponseBuilderService.ensurePublicSlug(event),
         autoUnpublishedAt:
           (event as { autoUnpublishedAt?: Date | null }).autoUnpublishedAt ||
           null,
@@ -457,6 +458,30 @@ export class ResponseBuilderService {
     } catch (error) {
       this.logger.error("buildEventWithRegistrations error", error as Error);
       return null;
+    }
+  }
+
+  /**
+   * Lazy slug generation: if an event has no publicSlug, generate and persist one.
+   * Covers pre-existing events created before slug-at-creation was added.
+   */
+  private static async ensurePublicSlug(event: {
+    _id?: Types.ObjectId;
+    title?: string;
+    publicSlug?: string;
+  }): Promise<string | undefined> {
+    if (event.publicSlug) return event.publicSlug;
+    if (!event.title || !event._id) return undefined;
+    try {
+      const slug = await generateUniquePublicSlug(event.title);
+      await Event.updateOne({ _id: event._id }, { $set: { publicSlug: slug } });
+      return slug;
+    } catch (err) {
+      ResponseBuilderService.logger.error(
+        "Failed to lazy-generate publicSlug",
+        err as Error,
+      );
+      return undefined;
     }
   }
 

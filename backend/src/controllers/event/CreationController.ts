@@ -88,6 +88,7 @@ import { EventProgramLinkageService } from "../../services/event/EventProgramLin
 import { RecurringEventGenerationService } from "../../services/event/RecurringEventGenerationService";
 import { EventCreationNotificationService } from "../../services/event/EventCreationNotificationService";
 import { CoOrganizerProgramAccessService } from "../../services/event/CoOrganizerProgramAccessService";
+import { generateUniquePublicSlug } from "../../utils/publicSlug";
 
 // Initialize logger
 const logger = Logger.getInstance().child("CreationController");
@@ -370,6 +371,10 @@ export class CreationController {
           hostedBy: data.hostedBy || "@Cloud Marketplace Ministry",
           status: "upcoming",
         });
+        await ev.save();
+
+        // Generate public slug at creation time so the public page is always accessible
+        ev.publicSlug = await generateUniquePublicSlug(ev.title);
         await ev.save();
 
         // Bidirectional linking: add event to program.events arrays

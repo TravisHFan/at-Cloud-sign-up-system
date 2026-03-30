@@ -219,7 +219,7 @@ export default function EventListItem({
     const spotsLeft = event.totalSlots - event.signedUp;
     const isFull = spotsLeft === 0;
 
-    // Guest visitor: published → public page, unpublished → login prompt
+    // Guest visitor: always navigate to public page (shows details; registration requires publish)
     if (isGuestVisitor) {
       const guestVariant = isFull
         ? "secondary"
@@ -229,11 +229,11 @@ export default function EventListItem({
       return (
         <Button
           onClick={() => {
-            if (event.publish && event.publicSlug) {
+            if (event.publicSlug) {
               navigate(`/p/${event.publicSlug}`);
             } else {
               setShowLoginPrompt(
-                "This event is not published. If you want to participate, please login.",
+                "This event is not yet available for viewing. Please check back later.",
               );
             }
           }}
@@ -241,7 +241,7 @@ export default function EventListItem({
           variant={guestVariant}
           className={isFull ? "cursor-not-allowed" : ""}
         >
-          {isFull ? "Full" : "View & Sign Up"}
+          {isFull ? "Full" : event.publish ? "View & Sign Up" : "View Details"}
         </Button>
       );
     }

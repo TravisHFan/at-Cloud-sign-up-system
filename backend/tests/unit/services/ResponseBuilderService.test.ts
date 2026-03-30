@@ -9,6 +9,7 @@ vi.mock("../../../src/models", () => ({
   Event: {
     findById: vi.fn(),
     find: vi.fn(),
+    updateOne: vi.fn(),
   },
   Registration: {
     find: vi.fn(),
@@ -18,6 +19,11 @@ vi.mock("../../../src/models", () => ({
     findById: vi.fn(),
     find: vi.fn(),
   },
+}));
+
+// Mock publicSlug utility (lazy slug generation in ResponseBuilderService)
+vi.mock("../../../src/utils/publicSlug", () => ({
+  generateUniquePublicSlug: vi.fn().mockResolvedValue("mock-slug-1234"),
 }));
 
 // Mock RegistrationQueryService
@@ -82,7 +88,7 @@ describe("ResponseBuilderService", () => {
       } as any);
 
       vi.mocked(
-        RegistrationQueryService.getEventSignupCounts
+        RegistrationQueryService.getEventSignupCounts,
       ).mockResolvedValue({
         eventId,
         totalSignups: 0,
@@ -119,9 +125,8 @@ describe("ResponseBuilderService", () => {
         }),
       } as any);
 
-      const result = await ResponseBuilderService.buildEventWithRegistrations(
-        eventId
-      );
+      const result =
+        await ResponseBuilderService.buildEventWithRegistrations(eventId);
       expect(result).toBeTruthy();
       const orgs = (result as any).organizerDetails as any[];
       expect(orgs[0].email).toBe("new@x.com");
@@ -214,7 +219,7 @@ describe("ResponseBuilderService", () => {
       } as any);
 
       vi.mocked(
-        RegistrationQueryService.getEventSignupCounts
+        RegistrationQueryService.getEventSignupCounts,
       ).mockResolvedValue(mockEventSignupCounts);
 
       vi.mocked(Registration.find).mockReturnValue({
@@ -225,9 +230,8 @@ describe("ResponseBuilderService", () => {
         }),
       } as any);
 
-      const result = await ResponseBuilderService.buildEventWithRegistrations(
-        eventId
-      );
+      const result =
+        await ResponseBuilderService.buildEventWithRegistrations(eventId);
 
       expect(result).toBeDefined();
       expect(result!.id).toBe(eventId);
@@ -247,9 +251,8 @@ describe("ResponseBuilderService", () => {
         }),
       } as any);
 
-      const result = await ResponseBuilderService.buildEventWithRegistrations(
-        eventId
-      );
+      const result =
+        await ResponseBuilderService.buildEventWithRegistrations(eventId);
 
       expect(result).toBeNull();
       expect(Event.findById).toHaveBeenCalledWith(eventId);
@@ -270,12 +273,11 @@ describe("ResponseBuilderService", () => {
       } as any);
 
       vi.mocked(
-        RegistrationQueryService.getEventSignupCounts
+        RegistrationQueryService.getEventSignupCounts,
       ).mockResolvedValue(null);
 
-      const result = await ResponseBuilderService.buildEventWithRegistrations(
-        eventId
-      );
+      const result =
+        await ResponseBuilderService.buildEventWithRegistrations(eventId);
 
       expect(result).toBeNull();
     });
@@ -287,9 +289,8 @@ describe("ResponseBuilderService", () => {
         }),
       } as any);
 
-      const result = await ResponseBuilderService.buildEventWithRegistrations(
-        eventId
-      );
+      const result =
+        await ResponseBuilderService.buildEventWithRegistrations(eventId);
 
       expect(result).toBeNull();
     });
@@ -338,9 +339,8 @@ describe("ResponseBuilderService", () => {
           signedUp: 3,
         } as any);
 
-      const result = await ResponseBuilderService.buildEventsWithRegistrations(
-        mockEvents
-      );
+      const result =
+        await ResponseBuilderService.buildEventsWithRegistrations(mockEvents);
 
       expect(result).toHaveLength(2);
       expect(result[0].title).toBe("Event 1");
@@ -352,12 +352,11 @@ describe("ResponseBuilderService", () => {
 
       vi.spyOn(
         ResponseBuilderService,
-        "buildEventWithRegistrations"
+        "buildEventWithRegistrations",
       ).mockResolvedValue(null);
 
-      const result = await ResponseBuilderService.buildEventsWithRegistrations(
-        mockEvents
-      );
+      const result =
+        await ResponseBuilderService.buildEventsWithRegistrations(mockEvents);
 
       expect(result).toEqual([]);
     });
@@ -391,7 +390,7 @@ describe("ResponseBuilderService", () => {
       ];
 
       vi.mocked(
-        RegistrationQueryService.getEventSignupCounts
+        RegistrationQueryService.getEventSignupCounts,
       ).mockResolvedValue(undefined as any);
       vi.mocked(Registration.find).mockReturnValue({
         populate: vi.fn().mockReturnValue({
@@ -400,7 +399,7 @@ describe("ResponseBuilderService", () => {
       } as any);
 
       const result = await ResponseBuilderService.buildAnalyticsEventData(
-        mockEvents as any
+        mockEvents as any,
       );
       expect(result).toHaveLength(1);
       const analytics = result[0] as any;
@@ -466,7 +465,7 @@ describe("ResponseBuilderService", () => {
       ];
 
       vi.mocked(
-        RegistrationQueryService.getEventSignupCounts
+        RegistrationQueryService.getEventSignupCounts,
       ).mockResolvedValue(mockEventSignupCounts);
 
       vi.mocked(Registration.find).mockReturnValue({
@@ -475,9 +474,8 @@ describe("ResponseBuilderService", () => {
         }),
       } as any);
 
-      const result = await ResponseBuilderService.buildAnalyticsEventData(
-        mockEvents
-      );
+      const result =
+        await ResponseBuilderService.buildAnalyticsEventData(mockEvents);
 
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe(eventId);
@@ -518,7 +516,7 @@ describe("ResponseBuilderService", () => {
         maxAllowedSignups: 1,
       } as any);
       vi.mocked(
-        RegistrationQueryService.getEventSignupCounts
+        RegistrationQueryService.getEventSignupCounts,
       ).mockResolvedValue({ roles: [] } as any);
 
       // Event missing -> null
@@ -527,7 +525,7 @@ describe("ResponseBuilderService", () => {
       } as any);
       let res = await ResponseBuilderService.buildUserSignupStatus(
         userId,
-        eventId
+        eventId,
       );
       expect(res).toBeNull();
 
@@ -560,7 +558,7 @@ describe("ResponseBuilderService", () => {
         maxAllowedSignups: 1,
       } as any);
       vi.mocked(
-        RegistrationQueryService.getEventSignupCounts
+        RegistrationQueryService.getEventSignupCounts,
       ).mockResolvedValue({
         roles: [
           { roleId: "r1", isFull: false },
@@ -578,7 +576,7 @@ describe("ResponseBuilderService", () => {
 
       const res = await ResponseBuilderService.buildUserSignupStatus(
         userId,
-        eventId
+        eventId,
       );
       expect(res).toBeTruthy();
       expect(res!.availableRoles).toContain("Common Participant (on-site)");
@@ -644,10 +642,10 @@ describe("ResponseBuilderService", () => {
       } as any);
 
       vi.mocked(RegistrationQueryService.getUserSignupInfo).mockResolvedValue(
-        mockUserInfo
+        mockUserInfo,
       );
       vi.mocked(
-        RegistrationQueryService.getEventSignupCounts
+        RegistrationQueryService.getEventSignupCounts,
       ).mockResolvedValue(mockEventSignupCounts);
 
       vi.mocked(Event.findById).mockReturnValue({
@@ -660,7 +658,7 @@ describe("ResponseBuilderService", () => {
 
       const result = await ResponseBuilderService.buildUserSignupStatus(
         userId,
-        eventId
+        eventId,
       );
 
       expect(result).toBeDefined();
@@ -678,12 +676,12 @@ describe("ResponseBuilderService", () => {
       } as any);
 
       vi.mocked(RegistrationQueryService.getUserSignupInfo).mockResolvedValue(
-        null
+        null,
       );
 
       const result = await ResponseBuilderService.buildUserSignupStatus(
         userId,
-        eventId
+        eventId,
       );
 
       expect(result).toBeNull();
@@ -696,7 +694,7 @@ describe("ResponseBuilderService", () => {
 
       const result = await ResponseBuilderService.buildUserSignupStatus(
         userId,
-        eventId
+        eventId,
       );
 
       expect(result).toBeNull();
@@ -713,7 +711,7 @@ describe("ResponseBuilderService", () => {
     it("should show contact info for users in ALL groups when viewer is registered in multiple groups", async () => {
       console.log("🚨 [TEST START] Multi-group test starting...");
       console.log(
-        "🧪 TEST STARTING: should show contact info for users in ALL groups when viewer is registered in multiple groups"
+        "🧪 TEST STARTING: should show contact info for users in ALL groups when viewer is registered in multiple groups",
       );
 
       // Just test null for now

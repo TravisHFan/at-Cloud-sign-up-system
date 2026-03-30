@@ -36,6 +36,7 @@ vi.mock("../../services/api", () => {
     time: "09:00",
     endTime: "10:00",
     timeZone: "America/New_York",
+    registrationOpen: true,
   };
   return {
     __esModule: true,
@@ -54,7 +55,7 @@ function renderWithSlug(slug: string) {
       <Routes>
         <Route path="/p/:slug" element={<PublicEvent />} />
       </Routes>
-    </MemoryRouter>
+    </MemoryRouter>,
   );
 }
 
@@ -71,7 +72,7 @@ describe("PublicEvent login prompt", () => {
     const link = screen.getByRole("link", { name: /log in/i });
     expect(link).toHaveAttribute(
       "href",
-      "/login?redirect=/dashboard/event/evt123"
+      "/login?redirect=/dashboard/event/evt123",
     );
   });
 

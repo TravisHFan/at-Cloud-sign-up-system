@@ -19,7 +19,7 @@ describe("Public Events API - publish/unpublish lifecycle", () => {
     if (mongoose.connection.readyState === 0) {
       await mongoose.connect(
         process.env.MONGODB_TEST_URI ||
-          "mongodb://127.0.0.1:27017/atcloud-signup-test"
+          "mongodb://127.0.0.1:27017/atcloud-signup-test",
       );
       openedLocal = true;
     }
@@ -49,7 +49,7 @@ describe("Public Events API - publish/unpublish lifecycle", () => {
     await request(app).post("/api/auth/register").send(adminData);
     await User.findOneAndUpdate(
       { email: adminData.email },
-      { isVerified: true, role: "Administrator" }
+      { isVerified: true, role: "Administrator" },
     );
     const loginRes = await request(app)
       .post("/api/auth/login")
@@ -142,7 +142,8 @@ describe("Public Events API - publish/unpublish lifecycle", () => {
       .send();
     expect(unpub.status).toBe(200);
     const getRes = await request(app).get(`/api/public/events/${slug}`);
-    expect(getRes.status).toBe(404);
+    expect(getRes.status).toBe(200);
+    expect(getRes.body.data.registrationOpen).toBe(false);
   });
 
   it("reflects real capacity remaining after registration", async () => {
@@ -170,7 +171,7 @@ describe("Public Events API - publish/unpublish lifecycle", () => {
     await request(app).post("/api/auth/register").send(userData);
     await User.findOneAndUpdate(
       { email: userData.email },
-      { isVerified: true }
+      { isVerified: true },
     );
     const login = await request(app)
       .post("/api/auth/login")

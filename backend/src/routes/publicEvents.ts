@@ -62,7 +62,7 @@ router.get("/events", async (req, res) => {
       if (q) {
         const safe = ValidationUtils.sanitizeString(q).replace(
           /[.*+?^${}()|[\]\\]/g,
-          "\\$&"
+          "\\$&",
         );
         filter.title = { $regex: safe, $options: "i" };
       }
@@ -83,7 +83,7 @@ router.get("/events", async (req, res) => {
         .limit(pageSize)
         .select(
           // Include type so frontend can color/type-label cards
-          "title type publicSlug date endDate time timeZone endTime location flyerUrl secondaryFlyerUrl roles publish"
+          "title type publicSlug date endDate time timeZone endTime location flyerUrl secondaryFlyerUrl roles publish",
         )
         .lean();
 
@@ -93,7 +93,7 @@ router.get("/events", async (req, res) => {
       const roleIds: { eventId: string; roleId: string }[] = [];
       for (const ev of events) {
         const openRoles = (ev.roles || []).filter(
-          (r: { openToPublic?: boolean }) => r.openToPublic
+          (r: { openToPublic?: boolean }) => r.openToPublic,
         );
         roleMap[(ev as { _id: { toString: () => string } })._id.toString()] =
           openRoles.map((r: { id: string; maxParticipants: number }) => ({
@@ -212,7 +212,6 @@ router.get("/events/:slug", authenticateOptional, async (req, res) => {
     }
     const event = await Event.findOne({
       publicSlug: slug,
-      publish: true,
     }).lean();
     if (!event) {
       return res
@@ -221,10 +220,15 @@ router.get("/events/:slug", authenticateOptional, async (req, res) => {
     }
 
     // event is a plain object due to .lean(); we assert required fields for serializer
-    const payload = await serializePublicEvent(event as unknown as IEvent);
+    const ev = event as unknown as IEvent;
+    const payload = await serializePublicEvent(ev);
     return res.status(200).json({
       success: true,
-      data: { ...payload, isAuthenticated: !!req.user },
+      data: {
+        ...payload,
+        isAuthenticated: !!req.user,
+        registrationOpen: ev.publish === true,
+      },
     });
   } catch {
     return res
@@ -237,7 +241,7 @@ router.get("/events/:slug", authenticateOptional, async (req, res) => {
 router.post(
   "/events/:slug/register",
   publicRegistrationRateLimit,
-  PublicEventController.register
+  PublicEventController.register,
 );
 
 export default router;

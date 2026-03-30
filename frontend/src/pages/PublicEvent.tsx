@@ -76,7 +76,7 @@ export default function PublicEvent() {
         } catch (err) {
           const e = err as Error;
           if (e.message.includes("404")) {
-            throw new Error("This event is not published or does not exist.");
+            throw new Error("This event does not exist.");
           }
           throw e;
         }
@@ -348,8 +348,20 @@ export default function PublicEvent() {
         </section>
       )}
 
-      {/* Show pricing section for paid events, roles section for free events */}
-      {data.pricing && (data.pricing.price ?? 0) > 0 ? (
+      {/* Show pricing/roles/registration only when registration is open (event published) */}
+      {!data.registrationOpen ? (
+        <section
+          className="mb-8"
+          data-testid="public-event-registration-closed"
+        >
+          <div className="p-4 border border-amber-200 rounded-md bg-amber-50">
+            <p className="text-sm text-amber-800">
+              Registration is not yet open for this event. Please check back
+              later.
+            </p>
+          </div>
+        </section>
+      ) : data.pricing && (data.pricing.price ?? 0) > 0 ? (
         <section className="mb-8" data-testid="public-event-pricing">
           <h2 className="text-xl font-semibold mb-3">Pricing</h2>
           <div className="border-2 border-blue-500 rounded-lg p-6 bg-gradient-to-br from-blue-50 to-white">
@@ -562,273 +574,284 @@ export default function PublicEvent() {
         </section>
       )}
 
-      {/* Registration form section - only show for free events */}
-      {(!data.pricing || (data.pricing.price ?? 0) === 0) && (
-        <section
-          className="mb-10 focus:outline-none"
-          data-testid="public-event-registration-form"
-          ref={registerSectionRef}
-          tabIndex={-1}
-          aria-label="Event registration form"
-        >
-          {!roleId && data.roles.length > 1 && (
-            <p className="text-sm text-gray-600 mb-4">
-              Select a role above to begin registration.
-              <br /> Upon completing your registration, the Zoom link or venue
-              details will be sent to your registered email address.
-            </p>
-          )}
-          {!roleId && data.roles.length === 1 && (
-            <p className="text-sm text-gray-600 mb-4">
-              Upon completing your registration, the Zoom link or venue details
-              will be sent to your registered email address.
-            </p>
-          )}
-          {roleId && !resultMsg && (
-            <form
-              className="space-y-4 max-w-md"
-              onSubmit={async (e) => {
-                e.preventDefault();
-                if (!slug) return;
-                setSubmitting(true);
-                setResultMsg(null);
-                setDuplicate(false);
-                try {
-                  const res: PublicRegistrationResponse =
-                    await apiClient.registerForPublicEvent(slug, {
-                      roleId,
-                      attendee: { name, email, phone },
-                      consent: { termsAccepted: true },
-                    });
-                  const isSameRoleDuplicate = !!res.duplicate;
-                  setDuplicate(isSameRoleDuplicate);
-                  const baseMsg =
-                    res.message ||
-                    (isSameRoleDuplicate
-                      ? "Already registered for this role"
-                      : "Registered successfully");
-                  setResultMsg(baseMsg);
-                  // Immediately reflect capacity change locally so user sees updated numbers without reload
-                  if (!isSameRoleDuplicate) {
-                    setData((prev) => {
-                      if (!prev) return prev;
-                      return {
-                        ...prev,
-                        roles: prev.roles.map((r) =>
-                          r.roleId === roleId && r.capacityRemaining > 0
-                            ? {
-                                ...r,
-                                capacityRemaining: r.capacityRemaining - 1,
-                              }
-                            : r,
-                        ),
-                      };
-                    });
-                  }
-                } catch (err) {
-                  const e = err as Error;
-                  const errorMsg = e.message || "Registration failed";
-
-                  // Check if this is a validation error - show in modal
-                  const isValidationError =
-                    errorMsg.toLowerCase().includes("phone") ||
-                    errorMsg.toLowerCase().includes("email") ||
-                    errorMsg.toLowerCase().includes("name") ||
-                    errorMsg.toLowerCase().includes("must be at least") ||
-                    errorMsg.toLowerCase().includes("is required") ||
-                    errorMsg.toLowerCase().includes("invalid");
-
-                  if (isValidationError) {
-                    // Show validation errors in a modal
-                    setErrorModalMessage(errorMsg);
-                    setShowErrorModal(true);
-                  } else if (
-                    errorMsg.includes("-role limit") ||
-                    errorMsg.includes("reached the")
-                  ) {
-                    // Handle role limit errors inline (complex message with formatting)
-                    const lc = errorMsg.toLowerCase();
-                    const backendIndicatesUser =
-                      lc.includes("you have reached");
-                    // Extract the limit number from error message (e.g., "1-role", "3-role", "5-role")
-                    const limitMatch = errorMsg.match(/(\d+)-role limit/);
-                    const roleLimit = limitMatch ? limitMatch[1] : "maximum";
-
-                    // Tailor message for authenticated (system) users OR when backend phrasing indicates user limit
-                    if (data?.isAuthenticated || backendIndicatesUser) {
-                      setResultMsg(
-                        data?.isAuthenticated
-                          ? `You have already registered for the maximum of ${roleLimit} role${
-                              roleLimit !== "1" ? "s" : ""
-                            } for this event. To change roles, visit this event in your dashboard and remove one role before adding another.`
-                          : `This email already has ${roleLimit} role${
-                              roleLimit !== "1" ? "s" : ""
-                            } registered for this event. Log in to your account to manage or swap roles (remove one before adding another).`,
-                      );
-                    } else {
-                      // Guest (email-only) with 1-role limit
-                      setResultMsg(
-                        roleLimit === "1"
-                          ? "You've already registered for this event. If you need to change your role, please contact the event organizer."
-                          : `You've already registered for the maximum number of roles (${roleLimit}) for this event. If you need to make changes, please contact the event organizer.`,
-                      );
+      {/* Registration form - only for free events when registration is open */}
+      {data.registrationOpen &&
+        (!data.pricing || (data.pricing.price ?? 0) === 0) && (
+          <section
+            className="mb-10 focus:outline-none"
+            data-testid="public-event-registration-form"
+            ref={registerSectionRef}
+            tabIndex={-1}
+            aria-label="Event registration form"
+          >
+            {!roleId && data.roles.length > 1 && (
+              <p className="text-sm text-gray-600 mb-4">
+                Select a role above to begin registration.
+                <br /> Upon completing your registration, the Zoom link or venue
+                details will be sent to your registered email address.
+              </p>
+            )}
+            {!roleId && data.roles.length === 1 && (
+              <p className="text-sm text-gray-600 mb-4">
+                Upon completing your registration, the Zoom link or venue
+                details will be sent to your registered email address.
+              </p>
+            )}
+            {roleId && !resultMsg && (
+              <form
+                className="space-y-4 max-w-md"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!slug) return;
+                  setSubmitting(true);
+                  setResultMsg(null);
+                  setDuplicate(false);
+                  try {
+                    const res: PublicRegistrationResponse =
+                      await apiClient.registerForPublicEvent(slug, {
+                        roleId,
+                        attendee: { name, email, phone },
+                        consent: { termsAccepted: true },
+                      });
+                    const isSameRoleDuplicate = !!res.duplicate;
+                    setDuplicate(isSameRoleDuplicate);
+                    const baseMsg =
+                      res.message ||
+                      (isSameRoleDuplicate
+                        ? "Already registered for this role"
+                        : "Registered successfully");
+                    setResultMsg(baseMsg);
+                    // Immediately reflect capacity change locally so user sees updated numbers without reload
+                    if (!isSameRoleDuplicate) {
+                      setData((prev) => {
+                        if (!prev) return prev;
+                        return {
+                          ...prev,
+                          roles: prev.roles.map((r) =>
+                            r.roleId === roleId && r.capacityRemaining > 0
+                              ? {
+                                  ...r,
+                                  capacityRemaining: r.capacityRemaining - 1,
+                                }
+                              : r,
+                          ),
+                        };
+                      });
                     }
-                  } else {
-                    // Other errors - show inline
-                    setResultMsg(errorMsg);
+                  } catch (err) {
+                    const e = err as Error;
+                    const errorMsg = e.message || "Registration failed";
+
+                    // Check if this is a validation error - show in modal
+                    const isValidationError =
+                      errorMsg.toLowerCase().includes("phone") ||
+                      errorMsg.toLowerCase().includes("email") ||
+                      errorMsg.toLowerCase().includes("name") ||
+                      errorMsg.toLowerCase().includes("must be at least") ||
+                      errorMsg.toLowerCase().includes("is required") ||
+                      errorMsg.toLowerCase().includes("invalid");
+
+                    if (isValidationError) {
+                      // Show validation errors in a modal
+                      setErrorModalMessage(errorMsg);
+                      setShowErrorModal(true);
+                    } else if (
+                      errorMsg.includes("-role limit") ||
+                      errorMsg.includes("reached the")
+                    ) {
+                      // Handle role limit errors inline (complex message with formatting)
+                      const lc = errorMsg.toLowerCase();
+                      const backendIndicatesUser =
+                        lc.includes("you have reached");
+                      // Extract the limit number from error message (e.g., "1-role", "3-role", "5-role")
+                      const limitMatch = errorMsg.match(/(\d+)-role limit/);
+                      const roleLimit = limitMatch ? limitMatch[1] : "maximum";
+
+                      // Tailor message for authenticated (system) users OR when backend phrasing indicates user limit
+                      if (data?.isAuthenticated || backendIndicatesUser) {
+                        setResultMsg(
+                          data?.isAuthenticated
+                            ? `You have already registered for the maximum of ${roleLimit} role${
+                                roleLimit !== "1" ? "s" : ""
+                              } for this event. To change roles, visit this event in your dashboard and remove one role before adding another.`
+                            : `This email already has ${roleLimit} role${
+                                roleLimit !== "1" ? "s" : ""
+                              } registered for this event. Log in to your account to manage or swap roles (remove one before adding another).`,
+                        );
+                      } else {
+                        // Guest (email-only) with 1-role limit
+                        setResultMsg(
+                          roleLimit === "1"
+                            ? "You've already registered for this event. If you need to change your role, please contact the event organizer."
+                            : `You've already registered for the maximum number of roles (${roleLimit}) for this event. If you need to make changes, please contact the event organizer.`,
+                        );
+                      }
+                    } else {
+                      // Other errors - show inline
+                      setResultMsg(errorMsg);
+                    }
+                  } finally {
+                    setSubmitting(false);
                   }
-                } finally {
-                  setSubmitting(false);
-                }
-              }}
-            >
-              <div>
-                <label
-                  htmlFor="public-reg-full-name"
-                  className="block text-sm font-medium mb-1"
-                >
-                  Full Name
-                </label>
-                <input
-                  id="public-reg-full-name"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring focus:border-indigo-500"
-                  placeholder="Your name"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="public-reg-email"
-                  className="block text-sm font-medium mb-1"
-                >
-                  Email
-                </label>
-                <input
-                  id="public-reg-email"
-                  required
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring focus:border-indigo-500"
-                  placeholder="you@example.com"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="public-reg-phone"
-                  className="block text-sm font-medium mb-1"
-                >
-                  Phone
-                </label>
-                <input
-                  id="public-reg-phone"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  required
-                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring focus:border-indigo-500"
-                  placeholder="+1 555 0100"
-                />
-              </div>
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  disabled={submitting || !name || !email || !phone}
-                  className="inline-flex items-center px-4 py-2 rounded bg-indigo-600 text-white text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed hover:bg-indigo-700 transition-colors"
-                >
-                  {submitting ? "Submitting..." : "Submit Registration"}
-                </button>
-              </div>
-            </form>
-          )}
-          {roleId && !resultMsg && (
-            <p
-              className="text-xs text-gray-500 mt-4"
-              data-testid="public-event-registration-reminder-inline"
-            >
-              Upon completing your registration, the Zoom link or venue details
-              will be sent to your registered email address.
-            </p>
-          )}
-          {resultMsg && (
-            <div
-              className={`max-w-md p-4 border rounded text-sm mt-4 ${
-                resultMsg.toLowerCase().includes("error") ||
-                resultMsg.toLowerCase().includes("failed") ||
-                resultMsg.toLowerCase().includes("maximum number of roles")
-                  ? "bg-red-50 border-red-200 text-red-800"
-                  : "bg-green-50 border-green-200 text-green-800"
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                <Icon
-                  name={
-                    resultMsg.toLowerCase().includes("error") ||
-                    resultMsg.toLowerCase().includes("failed") ||
-                    resultMsg.toLowerCase().includes("maximum number of roles")
-                      ? "x-circle"
-                      : "check-circle"
-                  }
-                  className="w-5 h-5 flex-shrink-0 mt-0.5"
-                />
-                <div className="flex-1">
-                  <p className="font-medium mb-1">{resultMsg}</p>
-                  {!resultMsg.toLowerCase().includes("error") &&
-                    !resultMsg.toLowerCase().includes("failed") &&
-                    !resultMsg
-                      .toLowerCase()
-                      .includes("maximum number of roles") &&
-                    (duplicate ? (
-                      <p className="text-sm opacity-80">
-                        You already registered for this role. We've sent another
-                        confirmation email.
-                      </p>
-                    ) : (
-                      <p className="text-sm opacity-80">
-                        Check your email for a confirmation with event details
-                        and calendar invite.
-                      </p>
-                    ))}
-                  {(() => {
-                    const lc = resultMsg.toLowerCase();
-                    const isGuestLimit = lc.includes("maximum number of roles");
-                    const isUserLimit =
-                      lc.includes(
-                        "you have already registered for the maximum",
-                      ) || lc.includes("this email already has 3 roles");
-                    if (!(isGuestLimit || isUserLimit)) return null;
-                    return (
-                      <div className="text-sm opacity-80 mt-2">
-                        <p className="mb-2">What you can do:</p>
-                        {isUserLimit ? (
-                          <ul className="list-disc list-inside space-y-1">
-                            <li>Open your dashboard event page</li>
-                            <li>Remove an existing role you no longer need</li>
-                            <li>
-                              Return here (or refresh) and register the new role
-                            </li>
-                          </ul>
-                        ) : (
-                          <ul className="list-disc list-inside space-y-1">
-                            <li>Check your email for previous registrations</li>
-                            <li>
-                              Contact the organizer if you need to change roles
-                            </li>
-                            <li>
-                              Create an account to manage your registrations
-                            </li>
-                          </ul>
-                        )}
-                      </div>
-                    );
-                  })()}
+                }}
+              >
+                <div>
+                  <label
+                    htmlFor="public-reg-full-name"
+                    className="block text-sm font-medium mb-1"
+                  >
+                    Full Name
+                  </label>
+                  <input
+                    id="public-reg-full-name"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring focus:border-indigo-500"
+                    placeholder="Your name"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="public-reg-email"
+                    className="block text-sm font-medium mb-1"
+                  >
+                    Email
+                  </label>
+                  <input
+                    id="public-reg-email"
+                    required
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring focus:border-indigo-500"
+                    placeholder="you@example.com"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="public-reg-phone"
+                    className="block text-sm font-medium mb-1"
+                  >
+                    Phone
+                  </label>
+                  <input
+                    id="public-reg-phone"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    required
+                    className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring focus:border-indigo-500"
+                    placeholder="+1 555 0100"
+                  />
+                </div>
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={submitting || !name || !email || !phone}
+                    className="inline-flex items-center px-4 py-2 rounded bg-indigo-600 text-white text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed hover:bg-indigo-700 transition-colors"
+                  >
+                    {submitting ? "Submitting..." : "Submit Registration"}
+                  </button>
+                </div>
+              </form>
+            )}
+            {roleId && !resultMsg && (
+              <p
+                className="text-xs text-gray-500 mt-4"
+                data-testid="public-event-registration-reminder-inline"
+              >
+                Upon completing your registration, the Zoom link or venue
+                details will be sent to your registered email address.
+              </p>
+            )}
+            {resultMsg && (
+              <div
+                className={`max-w-md p-4 border rounded text-sm mt-4 ${
+                  resultMsg.toLowerCase().includes("error") ||
+                  resultMsg.toLowerCase().includes("failed") ||
+                  resultMsg.toLowerCase().includes("maximum number of roles")
+                    ? "bg-red-50 border-red-200 text-red-800"
+                    : "bg-green-50 border-green-200 text-green-800"
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <Icon
+                    name={
+                      resultMsg.toLowerCase().includes("error") ||
+                      resultMsg.toLowerCase().includes("failed") ||
+                      resultMsg
+                        .toLowerCase()
+                        .includes("maximum number of roles")
+                        ? "x-circle"
+                        : "check-circle"
+                    }
+                    className="w-5 h-5 flex-shrink-0 mt-0.5"
+                  />
+                  <div className="flex-1">
+                    <p className="font-medium mb-1">{resultMsg}</p>
+                    {!resultMsg.toLowerCase().includes("error") &&
+                      !resultMsg.toLowerCase().includes("failed") &&
+                      !resultMsg
+                        .toLowerCase()
+                        .includes("maximum number of roles") &&
+                      (duplicate ? (
+                        <p className="text-sm opacity-80">
+                          You already registered for this role. We've sent
+                          another confirmation email.
+                        </p>
+                      ) : (
+                        <p className="text-sm opacity-80">
+                          Check your email for a confirmation with event details
+                          and calendar invite.
+                        </p>
+                      ))}
+                    {(() => {
+                      const lc = resultMsg.toLowerCase();
+                      const isGuestLimit = lc.includes(
+                        "maximum number of roles",
+                      );
+                      const isUserLimit =
+                        lc.includes(
+                          "you have already registered for the maximum",
+                        ) || lc.includes("this email already has 3 roles");
+                      if (!(isGuestLimit || isUserLimit)) return null;
+                      return (
+                        <div className="text-sm opacity-80 mt-2">
+                          <p className="mb-2">What you can do:</p>
+                          {isUserLimit ? (
+                            <ul className="list-disc list-inside space-y-1">
+                              <li>Open your dashboard event page</li>
+                              <li>
+                                Remove an existing role you no longer need
+                              </li>
+                              <li>
+                                Return here (or refresh) and register the new
+                                role
+                              </li>
+                            </ul>
+                          ) : (
+                            <ul className="list-disc list-inside space-y-1">
+                              <li>
+                                Check your email for previous registrations
+                              </li>
+                              <li>
+                                Contact the organizer if you need to change
+                                roles
+                              </li>
+                              <li>
+                                Create an account to manage your registrations
+                              </li>
+                            </ul>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-        </section>
-      )}
+            )}
+          </section>
+        )}
 
       <footer
         className="pt-4 border-t text-xs text-gray-500"

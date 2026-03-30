@@ -29,6 +29,7 @@ function baseEvent(overrides: Partial<Record<string, any>> = {}) {
     slug: "format-test-event",
     id: "evt-format-test",
     isAuthenticated: false,
+    registrationOpen: true,
     ...overrides,
   };
 }
@@ -53,7 +54,7 @@ function renderSlug() {
       <Routes>
         <Route path="/p/:slug" element={<PublicEvent />} />
       </Routes>
-    </MemoryRouter>
+    </MemoryRouter>,
   );
 }
 
@@ -64,7 +65,7 @@ describe("PublicEvent location format visibility", () => {
 
   it("shows Format line and no separate location when format is Online", async () => {
     (apiClient as any).getPublicEvent.mockResolvedValueOnce(
-      baseEvent({ format: "Online", location: "Something Else" })
+      baseEvent({ format: "Online", location: "Something Else" }),
     );
     renderSlug();
     await screen.findByText("Format Test Event");
@@ -77,7 +78,7 @@ describe("PublicEvent location format visibility", () => {
 
   it("shows only format for Hybrid Participation", async () => {
     (apiClient as any).getPublicEvent.mockResolvedValueOnce(
-      baseEvent({ format: "Hybrid Participation" })
+      baseEvent({ format: "Hybrid Participation" }),
     );
     renderSlug();
     await screen.findByText("Format Test Event");
@@ -88,7 +89,7 @@ describe("PublicEvent location format visibility", () => {
 
   it("shows only format for In-person", async () => {
     (apiClient as any).getPublicEvent.mockResolvedValueOnce(
-      baseEvent({ format: "In-person" })
+      baseEvent({ format: "In-person" }),
     );
     renderSlug();
     await screen.findByText("Format Test Event");

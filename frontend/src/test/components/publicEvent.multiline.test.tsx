@@ -41,6 +41,7 @@ vi.mock("../../services/api", () => ({
       time: "09:00",
       endTime: "10:00",
       timeZone: "America/New_York",
+      registrationOpen: true,
     }),
     registerForPublicEvent: async () => ({ status: "ok", registrationId: "x" }),
   },

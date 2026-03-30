@@ -9,6 +9,9 @@ import { RegistrationQueryService } from "../../../src/services/RegistrationQuer
 vi.mock("../../../src/models/Event.js");
 vi.mock("../../../src/models/Registration.js");
 vi.mock("../../../src/services/RegistrationQueryService.js");
+vi.mock("../../../src/utils/publicSlug", () => ({
+  generateUniquePublicSlug: vi.fn().mockResolvedValue("mock-slug-1234"),
+}));
 
 describe("ResponseBuilderService - Multi-Group Workshop Tests", () => {
   beforeEach(() => {

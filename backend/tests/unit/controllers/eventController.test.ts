@@ -139,6 +139,10 @@ vi.mock("uuid", () => ({
   v4: vi.fn(() => "mock-uuid-1234"),
 }));
 
+vi.mock("../../../src/utils/publicSlug", () => ({
+  generateUniquePublicSlug: vi.fn().mockResolvedValue("mock-slug-1234"),
+}));
+
 vi.mock("mongoose", async (importOriginal) => {
   const actual = await importOriginal<typeof import("mongoose")>();
   const RealObjectId: any = actual.Types.ObjectId;

@@ -52,6 +52,7 @@ export interface PublicEventData {
   roles: PublicEventRole[];
   slug: string;
   isAuthenticated?: boolean; // added optional auth flag
+  registrationOpen?: boolean; // true when event is published and accepting registrations
   pricing?: {
     isFree: boolean;
     price?: number; // in cents

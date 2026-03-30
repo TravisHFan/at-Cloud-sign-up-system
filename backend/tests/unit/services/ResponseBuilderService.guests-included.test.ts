@@ -5,9 +5,13 @@ import { Event, Registration } from "../../../src/models";
 import { RegistrationQueryService } from "../../../src/services/RegistrationQueryService";
 
 vi.mock("../../../src/models", () => ({
-  Event: { findById: vi.fn() },
+  Event: { findById: vi.fn(), updateOne: vi.fn() },
   Registration: { find: vi.fn() },
   User: { findById: vi.fn() },
+}));
+
+vi.mock("../../../src/utils/publicSlug", () => ({
+  generateUniquePublicSlug: vi.fn().mockResolvedValue("mock-slug-1234"),
 }));
 
 vi.mock("../../../src/services/RegistrationQueryService", () => ({
@@ -73,7 +77,7 @@ describe("ResponseBuilderService - guests included in signedUp", () => {
     } as any);
 
     const res = await ResponseBuilderService.buildEventWithRegistrations(
-      eventId.toString()
+      eventId.toString(),
     );
     expect(res).toBeTruthy();
     expect(res!.signedUp).toBe(2);

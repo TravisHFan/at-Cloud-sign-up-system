@@ -35,7 +35,7 @@ describe("Public Events API - GET /api/public/events/:slug", () => {
     await request(app).post("/api/auth/register").send(adminData);
     await User.findOneAndUpdate(
       { email: adminData.email },
-      { isVerified: true, role: "Administrator" }
+      { isVerified: true, role: "Administrator" },
     );
     const loginRes = await request(app).post("/api/auth/login").send({
       emailOrUsername: adminData.email,
@@ -49,7 +49,7 @@ describe("Public Events API - GET /api/public/events/:slug", () => {
     expect(res.status).toBe(404);
   }, 20000);
 
-  it("returns 404 for existing but unpublished event", async () => {
+  it("returns 200 with registrationOpen false for existing but unpublished event", async () => {
     // Create event (unpublished) directly via model (simpler) respecting required fields
     await Event.create({
       title: "Unpublished Event",
@@ -77,7 +77,9 @@ describe("Public Events API - GET /api/public/events/:slug", () => {
     });
 
     const res = await request(app).get("/api/public/events/unpub-test");
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.registrationOpen).toBe(false);
   }, 20000);
 
   it("returns sanitized public payload for published event", async () => {
@@ -127,6 +129,7 @@ describe("Public Events API - GET /api/public/events/:slug", () => {
     expect(data.roles[0].roleId).toBe("r1");
     expect(data.roles[0].name).toBe("Attendee");
     expect(data.slug).toBe("public-event");
+    expect(data.registrationOpen).toBe(true);
     // The event's local wall time 09:00 is stored with its IANA timeZone (default seeded in model)
     // Serializer now converts to the true UTC instant instead of naively appending 'Z'.
     // Previously this test expected the incorrect naive UTC ("09:00Z"). With a Pacific offset (-07:00)
