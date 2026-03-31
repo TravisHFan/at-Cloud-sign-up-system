@@ -119,6 +119,7 @@ class EventsApiClient extends BaseApiClient {
     excludeId?: string;
     mode?: "point" | "range";
     timeZone?: string;
+    programLabels?: string[];
   }): Promise<{
     conflict: boolean;
     conflicts: Array<{ id: string; title: string }>;
@@ -131,6 +132,11 @@ class EventsApiClient extends BaseApiClient {
     if (params.excludeId) qp.set("excludeId", params.excludeId);
     if (params.mode) qp.set("mode", params.mode);
     if (params.timeZone) qp.set("timeZone", params.timeZone);
+    if (params.programLabels?.length) {
+      for (const label of params.programLabels) {
+        qp.append("programLabels", label);
+      }
+    }
     const response = await this.request<{
       conflict: boolean;
       conflicts: Array<{ id: string; title: string }>;

@@ -231,6 +231,7 @@ export class CreationController {
         undefined,
         eventData.timeZone,
         eventData.suppressNotifications,
+        eventData.programLabels?.map((id: unknown) => String(id)),
       );
 
       if (conflictResult.hasConflict) {

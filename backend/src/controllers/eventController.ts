@@ -21,7 +21,7 @@ import { toIdString } from "../utils/idUtils";
 export class EventController {
   // Narrow guard to check organizerDetails array
   private static hasOrganizerDetails(
-    v: unknown
+    v: unknown,
   ): v is { organizerDetails?: Array<unknown> } {
     return (
       typeof v === "object" &&
@@ -41,7 +41,8 @@ export class EventController {
     endDate: string,
     endTime: string,
     excludeEventId?: string,
-    candidateTimeZone?: string
+    candidateTimeZone?: string,
+    candidateProgramLabels?: string[],
   ): Promise<Array<{ id: string; title: string }>> {
     // Narrow candidates by date range first (string YYYY-MM-DD works lexicographically)
     const dateRangeFilter: FilterQuery<IEvent> = {
@@ -62,6 +63,7 @@ export class EventController {
       time: string;
       endTime: string;
       timeZone?: string;
+      programLabels?: Types.ObjectId[];
     };
 
     // Support both real Mongoose chains and unit-test mocks that return arrays
@@ -81,7 +83,7 @@ export class EventController {
       typeof (chained as { select?: unknown }).select === "function"
     ) {
       chained = (chained as { select: (fields: string) => unknown }).select(
-        "_id title date endDate time endTime timeZone"
+        "_id title date endDate time endTime timeZone programLabels",
       ) as Chain;
     }
     let candidates: CandidateEvent[];
@@ -96,7 +98,7 @@ export class EventController {
     const newStart = toInstantFromWallClock(
       startDate,
       startTime,
-      candidateTimeZone
+      candidateTimeZone,
     );
     const newEnd = toInstantFromWallClock(endDate, endTime, candidateTimeZone);
 
@@ -106,10 +108,26 @@ export class EventController {
       const evEnd = toInstantFromWallClock(
         ev.endDate || ev.date,
         ev.endTime,
-        ev.timeZone
+        ev.timeZone,
       );
       // Overlap if newStart < evEnd AND newEnd > evStart (boundaries allowed to touch)
       if (newStart < evEnd && newEnd > evStart) {
+        // Program-aware filtering: allow overlap when events belong to different programs
+        if (candidateProgramLabels !== undefined) {
+          const candidateHasPrograms = candidateProgramLabels.length > 0;
+          const existingPrograms = (ev.programLabels || []).map((id) =>
+            id.toString(),
+          );
+          const existingHasPrograms = existingPrograms.length > 0;
+
+          // Allow overlap if either event has no programs or they share no programs
+          if (!candidateHasPrograms || !existingHasPrograms) continue;
+          const candidateSet = new Set(candidateProgramLabels);
+          const hasSharedProgram = existingPrograms.some((id) =>
+            candidateSet.has(id),
+          );
+          if (!hasSharedProgram) continue;
+        }
         conflicts.push({ id: ev._id.toString(), title: ev.title });
       }
     }
@@ -118,9 +136,8 @@ export class EventController {
 
   // Public endpoint to check for time conflicts (supports point or span checks)
   static async checkTimeConflict(req: Request, res: Response): Promise<void> {
-    const { EventConflictController } = await import(
-      "./event/EventConflictController"
-    );
+    const { EventConflictController } =
+      await import("./event/EventConflictController");
     return EventConflictController.checkTimeConflict(req, res);
   }
 
@@ -128,9 +145,8 @@ export class EventController {
    * Publish an event - delegates to PublishingController
    */
   static async publishEvent(req: Request, res: Response): Promise<void> {
-    const { PublishingController } = await import(
-      "./event/PublishingController"
-    );
+    const { PublishingController } =
+      await import("./event/PublishingController");
     return PublishingController.publishEvent(req, res);
   }
 
@@ -138,9 +154,8 @@ export class EventController {
    * Unpublish an event - delegates to PublishingController
    */
   static async unpublishEvent(req: Request, res: Response): Promise<void> {
-    const { PublishingController } = await import(
-      "./event/PublishingController"
-    );
+    const { PublishingController } =
+      await import("./event/PublishingController");
     return PublishingController.unpublishEvent(req, res);
   }
 
@@ -154,7 +169,7 @@ export class EventController {
     eventEndDateOrTime: string,
     eventTimeOrEndTime: string,
     maybeEventEndTime?: string,
-    maybeTimeZone?: string
+    maybeTimeZone?: string,
   ): "upcoming" | "ongoing" | "completed" {
     // Backward compatibility: legacy signature (date, time, endTime[, tz]) vs new (date, endDate, time, endTime[, tz])
     let eventEndDate: string;
@@ -178,7 +193,7 @@ export class EventController {
     const endInstant = toInstantFromWallClock(
       eventEndDate,
       eventEndTime,
-      timeZone
+      timeZone,
     );
 
     const now = new Date();
@@ -209,7 +224,7 @@ export class EventController {
       event.endDate || event.date,
       event.time,
       event.endTime,
-      event.timeZone
+      event.timeZone,
     );
 
     if (event.status !== newStatus && event.status !== "cancelled") {
@@ -231,7 +246,7 @@ export class EventController {
       phone?: string;
       name?: string;
       avatar?: string;
-    }>
+    }>,
   ): Promise<Array<Record<string, unknown>>> {
     if (!organizerDetails || organizerDetails.length === 0) {
       return [];
@@ -242,7 +257,7 @@ export class EventController {
         if (organizer.userId) {
           // Get fresh contact info from User collection
           const user = await User.findById(organizer.userId).select(
-            "email phone firstName lastName avatar"
+            "email phone firstName lastName avatar",
           );
           if (user) {
             return {
@@ -256,62 +271,56 @@ export class EventController {
         }
         // If no userId or user not found, return stored data
         return organizer.toObject();
-      })
+      }),
     );
   }
 
   // Batch update all event statuses (can be called periodically)
   static async updateAllEventStatuses(
     req: Request,
-    res: Response
+    res: Response,
   ): Promise<void> {
-    const { BatchOperationsController } = await import(
-      "./event/BatchOperationsController"
-    );
+    const { BatchOperationsController } =
+      await import("./event/BatchOperationsController");
     return BatchOperationsController.updateAllEventStatuses(req, res);
   }
 
   // Helper method to update all event statuses without sending response
   public static async updateAllEventStatusesHelper(): Promise<number> {
-    const { BatchOperationsController } = await import(
-      "./event/BatchOperationsController"
-    );
+    const { BatchOperationsController } =
+      await import("./event/BatchOperationsController");
     return BatchOperationsController.updateAllEventStatusesHelper();
   }
 
   // Recalculate signup counts for all events
   static async recalculateSignupCounts(
     req: Request,
-    res: Response
+    res: Response,
   ): Promise<void> {
-    const { BatchOperationsController } = await import(
-      "./event/BatchOperationsController"
-    );
+    const { BatchOperationsController } =
+      await import("./event/BatchOperationsController");
     return BatchOperationsController.recalculateSignupCounts(req, res);
   }
 
   // Helper method to recalculate signup counts for all events
   private static async recalculateSignupCountsHelper(): Promise<number> {
-    const { BatchOperationsController } = await import(
-      "./event/BatchOperationsController"
-    );
+    const { BatchOperationsController } =
+      await import("./event/BatchOperationsController");
     return BatchOperationsController.recalculateSignupCountsHelper();
   }
 
   // Get all events with filtering and pagination
   // Delegated to EventQueryController
   static async getAllEvents(req: Request, res: Response): Promise<void> {
-    const { EventQueryController } = await import(
-      "./event/EventQueryController"
-    );
+    const { EventQueryController } =
+      await import("./event/EventQueryController");
     return EventQueryController.getAllEvents(req, res);
   }
 
   // Get single event by ID
   static async getEventById(req: Request, res: Response): Promise<void> {
-    const { EventQueryController } = await import(
-      "./event/EventQueryController"
-    );
+    const { EventQueryController } =
+      await import("./event/EventQueryController");
     return EventQueryController.getEventById(req, res);
   }
 
@@ -324,9 +333,8 @@ export class EventController {
    * @returns { hasRegistrations: boolean, userCount: number, guestCount: number, totalCount: number }
    */
   static async hasRegistrations(req: Request, res: Response): Promise<void> {
-    const { MaintenanceController } = await import(
-      "./event/MaintenanceController"
-    );
+    const { MaintenanceController } =
+      await import("./event/MaintenanceController");
     return MaintenanceController.hasRegistrations(req, res);
   }
 
@@ -357,82 +365,73 @@ export class EventController {
 
   // Sign up for event role (THREAD-SAFE VERSION)
   static async signUpForEvent(req: Request, res: Response): Promise<void> {
-    const { RegistrationController } = await import(
-      "./event/RegistrationController"
-    );
+    const { RegistrationController } =
+      await import("./event/RegistrationController");
     return RegistrationController.signUpForEvent(req, res);
   }
 
   // Update a specific workshop group topic (Workshop only)
   static async updateWorkshopGroupTopic(
     req: Request,
-    res: Response
+    res: Response,
   ): Promise<void> {
-    const { RegistrationController } = await import(
-      "./event/RegistrationController"
-    );
+    const { RegistrationController } =
+      await import("./event/RegistrationController");
     return RegistrationController.updateWorkshopGroupTopic(req, res);
   }
 
   // Cancel event signup (THREAD-SAFE VERSION)
   static async cancelSignup(req: Request, res: Response): Promise<void> {
-    const { RegistrationController } = await import(
-      "./event/RegistrationController"
-    );
+    const { RegistrationController } =
+      await import("./event/RegistrationController");
     return RegistrationController.cancelSignup(req, res);
   }
 
   // Remove user from role (admin/organizer management operation)
   static async removeUserFromRole(req: Request, res: Response): Promise<void> {
-    const { RegistrationController } = await import(
-      "./event/RegistrationController"
-    );
+    const { RegistrationController } =
+      await import("./event/RegistrationController");
     return RegistrationController.removeUserFromRole(req, res);
   }
 
   // Move user between roles (admin/organizer management operation)
   static async moveUserBetweenRoles(
     req: Request,
-    res: Response
+    res: Response,
   ): Promise<void> {
-    const { RegistrationController } = await import(
-      "./event/RegistrationController"
-    );
+    const { RegistrationController } =
+      await import("./event/RegistrationController");
     return RegistrationController.moveUserBetweenRoles(req, res);
   }
 
   // Assign user to role (organizers/co-organizers only)
   static async assignUserToRole(req: Request, res: Response): Promise<void> {
-    const { RegistrationController } = await import(
-      "./event/RegistrationController"
-    );
+    const { RegistrationController } =
+      await import("./event/RegistrationController");
     return RegistrationController.assignUserToRole(req, res);
   }
 
   // Get user's registered events
   static async getUserEvents(req: Request, res: Response): Promise<void> {
-    const { MaintenanceController } = await import(
-      "./event/MaintenanceController"
-    );
+    const { MaintenanceController } =
+      await import("./event/MaintenanceController");
     return MaintenanceController.getUserEvents(req, res);
   }
 
   // Get events created by user
   static async getCreatedEvents(req: Request, res: Response): Promise<void> {
-    const { MaintenanceController } = await import(
-      "./event/MaintenanceController"
-    );
+    const { MaintenanceController } =
+      await import("./event/MaintenanceController");
     return MaintenanceController.getCreatedEvents(req, res);
   }
 
   // Get event participants (for event organizers and admins)
   static async getEventParticipants(
     req: Request,
-    res: Response
+    res: Response,
   ): Promise<void> {
-    const { MaintenanceController } = await import(
-      "./event/MaintenanceController"
-    );
+    const { MaintenanceController } =
+      await import("./event/MaintenanceController");
     return MaintenanceController.getEventParticipants(req, res);
   }
 }

@@ -23,8 +23,8 @@ export class EventConflictController {
         typeof v === "string"
           ? v
           : Array.isArray(v) && typeof v[0] === "string"
-          ? v[0]
-          : undefined;
+            ? v[0]
+            : undefined;
       const startDate = pickStr(req.query.startDate);
       const startTime = pickStr(req.query.startTime);
       const endDate = pickStr(req.query.endDate);
@@ -32,7 +32,15 @@ export class EventConflictController {
       const excludeId = pickStr(req.query.excludeId);
       const mode = pickStr(req.query.mode);
       const timeZone = pickStr(req.query.timeZone);
-
+      const programLabelsRaw = req.query.programLabels;
+      const programLabels: string[] | undefined =
+        programLabelsRaw !== undefined
+          ? Array.isArray(programLabelsRaw)
+            ? (programLabelsRaw as string[]).filter(Boolean)
+            : typeof programLabelsRaw === "string"
+              ? programLabelsRaw.split(",").filter(Boolean)
+              : undefined
+          : undefined;
       if (!startDate || !startTime) {
         res.status(400).json({
           success: false,
@@ -62,7 +70,8 @@ export class EventConflictController {
         checkEndDate,
         checkEndTime,
         excludeId,
-        timeZone
+        timeZone,
+        programLabels,
       );
 
       res.status(200).json({
@@ -73,7 +82,7 @@ export class EventConflictController {
       // console.error("checkTimeConflict error:", error);
       CorrelatedLogger.fromRequest(req, "EventController").error(
         "checkTimeConflict failed",
-        error as Error
+        error as Error,
       );
       res.status(500).json({
         success: false,

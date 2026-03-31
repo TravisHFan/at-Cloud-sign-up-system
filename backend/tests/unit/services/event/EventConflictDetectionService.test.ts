@@ -36,7 +36,7 @@ describe("EventConflictDetectionService", () => {
         "12:00",
         undefined,
         "America/New_York",
-        true // suppressNotifications
+        true, // suppressNotifications
       );
 
       expect(result).toEqual({ hasConflict: false });
@@ -55,7 +55,7 @@ describe("EventConflictDetectionService", () => {
         "12:00",
         undefined,
         "America/New_York",
-        false
+        false,
       );
 
       expect(result).toEqual({ hasConflict: false });
@@ -66,14 +66,14 @@ describe("EventConflictDetectionService", () => {
       process.env.NODE_ENV = "development";
       const mockConflicts = [{ id: "event1", title: "Conflicting Event" }];
       vi.mocked(EventController.findConflictingEvents).mockResolvedValue(
-        mockConflicts
+        mockConflicts,
       );
 
       const result = await EventConflictDetectionService.checkConflicts(
         "2024-01-15",
         "10:00",
         "2024-01-15",
-        "12:00"
+        "12:00",
       );
 
       expect(result).toEqual({
@@ -90,7 +90,7 @@ describe("EventConflictDetectionService", () => {
         "2024-01-15",
         "10:00",
         "2024-01-15",
-        "12:00"
+        "12:00",
       );
 
       expect(result).toEqual({ hasConflict: false });
@@ -102,20 +102,20 @@ describe("EventConflictDetectionService", () => {
         .spyOn(console, "error")
         .mockImplementation(() => {});
       vi.mocked(EventController.findConflictingEvents).mockRejectedValue(
-        new Error("Database error")
+        new Error("Database error"),
       );
 
       const result = await EventConflictDetectionService.checkConflicts(
         "2024-01-15",
         "10:00",
         "2024-01-15",
-        "12:00"
+        "12:00",
       );
 
       expect(result).toEqual({ hasConflict: false });
       expect(consoleSpy).toHaveBeenCalledWith(
         "Conflict detection failed:",
-        expect.any(Error)
+        expect.any(Error),
       );
 
       consoleSpy.mockRestore();
@@ -131,7 +131,7 @@ describe("EventConflictDetectionService", () => {
         "2024-01-15",
         "12:00",
         "existingEventId123",
-        "UTC"
+        "UTC",
       );
 
       expect(EventController.findConflictingEvents).toHaveBeenCalledWith(
@@ -140,7 +140,34 @@ describe("EventConflictDetectionService", () => {
         "2024-01-15",
         "12:00",
         "existingEventId123",
-        "UTC"
+        "UTC",
+        undefined,
+      );
+    });
+
+    it("should pass programLabels to findConflictingEvents", async () => {
+      process.env.NODE_ENV = "development";
+      vi.mocked(EventController.findConflictingEvents).mockResolvedValue([]);
+
+      await EventConflictDetectionService.checkConflicts(
+        "2024-01-15",
+        "10:00",
+        "2024-01-15",
+        "12:00",
+        undefined,
+        "UTC",
+        false,
+        ["program1", "program2"],
+      );
+
+      expect(EventController.findConflictingEvents).toHaveBeenCalledWith(
+        "2024-01-15",
+        "10:00",
+        "2024-01-15",
+        "12:00",
+        undefined,
+        "UTC",
+        ["program1", "program2"],
       );
     });
   });

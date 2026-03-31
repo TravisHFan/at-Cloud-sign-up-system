@@ -7222,6 +7222,127 @@ describe("EventController", () => {
     });
   });
 
+  describe("findConflictingEvents - program-aware filtering", () => {
+    const programA = new mongoose.Types.ObjectId();
+    const programB = new mongoose.Types.ObjectId();
+
+    const makeEvent = (overrides: any = {}) => ({
+      _id: new mongoose.Types.ObjectId(),
+      title: overrides.title || "Existing Event",
+      date: "2024-03-01",
+      endDate: "2024-03-01",
+      time: "10:00",
+      endTime: "12:00",
+      timeZone: "America/New_York",
+      programLabels: [],
+      ...overrides,
+    });
+
+    const mockFind = (events: any[]) => {
+      (Event.find as any).mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          lean: vi.fn().mockResolvedValue(events),
+        }),
+      });
+    };
+
+    it("should skip overlap when events belong to different programs", async () => {
+      mockFind([makeEvent({ programLabels: [programA] })]);
+
+      const conflicts = await EventController.findConflictingEvents(
+        "2024-03-01",
+        "11:00",
+        "2024-03-01",
+        "13:00",
+        undefined,
+        "America/New_York",
+        [programB.toString()],
+      );
+
+      expect(conflicts).toHaveLength(0);
+    });
+
+    it("should report overlap when events share a program", async () => {
+      mockFind([makeEvent({ programLabels: [programA] })]);
+
+      const conflicts = await EventController.findConflictingEvents(
+        "2024-03-01",
+        "11:00",
+        "2024-03-01",
+        "13:00",
+        undefined,
+        "America/New_York",
+        [programA.toString()],
+      );
+
+      expect(conflicts).toHaveLength(1);
+    });
+
+    it("should skip overlap when existing event has no programs", async () => {
+      mockFind([makeEvent({ programLabels: [] })]);
+
+      const conflicts = await EventController.findConflictingEvents(
+        "2024-03-01",
+        "11:00",
+        "2024-03-01",
+        "13:00",
+        undefined,
+        "America/New_York",
+        [programA.toString()],
+      );
+
+      expect(conflicts).toHaveLength(0);
+    });
+
+    it("should skip overlap when candidate has no programs", async () => {
+      mockFind([makeEvent({ programLabels: [programA] })]);
+
+      const conflicts = await EventController.findConflictingEvents(
+        "2024-03-01",
+        "11:00",
+        "2024-03-01",
+        "13:00",
+        undefined,
+        "America/New_York",
+        [], // empty candidate programs
+      );
+
+      expect(conflicts).toHaveLength(0);
+    });
+
+    it("should skip overlap when neither event has programs and programLabels is provided", async () => {
+      mockFind([makeEvent({ programLabels: [] })]);
+
+      const conflicts = await EventController.findConflictingEvents(
+        "2024-03-01",
+        "11:00",
+        "2024-03-01",
+        "13:00",
+        undefined,
+        "America/New_York",
+        [],
+      );
+
+      expect(conflicts).toHaveLength(0);
+    });
+
+    it("should fall back to global conflict when candidateProgramLabels is undefined", async () => {
+      mockFind([makeEvent({ programLabels: [programA] })]);
+
+      const conflicts = await EventController.findConflictingEvents(
+        "2024-03-01",
+        "11:00",
+        "2024-03-01",
+        "13:00",
+        undefined,
+        "America/New_York",
+        // no candidateProgramLabels → undefined
+      );
+
+      expect(conflicts).toHaveLength(1);
+    });
+  });
+
   describe("unpublishEvent delegation", () => {
     it("should delegate to PublishingController.unpublishEvent", async () => {
       const mockRequest = { params: { id: "event123" } } as any;

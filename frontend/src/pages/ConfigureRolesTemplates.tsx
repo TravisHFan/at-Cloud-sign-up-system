@@ -10,6 +10,9 @@ const EVENT_TYPES = [
   "Webinar",
   "Effective Communication Workshop",
   "Mentor Circle",
+  "Meeting",
+  "Office Hour",
+  "Hangout",
 ] as const;
 
 export default function ConfigureRolesTemplates() {
@@ -58,7 +61,7 @@ export default function ConfigureRolesTemplates() {
       } catch (err) {
         console.error("Failed to load templates:", err);
         setError(
-          err instanceof Error ? err.message : "Failed to load role templates"
+          err instanceof Error ? err.message : "Failed to load role templates",
         );
       } finally {
         setLoading(false);
@@ -81,7 +84,7 @@ export default function ConfigureRolesTemplates() {
         const updated = { ...prev };
         for (const eventType in updated) {
           updated[eventType] = updated[eventType].filter(
-            (t) => t._id !== templateId
+            (t) => t._id !== templateId,
           );
         }
         return updated;
@@ -89,7 +92,7 @@ export default function ConfigureRolesTemplates() {
 
       // Show success message
       setSuccessMessage(
-        `Template "${deleteConfirm.templateName}" has been deleted successfully.`
+        `Template "${deleteConfirm.templateName}" has been deleted successfully.`,
       );
 
       setDeleteConfirm(null);
@@ -152,7 +155,7 @@ export default function ConfigureRolesTemplates() {
                     <button
                       onClick={() =>
                         navigate(
-                          `/dashboard/create-roles-template?eventType=${eventType}`
+                          `/dashboard/create-roles-template?eventType=${eventType}`,
                         )
                       }
                       className="px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
@@ -192,7 +195,7 @@ export default function ConfigureRolesTemplates() {
                                   template.createdBy.username}{" "}
                                 on{" "}
                                 {new Date(
-                                  template.createdAt
+                                  template.createdAt,
                                 ).toLocaleDateString()}
                               </p>
                             </div>
@@ -204,7 +207,7 @@ export default function ConfigureRolesTemplates() {
                                   <button
                                     onClick={() =>
                                       navigate(
-                                        `/dashboard/edit-roles-template/${template._id}`
+                                        `/dashboard/edit-roles-template/${template._id}`,
                                       )
                                     }
                                     className="px-3 py-2 text-sm rounded-md transition-colors bg-blue-100 text-blue-700 hover:bg-blue-200"
@@ -229,7 +232,7 @@ export default function ConfigureRolesTemplates() {
                                 <button
                                   onClick={() =>
                                     navigate(
-                                      `/dashboard/view-roles-template/${template._id}`
+                                      `/dashboard/view-roles-template/${template._id}`,
                                     )
                                   }
                                   className="px-3 py-2 text-sm rounded-md transition-colors bg-green-100 text-green-700 hover:bg-green-200"

@@ -35,7 +35,8 @@ export class EventConflictDetectionService {
     endTime: string,
     excludeEventId?: string,
     timeZone?: string,
-    suppressNotifications?: boolean
+    suppressNotifications?: boolean,
+    programLabels?: string[],
   ): Promise<ConflictCheckResult> {
     // Skip conflict check in test environment when suppressNotifications=true
     // This allows integration test scenarios to create overlapping events
@@ -48,9 +49,8 @@ export class EventConflictDetectionService {
 
     try {
       // Dynamic import to avoid circular dependency
-      const { EventController } = await import(
-        "../../controllers/eventController"
-      );
+      const { EventController } =
+        await import("../../controllers/eventController");
 
       const conflicts = await EventController.findConflictingEvents(
         date,
@@ -58,7 +58,8 @@ export class EventConflictDetectionService {
         endDate,
         endTime,
         excludeEventId,
-        timeZone
+        timeZone,
+        programLabels,
       );
 
       if (conflicts.length > 0) {

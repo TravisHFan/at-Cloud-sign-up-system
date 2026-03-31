@@ -6,6 +6,8 @@ import Event from "../../../src/models/Event";
 import { ROLES } from "../../../src/utils/roleUtils";
 import { ensureIntegrationDB } from "../setup/connect";
 
+import mongoose from "mongoose";
+
 describe("EventConflictController - GET /api/events/check-conflict", () => {
   beforeEach(async () => {
     await ensureIntegrationDB();
@@ -36,6 +38,7 @@ describe("EventConflictController - GET /api/events/check-conflict", () => {
       format: "In-person",
       timeZone: options.timeZone || "America/Los_Angeles",
       createdBy: creator._id,
+      programLabels: options.programLabels || [],
       roles: [
         {
           id: "participant-role-1",
@@ -55,7 +58,7 @@ describe("EventConflictController - GET /api/events/check-conflict", () => {
   describe("Public Access", () => {
     it("should allow access without authentication", async () => {
       const response = await request(app).get(
-        "/api/events/check-conflict?startDate=2025-06-01&startTime=10:00"
+        "/api/events/check-conflict?startDate=2025-06-01&startTime=10:00",
       );
 
       expect(response.status).toBe(200);
@@ -67,7 +70,7 @@ describe("EventConflictController - GET /api/events/check-conflict", () => {
   describe("Success Cases", () => {
     it("should detect no conflict when no events exist", async () => {
       const response = await request(app).get(
-        "/api/events/check-conflict?startDate=2025-06-01&startTime=10:00&endDate=2025-06-01&endTime=12:00"
+        "/api/events/check-conflict?startDate=2025-06-01&startTime=10:00&endDate=2025-06-01&endTime=12:00",
       );
 
       expect(response.status).toBe(200);
@@ -85,7 +88,7 @@ describe("EventConflictController - GET /api/events/check-conflict", () => {
       });
 
       const response = await request(app).get(
-        "/api/events/check-conflict?startDate=2025-06-01&startTime=11:00&endDate=2025-06-01&endTime=13:00"
+        "/api/events/check-conflict?startDate=2025-06-01&startTime=11:00&endDate=2025-06-01&endTime=13:00",
       );
 
       expect(response.status).toBe(200);
@@ -103,7 +106,7 @@ describe("EventConflictController - GET /api/events/check-conflict", () => {
       });
 
       const response = await request(app).get(
-        "/api/events/check-conflict?startDate=2025-06-01&startTime=13:00&endDate=2025-06-01&endTime=15:00"
+        "/api/events/check-conflict?startDate=2025-06-01&startTime=13:00&endDate=2025-06-01&endTime=15:00",
       );
 
       expect(response.status).toBe(200);
@@ -120,7 +123,7 @@ describe("EventConflictController - GET /api/events/check-conflict", () => {
       });
 
       const response = await request(app).get(
-        `/api/events/check-conflict?startDate=2025-06-01&startTime=10:00&endDate=2025-06-01&endTime=12:00&excludeId=${existingEvent._id}`
+        `/api/events/check-conflict?startDate=2025-06-01&startTime=10:00&endDate=2025-06-01&endTime=12:00&excludeId=${existingEvent._id}`,
       );
 
       expect(response.status).toBe(200);
@@ -138,7 +141,7 @@ describe("EventConflictController - GET /api/events/check-conflict", () => {
 
       // Only startDate and startTime provided
       const response = await request(app).get(
-        "/api/events/check-conflict?startDate=2025-06-01&startTime=10:30"
+        "/api/events/check-conflict?startDate=2025-06-01&startTime=10:30",
       );
 
       expect(response.status).toBe(200);
@@ -155,7 +158,7 @@ describe("EventConflictController - GET /api/events/check-conflict", () => {
       });
 
       const response = await request(app).get(
-        "/api/events/check-conflict?startDate=2025-06-01&startTime=10:30&mode=point"
+        "/api/events/check-conflict?startDate=2025-06-01&startTime=10:30&mode=point",
       );
 
       expect(response.status).toBe(200);
@@ -173,7 +176,7 @@ describe("EventConflictController - GET /api/events/check-conflict", () => {
 
       // 10 AM Pacific = 1 PM Eastern (no conflict)
       const response = await request(app).get(
-        "/api/events/check-conflict?startDate=2025-06-01&startTime=10:00&endDate=2025-06-01&endTime=12:00&timeZone=America/Los_Angeles"
+        "/api/events/check-conflict?startDate=2025-06-01&startTime=10:00&endDate=2025-06-01&endTime=12:00&timeZone=America/Los_Angeles",
       );
 
       expect(response.status).toBe(200);
@@ -197,7 +200,7 @@ describe("EventConflictController - GET /api/events/check-conflict", () => {
       });
 
       const response = await request(app).get(
-        "/api/events/check-conflict?startDate=2025-06-01&startTime=11:30&endDate=2025-06-01&endTime=12:30"
+        "/api/events/check-conflict?startDate=2025-06-01&startTime=11:30&endDate=2025-06-01&endTime=12:30",
       );
 
       expect(response.status).toBe(200);
@@ -215,7 +218,7 @@ describe("EventConflictController - GET /api/events/check-conflict", () => {
       });
 
       const response = await request(app).get(
-        "/api/events/check-conflict?startDate=2025-06-01&startTime=11:00&endDate=2025-06-01&endTime=13:00"
+        "/api/events/check-conflict?startDate=2025-06-01&startTime=11:00&endDate=2025-06-01&endTime=13:00",
       );
 
       expect(response.status).toBe(200);
@@ -233,7 +236,7 @@ describe("EventConflictController - GET /api/events/check-conflict", () => {
       });
 
       const response = await request(app).get(
-        "/api/events/check-conflict?startDate=2025-06-02&startTime=14:00&endDate=2025-06-02&endTime=16:00"
+        "/api/events/check-conflict?startDate=2025-06-02&startTime=14:00&endDate=2025-06-02&endTime=16:00",
       );
 
       expect(response.status).toBe(200);
@@ -246,25 +249,25 @@ describe("EventConflictController - GET /api/events/check-conflict", () => {
   describe("Edge Cases", () => {
     it("should return 400 when startDate is missing", async () => {
       const response = await request(app).get(
-        "/api/events/check-conflict?startTime=10:00"
+        "/api/events/check-conflict?startTime=10:00",
       );
 
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);
       expect(response.body.message).toBe(
-        "startDate and startTime are required"
+        "startDate and startTime are required",
       );
     });
 
     it("should return 400 when startTime is missing", async () => {
       const response = await request(app).get(
-        "/api/events/check-conflict?startDate=2025-06-01"
+        "/api/events/check-conflict?startDate=2025-06-01",
       );
 
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);
       expect(response.body.message).toBe(
-        "startDate and startTime are required"
+        "startDate and startTime are required",
       );
     });
 
@@ -276,7 +279,7 @@ describe("EventConflictController - GET /api/events/check-conflict", () => {
       });
 
       const response = await request(app).get(
-        "/api/events/check-conflict?startDate=2025-06-01&startTime=11:00&endDate=2025-06-01&endTime=13:00&excludeId=invalid-id"
+        "/api/events/check-conflict?startDate=2025-06-01&startTime=11:00&endDate=2025-06-01&endTime=13:00&excludeId=invalid-id",
       );
 
       expect(response.status).toBe(200);
@@ -295,7 +298,7 @@ describe("EventConflictController - GET /api/events/check-conflict", () => {
       });
 
       const response = await request(app).get(
-        "/api/events/check-conflict?startDate=2025-06-01&startTime=11:00&endDate=2025-06-01&endTime=13:00"
+        "/api/events/check-conflict?startDate=2025-06-01&startTime=11:00&endDate=2025-06-01&endTime=13:00",
       );
 
       expect(response.status).toBe(200);
@@ -312,7 +315,7 @@ describe("EventConflictController - GET /api/events/check-conflict", () => {
       });
 
       const response = await request(app).get(
-        "/api/events/check-conflict?startDate=2025-06-01&startTime=23:00&endDate=2025-06-02&endTime=01:00"
+        "/api/events/check-conflict?startDate=2025-06-01&startTime=23:00&endDate=2025-06-02&endTime=01:00",
       );
 
       expect(response.status).toBe(200);
@@ -325,7 +328,7 @@ describe("EventConflictController - GET /api/events/check-conflict", () => {
   describe("Response Format", () => {
     it("should have correct success response structure", async () => {
       const response = await request(app).get(
-        "/api/events/check-conflict?startDate=2025-06-01&startTime=10:00"
+        "/api/events/check-conflict?startDate=2025-06-01&startTime=10:00",
       );
 
       expect(response.status).toBe(200);
@@ -340,7 +343,7 @@ describe("EventConflictController - GET /api/events/check-conflict", () => {
 
     it("should have correct error response structure", async () => {
       const response = await request(app).get(
-        "/api/events/check-conflict?startTime=10:00"
+        "/api/events/check-conflict?startTime=10:00",
       );
 
       expect(response.status).toBe(400);
@@ -359,7 +362,7 @@ describe("EventConflictController - GET /api/events/check-conflict", () => {
       });
 
       const response = await request(app).get(
-        "/api/events/check-conflict?startDate=2025-06-01&startTime=11:00&endDate=2025-06-01&endTime=13:00"
+        "/api/events/check-conflict?startDate=2025-06-01&startTime=11:00&endDate=2025-06-01&endTime=13:00",
       );
 
       expect(response.status).toBe(200);
@@ -368,6 +371,136 @@ describe("EventConflictController - GET /api/events/check-conflict", () => {
       expect(response.body.data.conflicts[0]).toHaveProperty("title");
       expect(response.body.data.conflicts[0].id).toBe(event._id.toString());
       expect(response.body.data.conflicts[0].title).toBe("Conflicting Event");
+    });
+  });
+
+  // ========== Program-Aware Conflict Detection ==========
+  describe("Program-Aware Conflict Detection", () => {
+    const programA = new mongoose.Types.ObjectId();
+    const programB = new mongoose.Types.ObjectId();
+    const programC = new mongoose.Types.ObjectId();
+
+    it("should allow overlap when events belong to different programs", async () => {
+      await createTestEvent({
+        title: "Program A Event",
+        date: "2025-06-01",
+        time: "10:00",
+        endTime: "12:00",
+        programLabels: [programA],
+      });
+
+      const response = await request(app).get(
+        `/api/events/check-conflict?startDate=2025-06-01&startTime=11:00&endDate=2025-06-01&endTime=13:00&programLabels=${programB}`,
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.body.data.conflict).toBe(false);
+    });
+
+    it("should block overlap when events share a program", async () => {
+      await createTestEvent({
+        title: "Program A Event",
+        date: "2025-06-01",
+        time: "10:00",
+        endTime: "12:00",
+        programLabels: [programA],
+      });
+
+      const response = await request(app).get(
+        `/api/events/check-conflict?startDate=2025-06-01&startTime=11:00&endDate=2025-06-01&endTime=13:00&programLabels=${programA}`,
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.body.data.conflict).toBe(true);
+      expect(response.body.data.conflicts).toHaveLength(1);
+    });
+
+    it("should block overlap when events share at least one program among multiple", async () => {
+      await createTestEvent({
+        title: "Multi-Program Event",
+        date: "2025-06-01",
+        time: "10:00",
+        endTime: "12:00",
+        programLabels: [programA, programB],
+      });
+
+      // New event shares programB
+      const response = await request(app).get(
+        `/api/events/check-conflict?startDate=2025-06-01&startTime=11:00&endDate=2025-06-01&endTime=13:00&programLabels=${programB}&programLabels=${programC}`,
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.body.data.conflict).toBe(true);
+    });
+
+    it("should allow overlap when existing event has no programs", async () => {
+      await createTestEvent({
+        title: "No-Program Event",
+        date: "2025-06-01",
+        time: "10:00",
+        endTime: "12:00",
+        programLabels: [],
+      });
+
+      const response = await request(app).get(
+        `/api/events/check-conflict?startDate=2025-06-01&startTime=11:00&endDate=2025-06-01&endTime=13:00&programLabels=${programA}`,
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.body.data.conflict).toBe(false);
+    });
+
+    it("should allow overlap when new event has no programs", async () => {
+      await createTestEvent({
+        title: "Program A Event",
+        date: "2025-06-01",
+        time: "10:00",
+        endTime: "12:00",
+        programLabels: [programA],
+      });
+
+      // Send empty programLabels
+      const response = await request(app).get(
+        "/api/events/check-conflict?startDate=2025-06-01&startTime=11:00&endDate=2025-06-01&endTime=13:00&programLabels=",
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.body.data.conflict).toBe(false);
+    });
+
+    it("should allow overlap when neither event has programs and programLabels param is sent", async () => {
+      await createTestEvent({
+        title: "No-Program Event",
+        date: "2025-06-01",
+        time: "10:00",
+        endTime: "12:00",
+        programLabels: [],
+      });
+
+      const response = await request(app).get(
+        "/api/events/check-conflict?startDate=2025-06-01&startTime=11:00&endDate=2025-06-01&endTime=13:00&programLabels=",
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.body.data.conflict).toBe(false);
+    });
+
+    it("should fall back to global conflict when programLabels param is not sent", async () => {
+      await createTestEvent({
+        title: "Some Event",
+        date: "2025-06-01",
+        time: "10:00",
+        endTime: "12:00",
+        programLabels: [programA],
+      });
+
+      // No programLabels param at all → legacy behavior, global conflict
+      const response = await request(app).get(
+        "/api/events/check-conflict?startDate=2025-06-01&startTime=11:00&endDate=2025-06-01&endTime=13:00",
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.body.data.conflict).toBe(true);
     });
   });
 });

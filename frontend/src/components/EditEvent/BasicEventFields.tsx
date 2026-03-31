@@ -257,6 +257,8 @@ export default function BasicEventFields({
                     mode: "point",
                     excludeId: id,
                     timeZone: watch("timeZone"),
+                    programLabels:
+                      (watch("programLabels") as string[] | undefined) || [],
                   });
                   if (result.conflict) {
                     (
@@ -387,6 +389,8 @@ export default function BasicEventFields({
                       mode: "point",
                       excludeId: id,
                       timeZone: watch("timeZone"),
+                      programLabels:
+                        (watch("programLabels") as string[] | undefined) || [],
                     },
                   );
                   if (pointResult.conflict) {
@@ -422,6 +426,8 @@ export default function BasicEventFields({
                       mode: "range",
                       excludeId: id,
                       timeZone: watch("timeZone"),
+                      programLabels:
+                        (watch("programLabels") as string[] | undefined) || [],
                     },
                   );
 
