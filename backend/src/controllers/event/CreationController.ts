@@ -136,6 +136,7 @@ interface CreateEventRequest {
     isFree: boolean;
     price?: number;
   };
+  programLabels?: string[];
 }
 
 export class CreationController {
