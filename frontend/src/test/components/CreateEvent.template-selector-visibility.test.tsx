@@ -122,7 +122,7 @@ describe("CreateEvent - Template Selector Visibility", () => {
     render(
       <Wrapper>
         <NewEvent />
-      </Wrapper>
+      </Wrapper>,
     );
 
     // Wait for page to load
@@ -134,12 +134,12 @@ describe("CreateEvent - Template Selector Visibility", () => {
 
     // Template selector should NOT be visible
     expect(
-      screen.queryByText(/choose a roles template/i)
+      screen.queryByText(/choose a roles template/i),
     ).not.toBeInTheDocument();
 
     // The key behavior: No role configuration section yet
     expect(
-      screen.queryByText(/configure event roles for/i)
+      screen.queryByText(/configure event roles for/i),
     ).not.toBeInTheDocument();
   });
 
@@ -147,14 +147,14 @@ describe("CreateEvent - Template Selector Visibility", () => {
     render(
       <Wrapper>
         <NewEvent />
-      </Wrapper>
+      </Wrapper>,
     );
 
     const typeSelect = await screen.findByLabelText(/event type/i);
 
     // Initially no template selector
     expect(
-      screen.queryByText(/choose a roles template/i)
+      screen.queryByText(/choose a roles template/i),
     ).not.toBeInTheDocument();
 
     // User selects Conference (has 2 templates)
@@ -175,7 +175,7 @@ describe("CreateEvent - Template Selector Visibility", () => {
     render(
       <Wrapper>
         <NewEvent />
-      </Wrapper>
+      </Wrapper>,
     );
 
     const typeSelect = await screen.findByLabelText(/event type/i);
@@ -204,7 +204,7 @@ describe("CreateEvent - Template Selector Visibility", () => {
     // Template selector should disappear after confirmation
     await waitFor(() => {
       expect(
-        screen.queryByText(/choose a roles template/i)
+        screen.queryByText(/choose a roles template/i),
       ).not.toBeInTheDocument();
     });
 
@@ -218,7 +218,7 @@ describe("CreateEvent - Template Selector Visibility", () => {
     render(
       <Wrapper>
         <NewEvent />
-      </Wrapper>
+      </Wrapper>,
     );
 
     const typeSelect = await screen.findByLabelText(/event type/i);
@@ -226,24 +226,24 @@ describe("CreateEvent - Template Selector Visibility", () => {
     // User selects Mentor Circle (has 0 templates)
     fireEvent.change(typeSelect, { target: { value: "Mentor Circle" } });
 
-    // Template selector should NOT appear
+    // Template selector should NOT appear (no templates available)
     await waitFor(() => {
       expect(
-        screen.queryByText(/choose a roles template/i)
+        screen.queryByText(/choose a roles template/i),
       ).not.toBeInTheDocument();
     });
 
-    // Should NOT show the role configuration section (because no roles)
+    // Should still show the role configuration section header
     expect(
-      screen.queryByText(/configure event roles for mentor circle/i)
-    ).not.toBeInTheDocument();
+      screen.getByText(/configure event roles for mentor circle/i),
+    ).toBeInTheDocument();
   });
 
   it("should hide template selector after user confirms template selection", async () => {
     render(
       <Wrapper>
         <NewEvent />
-      </Wrapper>
+      </Wrapper>,
     );
 
     const typeSelect = await screen.findByLabelText(/event type/i);
@@ -253,7 +253,7 @@ describe("CreateEvent - Template Selector Visibility", () => {
 
     // Wait for template selector to appear
     const templateSelector = await screen.findByText(
-      /choose a roles template/i
+      /choose a roles template/i,
     );
     expect(templateSelector).toBeInTheDocument();
 
@@ -261,7 +261,7 @@ describe("CreateEvent - Template Selector Visibility", () => {
     const selectsOnPage = screen.getAllByRole("combobox");
     // The template dropdown should be after event type select
     const templateSelect = selectsOnPage.find(
-      (select) => select.querySelector('option[value="template1"]') !== null
+      (select) => select.querySelector('option[value="template1"]') !== null,
     );
 
     if (!templateSelect) {
@@ -279,13 +279,13 @@ describe("CreateEvent - Template Selector Visibility", () => {
     // Template selector should disappear
     await waitFor(() => {
       expect(
-        screen.queryByText(/choose a roles template/i)
+        screen.queryByText(/choose a roles template/i),
       ).not.toBeInTheDocument();
     });
 
     // Should show role configuration section instead
     expect(
-      screen.getByText(/configure event roles for conference/i)
+      screen.getByText(/configure event roles for conference/i),
     ).toBeInTheDocument();
   });
 
@@ -293,7 +293,7 @@ describe("CreateEvent - Template Selector Visibility", () => {
     render(
       <Wrapper>
         <NewEvent />
-      </Wrapper>
+      </Wrapper>,
     );
 
     const typeSelect = await screen.findByLabelText(/event type/i);
@@ -334,7 +334,7 @@ describe("CreateEvent - Template Selector Visibility", () => {
     render(
       <Wrapper>
         <NewEvent />
-      </Wrapper>
+      </Wrapper>,
     );
 
     // Wait for form to load
@@ -347,12 +347,12 @@ describe("CreateEvent - Template Selector Visibility", () => {
 
     // Template selector should not be visible
     expect(
-      screen.queryByText(/choose a roles template/i)
+      screen.queryByText(/choose a roles template/i),
     ).not.toBeInTheDocument();
 
     // Should NOT show role configuration either
     expect(
-      screen.queryByText(/configure event roles for/i)
+      screen.queryByText(/configure event roles for/i),
     ).not.toBeInTheDocument();
   });
 
@@ -360,7 +360,7 @@ describe("CreateEvent - Template Selector Visibility", () => {
     render(
       <Wrapper>
         <NewEvent />
-      </Wrapper>
+      </Wrapper>,
     );
 
     const typeSelect = await screen.findByLabelText(/event type/i);
@@ -386,7 +386,7 @@ describe("CreateEvent - Template Selector Visibility", () => {
     render(
       <Wrapper>
         <NewEvent />
-      </Wrapper>
+      </Wrapper>,
     );
 
     const typeSelect = await screen.findByLabelText(/event type/i);

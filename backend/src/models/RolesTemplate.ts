@@ -13,7 +13,7 @@ export interface ITemplateRole {
 
 export interface IRolesTemplate extends Document {
   name: string; // Template name (e.g., "Standard Conference", "Small Workshop")
-  eventType: string; // One of: Conference, Webinar, Effective Communication Workshop, Mentor Circle
+  eventType: string; // One of: Conference, Webinar, Effective Communication Workshop, Mentor Circle, Meeting, Office Hour, Hangout
   roles: ITemplateRole[]; // Array of role definitions
   createdBy: mongoose.Types.ObjectId; // Reference to User who created the template
   createdAt: Date;
@@ -62,7 +62,7 @@ const templateRoleSchema = new Schema<ITemplateRole>(
       match: [/^([01]\d|2[0-3]):([0-5]\d)$/, "endTime must be in HH:mm format"],
     },
   },
-  { _id: false }
+  { _id: false },
 );
 
 // Main RolesTemplate Schema
@@ -83,6 +83,9 @@ const rolesTemplateSchema = new Schema<IRolesTemplate>(
         "Webinar",
         "Effective Communication Workshop",
         "Mentor Circle",
+        "Meeting",
+        "Office Hour",
+        "Hangout",
       ],
       index: true,
     },
@@ -105,7 +108,7 @@ const rolesTemplateSchema = new Schema<IRolesTemplate>(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 // Indexes for efficient querying

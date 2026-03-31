@@ -45,7 +45,7 @@ describe("RolesTemplate Model", () => {
 
       it("should trim whitespace from name", () => {
         const doc = new RolesTemplate(
-          createValidTemplate({ name: "  Trimmed Name  " })
+          createValidTemplate({ name: "  Trimmed Name  " }),
         );
         expect(doc.name).toBe("Trimmed Name");
       });
@@ -76,7 +76,7 @@ describe("RolesTemplate Model", () => {
     describe("eventType field", () => {
       it("should accept valid event type: Conference", () => {
         const doc = new RolesTemplate(
-          createValidTemplate({ eventType: "Conference" })
+          createValidTemplate({ eventType: "Conference" }),
         );
         const error = doc.validateSync();
         expect(error).toBeUndefined();
@@ -84,7 +84,7 @@ describe("RolesTemplate Model", () => {
 
       it("should accept valid event type: Webinar", () => {
         const doc = new RolesTemplate(
-          createValidTemplate({ eventType: "Webinar" })
+          createValidTemplate({ eventType: "Webinar" }),
         );
         const error = doc.validateSync();
         expect(error).toBeUndefined();
@@ -92,7 +92,9 @@ describe("RolesTemplate Model", () => {
 
       it("should accept valid event type: Effective Communication Workshop", () => {
         const doc = new RolesTemplate(
-          createValidTemplate({ eventType: "Effective Communication Workshop" })
+          createValidTemplate({
+            eventType: "Effective Communication Workshop",
+          }),
         );
         const error = doc.validateSync();
         expect(error).toBeUndefined();
@@ -100,7 +102,31 @@ describe("RolesTemplate Model", () => {
 
       it("should accept valid event type: Mentor Circle", () => {
         const doc = new RolesTemplate(
-          createValidTemplate({ eventType: "Mentor Circle" })
+          createValidTemplate({ eventType: "Mentor Circle" }),
+        );
+        const error = doc.validateSync();
+        expect(error).toBeUndefined();
+      });
+
+      it("should accept valid event type: Meeting", () => {
+        const doc = new RolesTemplate(
+          createValidTemplate({ eventType: "Meeting" }),
+        );
+        const error = doc.validateSync();
+        expect(error).toBeUndefined();
+      });
+
+      it("should accept valid event type: Office Hour", () => {
+        const doc = new RolesTemplate(
+          createValidTemplate({ eventType: "Office Hour" }),
+        );
+        const error = doc.validateSync();
+        expect(error).toBeUndefined();
+      });
+
+      it("should accept valid event type: Hangout", () => {
+        const doc = new RolesTemplate(
+          createValidTemplate({ eventType: "Hangout" }),
         );
         const error = doc.validateSync();
         expect(error).toBeUndefined();
@@ -108,7 +134,7 @@ describe("RolesTemplate Model", () => {
 
       it("should require eventType field", () => {
         const doc = new RolesTemplate(
-          createValidTemplate({ eventType: undefined })
+          createValidTemplate({ eventType: undefined }),
         );
         const error = doc.validateSync();
         expect(error).toBeDefined();
@@ -117,7 +143,7 @@ describe("RolesTemplate Model", () => {
 
       it("should reject invalid event type", () => {
         const doc = new RolesTemplate(
-          createValidTemplate({ eventType: "InvalidType" })
+          createValidTemplate({ eventType: "InvalidType" }),
         );
         const error = doc.validateSync();
         expect(error).toBeDefined();
@@ -134,7 +160,7 @@ describe("RolesTemplate Model", () => {
 
       it("should require createdBy field", () => {
         const doc = new RolesTemplate(
-          createValidTemplate({ createdBy: undefined })
+          createValidTemplate({ createdBy: undefined }),
         );
         const error = doc.validateSync();
         expect(error).toBeDefined();
@@ -144,7 +170,7 @@ describe("RolesTemplate Model", () => {
       it("should cast string ObjectId to ObjectId type", () => {
         const stringId = validObjectId.toString();
         const doc = new RolesTemplate(
-          createValidTemplate({ createdBy: stringId })
+          createValidTemplate({ createdBy: stringId }),
         );
         expect(doc.createdBy instanceof mongoose.Types.ObjectId).toBe(true);
       });
@@ -157,7 +183,7 @@ describe("RolesTemplate Model", () => {
         expect(error).toBeDefined();
         expect(error?.errors.roles).toBeDefined();
         expect(error?.errors.roles?.message).toBe(
-          "Template must have at least one role"
+          "Template must have at least one role",
         );
       });
 
@@ -169,7 +195,7 @@ describe("RolesTemplate Model", () => {
               { name: "Panelist", maxParticipants: 3 },
               { name: "Moderator", maxParticipants: 1 },
             ],
-          })
+          }),
         );
         const error = doc.validateSync();
         expect(error).toBeUndefined();
@@ -184,7 +210,7 @@ describe("RolesTemplate Model", () => {
         const doc = new RolesTemplate(
           createValidTemplate({
             roles: [{ maxParticipants: 5 }],
-          })
+          }),
         );
         const error = doc.validateSync();
         expect(error).toBeDefined();
@@ -195,7 +221,7 @@ describe("RolesTemplate Model", () => {
         const doc = new RolesTemplate(
           createValidTemplate({
             roles: [{ name: "  Trimmed Role  ", maxParticipants: 5 }],
-          })
+          }),
         );
         expect(doc.roles[0].name).toBe("Trimmed Role");
       });
@@ -206,7 +232,7 @@ describe("RolesTemplate Model", () => {
         const doc = new RolesTemplate(
           createValidTemplate({
             roles: [{ name: "Speaker", maxParticipants: 5 }],
-          })
+          }),
         );
         const error = doc.validateSync();
         expect(error).toBeUndefined();
@@ -216,7 +242,7 @@ describe("RolesTemplate Model", () => {
         const doc = new RolesTemplate(
           createValidTemplate({
             roles: [{ name: "Speaker", maxParticipants: 5 }],
-          })
+          }),
         );
         expect(doc.roles[0].description).toBe("");
       });
@@ -231,7 +257,7 @@ describe("RolesTemplate Model", () => {
                 maxParticipants: 5,
               },
             ],
-          })
+          }),
         );
         expect(doc.roles[0].description).toBe("Speaker description");
       });
@@ -242,7 +268,7 @@ describe("RolesTemplate Model", () => {
         const doc = new RolesTemplate(
           createValidTemplate({
             roles: [{ name: "Speaker" }],
-          })
+          }),
         );
         const error = doc.validateSync();
         expect(error).toBeDefined();
@@ -253,7 +279,7 @@ describe("RolesTemplate Model", () => {
         const doc = new RolesTemplate(
           createValidTemplate({
             roles: [{ name: "Speaker", maxParticipants: 0 }],
-          })
+          }),
         );
         const error = doc.validateSync();
         expect(error).toBeDefined();
@@ -264,7 +290,7 @@ describe("RolesTemplate Model", () => {
         const doc = new RolesTemplate(
           createValidTemplate({
             roles: [{ name: "Speaker", maxParticipants: 1 }],
-          })
+          }),
         );
         const error = doc.validateSync();
         expect(error).toBeUndefined();
@@ -274,7 +300,7 @@ describe("RolesTemplate Model", () => {
         const doc = new RolesTemplate(
           createValidTemplate({
             roles: [{ name: "Attendee", maxParticipants: 10000 }],
-          })
+          }),
         );
         const error = doc.validateSync();
         expect(error).toBeUndefined();
@@ -286,7 +312,7 @@ describe("RolesTemplate Model", () => {
         const doc = new RolesTemplate(
           createValidTemplate({
             roles: [{ name: "Speaker", maxParticipants: 5 }],
-          })
+          }),
         );
         expect(doc.roles[0].openToPublic).toBe(false);
       });
@@ -297,7 +323,7 @@ describe("RolesTemplate Model", () => {
             roles: [
               { name: "Speaker", maxParticipants: 5, openToPublic: true },
             ],
-          })
+          }),
         );
         expect(doc.roles[0].openToPublic).toBe(true);
       });
@@ -308,7 +334,7 @@ describe("RolesTemplate Model", () => {
         const doc = new RolesTemplate(
           createValidTemplate({
             roles: [{ name: "Speaker", maxParticipants: 5 }],
-          })
+          }),
         );
         expect(doc.roles[0].agenda).toBe("");
       });
@@ -323,7 +349,7 @@ describe("RolesTemplate Model", () => {
                 agenda: "  Session topics  ",
               },
             ],
-          })
+          }),
         );
         expect(doc.roles[0].agenda).toBe("Session topics");
       });
@@ -336,7 +362,7 @@ describe("RolesTemplate Model", () => {
             roles: [
               { name: "Speaker", maxParticipants: 5, startTime: "09:30" },
             ],
-          })
+          }),
         );
         const error = doc.validateSync();
         expect(error).toBeUndefined();
@@ -349,7 +375,7 @@ describe("RolesTemplate Model", () => {
             roles: [
               { name: "Speaker", maxParticipants: 5, startTime: "00:00" },
             ],
-          })
+          }),
         );
         const error = doc.validateSync();
         expect(error).toBeUndefined();
@@ -361,7 +387,7 @@ describe("RolesTemplate Model", () => {
             roles: [
               { name: "Speaker", maxParticipants: 5, startTime: "23:59" },
             ],
-          })
+          }),
         );
         const error = doc.validateSync();
         expect(error).toBeUndefined();
@@ -373,7 +399,7 @@ describe("RolesTemplate Model", () => {
             roles: [
               { name: "Speaker", maxParticipants: 5, startTime: "24:00" },
             ],
-          })
+          }),
         );
         const error = doc.validateSync();
         expect(error).toBeDefined();
@@ -386,7 +412,7 @@ describe("RolesTemplate Model", () => {
             roles: [
               { name: "Speaker", maxParticipants: 5, startTime: "12:60" },
             ],
-          })
+          }),
         );
         const error = doc.validateSync();
         expect(error).toBeDefined();
@@ -397,7 +423,7 @@ describe("RolesTemplate Model", () => {
         const doc = new RolesTemplate(
           createValidTemplate({
             roles: [{ name: "Speaker", maxParticipants: 5, startTime: "9:30" }],
-          })
+          }),
         );
         const error = doc.validateSync();
         expect(error).toBeDefined();
@@ -408,7 +434,7 @@ describe("RolesTemplate Model", () => {
         const doc = new RolesTemplate(
           createValidTemplate({
             roles: [{ name: "Speaker", maxParticipants: 5, startTime: "09:5" }],
-          })
+          }),
         );
         const error = doc.validateSync();
         expect(error).toBeDefined();
@@ -421,7 +447,7 @@ describe("RolesTemplate Model", () => {
             roles: [
               { name: "Speaker", maxParticipants: 5, startTime: "09:30 AM" },
             ],
-          })
+          }),
         );
         const error = doc.validateSync();
         expect(error).toBeDefined();
@@ -434,7 +460,7 @@ describe("RolesTemplate Model", () => {
         const doc = new RolesTemplate(
           createValidTemplate({
             roles: [{ name: "Speaker", maxParticipants: 5, endTime: "17:00" }],
-          })
+          }),
         );
         const error = doc.validateSync();
         expect(error).toBeUndefined();
@@ -447,7 +473,7 @@ describe("RolesTemplate Model", () => {
             roles: [
               { name: "Speaker", maxParticipants: 5, endTime: "5:00 PM" },
             ],
-          })
+          }),
         );
         const error = doc.validateSync();
         expect(error).toBeDefined();
@@ -511,7 +537,7 @@ describe("RolesTemplate Model", () => {
     it("should have index on eventType", () => {
       const indexes = RolesTemplate.schema.indexes();
       const hasEventTypeIndex = indexes.some(
-        ([fields]) => "eventType" in fields
+        ([fields]) => "eventType" in fields,
       );
       expect(hasEventTypeIndex).toBe(true);
     });
@@ -519,7 +545,7 @@ describe("RolesTemplate Model", () => {
     it("should have index on createdBy", () => {
       const indexes = RolesTemplate.schema.indexes();
       const hasCreatedByIndex = indexes.some(
-        ([fields]) => "createdBy" in fields
+        ([fields]) => "createdBy" in fields,
       );
       expect(hasCreatedByIndex).toBe(true);
     });
@@ -527,7 +553,7 @@ describe("RolesTemplate Model", () => {
     it("should have compound index on eventType and createdBy", () => {
       const indexes = RolesTemplate.schema.indexes();
       const hasCompoundIndex = indexes.some(
-        ([fields]) => "eventType" in fields && "createdBy" in fields
+        ([fields]) => "eventType" in fields && "createdBy" in fields,
       );
       expect(hasCompoundIndex).toBe(true);
     });

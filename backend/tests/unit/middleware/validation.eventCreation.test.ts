@@ -433,6 +433,33 @@ describe("Event Creation Validation Rules", () => {
       expect(typeErrors).toHaveLength(0);
     });
 
+    it("should accept Meeting type", async () => {
+      const result = await runValidation(validateEventCreation, {
+        ...validEventData,
+        type: "Meeting",
+      });
+      const typeErrors = result.errors.filter((e) => e.path === "type");
+      expect(typeErrors).toHaveLength(0);
+    });
+
+    it("should accept Office Hour type", async () => {
+      const result = await runValidation(validateEventCreation, {
+        ...validEventData,
+        type: "Office Hour",
+      });
+      const typeErrors = result.errors.filter((e) => e.path === "type");
+      expect(typeErrors).toHaveLength(0);
+    });
+
+    it("should accept Hangout type", async () => {
+      const result = await runValidation(validateEventCreation, {
+        ...validEventData,
+        type: "Hangout",
+      });
+      const typeErrors = result.errors.filter((e) => e.path === "type");
+      expect(typeErrors).toHaveLength(0);
+    });
+
     it("should reject invalid event type", async () => {
       const result = await runValidation(validateEventCreation, {
         ...validEventData,

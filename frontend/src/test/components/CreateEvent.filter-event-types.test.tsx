@@ -82,24 +82,24 @@ const Wrapper = ({ children }: { children: React.ReactNode }) => (
   </BrowserRouter>
 );
 
-describe("CreateEvent - Event Type filtering by Program Type", () => {
+describe("CreateEvent - All event types shown regardless of program", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.setItem("authToken", "test-token");
   });
 
-  it("hides 'Effective Communication Workshop' when Program Type is 'EMBA Mentor Circles'", async () => {
+  it("shows all event types even when a program is selected", async () => {
     render(
       <Wrapper>
         <NewEvent />
-      </Wrapper>
+      </Wrapper>,
     );
 
     // Wait for templates and programs
     await waitFor(() =>
       expect(
-        screen.getByRole("button", { name: /select programs/i })
-      ).toBeInTheDocument()
+        screen.getByRole("button", { name: /select programs/i }),
+      ).toBeInTheDocument(),
     );
     const typeSelect = await screen.findByLabelText(/event type/i);
 
@@ -109,26 +109,28 @@ describe("CreateEvent - Event Type filtering by Program Type", () => {
     });
     fireEvent.click(selectProgramsBtn);
     await waitFor(() =>
-      expect(screen.getByText(/EMBA 2025/i)).toBeInTheDocument()
+      expect(screen.getByText(/EMBA 2025/i)).toBeInTheDocument(),
     );
     const embaProgram = screen.getByText(/EMBA 2025/i).closest("button");
     fireEvent.click(embaProgram!);
     await waitFor(() =>
       expect(
-        screen.getByRole("button", { name: /select programs/i })
-      ).toBeInTheDocument()
+        screen.getByRole("button", { name: /select programs/i }),
+      ).toBeInTheDocument(),
     );
 
-    // Open the options list by focusing the select; then assert options
-    // Note: in JSDOM, options are always present in the DOM
+    // All event types should still be available
     const options = within(typeSelect).getAllByRole("option");
     const optionTexts = options.map((o) =>
-      (o as HTMLOptionElement).textContent?.trim()
+      (o as HTMLOptionElement).textContent?.trim(),
     );
 
     expect(optionTexts).toContain("Mentor Circle");
     expect(optionTexts).toContain("Conference");
     expect(optionTexts).toContain("Webinar");
-    expect(optionTexts).not.toContain("Effective Communication Workshop");
+    expect(optionTexts).toContain("Effective Communication Workshop");
+    expect(optionTexts).toContain("Meeting");
+    expect(optionTexts).toContain("Office Hour");
+    expect(optionTexts).toContain("Hangout");
   });
 });

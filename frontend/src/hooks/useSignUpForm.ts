@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm, type Resolver } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import { signUpSchema, type SignUpFormData } from "../schemas/signUpSchema";
 import {
@@ -16,11 +16,25 @@ export function useSignUpForm() {
     string | null
   >(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const notification = useToastReplacement();
+
+  // Pre-populate from navigation state (e.g. from public event registration)
+  const prefill =
+    (location.state as {
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+      phone?: string;
+    }) || {};
 
   const form = useForm<SignUpFormData>({
     resolver: yupResolver(signUpSchema) as Resolver<SignUpFormData>,
     defaultValues: {
+      firstName: prefill.firstName || "",
+      lastName: prefill.lastName || "",
+      email: prefill.email || "",
+      phone: prefill.phone || "",
       // Ensure selects start on placeholder instead of defaulting to first option
       gender: "",
       isAtCloudLeader: "false",
@@ -43,7 +57,7 @@ export function useSignUpForm() {
 
   // Calculate password strength
   const passwordStrength: PasswordStrength = calculatePasswordStrength(
-    password || ""
+    password || "",
   );
 
   const onSubmit = async (data: SignUpFormData) => {
@@ -100,10 +114,10 @@ export function useSignUpForm() {
                   onClose: () => {
                     navigate("/check-email", { state: { email: data.email } });
                   },
-                }
+                },
               );
             },
-          }
+          },
         );
       }
 
@@ -124,7 +138,7 @@ export function useSignUpForm() {
             onClose: () => {
               navigate("/check-email", { state: { email: data.email } });
             },
-          }
+          },
         );
       }
 
@@ -142,7 +156,7 @@ export function useSignUpForm() {
             {
               title: "Co-worker Request Submitted",
               autoCloseDelay: 5000,
-            }
+            },
           );
         } else if (data.isAtCloudLeader === "true") {
           notification.info(
@@ -150,7 +164,7 @@ export function useSignUpForm() {
             {
               title: "Co-worker Request Noted",
               autoCloseDelay: 5000,
-            }
+            },
           );
         }
       }

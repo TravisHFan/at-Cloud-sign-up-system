@@ -126,7 +126,7 @@ describe("Event Model", () => {
         const event = new Event({ type: invalidType });
         const error = event.validateSync();
         expect(error?.errors?.type?.message).toBe(
-          "Event type must be one of: Conference, Webinar, Effective Communication Workshop, Mentor Circle",
+          "Event type must be one of: Conference, Webinar, Effective Communication Workshop, Mentor Circle, Meeting, Office Hour, Hangout",
         );
       });
 
@@ -808,7 +808,9 @@ describe("Event Model", () => {
       });
 
       it("should accept https flyerUrl", () => {
-        expect(flyerUrlValidator("https://cdn.example.com/flyer.png")).toBe(true);
+        expect(flyerUrlValidator("https://cdn.example.com/flyer.png")).toBe(
+          true,
+        );
       });
 
       it("should accept /uploads/ path flyerUrl", () => {
@@ -820,12 +822,16 @@ describe("Event Model", () => {
       });
 
       it("should reject ftp URL", () => {
-        expect(flyerUrlValidator("ftp://files.example.com/flyer.jpg")).toBe(false);
+        expect(flyerUrlValidator("ftp://files.example.com/flyer.jpg")).toBe(
+          false,
+        );
       });
     });
 
     describe("secondaryFlyerUrl Validator", () => {
-      const secondaryFlyerUrlValidator = (value: string | undefined | null): boolean => {
+      const secondaryFlyerUrlValidator = (
+        value: string | undefined | null,
+      ): boolean => {
         if (value === undefined || value === null || value === "") return true;
         const v = String(value).trim();
         if (!v) return true;
@@ -837,11 +843,15 @@ describe("Event Model", () => {
       });
 
       it("should accept valid https secondaryFlyerUrl", () => {
-        expect(secondaryFlyerUrlValidator("https://example.com/secondary.png")).toBe(true);
+        expect(
+          secondaryFlyerUrlValidator("https://example.com/secondary.png"),
+        ).toBe(true);
       });
 
       it("should accept /uploads/ path for secondaryFlyerUrl", () => {
-        expect(secondaryFlyerUrlValidator("/uploads/images/secondary.jpg")).toBe(true);
+        expect(
+          secondaryFlyerUrlValidator("/uploads/images/secondary.jpg"),
+        ).toBe(true);
       });
 
       it("should reject invalid secondaryFlyerUrl", () => {
@@ -850,7 +860,9 @@ describe("Event Model", () => {
     });
 
     describe("youtubeUrl Validator", () => {
-      const youtubeUrlValidator = (value: string | undefined | null): boolean => {
+      const youtubeUrlValidator = (
+        value: string | undefined | null,
+      ): boolean => {
         if (value === undefined || value === null || value === "") return true;
         const v = String(value).trim();
         if (!v) return true;
@@ -870,11 +882,15 @@ describe("Event Model", () => {
       });
 
       it("should accept valid youtube.com URL", () => {
-        expect(youtubeUrlValidator("https://youtube.com/watch?v=abc123")).toBe(true);
+        expect(youtubeUrlValidator("https://youtube.com/watch?v=abc123")).toBe(
+          true,
+        );
       });
 
       it("should accept valid www.youtube.com URL", () => {
-        expect(youtubeUrlValidator("https://www.youtube.com/watch?v=abc123")).toBe(true);
+        expect(
+          youtubeUrlValidator("https://www.youtube.com/watch?v=abc123"),
+        ).toBe(true);
       });
 
       it("should accept valid youtu.be short URL", () => {
@@ -882,7 +898,9 @@ describe("Event Model", () => {
       });
 
       it("should accept http youtube URL", () => {
-        expect(youtubeUrlValidator("http://youtube.com/watch?v=xyz789")).toBe(true);
+        expect(youtubeUrlValidator("http://youtube.com/watch?v=xyz789")).toBe(
+          true,
+        );
       });
 
       it("should reject non-YouTube URL", () => {
@@ -894,7 +912,9 @@ describe("Event Model", () => {
       });
 
       it("should reject other video sites", () => {
-        expect(youtubeUrlValidator("https://dailymotion.com/video/123")).toBe(false);
+        expect(youtubeUrlValidator("https://dailymotion.com/video/123")).toBe(
+          false,
+        );
       });
     });
   });

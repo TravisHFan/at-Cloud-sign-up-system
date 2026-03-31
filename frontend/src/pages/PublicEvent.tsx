@@ -27,6 +27,7 @@ export default function PublicEvent() {
   const [submitting, setSubmitting] = useState(false);
   const [resultMsg, setResultMsg] = useState<string | null>(null);
   const [duplicate, setDuplicate] = useState(false);
+  const [wantsSignUp, setWantsSignUp] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorModalMessage, setErrorModalMessage] = useState("");
@@ -638,6 +639,16 @@ export default function PublicEvent() {
                         };
                       });
                     }
+                    // If user opted to sign up for an account, redirect to sign-up page with pre-populated data
+                    if (wantsSignUp && !isSameRoleDuplicate) {
+                      const nameParts = name.trim().split(/\s+/);
+                      const firstName = nameParts[0] || "";
+                      const lastName = nameParts.slice(1).join(" ") || "";
+                      navigate("/signup", {
+                        state: { firstName, lastName, email, phone },
+                      });
+                      return;
+                    }
                   } catch (err) {
                     const e = err as Error;
                     const errorMsg = e.message || "Registration failed";
@@ -744,14 +755,37 @@ export default function PublicEvent() {
                     placeholder="+1 555 0100"
                   />
                 </div>
-                <div className="pt-2">
+                <div className="pt-2 space-y-3">
                   <button
                     type="submit"
                     disabled={submitting || !name || !email || !phone}
+                    onClick={() => setWantsSignUp(false)}
                     className="inline-flex items-center px-4 py-2 rounded bg-indigo-600 text-white text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed hover:bg-indigo-700 transition-colors"
+                    data-testid="public-event-submit-registration"
                   >
-                    {submitting ? "Submitting..." : "Submit Registration"}
+                    {submitting && !wantsSignUp
+                      ? "Submitting..."
+                      : "Submit Registration"}
                   </button>
+                  <div>
+                    <button
+                      type="submit"
+                      disabled={submitting || !name || !email || !phone}
+                      onClick={() => setWantsSignUp(true)}
+                      className="inline-flex items-center px-4 py-2 rounded bg-emerald-600 text-white text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed hover:bg-emerald-700 transition-colors"
+                      data-testid="public-event-submit-and-signup"
+                    >
+                      {submitting && wantsSignUp
+                        ? "Submitting..."
+                        : "Sign Up as User & Submit Registration"}
+                    </button>
+                    <p className="text-xs text-gray-500 mt-1 max-w-sm">
+                      By signing up for an @Cloud user account, you’ll receive
+                      notifications about upcoming events, gain access to more
+                      events and programs, watch archived recordings, and enjoy
+                      one-click registration for future events.
+                    </p>
+                  </div>
                 </div>
               </form>
             )}

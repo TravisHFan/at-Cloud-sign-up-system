@@ -203,7 +203,7 @@ const RoleManagement: React.FC<RoleManagementProps> = ({
                 }
                 // Apply the selected template
                 const template = (dbTemplates[selectedEventType] || []).find(
-                  (t) => t._id === selectedTemplateId
+                  (t) => t._id === selectedTemplateId,
                 );
                 if (template) {
                   const formattedRoles = template.roles.map(
@@ -217,7 +217,7 @@ const RoleManagement: React.FC<RoleManagementProps> = ({
                       agenda: role.agenda,
                       startTime: role.startTime,
                       endTime: role.endTime,
-                    })
+                    }),
                   );
                   setValue("roles", formattedRoles);
                   setShowTemplateSelector(false);
@@ -274,7 +274,7 @@ const RoleManagement: React.FC<RoleManagementProps> = ({
                         "No templates available for this event type",
                         {
                           title: "No Templates",
-                        }
+                        },
                       );
                       return;
                     }
@@ -300,7 +300,7 @@ const RoleManagement: React.FC<RoleManagementProps> = ({
                               agenda: role.agenda,
                               startTime: role.startTime,
                               endTime: role.endTime,
-                            })
+                            }),
                           );
                           setValue("roles", formattedRoles);
                           setTemplateApplied(true); // Mark that a template was applied
@@ -308,7 +308,7 @@ const RoleManagement: React.FC<RoleManagementProps> = ({
                           setHighlightRoleSection(true);
                           setTimeout(
                             () => setHighlightRoleSection(false),
-                            1200
+                            1200,
                           );
                           setConfirmResetModal({
                             isOpen: false,
@@ -334,7 +334,7 @@ const RoleManagement: React.FC<RoleManagementProps> = ({
                           setHighlightTemplateSelector(true);
                           setTimeout(
                             () => setHighlightTemplateSelector(false),
-                            1200
+                            1200,
                           );
                           setConfirmResetModal({
                             isOpen: false,
@@ -433,9 +433,26 @@ const RoleManagement: React.FC<RoleManagementProps> = ({
                               onChange={(e) => {
                                 const updated = [...formRoles];
                                 if (updated[index]) {
+                                  const oldName = (updated[index].name || "")
+                                    .trim()
+                                    .toLowerCase();
+                                  const newName = e.target.value;
+                                  const newNameNorm = newName
+                                    .trim()
+                                    .toLowerCase();
+                                  // Auto-toggle openToPublic when role name involves "attendee"
+                                  const wasAttendee = oldName === "attendee";
+                                  const isAttendee = newNameNorm === "attendee";
+                                  let openToPublic =
+                                    updated[index].openToPublic;
+                                  if (!wasAttendee && isAttendee)
+                                    openToPublic = true;
+                                  if (wasAttendee && !isAttendee)
+                                    openToPublic = false;
                                   updated[index] = {
                                     ...updated[index],
-                                    name: e.target.value,
+                                    name: newName,
+                                    openToPublic,
                                   };
                                   setValue("roles", updated, {
                                     shouldDirty: true,

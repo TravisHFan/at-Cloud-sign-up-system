@@ -5,7 +5,7 @@ import { Request, Response, NextFunction } from "express";
 export const handleValidationErrors = (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -59,7 +59,7 @@ export const handleValidationErrors = (
           "[VALIDATION]",
           req.method,
           req.originalUrl,
-          JSON.stringify({ payloadPreview, errors: errors.array() }, null, 2)
+          JSON.stringify({ payloadPreview, errors: errors.array() }, null, 2),
         );
       } catch {
         // ignore logging errors
@@ -89,7 +89,7 @@ export const validateUserRegistration = [
         throw new Error("Username must start with a letter");
       if (!/^[a-z0-9_]+$/.test(value))
         throw new Error(
-          "Username can only contain lowercase letters, numbers, and underscores"
+          "Username can only contain lowercase letters, numbers, and underscores",
         );
       if (/__/.test(value))
         throw new Error("Username cannot contain consecutive underscores");
@@ -125,7 +125,7 @@ export const validateUserRegistration = [
     .withMessage("Password must be at least 8 characters long")
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d@$!%*?&]/)
     .withMessage(
-      "Password must contain at least one uppercase letter, one lowercase letter, and one number"
+      "Password must contain at least one uppercase letter, one lowercase letter, and one number",
     ),
 
   body("firstName")
@@ -283,15 +283,18 @@ export const validateEventCreation = [
       "Webinar",
       "Effective Communication Workshop",
       "Mentor Circle",
+      "Meeting",
+      "Office Hour",
+      "Hangout",
     ])
     .withMessage(
-      "Event type must be one of: Conference, Webinar, Effective Communication Workshop, Mentor Circle"
+      "Event type must be one of: Conference, Webinar, Effective Communication Workshop, Mentor Circle, Meeting, Office Hour, Hangout",
     ),
 
   body("format")
     .isIn(["In-person", "Online", "Hybrid Participation"])
     .withMessage(
-      "Format must be 'In-person', 'Online', or 'Hybrid Participation'"
+      "Format must be 'In-person', 'Online', or 'Hybrid Participation'",
     ),
 
   body("purpose")
@@ -347,7 +350,7 @@ export const validateEventCreation = [
         const urlRegex = /^https?:\/\/.+/;
         if (!urlRegex.test(value)) {
           throw new Error(
-            "Zoom link must be a valid URL starting with http:// or https://"
+            "Zoom link must be a valid URL starting with http:// or https://",
           );
         }
       }
@@ -376,7 +379,7 @@ export const validateEventCreation = [
       if (/^https?:\/\//.test(v)) return true;
       if (v.startsWith("/uploads/")) return true;
       throw new Error(
-        "Flyer URL must be an absolute http(s) URL or a path starting with /uploads/"
+        "Flyer URL must be an absolute http(s) URL or a path starting with /uploads/",
       );
     }),
 
@@ -423,7 +426,7 @@ export const validateResetPassword = [
     .withMessage("Password must be at least 8 characters long")
     .matches(/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
     .withMessage(
-      "Password must contain at least one lowercase letter, one uppercase letter, and one number"
+      "Password must contain at least one lowercase letter, one uppercase letter, and one number",
     ),
 ];
 
@@ -438,7 +441,7 @@ export const validateSystemMessage = [
     .trim()
     .isLength({ min: 5, max: 3500 })
     .withMessage(
-      "System message content must be between 5 and 3500 characters"
+      "System message content must be between 5 and 3500 characters",
     ),
 
   body("type")

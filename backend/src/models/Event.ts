@@ -236,9 +236,12 @@ const eventSchema: Schema = new Schema(
           "Webinar",
           "Effective Communication Workshop",
           "Mentor Circle",
+          "Meeting",
+          "Office Hour",
+          "Hangout",
         ],
         message:
-          "Event type must be one of: Conference, Webinar, Effective Communication Workshop, Mentor Circle",
+          "Event type must be one of: Conference, Webinar, Effective Communication Workshop, Mentor Circle, Meeting, Office Hour, Hangout",
       },
       maxlength: [100, "Event type cannot exceed 100 characters"],
     },

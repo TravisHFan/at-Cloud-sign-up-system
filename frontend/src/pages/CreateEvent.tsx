@@ -76,7 +76,7 @@ export default function NewEvent() {
     >
   >({});
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(
-    null
+    null,
   );
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const [_templateConfirmed, setTemplateConfirmed] = useState(false);
@@ -144,7 +144,7 @@ export default function NewEvent() {
     },
     {
       shouldSendNotifications: () => sendNotificationsPref,
-    }
+    },
   );
 
   // Destructure form helpers before any usage below
@@ -173,7 +173,7 @@ export default function NewEvent() {
         setValue as unknown as (
           name: string,
           value: ValidationState,
-          options?: { shouldDirty?: boolean; shouldValidate?: boolean }
+          options?: { shouldDirty?: boolean; shouldValidate?: boolean },
         ) => void
       )(name, value, { shouldDirty: false, shouldValidate: false });
 
@@ -240,7 +240,7 @@ export default function NewEvent() {
 
               // Check 2: Is user a mentor of this program?
               const isMentor = program.mentors?.some(
-                (m) => m.userId === currentUser.id
+                (m) => m.userId === currentUser.id,
               );
               if (isMentor) {
                 accessiblePrograms.push(program);
@@ -250,7 +250,7 @@ export default function NewEvent() {
               // Check 3: Has user purchased this program?
               try {
                 const accessResult = await purchaseService.checkProgramAccess(
-                  program.id
+                  program.id,
                 );
                 if (accessResult.hasAccess) {
                   accessiblePrograms.push(program);
@@ -258,7 +258,7 @@ export default function NewEvent() {
               } catch (error) {
                 console.error(
                   `Error checking access for program ${program.id}:`,
-                  error
+                  error,
                 );
                 // On error, exclude the program to be safe
               }
@@ -272,7 +272,7 @@ export default function NewEvent() {
               id: p.id,
               title: p.title,
               programType: p.programType,
-            }))
+            })),
           );
         }
       } catch (e) {
@@ -388,57 +388,7 @@ export default function NewEvent() {
     }
   }, [overallStatus.firstInvalidField]);
 
-  const selectedProgramLabels = watch("programLabels") as string[] | undefined;
   const selectedEventType = watch("type");
-
-  // Filter event types based on program selection
-  // Base event types (available with no programs): Conference, Webinar
-  // EMBA Mentor Circles program adds: Mentor Circle
-  // Effective Communication Workshops program adds: Effective Communication Workshop
-  const filteredAllowedTypes = useMemo(() => {
-    if (!allowedTypes || allowedTypes.length === 0) return [] as string[];
-
-    // Start with base event types: Conference, Webinar
-    const baseTypes = ["Conference", "Webinar"];
-    const availableTypes = new Set(baseTypes);
-
-    // If programs are selected, add event types based on program types
-    if (selectedProgramLabels && selectedProgramLabels.length > 0) {
-      const selectedPrograms = programs.filter((p) =>
-        selectedProgramLabels.includes(p.id)
-      );
-
-      // Check if any EMBA Mentor Circles program is selected
-      const hasEMBAProgram = selectedPrograms.some(
-        (p) => p.programType === "EMBA Mentor Circles"
-      );
-      if (hasEMBAProgram) {
-        availableTypes.add("Mentor Circle");
-      }
-
-      // Check if any Effective Communication Workshops program is selected
-      const hasECWProgram = selectedPrograms.some(
-        (p) => p.programType === "Effective Communication Workshops"
-      );
-      if (hasECWProgram) {
-        availableTypes.add("Effective Communication Workshop");
-      }
-    }
-
-    // Filter allowedTypes to only include available types
-    return allowedTypes.filter((name) => availableTypes.has(name));
-  }, [allowedTypes, selectedProgramLabels, programs]);
-
-  // Ensure currently selected event type remains valid if the list is filtered by program selection
-  useEffect(() => {
-    if (!selectedEventType) return;
-    if (!filteredAllowedTypes.includes(selectedEventType)) {
-      const fallback = filteredAllowedTypes[0] || "";
-      if (fallback) {
-        setValue("type", fallback);
-      }
-    }
-  }, [filteredAllowedTypes, selectedEventType, setValue]);
 
   // Watch the form's roles field for validation
   const formRoles = watch("roles") || [];
@@ -448,7 +398,7 @@ export default function NewEvent() {
   const { warnings: roleWarnings } = useRoleValidation(
     formRoles,
     dbTemplates,
-    selectedEventType
+    selectedEventType,
   );
 
   // Create roleValidation object for RoleManagement component
@@ -488,7 +438,7 @@ export default function NewEvent() {
                 endTime?: string;
               }>;
             }>
-          >
+          >,
         );
 
         // Don't auto-select a default event type - let user choose explicitly
@@ -560,7 +510,7 @@ export default function NewEvent() {
       disclaimer: watchAllFields.disclaimer || undefined,
       // Filter out any undefined values from programLabels
       programLabels: watchAllFields.programLabels?.filter(
-        (label): label is string => typeof label === "string"
+        (label): label is string => typeof label === "string",
       ),
       roles: (watchAllFields.roles || []).map((role) => ({
         ...role,
@@ -662,7 +612,7 @@ export default function NewEvent() {
             onOrganizersChange={handleOrganizersChange}
             originalFlyerUrl={null}
             originalSecondaryFlyerUrl={null}
-            allowedEventTypes={filteredAllowedTypes}
+            allowedEventTypes={allowedTypes}
           />
 
           {/* Format Settings - Format dropdown, Location, Zoom info, Disclaimer */}

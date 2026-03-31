@@ -40,6 +40,30 @@ export const EVENT_TYPES: EventTypeConfig[] = [
     maxParticipants: 40,
     defaultLocation: "Workshop Space",
   },
+  {
+    id: "meeting",
+    name: "Meeting",
+    description: "General meeting for teams or groups",
+    duration: "1 hour",
+    maxParticipants: 20,
+    defaultLocation: "Meeting Room",
+  },
+  {
+    id: "office-hour",
+    name: "Office Hour",
+    description: "Open office hour session for questions and guidance",
+    duration: "1 hour",
+    maxParticipants: 10,
+    defaultLocation: "Online",
+  },
+  {
+    id: "hangout",
+    name: "Hangout",
+    description: "Casual social gathering",
+    duration: "2 hours",
+    maxParticipants: 30,
+    defaultLocation: "TBD",
+  },
 ];
 
 export const DEFAULT_EVENT_VALUES = {
