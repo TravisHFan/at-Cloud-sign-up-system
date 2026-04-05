@@ -348,12 +348,18 @@ function getEventTypeColorClasses(eventType: string | undefined): string {
     case "Mentor Circle":
       // Match "EMBA Mentor Circles" program blue colors
       return "bg-blue-100 text-blue-800";
+    case "Meeting":
+      return "bg-teal-100 text-teal-800";
+    case "Office Hour":
+      return "bg-rose-100 text-rose-800";
+    case "Hangout":
+      return "bg-amber-100 text-amber-800";
     case "NextGen":
       // Match "NextGen" program olive/lime colors
       return "bg-lime-100 text-lime-800";
     default:
-      // Fallback to purple for unknown types
-      return "bg-purple-100 text-purple-800";
+      // Fallback to gray for unknown types
+      return "bg-gray-100 text-gray-800";
   }
 }
 
@@ -382,6 +388,12 @@ function getEventTypeDisplayName(
       return "Webinar";
     case "Mentor Circle":
       return "Mentor Circle";
+    case "Meeting":
+      return "Meeting";
+    case "Office Hour":
+      return "Office Hour";
+    case "Hangout":
+      return "Hangout";
     default:
       return eventType.length > 20
         ? eventType.substring(0, 17) + "..."

@@ -75,7 +75,7 @@ describe("RecurringEventGenerationService - additional coverage", () => {
       UnifiedMessageController.createTargetedSystemMessage as any
     ).mockResolvedValue(undefined);
     (EmailService.sendGenericNotificationEmail as any).mockResolvedValue(
-      undefined
+      undefined,
     );
   });
 
@@ -95,7 +95,7 @@ describe("RecurringEventGenerationService - additional coverage", () => {
           baseEventData as any,
           "e1",
           createEventFn,
-          currentUser as any
+          currentUser as any,
         );
 
       expect(result.success).toBe(true);
@@ -116,12 +116,193 @@ describe("RecurringEventGenerationService - additional coverage", () => {
           baseEventData as any,
           "e1",
           createEventFn,
-          currentUser as any
+          currentUser as any,
         );
 
       expect(result.success).toBe(true);
       expect(result.seriesIds).toHaveLength(4);
       expect(createEventFn).toHaveBeenCalledTimes(3);
+    });
+
+    it("generates series with weekly frequency", async () => {
+      const weeklyRecurring = {
+        isRecurring: true,
+        frequency: "weekly" as const,
+        occurrenceCount: 4,
+      };
+
+      const result =
+        await RecurringEventGenerationService.generateRecurringSeries(
+          weeklyRecurring,
+          baseEventData as any,
+          "e1",
+          createEventFn,
+          currentUser as any,
+        );
+
+      expect(result.success).toBe(true);
+      expect(result.seriesIds).toHaveLength(4);
+      expect(createEventFn).toHaveBeenCalledTimes(3);
+
+      // Verify 7-day spacing
+      const calls = createEventFn.mock.calls;
+      const firstDate = new Date("2024-01-01T10:00:00.000Z");
+      for (let i = 0; i < calls.length; i++) {
+        const expectedDate = new Date(
+          firstDate.getTime() + (i + 1) * 7 * 24 * 60 * 60 * 1000,
+        );
+        expect(calls[i][0].date).toBe(expectedDate.toISOString().slice(0, 10));
+      }
+    });
+
+    it("generates series with biweekly frequency", async () => {
+      const biweeklyRecurring = {
+        isRecurring: true,
+        frequency: "biweekly" as const,
+        occurrenceCount: 3,
+      };
+
+      const result =
+        await RecurringEventGenerationService.generateRecurringSeries(
+          biweeklyRecurring,
+          baseEventData as any,
+          "e1",
+          createEventFn,
+          currentUser as any,
+        );
+
+      expect(result.success).toBe(true);
+      expect(result.seriesIds).toHaveLength(3);
+      // Verify 14-day spacing
+      const calls = createEventFn.mock.calls;
+      expect(calls[0][0].date).toBe("2024-01-15");
+      expect(calls[1][0].date).toBe("2024-01-29");
+    });
+
+    it("generates series with every-three-months frequency", async () => {
+      const q3Recurring = {
+        isRecurring: true,
+        frequency: "every-three-months" as const,
+        occurrenceCount: 3,
+      };
+
+      const result =
+        await RecurringEventGenerationService.generateRecurringSeries(
+          q3Recurring,
+          baseEventData as any,
+          "e1",
+          createEventFn,
+          currentUser as any,
+        );
+
+      expect(result.success).toBe(true);
+      expect(result.seriesIds).toHaveLength(3);
+      expect(createEventFn).toHaveBeenCalledTimes(2);
+    });
+
+    it("treats every-two-weeks as alias for biweekly", async () => {
+      const legacyRecurring = {
+        isRecurring: true,
+        frequency: "every-two-weeks" as const,
+        occurrenceCount: 3,
+      };
+
+      const result =
+        await RecurringEventGenerationService.generateRecurringSeries(
+          legacyRecurring,
+          baseEventData as any,
+          "e1",
+          createEventFn,
+          currentUser as any,
+        );
+
+      expect(result.success).toBe(true);
+      expect(result.seriesIds).toHaveLength(3);
+      // Same 14-day spacing as biweekly
+      const calls = createEventFn.mock.calls;
+      expect(calls[0][0].date).toBe("2024-01-15");
+    });
+  });
+
+  describe("recurrence mode", () => {
+    it("monthly same-date preserves the calendar date", async () => {
+      // Start on Jan 15
+      const eventData = {
+        ...baseEventData,
+        date: "2024-01-15",
+        endDate: "2024-01-15",
+      };
+
+      const result =
+        await RecurringEventGenerationService.generateRecurringSeries(
+          {
+            isRecurring: true,
+            frequency: "monthly" as const,
+            occurrenceCount: 3,
+            recurrenceMode: "same-date" as const,
+          },
+          eventData as any,
+          "e1",
+          createEventFn,
+          currentUser as any,
+        );
+
+      expect(result.success).toBe(true);
+      const calls = createEventFn.mock.calls;
+      // Feb 15, Mar 15
+      expect(calls[0][0].date).toBe("2024-02-15");
+      expect(calls[1][0].date).toBe("2024-03-15");
+    });
+
+    it("monthly same-weekday uses ordinal and weekday", async () => {
+      // Jan 8 2024 is the 2nd Monday of January
+      const eventData = {
+        ...baseEventData,
+        date: "2024-01-08",
+        endDate: "2024-01-08",
+      };
+
+      const result =
+        await RecurringEventGenerationService.generateRecurringSeries(
+          {
+            isRecurring: true,
+            frequency: "monthly" as const,
+            occurrenceCount: 3,
+            recurrenceMode: "same-weekday" as const,
+            weekdayOrdinal: 2,
+            weekday: 1, // Monday
+          },
+          eventData as any,
+          "e1",
+          createEventFn,
+          currentUser as any,
+        );
+
+      expect(result.success).toBe(true);
+      const calls = createEventFn.mock.calls;
+      // 2nd Monday of Feb 2024 = Feb 12
+      expect(calls[0][0].date).toBe("2024-02-12");
+      // 2nd Monday of Mar 2024 = Mar 11
+      expect(calls[1][0].date).toBe("2024-03-11");
+    });
+
+    it("defaults to same-weekday for monthly when no recurrenceMode specified", async () => {
+      // Existing behavior: monthly defaults to same-weekday
+      const result =
+        await RecurringEventGenerationService.generateRecurringSeries(
+          {
+            isRecurring: true,
+            frequency: "monthly" as const,
+            occurrenceCount: 2,
+          },
+          baseEventData as any,
+          "e1",
+          createEventFn,
+          currentUser as any,
+        );
+
+      expect(result.success).toBe(true);
+      expect(result.seriesIds).toHaveLength(2);
     });
   });
 
@@ -139,7 +320,7 @@ describe("RecurringEventGenerationService - additional coverage", () => {
           baseEventData as any,
           "e1",
           createEventFn,
-          currentUser as any
+          currentUser as any,
         );
 
       expect(result.success).toBe(true);
@@ -160,15 +341,15 @@ describe("RecurringEventGenerationService - additional coverage", () => {
           baseEventData as any,
           "e1",
           createEventFn,
-          currentUser as any
-        )
+          currentUser as any,
+        ),
       ).rejects.toThrow("Invalid recurring configuration");
     });
 
     it("rejects invalid frequency value", async () => {
       const invalidFreq = {
         isRecurring: true,
-        frequency: "weekly" as any, // not a valid frequency
+        frequency: "daily" as any, // not a valid frequency
         occurrenceCount: 3,
       };
 
@@ -178,8 +359,8 @@ describe("RecurringEventGenerationService - additional coverage", () => {
           baseEventData as any,
           "e1",
           createEventFn,
-          currentUser as any
-        )
+          currentUser as any,
+        ),
       ).rejects.toThrow("Invalid recurring configuration");
     });
   });
@@ -204,7 +385,7 @@ describe("RecurringEventGenerationService - additional coverage", () => {
         async () => {
           callCount++;
           return callCount === 1 ? [{ id: "conflict" }] : [];
-        }
+        },
       );
 
       const result =
@@ -217,13 +398,13 @@ describe("RecurringEventGenerationService - additional coverage", () => {
           baseEventData as any,
           "e1",
           createEventFn,
-          userWithoutEmail as any
+          userWithoutEmail as any,
         );
 
       expect(result.success).toBe(true);
       expect(result.autoRescheduled).toBeDefined();
       expect(
-        UnifiedMessageController.createTargetedSystemMessage
+        UnifiedMessageController.createTargetedSystemMessage,
       ).toHaveBeenCalled();
       // Email should not be called for this user
       // but createTargetedSystemMessage should still work
@@ -247,7 +428,7 @@ describe("RecurringEventGenerationService - additional coverage", () => {
         async () => {
           callCount++;
           return callCount === 1 ? [{ id: "conflict" }] : [];
-        }
+        },
       );
 
       const result =
@@ -260,7 +441,7 @@ describe("RecurringEventGenerationService - additional coverage", () => {
           baseEventData as any,
           "e1",
           createEventFn,
-          userWithEmptyNames as any
+          userWithEmptyNames as any,
         );
 
       expect(result.success).toBe(true);
@@ -268,7 +449,7 @@ describe("RecurringEventGenerationService - additional coverage", () => {
       expect(EmailService.sendGenericNotificationEmail).toHaveBeenCalledWith(
         "test@example.com",
         "fallback_username", // Falls back to username
-        expect.any(Object)
+        expect.any(Object),
       );
     });
 
@@ -283,12 +464,12 @@ describe("RecurringEventGenerationService - additional coverage", () => {
         async () => {
           callCount++;
           return callCount === 1 ? [{ id: "conflict" }] : [];
-        }
+        },
       );
 
       // Make email sending fail
       (EmailService.sendGenericNotificationEmail as any).mockRejectedValue(
-        new Error("SMTP failure")
+        new Error("SMTP failure"),
       );
 
       const result =
@@ -301,7 +482,7 @@ describe("RecurringEventGenerationService - additional coverage", () => {
           baseEventData as any,
           "e1",
           createEventFn,
-          currentUser as any
+          currentUser as any,
         );
 
       // Should still succeed despite email failure
@@ -310,7 +491,7 @@ describe("RecurringEventGenerationService - additional coverage", () => {
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         "Failed to send auto-reschedule email to",
         "creator@example.com",
-        expect.any(Error)
+        expect.any(Error),
       );
 
       consoleErrorSpy.mockRestore();
@@ -327,7 +508,7 @@ describe("RecurringEventGenerationService - additional coverage", () => {
         async () => {
           callCount++;
           return callCount === 1 ? [{ id: "conflict" }] : [];
-        }
+        },
       );
 
       // Make system message fail
@@ -345,7 +526,7 @@ describe("RecurringEventGenerationService - additional coverage", () => {
           baseEventData as any,
           "e1",
           createEventFn,
-          currentUser as any
+          currentUser as any,
         );
 
       // Should still succeed despite notification failure
@@ -353,7 +534,7 @@ describe("RecurringEventGenerationService - additional coverage", () => {
       expect(result.autoRescheduled).toBeDefined();
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         "Failed to notify about auto-reschedule:",
-        expect.any(Error)
+        expect.any(Error),
       );
 
       consoleErrorSpy.mockRestore();
@@ -367,7 +548,7 @@ describe("RecurringEventGenerationService - additional coverage", () => {
         async () => {
           callCount++;
           return callCount === 1 ? [{ id: "conflict" }] : [];
-        }
+        },
       );
 
       const eventWithWeirdOrgDetails = {
@@ -389,7 +570,7 @@ describe("RecurringEventGenerationService - additional coverage", () => {
           eventWithWeirdOrgDetails as any,
           "e1",
           createEventFn,
-          currentUser as any
+          currentUser as any,
         );
 
       expect(result.success).toBe(true);
@@ -402,7 +583,7 @@ describe("RecurringEventGenerationService - additional coverage", () => {
         async () => {
           callCount++;
           return callCount === 1 ? [{ id: "conflict" }] : [];
-        }
+        },
       );
 
       // Co-org user found but has no email
@@ -431,12 +612,12 @@ describe("RecurringEventGenerationService - additional coverage", () => {
           eventWithOrg as any,
           "e1",
           createEventFn,
-          currentUser as any
+          currentUser as any,
         );
 
       expect(result.success).toBe(true);
       expect(
-        UnifiedMessageController.createTargetedSystemMessage
+        UnifiedMessageController.createTargetedSystemMessage,
       ).toHaveBeenCalled();
       // Co-org without email should still be included in system message
     });
@@ -447,7 +628,7 @@ describe("RecurringEventGenerationService - additional coverage", () => {
         async () => {
           callCount++;
           return callCount === 1 ? [{ id: "conflict" }] : [];
-        }
+        },
       );
 
       (User.findById as any).mockReturnValue({
@@ -475,14 +656,14 @@ describe("RecurringEventGenerationService - additional coverage", () => {
           eventWithOrg as any,
           "e1",
           createEventFn,
-          currentUser as any
+          currentUser as any,
         );
 
       expect(result.success).toBe(true);
       expect(EmailService.sendGenericNotificationEmail).toHaveBeenCalledWith(
         "coorg@example.com",
         "coorg_username",
-        expect.any(Object)
+        expect.any(Object),
       );
     });
   });
@@ -508,7 +689,7 @@ describe("RecurringEventGenerationService - additional coverage", () => {
           baseEventData as any,
           "e1",
           createEventFn,
-          currentUser as any
+          currentUser as any,
         );
 
       expect(result.success).toBe(true);
@@ -516,7 +697,7 @@ describe("RecurringEventGenerationService - additional coverage", () => {
       expect(result.seriesIds).toContain("e1");
       // Warning should be logged about unable to schedule (matches actual message)
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("Auto-reschedule: unable to")
+        expect.stringContaining("Auto-reschedule: unable to"),
       );
 
       consoleWarnSpy.mockRestore();
@@ -533,7 +714,7 @@ describe("RecurringEventGenerationService - additional coverage", () => {
             return [{ id: "conflict" }];
           }
           return [];
-        }
+        },
       );
 
       const consoleWarnSpy = vi
@@ -550,7 +731,7 @@ describe("RecurringEventGenerationService - additional coverage", () => {
           baseEventData as any,
           "e1",
           createEventFn,
-          currentUser as any
+          currentUser as any,
         );
 
       expect(result.success).toBe(true);
@@ -579,7 +760,7 @@ describe("RecurringEventGenerationService - additional coverage", () => {
           eventWithoutTZ as any,
           "e1",
           createEventFn,
-          currentUser as any
+          currentUser as any,
         );
 
       expect(result.success).toBe(true);

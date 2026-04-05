@@ -75,6 +75,18 @@ interface BasicEventFieldsProps {
   originalSecondaryFlyerUrl: string | null;
   id?: string; // For time conflict check
   allowedEventTypes?: string[]; // Optional: filtered event types for CreateEvent
+  // Recurrence props
+  isEditMode?: boolean; // When true, Repeat is locked to "Never"
+  repeatFrequency?: string;
+  onRepeatFrequencyChange?: (value: string) => void;
+  occurrenceCount?: string;
+  onOccurrenceCountChange?: (value: string) => void;
+  recurrenceMode?: string;
+  onRecurrenceModeChange?: (value: string) => void;
+  weekdayOrdinal?: string;
+  onWeekdayOrdinalChange?: (value: string) => void;
+  weekday?: string;
+  onWeekdayChange?: (value: string) => void;
 }
 
 /**
@@ -106,6 +118,17 @@ export default function BasicEventFields({
   originalSecondaryFlyerUrl,
   id,
   allowedEventTypes, // Filtered event types for CreateEvent
+  isEditMode,
+  repeatFrequency,
+  onRepeatFrequencyChange,
+  occurrenceCount,
+  onOccurrenceCountChange,
+  recurrenceMode,
+  onRecurrenceModeChange,
+  weekdayOrdinal,
+  onWeekdayOrdinalChange,
+  weekday,
+  onWeekdayChange,
 }: BasicEventFieldsProps) {
   const notification = useToastReplacement();
 
@@ -504,6 +527,186 @@ export default function BasicEventFields({
             </p>
           )}
         </div>
+      </div>
+
+      {/* Repeat / Recurrence */}
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          {/* Repeat Frequency */}
+          <div>
+            <label
+              htmlFor="repeatFrequency"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Repeat
+            </label>
+            <select
+              id="repeatFrequency"
+              value={isEditMode ? "never" : repeatFrequency || "never"}
+              onChange={(e) => onRepeatFrequencyChange?.(e.target.value)}
+              disabled={isEditMode}
+              className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                isEditMode ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""
+              }`}
+            >
+              <option value="never">Never</option>
+              <option value="weekly">Weekly</option>
+              <option value="biweekly">Biweekly</option>
+              <option value="monthly">Monthly</option>
+              <option value="every-two-months">Every 2 Months</option>
+              <option value="every-three-months">Every 3 Months</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Occurrence Count — for weekly/biweekly */}
+        {!isEditMode &&
+          (repeatFrequency === "weekly" || repeatFrequency === "biweekly") && (
+            <div>
+              <label
+                htmlFor="occurrenceCount"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                How many times should this event recur, including the first
+                occurrence? <span className="text-red-500">*</span>
+              </label>
+              <select
+                id="occurrenceCount"
+                value={occurrenceCount || ""}
+                onChange={(e) => onOccurrenceCountChange?.(e.target.value)}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  !occurrenceCount ? "border-red-300" : "border-gray-300"
+                }`}
+              >
+                <option value="" disabled>
+                  Select count
+                </option>
+                {Array.from({ length: 23 }, (_, i) => i + 2).map((num) => (
+                  <option key={num} value={num}>
+                    {num}
+                  </option>
+                ))}
+              </select>
+              {!occurrenceCount && (
+                <p className="mt-1 text-sm text-red-600">
+                  Please select how many times this event should recur
+                </p>
+              )}
+            </div>
+          )}
+
+        {/* Monthly-type sub-fields */}
+        {!isEditMode &&
+          (repeatFrequency === "monthly" ||
+            repeatFrequency === "every-two-months" ||
+            repeatFrequency === "every-three-months") && (
+            <div className="space-y-4">
+              {/* Occurrence Count — for monthly-type (own row) */}
+              <div>
+                <label
+                  htmlFor="occurrenceCountMonthly"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  How many times should this event recur, including the first
+                  occurrence? <span className="text-red-500">*</span>
+                </label>
+                <select
+                  id="occurrenceCountMonthly"
+                  value={occurrenceCount || ""}
+                  onChange={(e) => onOccurrenceCountChange?.(e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    !occurrenceCount ? "border-red-300" : "border-gray-300"
+                  }`}
+                >
+                  <option value="" disabled>
+                    Select count
+                  </option>
+                  {Array.from({ length: 23 }, (_, i) => i + 2).map((num) => (
+                    <option key={num} value={num}>
+                      {num}
+                    </option>
+                  ))}
+                </select>
+                {!occurrenceCount && (
+                  <p className="mt-1 text-sm text-red-600">
+                    Please select how many times this event should recur
+                  </p>
+                )}
+              </div>
+
+              {/* Recurrence Mode */}
+              <div>
+                <label
+                  htmlFor="recurrenceMode"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  How will this event recur?
+                </label>
+                <select
+                  id="recurrenceMode"
+                  value={recurrenceMode || "same-date"}
+                  onChange={(e) => onRecurrenceModeChange?.(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="same-date">On the same date</option>
+                  <option value="same-weekday">On the same weekday</option>
+                </select>
+              </div>
+
+              {/* Same-weekday sub-options */}
+              {recurrenceMode === "same-weekday" && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div>
+                    <label
+                      htmlFor="weekdayOrdinal"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
+                      On every
+                    </label>
+                    <select
+                      id="weekdayOrdinal"
+                      value={weekdayOrdinal || ""}
+                      onChange={(e) => onWeekdayOrdinalChange?.(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="" disabled>
+                        Select ordinal
+                      </option>
+                      <option value="1">1st</option>
+                      <option value="2">2nd</option>
+                      <option value="3">3rd</option>
+                      <option value="4">4th</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="weekday"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
+                      Day of the week
+                    </label>
+                    <select
+                      id="weekday"
+                      value={weekday || ""}
+                      onChange={(e) => onWeekdayChange?.(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="" disabled>
+                        Select day
+                      </option>
+                      <option value="1">Monday</option>
+                      <option value="2">Tuesday</option>
+                      <option value="3">Wednesday</option>
+                      <option value="4">Thursday</option>
+                      <option value="5">Friday</option>
+                      <option value="6">Saturday</option>
+                      <option value="0">Sunday</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
       </div>
 
       {/* Hosted by */}

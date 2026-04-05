@@ -188,15 +188,33 @@ export class CreationController {
         req.body as {
           recurring?: {
             isRecurring?: boolean;
-            frequency?: "every-two-weeks" | "monthly" | "every-two-months";
+            frequency?:
+              | "weekly"
+              | "biweekly"
+              | "every-two-weeks"
+              | "monthly"
+              | "every-two-months"
+              | "every-three-months";
             occurrenceCount?: number;
+            recurrenceMode?: "same-date" | "same-weekday";
+            weekdayOrdinal?: number;
+            weekday?: number;
           };
         }
       ).recurring as
         | {
             isRecurring?: boolean;
-            frequency?: "every-two-weeks" | "monthly" | "every-two-months";
+            frequency?:
+              | "weekly"
+              | "biweekly"
+              | "every-two-weeks"
+              | "monthly"
+              | "every-two-months"
+              | "every-three-months";
             occurrenceCount?: number;
+            recurrenceMode?: "same-date" | "same-weekday";
+            weekdayOrdinal?: number;
+            weekday?: number;
           }
         | undefined;
 
@@ -394,11 +412,17 @@ export class CreationController {
       // Build recurring series if requested
       const { EventController } = await import("../eventController");
       let createdSeriesIds: string[] = [EventController.toIdString(event._id)];
+      const validFrequencies = [
+        "weekly",
+        "biweekly",
+        "every-two-weeks",
+        "monthly",
+        "every-two-months",
+        "every-three-months",
+      ];
       const isValidRecurring =
         !!recurring?.isRecurring &&
-        (recurring.frequency === "every-two-weeks" ||
-          recurring.frequency === "monthly" ||
-          recurring.frequency === "every-two-months") &&
+        validFrequencies.includes(recurring.frequency!) &&
         typeof recurring.occurrenceCount === "number" &&
         recurring.occurrenceCount > 1 &&
         recurring.occurrenceCount <= 24;
@@ -411,6 +435,9 @@ export class CreationController {
                 isRecurring: recurring!.isRecurring!,
                 frequency: recurring!.frequency!,
                 occurrenceCount: recurring!.occurrenceCount!,
+                recurrenceMode: recurring!.recurrenceMode,
+                weekdayOrdinal: recurring!.weekdayOrdinal,
+                weekday: recurring!.weekday,
               },
               eventData,
               event._id,
@@ -449,6 +476,7 @@ export class CreationController {
                   isRecurring: recurring!.isRecurring!,
                   frequency: recurring!.frequency!,
                   occurrenceCount: recurring!.occurrenceCount!,
+                  recurrenceMode: recurring!.recurrenceMode,
                 }
               : undefined,
             EventController.toIdString,

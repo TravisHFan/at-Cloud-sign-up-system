@@ -8,7 +8,7 @@ vi.mock("../../hooks/useAuth", () => ({
   useAuth: () => useAuthMock(),
 }));
 
-describe("Recurring Event Config access gating (/dashboard/event-config)", () => {
+describe("Create Event access gating (/dashboard/new-event)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.removeItem("authToken");
@@ -21,21 +21,21 @@ describe("Recurring Event Config access gating (/dashboard/event-config)", () =>
     });
 
     render(
-      <MemoryRouter initialEntries={["/dashboard/event-config"]}>
+      <MemoryRouter initialEntries={["/dashboard/new-event"]}>
         <Routes>
           <Route
-            path="/dashboard/event-config"
+            path="/dashboard/new-event"
             element={
               <ProtectedRoute
                 allowedRoles={["Super Admin", "Administrator", "Leader"]}
               >
-                <div>Recurring Config</div>
+                <div>Create Event</div>
               </ProtectedRoute>
             }
           />
           <Route path="/dashboard" element={<div>Dashboard Home</div>} />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     expect(await screen.findByText(/Dashboard Home/i)).toBeInTheDocument();
@@ -48,50 +48,50 @@ describe("Recurring Event Config access gating (/dashboard/event-config)", () =>
     });
 
     render(
-      <MemoryRouter initialEntries={["/dashboard/event-config"]}>
+      <MemoryRouter initialEntries={["/dashboard/new-event"]}>
         <Routes>
           <Route
-            path="/dashboard/event-config"
+            path="/dashboard/new-event"
             element={
               <ProtectedRoute
                 allowedRoles={["Super Admin", "Administrator", "Leader"]}
               >
-                <div>Recurring Config</div>
+                <div>Create Event</div>
               </ProtectedRoute>
             }
           />
           <Route path="/dashboard" element={<div>Dashboard Home</div>} />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     expect(await screen.findByText(/Dashboard Home/i)).toBeInTheDocument();
   });
 
-  it("allows Leader to access Recurring Config", async () => {
+  it("allows Leader to access Create Event", async () => {
     useAuthMock.mockReturnValue({
       currentUser: { id: "lead1", role: "Leader" },
       isLoading: false,
     });
 
     render(
-      <MemoryRouter initialEntries={["/dashboard/event-config"]}>
+      <MemoryRouter initialEntries={["/dashboard/new-event"]}>
         <Routes>
           <Route
-            path="/dashboard/event-config"
+            path="/dashboard/new-event"
             element={
               <ProtectedRoute
                 allowedRoles={["Super Admin", "Administrator", "Leader"]}
               >
-                <div>Recurring Config</div>
+                <div>Create Event</div>
               </ProtectedRoute>
             }
           />
           <Route path="/dashboard" element={<div>Dashboard Home</div>} />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
-    expect(await screen.findByText(/Recurring Config/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Create Event/i)).toBeInTheDocument();
   });
 });

@@ -425,5 +425,49 @@ describe("EventCreationNotificationService", () => {
 
       expect(result.systemMessagesSent).toBe(true);
     });
+
+    it("should handle weekly frequency in recurring info", async () => {
+      const activeUsers = [{ _id: { toString: () => "user-1" } }];
+      (User.find as any).mockReturnValue({
+        select: vi.fn().mockResolvedValue(activeUsers),
+      });
+      (EmailRecipientUtils.getActiveVerifiedUsers as any).mockResolvedValue([]);
+
+      const result =
+        await EventCreationNotificationService.sendAllNotifications(
+          createMockEvent(),
+          createEventData(),
+          createMockUser(),
+          {
+            isRecurring: true,
+            frequency: "weekly",
+            occurrenceCount: 4,
+          },
+        );
+
+      expect(result.systemMessagesSent).toBe(true);
+    });
+
+    it("should handle every-three-months frequency in recurring info", async () => {
+      const activeUsers = [{ _id: { toString: () => "user-1" } }];
+      (User.find as any).mockReturnValue({
+        select: vi.fn().mockResolvedValue(activeUsers),
+      });
+      (EmailRecipientUtils.getActiveVerifiedUsers as any).mockResolvedValue([]);
+
+      const result =
+        await EventCreationNotificationService.sendAllNotifications(
+          createMockEvent(),
+          createEventData(),
+          createMockUser(),
+          {
+            isRecurring: true,
+            frequency: "every-three-months",
+            occurrenceCount: 3,
+          },
+        );
+
+      expect(result.systemMessagesSent).toBe(true);
+    });
   });
 });

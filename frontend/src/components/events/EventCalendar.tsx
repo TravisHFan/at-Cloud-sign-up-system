@@ -134,12 +134,18 @@ export default function EventCalendar({
       case "Mentor Circle":
         // Match "EMBA Mentor Circles" program blue colors
         return "bg-blue-100 text-blue-800 hover:bg-blue-200";
+      case "Meeting":
+        return "bg-teal-100 text-teal-800 hover:bg-teal-200";
+      case "Office Hour":
+        return "bg-rose-100 text-rose-800 hover:bg-rose-200";
+      case "Hangout":
+        return "bg-amber-100 text-amber-800 hover:bg-amber-200";
       case "NextGen":
         // Match "NextGen" program olive/lime colors
         return "bg-lime-100 text-lime-800 hover:bg-lime-200";
       default:
-        // Fallback to purple for unknown types
-        return "bg-purple-100 text-purple-800 hover:bg-purple-200";
+        // Fallback to gray for unknown types
+        return "bg-gray-100 text-gray-800 hover:bg-gray-200";
     }
   };
 
@@ -303,6 +309,18 @@ export default function EventCalendar({
           <div className="flex items-center space-x-2">
             <div className="w-3 h-3 bg-blue-100 rounded"></div>
             <span>Mentor Circle</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 bg-teal-100 rounded"></div>
+            <span>Meeting</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 bg-rose-100 rounded"></div>
+            <span>Office Hour</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 bg-amber-100 rounded"></div>
+            <span>Hangout</span>
           </div>
           <div className="flex items-center space-x-2">
             <div className="w-3 h-3 bg-lime-100 rounded"></div>

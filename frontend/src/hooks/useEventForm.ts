@@ -10,8 +10,18 @@ import { normalizeEventDate } from "../utils/eventStatsUtils";
 
 export type RecurringConfig = {
   isRecurring?: boolean;
-  frequency?: "every-two-weeks" | "monthly" | "every-two-months" | null;
+  frequency?:
+    | "weekly"
+    | "biweekly"
+    | "every-two-weeks"
+    | "monthly"
+    | "every-two-months"
+    | "every-three-months"
+    | null;
   occurrenceCount?: number | null;
+  recurrenceMode?: "same-date" | "same-weekday" | null;
+  weekdayOrdinal?: number | null;
+  weekday?: number | null;
 } | null;
 
 type SimpleOrganizer = { id?: string; name?: string; [k: string]: unknown };
@@ -22,7 +32,7 @@ export const useEventForm = (
   options?: {
     // Returns true to send notifications now, false to suppress, null/undefined if not chosen yet
     shouldSendNotifications?: () => boolean | null | undefined;
-  }
+  },
 ) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -139,11 +149,21 @@ export const useEventForm = (
         recurringConfig.frequency &&
         typeof recurringConfig.occurrenceCount === "number"
       ) {
-        eventPayload.recurring = {
+        const recurringPayload: Record<string, unknown> = {
           isRecurring: true,
           frequency: recurringConfig.frequency,
           occurrenceCount: recurringConfig.occurrenceCount,
         };
+        if (recurringConfig.recurrenceMode) {
+          recurringPayload.recurrenceMode = recurringConfig.recurrenceMode;
+        }
+        if (typeof recurringConfig.weekdayOrdinal === "number") {
+          recurringPayload.weekdayOrdinal = recurringConfig.weekdayOrdinal;
+        }
+        if (typeof recurringConfig.weekday === "number") {
+          recurringPayload.weekday = recurringConfig.weekday;
+        }
+        eventPayload.recurring = recurringPayload;
       }
 
       // Attach suppression flag based on external UI selection

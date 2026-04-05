@@ -19,6 +19,7 @@ export interface EventValidationState {
   format: FieldValidation;
   zoomLink: FieldValidation;
   roles: FieldValidation;
+  occurrenceCount?: FieldValidation;
 }
 
 export function validateEventField(
@@ -33,7 +34,7 @@ export function validateEventField(
     programLabels?: string[];
     __startOverlapValidation?: FieldValidation;
     __endOverlapValidation?: FieldValidation;
-  }
+  },
 ): FieldValidation {
   switch (fieldName) {
     case "title":
@@ -53,7 +54,7 @@ export function validateEventField(
         String(value ?? ""),
         formData?.time,
         formData?.date,
-        formData?.endDate
+        formData?.endDate,
       );
     case "startOverlap":
       return (
@@ -300,7 +301,7 @@ function validateRoles(roles: SimpleRole[]): FieldValidation {
       role.name.length < 2 ||
       role.name.length > 100 ||
       !role.maxParticipants ||
-      role.maxParticipants < 1
+      role.maxParticipants < 1,
   );
 
   if (invalidRoles.length > 0) {
@@ -357,7 +358,7 @@ function validateDate(date: string): FieldValidation {
   const eventDate = new Date(
     parseInt(year),
     parseInt(month) - 1,
-    parseInt(day)
+    parseInt(day),
   );
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -463,7 +464,7 @@ function validateEndTime(
   endTime: string,
   startTime?: string,
   startDate?: string,
-  endDate?: string
+  endDate?: string,
 ): FieldValidation {
   if (!endTime || endTime.trim().length === 0) {
     return {
@@ -594,7 +595,7 @@ function validateZoomLink(zoomLink: string, format?: string): FieldValidation {
 }
 
 export function getOverallValidationStatus(
-  validations: EventValidationState
+  validations: EventValidationState,
 ): FieldValidation {
   // Define the order of fields to check (matches form layout)
   const fieldOrder: (keyof EventValidationState)[] = [
@@ -607,6 +608,7 @@ export function getOverallValidationStatus(
     "endDate",
     "endTime",
     "endOverlap",
+    "occurrenceCount",
     "agenda",
     "format",
     "location",

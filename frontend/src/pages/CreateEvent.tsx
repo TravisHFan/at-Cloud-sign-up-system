@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { useLocation, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { useEventForm } from "../hooks/useEventForm";
 import { useEventValidation } from "../hooks/useEventValidation";
+import { getOverallValidationStatus } from "../utils/eventValidationUtils";
+import type { FieldValidation } from "../utils/eventValidationUtils";
 import { useRoleValidation } from "../hooks/useRoleValidation";
 import EventPreview from "../components/events/EventPreview";
 import BasicEventFields from "../components/EditEvent/BasicEventFields";
@@ -38,7 +40,6 @@ interface Organizer {
 export default function NewEvent() {
   const { currentUser } = useAuth();
   const notification = useToastReplacement();
-  const location = useLocation();
   const [searchParams] = useSearchParams();
   // Get programId from URL and convert to array for programLabels (set via useEffect)
   const programIdFromUrl = searchParams.get("programId");
@@ -48,12 +49,13 @@ export default function NewEvent() {
   >([]);
   const [programLoading, setProgramLoading] = useState(false);
 
-  // Get recurring event configuration from navigation state
-  const recurringConfig = location.state as {
-    isRecurring?: boolean;
-    frequency?: string | null;
-    occurrenceCount?: number | null;
-  } | null;
+  // Recurrence state (managed locally in the form)
+  const [repeatFrequency, setRepeatFrequency] = useState("never");
+  const [occurrenceCount, setOccurrenceCount] = useState("");
+  const [recurrenceMode, setRecurrenceMode] = useState("same-date");
+  const [weekdayOrdinal, setWeekdayOrdinal] = useState("");
+  const [weekday, setWeekday] = useState("");
+
   const [allowedTypes, setAllowedTypes] = useState<string[]>([]);
 
   // Database role templates
@@ -108,9 +110,21 @@ export default function NewEvent() {
   }, [selectedOrganizers]);
 
   // Normalize recurrence frequency to allowed union
-  type Frequency = "every-two-weeks" | "monthly" | "every-two-months" | null;
+  type Frequency =
+    | "weekly"
+    | "biweekly"
+    | "monthly"
+    | "every-two-months"
+    | "every-three-months"
+    | null;
   const normalizeFrequency = (value: unknown): Frequency => {
-    const allowed = ["every-two-weeks", "monthly", "every-two-months"] as const;
+    const allowed = [
+      "weekly",
+      "biweekly",
+      "monthly",
+      "every-two-months",
+      "every-three-months",
+    ] as const;
     return typeof value === "string" &&
       (allowed as readonly string[]).includes(value)
       ? (value as Frequency)
@@ -124,6 +138,13 @@ export default function NewEvent() {
   // track if user interacted with notification radios (not needed for error visibility)
   const [, setNotificationPrefTouched] = useState(false);
 
+  const isRecurring = repeatFrequency !== "never";
+  const isMonthlyType = [
+    "monthly",
+    "every-two-months",
+    "every-three-months",
+  ].includes(repeatFrequency);
+
   const {
     form,
     isSubmitting,
@@ -135,12 +156,18 @@ export default function NewEvent() {
   } = useEventForm(
     organizerDetails,
     {
-      isRecurring: !!recurringConfig?.isRecurring,
-      frequency: normalizeFrequency(recurringConfig?.frequency),
-      occurrenceCount:
-        typeof recurringConfig?.occurrenceCount === "number"
-          ? recurringConfig?.occurrenceCount
+      isRecurring,
+      frequency: normalizeFrequency(repeatFrequency),
+      occurrenceCount: occurrenceCount ? parseInt(occurrenceCount) : null,
+      recurrenceMode: isMonthlyType
+        ? (recurrenceMode as "same-date" | "same-weekday")
+        : null,
+      weekdayOrdinal:
+        recurrenceMode === "same-weekday" && weekdayOrdinal
+          ? parseInt(weekdayOrdinal)
           : null,
+      weekday:
+        recurrenceMode === "same-weekday" && weekday ? parseInt(weekday) : null,
     },
     {
       shouldSendNotifications: () => sendNotificationsPref,
@@ -331,7 +358,43 @@ export default function NewEvent() {
   // (form helpers already destructured above)
 
   // Add real-time validation
-  const { validations, overallStatus, isFormValid } = useEventValidation(watch);
+  const { validations: baseValidations, isFormValid: baseFormValid } =
+    useEventValidation(watch);
+
+  // Compute occurrence count validation (required when a repeat frequency is selected)
+  const needsOccurrenceCount =
+    repeatFrequency !== "never" && repeatFrequency !== "";
+  const occurrenceCountValidation: FieldValidation = useMemo(() => {
+    if (!needsOccurrenceCount) {
+      return { isValid: true, message: "", color: "" };
+    }
+    if (!occurrenceCount) {
+      return {
+        isValid: false,
+        message: "Please select how many times this event should recur",
+        color: "text-red-500",
+      };
+    }
+    return {
+      isValid: true,
+      message: `Event will recur ${occurrenceCount} time(s)`,
+      color: "text-green-500",
+    };
+  }, [needsOccurrenceCount, occurrenceCount]);
+
+  // Merge occurrence count validation into the overall validation set
+  const validations = useMemo(
+    () => ({ ...baseValidations, occurrenceCount: occurrenceCountValidation }),
+    [baseValidations, occurrenceCountValidation],
+  );
+  const overallStatus = useMemo(
+    () => getOverallValidationStatus(validations),
+    [validations],
+  );
+  const isFormValid = useMemo(
+    () => baseFormValid && occurrenceCountValidation.isValid,
+    [baseFormValid, occurrenceCountValidation.isValid],
+  );
 
   // Scroll to first invalid field when user clicks on validation summary
   const scrollToFirstInvalidField = useCallback(() => {
@@ -361,11 +424,16 @@ export default function NewEvent() {
         location: "location",
         zoomLink: "zoomLink",
         agenda: "agenda",
+        occurrenceCount: "occurrenceCount",
       };
 
       const mappedId = fieldMappings[fieldName];
       if (mappedId) {
         element = document.getElementById(mappedId);
+        // Fallback for monthly occurrence count (different element ID)
+        if (!element && mappedId === "occurrenceCount") {
+          element = document.getElementById("occurrenceCountMonthly");
+        }
       }
     }
 
@@ -583,17 +651,16 @@ export default function NewEvent() {
           </div>
         )}
         <h1 className="text-2xl font-bold text-gray-900 mb-2">
-          {recurringConfig?.isRecurring
+          {isRecurring
             ? "Create the First Event for This Recurring Program"
             : "Create New Event"}
         </h1>
 
-        {recurringConfig?.isRecurring && (
+        {isRecurring && (
           <p className="text-sm text-gray-500 mb-6">
             Future events will be generated according to the selected recurrence
-            (frequency and total count, incl. the first) on the same day of the
-            week (Monday–Sunday) each cycle. All generated events are
-            individually editable.
+            (frequency and total count, incl. the first). All generated events
+            are individually editable.
           </p>
         )}
 
@@ -613,6 +680,28 @@ export default function NewEvent() {
             originalFlyerUrl={null}
             originalSecondaryFlyerUrl={null}
             allowedEventTypes={allowedTypes}
+            isEditMode={false}
+            repeatFrequency={repeatFrequency}
+            onRepeatFrequencyChange={(v) => {
+              setRepeatFrequency(v);
+              // Reset dependent fields when frequency changes
+              setOccurrenceCount("");
+              setRecurrenceMode("same-date");
+              setWeekdayOrdinal("");
+              setWeekday("");
+            }}
+            occurrenceCount={occurrenceCount}
+            onOccurrenceCountChange={setOccurrenceCount}
+            recurrenceMode={recurrenceMode}
+            onRecurrenceModeChange={(v) => {
+              setRecurrenceMode(v);
+              setWeekdayOrdinal("");
+              setWeekday("");
+            }}
+            weekdayOrdinal={weekdayOrdinal}
+            onWeekdayOrdinalChange={setWeekdayOrdinal}
+            weekday={weekday}
+            onWeekdayChange={setWeekday}
           />
 
           {/* Format Settings - Format dropdown, Location, Zoom info, Disclaimer */}

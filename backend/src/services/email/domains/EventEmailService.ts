@@ -33,9 +33,8 @@ export class EventEmailService {
    */
   private static async sendEmail(options: EmailOptions): Promise<boolean> {
     // Import EmailServiceFacade dynamically to avoid circular dependency
-    const { EmailService } = await import(
-      "../../infrastructure/EmailServiceFacade"
-    );
+    const { EmailService } =
+      await import("../../infrastructure/EmailServiceFacade");
     return EmailService.sendEmail(options);
   }
 
@@ -47,14 +46,14 @@ export class EventEmailService {
     startTime: string,
     endTime?: string,
     endDate?: string,
-    timeZone?: string
+    timeZone?: string,
   ): string {
     return EmailHelpers.formatDateTimeRange(
       date,
       startTime,
       endTime,
       endDate,
-      timeZone
+      timeZone,
     );
   }
 
@@ -71,7 +70,7 @@ export class EventEmailService {
       endTime?: string;
       timeZone?: string;
       message?: string;
-    }
+    },
   ): Promise<boolean[]> {
     const seen = new Set<string>();
     const unique = recipients.filter((r) => {
@@ -86,15 +85,15 @@ export class EventEmailService {
         EventEmailService.sendEventNotificationEmail(
           r.email,
           r.name || r.email,
-          payload
+          payload,
         ).catch((err) => {
           console.error(
             `❌ Failed to send event update email to ${r.email}:`,
-            err
+            err,
           );
           return false;
-        })
-      )
+        }),
+      ),
     );
   }
   static async sendEventAutoUnpublishNotification(params: {
@@ -226,7 +225,7 @@ export class EventEmailService {
   static async sendEventNotificationEmail(
     email: string,
     name: string,
-    data: EmailTemplateData
+    data: EmailTemplateData,
   ): Promise<boolean> {
     const html = `
       <!DOCTYPE html>
@@ -269,7 +268,7 @@ export class EventEmailService {
                       time,
                       endTime,
                       endDate,
-                      tz
+                      tz,
                     );
                   }
                   return (data as any).eventDate || "TBD";
@@ -316,23 +315,30 @@ export class EventEmailService {
       format: string;
       timeZone?: string;
       recurringInfo?: {
-        frequency: "every-two-weeks" | "monthly" | "every-two-months" | string;
+        frequency:
+          | "weekly"
+          | "biweekly"
+          | "every-two-weeks"
+          | "monthly"
+          | "every-two-months"
+          | "every-three-months"
+          | string;
         occurrenceCount: number;
       };
-    }
+    },
   ): Promise<boolean> {
     const formatDateTimeRange = (
       date: string,
       startTime: string,
       endTime?: string,
-      endDate?: string
+      endDate?: string,
     ) =>
       EventEmailService.formatDateTimeRange(
         date,
         startTime,
         endTime,
         endDate,
-        eventData.timeZone
+        eventData.timeZone,
       );
 
     const eventLocation =
@@ -341,9 +347,12 @@ export class EventEmailService {
         : eventData.location || "Location TBD";
 
     const freqMap: Record<string, string> = {
+      weekly: "Weekly",
+      biweekly: "Every Two Weeks",
       "every-two-weeks": "Every Two Weeks",
       monthly: "Monthly",
       "every-two-months": "Every Two Months",
+      "every-three-months": "Every Three Months",
     };
 
     const html = `
@@ -381,7 +390,7 @@ export class EventEmailService {
                     eventData.date,
                     eventData.time,
                     eventData.endTime,
-                    eventData.endDate
+                    eventData.endDate,
                   )}
                 </div>
                 <div class="event-detail">
@@ -408,8 +417,8 @@ export class EventEmailService {
                     freqMap[eventData.recurringInfo.frequency] ||
                     eventData.recurringInfo.frequency
                   } (${
-                        eventData.recurringInfo.occurrenceCount
-                      } total occurrences)
+                    eventData.recurringInfo.occurrenceCount
+                  } total occurrences)
                 </div>
                 `
                     : ""
@@ -453,7 +462,7 @@ export class EventEmailService {
         eventData.date,
         eventData.time,
         eventData.endTime,
-        eventData.endDate
+        eventData.endDate,
       )} at ${eventLocation}. ${
         eventData.recurringInfo
           ? `Recurrence: ${
@@ -483,7 +492,7 @@ export class EventEmailService {
     assignedBy: {
       firstName: string;
       lastName: string;
-    }
+    },
   ): Promise<boolean> {
     const coOrganizerName = `${assignedUser.firstName || ""} ${
       assignedUser.lastName || ""
@@ -537,7 +546,7 @@ export class EventEmailService {
                   eventData.time,
                   eventData.endTime,
                   eventData.endDate,
-                  (eventData as any).timeZone
+                  (eventData as any).timeZone,
                 )}</p>
                 <p><strong>Location:</strong> ${eventData.location}</p>
                 <p><strong>Assigned by:</strong> ${organizerName}</p>
@@ -589,7 +598,7 @@ export class EventEmailService {
         eventData.time,
         eventData.endTime,
         eventData.endDate,
-        (eventData as any).timeZone
+        (eventData as any).timeZone,
       )}. Location: ${
         eventData.location
       }. Assigned by: ${organizerName}. Please check the event management dashboard for more details.`,
@@ -609,7 +618,7 @@ export class EventEmailService {
       format: string;
       timeZone?: string;
     },
-    reminderType: "1h" | "24h" | "1week"
+    reminderType: "1h" | "24h" | "1week",
   ): Promise<boolean> {
     const reminderLabels = {
       "1h": { label: "1 Hour", urgency: "high", emoji: "🚨" },
@@ -673,8 +682,8 @@ export class EventEmailService {
                   isUrgent
                     ? "🚨 STARTING SOON! 🚨"
                     : reminder.urgency === "medium"
-                    ? "⏰ Tomorrow!"
-                    : "📅 Coming Up!"
+                      ? "⏰ Tomorrow!"
+                      : "📅 Coming Up!"
                 }
               </div>
 
@@ -686,7 +695,7 @@ export class EventEmailService {
                   eventData.time,
                   eventData.endTime,
                   eventData.endDate,
-                  eventData.timeZone
+                  eventData.timeZone,
                 )}</p>
                 <p><strong>Format:</strong> ${eventData.format}</p>
                 ${
@@ -724,14 +733,14 @@ export class EventEmailService {
                 </div>
               `
                   : !isVirtual
-                  ? `
+                    ? `
                 <div class="location-info">
                   <h4>📍 In-Person Event Location:</h4>
                   <p><strong>Address:</strong> ${eventData.location}</p>
                   <p><em>Please arrive 10-15 minutes early for check-in.</em></p>
                 </div>
               `
-                  : ""
+                    : ""
               }
 
               <div style="text-align: center; margin: 30px 0;">
@@ -750,8 +759,8 @@ export class EventEmailService {
                   isUrgent
                     ? "<strong>The event is starting very soon! Please make sure you're ready to participate.</strong>"
                     : reminder.urgency === "medium"
-                    ? "The event is tomorrow! Please make your final preparations."
-                    : "Just a friendly reminder about this upcoming event. Mark your calendar!"
+                      ? "The event is tomorrow! Please make your final preparations."
+                      : "Just a friendly reminder about this upcoming event. Mark your calendar!"
                 }
               </p>
 
@@ -779,7 +788,7 @@ export class EventEmailService {
         eventData.time,
         eventData.endTime,
         eventData.endDate,
-        eventData.timeZone
+        eventData.timeZone,
       )}. ${
         isVirtual
           ? `Join link: ${eventData.zoomLink || "Virtual event"}`
@@ -800,7 +809,7 @@ export class EventEmailService {
       format: string;
       timeZone?: string;
     },
-    reminderType: "1h" | "24h" | "1week"
+    reminderType: "1h" | "24h" | "1week",
   ): Promise<boolean[]> {
     const seen = new Set<string>();
     const unique = recipients.filter((r) => {
@@ -816,15 +825,15 @@ export class EventEmailService {
           r.email,
           r.name || r.email,
           eventData,
-          reminderType
+          reminderType,
         ).catch((err) => {
           console.error(
             `❌ Failed to send event reminder email to ${r.email}:`,
-            err
+            err,
           );
           return false;
-        })
-      )
+        }),
+      ),
     );
   }
   static async sendEventRoleAssignedEmail(
@@ -835,7 +844,7 @@ export class EventEmailService {
       roleName: string;
       actor: any;
       rejectionToken?: string;
-    }
+    },
   ): Promise<boolean> {
     const { event, roleName, actor, user, rejectionToken } = data;
     const subject = `✅ Invited to ${roleName} - ${event.title}`;
@@ -843,11 +852,11 @@ export class EventEmailService {
     // Direct link to view the event details (protected route). If user not logged in, they'll be redirected after login.
     // NOTE: Currently our frontend protects /dashboard/event/:id. If we expose a public /events/:id we can adjust later.
     const eventDetailUrl = `${baseUrl}/dashboard/event/${encodeURIComponent(
-      event.id || event._id || ""
+      event.id || event._id || "",
     )}`;
     // Rejection token creation is deferred to assignment creation flow; placeholder parameter usage.
     const hasRealToken = Boolean(
-      rejectionToken && !rejectionToken.includes("{{")
+      rejectionToken && !rejectionToken.includes("{{"),
     );
     const token = hasRealToken
       ? encodeURIComponent(rejectionToken as string)
@@ -859,7 +868,7 @@ export class EventEmailService {
       // Warn (non-fatal) so missing token can be traced. Avoid leaking in prod logs if spammy.
       if (process.env.NODE_ENV !== "test") {
         console.warn(
-          "sendEventRoleAssignedEmail: rejectionToken missing; link omitted"
+          "sendEventRoleAssignedEmail: rejectionToken missing; link omitted",
         );
       }
     }
@@ -872,7 +881,7 @@ export class EventEmailService {
         event.time,
         event.endTime,
         event.endDate,
-        event.timeZone
+        event.timeZone,
       );
       return dateTimeRange;
     };
@@ -924,18 +933,18 @@ export class EventEmailService {
 
     textParts.push("");
     textParts.push(
-      `View the event and this role's responsibilities: ${eventDetailUrl}`
+      `View the event and this role's responsibilities: ${eventDetailUrl}`,
     );
     textParts.push("If you accept this invitation, no action is required.");
 
     if (hasRealToken) {
       textParts.push(
         "If you need to decline this invitation, please use the link below to tell the organizer so they can invite other users for this role:",
-        rejectionLink
+        rejectionLink,
       );
     } else {
       textParts.push(
-        "(Rejection link unavailable – please contact the organizer directly if you need to decline.)"
+        "(Rejection link unavailable – please contact the organizer directly if you need to decline.)",
       );
     }
     const text = textParts.join("\n");
@@ -945,10 +954,10 @@ export class EventEmailService {
       <div style="font-family:Arial,sans-serif;line-height:1.5;font-size:14px;">
         <p>Hi ${user?.firstName || user?.username || "there"},</p>
         <p>${actor.firstName} ${
-      actor.lastName
-    } <strong>invited</strong> you to the role <strong>${roleName}</strong> for event <em>${
-      event.title
-    }</em></p>
+          actor.lastName
+        } <strong>invited</strong> you to the role <strong>${roleName}</strong> for event <em>${
+          event.title
+        }</em></p>
         
         <div style="background:#f8f9fa;padding:16px;margin:16px 0;border-radius:6px;border-left:4px solid #2563eb;">
           <h3 style="margin:0 0 12px 0;color:#2563eb;font-size:16px;">📋 Event Details</h3>
@@ -1051,7 +1060,7 @@ export class EventEmailService {
       // Fallback: send email without ICS attachment if generation fails
       console.warn(
         "ICS generation failed for role assignment email:",
-        icsError
+        icsError,
       );
       console.warn("Event data that failed ICS generation:", {
         id: event._id || event.id,
@@ -1069,7 +1078,7 @@ export class EventEmailService {
   }
   static async sendEventRoleRemovedEmail(
     to: string,
-    data: { event: any; user: any; roleName: string; actor: any }
+    data: { event: any; user: any; roleName: string; actor: any },
   ): Promise<boolean> {
     const { event, roleName, actor } = data;
     const subject = `⚠️ Removed from ${roleName} - ${event.title}`;
@@ -1085,7 +1094,7 @@ export class EventEmailService {
       fromRoleName: string;
       toRoleName: string;
       actor: any;
-    }
+    },
   ): Promise<boolean> {
     const { event, fromRoleName, toRoleName, actor, user } = data;
     const subject = `🔄 Role Updated: ${toRoleName} - ${event.title}`;
@@ -1099,7 +1108,7 @@ export class EventEmailService {
         event.time,
         event.endTime,
         event.endDate,
-        event.timeZone
+        event.timeZone,
       );
       return dateTimeRange;
     };
@@ -1121,7 +1130,7 @@ export class EventEmailService {
     const locationDisplay = getLocationDisplay();
     const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
     const eventDetailUrl = `${baseUrl}/dashboard/event/${encodeURIComponent(
-      event.id || event._id || ""
+      event.id || event._id || "",
     )}`;
 
     // Build comprehensive text version
@@ -1166,8 +1175,8 @@ export class EventEmailService {
         <p>Your role in event <em>${
           event.title
         }</em> was <strong>updated</strong> by ${actor.firstName} ${
-      actor.lastName
-    }:</p>
+          actor.lastName
+        }:</p>
         <p style="text-align:center;margin:12px 0;padding:12px;background:#f0f8ff;border-radius:6px;">
           <strong style="color:#dc3545;">${fromRoleName}</strong> 
           <span style="margin:0 8px;color:#6c757d;">→</span> 
@@ -1284,7 +1293,7 @@ export class EventEmailService {
       assigner: { firstName?: string; lastName?: string };
       noteProvided: boolean;
       noteText?: string; // newly passed raw note text (optional)
-    }
+    },
   ): Promise<boolean> {
     const { event, roleName, rejectedBy, assigner, noteProvided } = data;
     const subject = `❌ Invitation Declined: ${roleName} - ${event.title}`;
@@ -1320,7 +1329,7 @@ export class EventEmailService {
         ? `<div style="margin:12px 0;padding:12px;background:#fafafa;border:1px solid #eee;border-radius:4px;">
              <strong style="display:block;margin-bottom:4px;">Rejection Note:</strong>
              <div style="white-space:pre-wrap;font-family:inherit;">${escapeHtml(
-               cleanedNote
+               cleanedNote,
              )}</div>
            </div>`
         : `<p>A rejection note was provided in the system.</p>`

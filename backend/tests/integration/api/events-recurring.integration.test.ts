@@ -14,7 +14,7 @@ const getWeekday = (dateStr: string) => toUtcMidnight(dateStr).getUTCDay(); // 0
 const daysBetween = (a: string, b: string) =>
   Math.round(
     (toUtcMidnight(b).getTime() - toUtcMidnight(a).getTime()) /
-      (24 * 60 * 60 * 1000)
+      (24 * 60 * 60 * 1000),
   );
 const minutesFromHHMM = (hhmm: string) => {
   const [hh, mm] = hhmm.split(":").map((n) => parseInt(n, 10));
@@ -24,7 +24,7 @@ const durationMinutes = (
   startDate: string,
   startTime: string,
   endDate: string,
-  endTime: string
+  endTime: string,
 ) => {
   const dayDiff = daysBetween(startDate, endDate);
   return (
@@ -72,7 +72,7 @@ describe("Recurring Events - series creation and notifications", () => {
       0,
       0,
       0,
-      0
+      0,
     )
       .toISOString()
       .split("T")[0];
@@ -194,7 +194,7 @@ describe("Recurring Events - series creation and notifications", () => {
       events[0].date,
       events[0].time,
       events[0].endDate,
-      events[0].endTime
+      events[0].endTime,
     );
     expect(baseDuration).toBeGreaterThan(0);
 
@@ -262,5 +262,149 @@ describe("Recurring Events - series creation and notifications", () => {
       "metadata.kind": "new_event",
     });
     expect(msgCount).toBe(1);
+  });
+
+  it("creates weekly series with exact 7-day spacing", async () => {
+    const now = new Date();
+    const daysUntilTue = (2 - now.getDay() + 7) % 7 || 7;
+    const nextTuesday = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate() + daysUntilTue,
+      0,
+      0,
+      0,
+      0,
+    )
+      .toISOString()
+      .split("T")[0];
+
+    const res = await request(app)
+      .post("/api/events")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({
+        title: "Weekly Series",
+        description: "Test weekly recurring",
+        date: nextTuesday,
+        time: "09:00",
+        endTime: "10:00",
+        type: "Conference",
+        format: "Online",
+        location: "Online",
+        agenda: "Weekly check-in meeting agenda",
+        organizer: "Org",
+        purpose: "Testing weekly",
+        roles: [
+          {
+            id: "r1",
+            name: "Common Participant (Zoom)",
+            maxParticipants: 5,
+            description: "General",
+          },
+        ],
+        recurring: {
+          isRecurring: true,
+          frequency: "weekly",
+          occurrenceCount: 4,
+        },
+      })
+      .expect(201);
+
+    const seriesIds: string[] = res.body.data.series;
+    expect(seriesIds.length).toBe(4);
+
+    const events = [] as any[];
+    for (const id of seriesIds) {
+      const detail = await request(app)
+        .get(`/api/events/${id}`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .expect(200);
+      events.push(detail.body.data.event);
+    }
+
+    for (let i = 1; i < events.length; i++) {
+      expect(daysBetween(events[i - 1].date, events[i].date)).toBe(7);
+    }
+  });
+
+  it("creates every-three-months series", async () => {
+    const startDate = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split("T")[0];
+
+    const res = await request(app)
+      .post("/api/events")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({
+        title: "Quarterly Series",
+        description: "Every three months",
+        date: startDate,
+        time: "14:00",
+        endTime: "15:00",
+        type: "Conference",
+        format: "Online",
+        location: "Online",
+        agenda: "Quarterly review meeting agenda",
+        organizer: "Org",
+        purpose: "Testing every-three-months",
+        roles: [
+          {
+            id: "r1",
+            name: "Common Participant (Zoom)",
+            maxParticipants: 10,
+            description: "General",
+          },
+        ],
+        recurring: {
+          isRecurring: true,
+          frequency: "every-three-months",
+          occurrenceCount: 3,
+        },
+      })
+      .expect(201);
+
+    const seriesIds: string[] = res.body.data.series;
+    expect(seriesIds.length).toBe(3);
+  });
+
+  it("creates monthly same-date series preserving calendar date", async () => {
+    const startDate = new Date(Date.now() + 20 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split("T")[0];
+
+    const res = await request(app)
+      .post("/api/events")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({
+        title: "Monthly Same-Date Series",
+        description: "Same date each month",
+        date: startDate,
+        time: "16:00",
+        endTime: "17:00",
+        type: "Conference",
+        format: "Online",
+        location: "Online",
+        agenda: "Monthly on same date",
+        organizer: "Org",
+        purpose: "Testing same-date mode",
+        roles: [
+          {
+            id: "r1",
+            name: "Common Participant (Zoom)",
+            maxParticipants: 10,
+            description: "General",
+          },
+        ],
+        recurring: {
+          isRecurring: true,
+          frequency: "monthly",
+          occurrenceCount: 3,
+          recurrenceMode: "same-date",
+        },
+      })
+      .expect(201);
+
+    const seriesIds: string[] = res.body.data.series;
+    expect(seriesIds.length).toBe(3);
   });
 });

@@ -37,8 +37,15 @@ interface EventData {
 
 interface RecurringInfo {
   isRecurring: boolean;
-  frequency: "every-two-weeks" | "monthly" | "every-two-months";
+  frequency:
+    | "weekly"
+    | "biweekly"
+    | "every-two-weeks"
+    | "monthly"
+    | "every-two-months"
+    | "every-three-months";
   occurrenceCount: number;
+  recurrenceMode?: "same-date" | "same-weekday";
 }
 
 interface CurrentUser {
@@ -64,7 +71,7 @@ export class EventCreationNotificationService {
    * Helper type guard for organizerDetails
    */
   private static hasOrganizerDetails(
-    v: unknown
+    v: unknown,
   ): v is { organizerDetails?: Array<unknown> } {
     return (
       typeof v === "object" &&
@@ -82,7 +89,7 @@ export class EventCreationNotificationService {
   static async sendCoOrganizerNotifications(
     event: IEvent,
     currentUser: CurrentUser,
-    toIdString?: (id: unknown) => string
+    toIdString?: (id: unknown) => string,
   ): Promise<boolean> {
     // Use provided toIdString or fallback to toString
     const idToString =
@@ -101,12 +108,12 @@ export class EventCreationNotificationService {
       try {
         populatedEvent =
           await ResponseBuilderService.buildEventWithRegistrations(
-            idToString(event._id)
+            idToString(event._id),
           );
       } catch (populationError) {
         logger.error(
           "Error populating event data for co-organizer notifications",
-          populationError as Error
+          populationError as Error,
         );
         populatedEvent = event; // fallback to raw event
       }
@@ -125,7 +132,7 @@ export class EventCreationNotificationService {
 
       // Get co-organizers (excluding main organizer)
       const coOrganizers = await EmailRecipientUtils.getEventCoOrganizers(
-        populatedEvent as unknown as IEvent
+        populatedEvent as unknown as IEvent,
       );
 
       if (coOrganizers.length === 0) {
@@ -150,13 +157,13 @@ export class EventCreationNotificationService {
             {
               firstName: currentUser.firstName || "Unknown",
               lastName: currentUser.lastName || "User",
-            }
+            },
           );
           return true;
         } catch (error) {
           logger.error(
             `Failed to send co-organizer email to ${coOrganizer.email}`,
-            error as Error
+            error as Error,
           );
           return false;
         }
@@ -184,18 +191,18 @@ export class EventCreationNotificationService {
                   gender: currentUser.gender || "male",
                   authLevel: currentUser.role,
                   roleInAtCloud: currentUser.roleInAtCloud,
-                }
+                },
               );
             }
             return true;
           } catch (error) {
             logger.error(
               `Failed to send co-organizer system message to ${coOrganizer.email}`,
-              error as Error
+              error as Error,
             );
             return false;
           }
-        }
+        },
       );
 
       // Wait for all notifications
@@ -210,7 +217,7 @@ export class EventCreationNotificationService {
         "Error in sendCoOrganizerNotifications",
         error as Error,
         undefined,
-        { eventId: event._id }
+        { eventId: event._id },
       );
       return false;
     }
@@ -227,7 +234,7 @@ export class EventCreationNotificationService {
     eventData: EventData,
     currentUser: CurrentUser,
     recurringInfo?: RecurringInfo,
-    toIdString?: (id: unknown) => string
+    toIdString?: (id: unknown) => string,
   ): Promise<NotificationResult> {
     const result: NotificationResult = {
       systemMessagesSent: false,
@@ -269,9 +276,12 @@ export class EventCreationNotificationService {
           ? `New Recurring Program: ${eventData.title}`
           : `New Event: ${eventData.title}`;
         const freqMap: Record<string, string> = {
+          weekly: "Weekly",
+          biweekly: "Every Two Weeks",
           "every-two-weeks": "Every Two Weeks",
           monthly: "Monthly",
           "every-two-months": "Every Two Months",
+          "every-three-months": "Every Three Months",
         };
         const seriesNote = isRecurring
           ? `\nThis is a recurring program (${
@@ -303,7 +313,7 @@ export class EventCreationNotificationService {
             gender: currentUser.gender || "male",
             authLevel: currentUser.role,
             roleInAtCloud: currentUser.roleInAtCloud,
-          }
+          },
         );
 
         logger.info("System message created successfully", undefined, {
@@ -320,7 +330,7 @@ export class EventCreationNotificationService {
         "Failed to create system messages for event",
         error as Error,
         undefined,
-        { eventId: event?._id }
+        { eventId: event?._id },
       );
       // Continue execution - don't fail event creation if system messages fail
     }
@@ -329,7 +339,7 @@ export class EventCreationNotificationService {
     try {
       // Get all active, verified users who want emails (excluding event creator)
       const allUsers = await EmailRecipientUtils.getActiveVerifiedUsers(
-        currentUser.email
+        currentUser.email,
       );
 
       // Send notifications in parallel but don't wait for all to complete
@@ -357,14 +367,14 @@ export class EventCreationNotificationService {
                     occurrenceCount: recurringInfo!.occurrenceCount!,
                   }
                 : undefined,
-            }
+            },
           ).catch((error) => {
             console.error(
               `Failed to send event notification to ${user.email}:`,
-              error
+              error,
             );
             return false; // Continue with other emails even if one fails
-          })
+          }),
       );
 
       // Process emails in the background
@@ -380,7 +390,7 @@ export class EventCreationNotificationService {
     } catch (emailError) {
       console.error(
         "Error fetching users for event notifications:",
-        emailError
+        emailError,
       );
       // Don't fail the event creation if email notifications fail
     }

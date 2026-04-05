@@ -67,7 +67,7 @@ export class EmailService {
       // Skip email sending in test environment
       if (process.env.NODE_ENV === "test") {
         console.log(
-          `📧 Email skipped in test environment: ${options.subject} to ${options.to}`
+          `📧 Email skipped in test environment: ${options.subject} to ${options.to}`,
         );
         // Structured log, keep console for tests
         try {
@@ -137,7 +137,7 @@ export class EmailService {
   private static buildDate(
     date: string,
     time: string,
-    timeZone?: string
+    timeZone?: string,
   ): Date {
     return EmailHelpers.buildDate(date, time, timeZone);
   }
@@ -145,7 +145,7 @@ export class EmailService {
   private static formatDateTime(
     date: string,
     time: string,
-    timeZone?: string
+    timeZone?: string,
   ): string {
     return EmailHelpers.formatDateTime(date, time, timeZone);
   }
@@ -153,7 +153,7 @@ export class EmailService {
   private static formatTime(
     time: string,
     timeZone?: string,
-    date?: string
+    date?: string,
   ): string {
     return EmailHelpers.formatTime(time, timeZone, date);
   }
@@ -163,14 +163,14 @@ export class EmailService {
     startTime: string,
     endTime?: string,
     endDate?: string,
-    timeZone?: string
+    timeZone?: string,
   ): string {
     return EmailHelpers.formatDateTimeRange(
       date,
       startTime,
       endTime,
       endDate,
-      timeZone
+      timeZone,
     );
   }
 
@@ -188,30 +188,30 @@ export class EmailService {
       endTime?: string;
       timeZone?: string;
       message?: string;
-    }
+    },
   ): Promise<boolean[]> {
     return EventEmailService.sendEventNotificationEmailBulk(
       recipients,
-      payload
+      payload,
     );
   }
 
   static async sendVerificationEmail(
     email: string,
     name: string,
-    verificationToken: string
+    verificationToken: string,
   ): Promise<boolean> {
     return AuthEmailService.sendVerificationEmail(
       email,
       name,
-      verificationToken
+      verificationToken,
     );
   }
 
   static async sendPasswordResetEmail(
     email: string,
     name: string,
-    resetToken: string
+    resetToken: string,
   ): Promise<boolean> {
     return AuthEmailService.sendPasswordResetEmail(email, name, resetToken);
   }
@@ -219,12 +219,12 @@ export class EmailService {
   static async sendPasswordChangeRequestEmail(
     email: string,
     name: string,
-    confirmToken: string
+    confirmToken: string,
   ): Promise<boolean> {
     return AuthEmailService.sendPasswordChangeRequestEmail(
       email,
       name,
-      confirmToken
+      confirmToken,
     );
   }
 
@@ -352,12 +352,12 @@ export class EmailService {
   static async sendAccountDeactivationEmail(
     userEmail: string,
     userName: string,
-    deactivatedBy: { role: string; firstName?: string; lastName?: string }
+    deactivatedBy: { role: string; firstName?: string; lastName?: string },
   ): Promise<boolean> {
     return AuthEmailService.sendAccountDeactivationEmail(
       userEmail,
       userName,
-      deactivatedBy
+      deactivatedBy,
     );
   }
 
@@ -367,12 +367,12 @@ export class EmailService {
   static async sendAccountReactivationEmail(
     userEmail: string,
     userName: string,
-    reactivatedBy: { role: string; firstName?: string; lastName?: string }
+    reactivatedBy: { role: string; firstName?: string; lastName?: string },
   ): Promise<boolean> {
     return AuthEmailService.sendAccountReactivationEmail(
       userEmail,
       userName,
-      reactivatedBy
+      reactivatedBy,
     );
   }
 
@@ -388,13 +388,13 @@ export class EmailService {
       lastName?: string;
       email: string;
       role: string;
-    }
+    },
   ): Promise<boolean> {
     return UserEmailService.sendUserDeactivatedAlertToAdmin(
       adminEmail,
       adminName,
       target,
-      actor
+      actor,
     );
   }
 
@@ -410,13 +410,13 @@ export class EmailService {
       lastName?: string;
       email: string;
       role: string;
-    }
+    },
   ): Promise<boolean> {
     return UserEmailService.sendUserReactivatedAlertToAdmin(
       adminEmail,
       adminName,
       target,
-      actor
+      actor,
     );
   }
 
@@ -432,19 +432,19 @@ export class EmailService {
       lastName?: string;
       email: string;
       role: string;
-    }
+    },
   ): Promise<boolean> {
     return UserEmailService.sendUserDeletedAlertToAdmin(
       adminEmail,
       adminName,
       target,
-      actor
+      actor,
     );
   }
 
   static async sendPasswordResetSuccessEmail(
     email: string,
-    name: string
+    name: string,
   ): Promise<boolean> {
     return AuthEmailService.sendPasswordResetSuccessEmail(email, name);
   }
@@ -452,7 +452,7 @@ export class EmailService {
   static async sendEventNotificationEmail(
     email: string,
     name: string,
-    data: EmailTemplateData
+    data: EmailTemplateData,
   ): Promise<boolean> {
     return EventEmailService.sendEventNotificationEmail(email, name, data);
   }
@@ -469,12 +469,12 @@ export class EmailService {
       contentHtml: string;
       contentText?: string;
       attachments?: nodemailer.SendMailOptions["attachments"];
-    }
+    },
   ): Promise<boolean> {
     return UtilityEmailService.sendGenericNotificationEmail(
       to,
       nameOrTitle,
-      payload
+      payload,
     );
   }
 
@@ -498,10 +498,17 @@ export class EmailService {
       format: string;
       timeZone?: string;
       recurringInfo?: {
-        frequency: "every-two-weeks" | "monthly" | "every-two-months" | string;
+        frequency:
+          | "weekly"
+          | "biweekly"
+          | "every-two-weeks"
+          | "monthly"
+          | "every-two-months"
+          | "every-three-months"
+          | string;
         occurrenceCount: number;
       };
-    }
+    },
   ): Promise<boolean> {
     return EventEmailService.sendEventCreatedEmail(email, name, eventData);
   }
@@ -521,12 +528,12 @@ export class EmailService {
       firstName: string;
       lastName: string;
       role: string;
-    }
+    },
   ): Promise<boolean> {
     return RoleEmailService.sendPromotionNotificationToUser(
       email,
       userData,
-      changedBy
+      changedBy,
     );
   }
 
@@ -547,13 +554,13 @@ export class EmailService {
       firstName: string;
       lastName: string;
       role: string;
-    }
+    },
   ): Promise<boolean> {
     return RoleEmailService.sendPromotionNotificationToAdmins(
       adminEmail,
       adminName,
       userData,
-      changedBy
+      changedBy,
     );
   }
 
@@ -577,13 +584,13 @@ export class EmailService {
       email: string;
       role: string;
     },
-    reason?: string
+    reason?: string,
   ): Promise<boolean> {
     return RoleEmailService.sendDemotionNotificationToUser(
       userEmail,
       userData,
       changedBy,
-      reason
+      reason,
     );
   }
 
@@ -608,14 +615,14 @@ export class EmailService {
       email: string;
       role: string;
     },
-    reason?: string
+    reason?: string,
   ): Promise<boolean> {
     return RoleEmailService.sendDemotionNotificationToAdmins(
       adminEmail,
       adminName,
       userData,
       changedBy,
-      reason
+      reason,
     );
   }
 
@@ -632,7 +639,7 @@ export class EmailService {
       email: string;
       oldRoleInAtCloud: string;
       newRoleInAtCloud: string;
-    }
+    },
   ): Promise<boolean> {
     return RoleEmailService.sendAtCloudRoleChangeToUser(userEmail, userData);
   }
@@ -650,12 +657,12 @@ export class EmailService {
       email: string;
       oldRoleInAtCloud: string;
       newRoleInAtCloud: string;
-    }
+    },
   ): Promise<boolean> {
     return RoleEmailService.sendAtCloudRoleChangeToAdmins(
       adminEmail,
       adminName,
-      userData
+      userData,
     );
   }
 
@@ -672,12 +679,12 @@ export class EmailService {
       email: string;
       roleInAtCloud: string;
       signupDate: string;
-    }
+    },
   ): Promise<boolean> {
     return RoleEmailService.sendNewLeaderSignupEmail(
       adminEmail,
       adminName,
-      newLeaderData
+      newLeaderData,
     );
   }
 
@@ -702,13 +709,13 @@ export class EmailService {
     assignedBy: {
       firstName: string;
       lastName: string;
-    }
+    },
   ): Promise<boolean> {
     return RoleEmailService.sendCoOrganizerAssignedEmail(
       coOrganizerEmail,
       assignedUser,
       eventData,
-      assignedBy
+      assignedBy,
     );
   }
 
@@ -730,13 +737,13 @@ export class EmailService {
       format: string;
       timeZone?: string;
     },
-    reminderType: "1h" | "24h" | "1week"
+    reminderType: "1h" | "24h" | "1week",
   ): Promise<boolean> {
     return EventEmailService.sendEventReminderEmail(
       email,
       userName,
       eventData,
-      reminderType
+      reminderType,
     );
   }
 
@@ -757,12 +764,12 @@ export class EmailService {
       format: string;
       timeZone?: string;
     },
-    reminderType: "1h" | "24h" | "1week"
+    reminderType: "1h" | "24h" | "1week",
   ): Promise<boolean[]> {
     return EventEmailService.sendEventReminderEmailBulk(
       recipients,
       eventData,
-      reminderType
+      reminderType,
     );
   }
 
@@ -778,12 +785,12 @@ export class EmailService {
       lastName: string;
       email: string;
       roleInAtCloud: string;
-    }
+    },
   ): Promise<boolean> {
     return RoleEmailService.sendAtCloudRoleAssignedToAdmins(
       adminEmail,
       adminName,
-      userData
+      userData,
     );
   }
 
@@ -795,12 +802,12 @@ export class EmailService {
       lastName: string;
       email: string;
       previousRoleInAtCloud: string;
-    }
+    },
   ): Promise<boolean> {
     return RoleEmailService.sendAtCloudRoleRemovedToAdmins(
       adminEmail,
       adminName,
-      userData
+      userData,
     );
   }
 
@@ -816,12 +823,12 @@ export class EmailService {
       lastName: string;
       email: string;
       roleInAtCloud: string;
-    }
+    },
   ): Promise<boolean> {
     return UserEmailService.sendNewAtCloudLeaderSignupToAdmins(
       adminEmail,
       adminName,
-      userData
+      userData,
     );
   }
 
@@ -834,14 +841,14 @@ export class EmailService {
       roleName: string;
       actor: any;
       rejectionToken?: string;
-    }
+    },
   ): Promise<boolean> {
     return EventEmailService.sendEventRoleAssignedEmail(to, data);
   }
 
   static async sendEventRoleRemovedEmail(
     to: string,
-    data: { event: any; user: any; roleName: string; actor: any }
+    data: { event: any; user: any; roleName: string; actor: any },
   ): Promise<boolean> {
     return EventEmailService.sendEventRoleRemovedEmail(to, data);
   }
@@ -854,7 +861,7 @@ export class EmailService {
       fromRoleName: string;
       toRoleName: string;
       actor: any;
-    }
+    },
   ): Promise<boolean> {
     return EventEmailService.sendEventRoleMovedEmail(to, data);
   }
@@ -868,7 +875,7 @@ export class EmailService {
       assigner: { firstName?: string; lastName?: string };
       noteProvided: boolean;
       noteText?: string; // newly passed raw note text (optional)
-    }
+    },
   ): Promise<boolean> {
     return EventEmailService.sendEventRoleAssignmentRejectedEmail(to, data);
   }

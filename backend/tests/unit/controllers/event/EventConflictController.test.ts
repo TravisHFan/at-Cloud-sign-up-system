@@ -49,7 +49,7 @@ describe("EventConflictController", () => {
 
         await EventConflictController.checkTimeConflict(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -66,7 +66,7 @@ describe("EventConflictController", () => {
 
         await EventConflictController.checkTimeConflict(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -81,7 +81,7 @@ describe("EventConflictController", () => {
 
         await EventConflictController.checkTimeConflict(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -101,7 +101,7 @@ describe("EventConflictController", () => {
 
         await EventConflictController.checkTimeConflict(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -116,7 +116,7 @@ describe("EventConflictController", () => {
 
         await EventConflictController.checkTimeConflict(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -136,7 +136,7 @@ describe("EventConflictController", () => {
 
         await EventConflictController.checkTimeConflict(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -164,12 +164,12 @@ describe("EventConflictController", () => {
         ];
 
         vi.mocked(EventController.findConflictingEvents).mockResolvedValue(
-          mockConflicts as any
+          mockConflicts as any,
         );
 
         await EventConflictController.checkTimeConflict(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -189,7 +189,7 @@ describe("EventConflictController", () => {
 
         await EventConflictController.checkTimeConflict(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(EventController.findConflictingEvents).toHaveBeenCalled();
@@ -211,7 +211,7 @@ describe("EventConflictController", () => {
 
         await EventConflictController.checkTimeConflict(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(EventController.findConflictingEvents).toHaveBeenCalledWith(
@@ -220,7 +220,8 @@ describe("EventConflictController", () => {
           expect.any(String),
           expect.any(String),
           "event-to-exclude",
-          undefined
+          undefined,
+          undefined,
         );
       });
 
@@ -235,7 +236,7 @@ describe("EventConflictController", () => {
 
         await EventConflictController.checkTimeConflict(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(EventController.findConflictingEvents).toHaveBeenCalledWith(
@@ -244,7 +245,8 @@ describe("EventConflictController", () => {
           expect.any(String),
           expect.any(String),
           undefined,
-          "America/Los_Angeles"
+          "America/Los_Angeles",
+          undefined,
         );
       });
     });
@@ -261,7 +263,7 @@ describe("EventConflictController", () => {
 
         await EventConflictController.checkTimeConflict(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(EventController.findConflictingEvents).toHaveBeenCalled();
@@ -286,7 +288,7 @@ describe("EventConflictController", () => {
 
         await EventConflictController.checkTimeConflict(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(EventController.findConflictingEvents).toHaveBeenCalled();
@@ -305,7 +307,7 @@ describe("EventConflictController", () => {
 
         await EventConflictController.checkTimeConflict(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(EventController.findConflictingEvents).toHaveBeenCalledWith(
@@ -314,7 +316,8 @@ describe("EventConflictController", () => {
           "2024-06-01",
           "12:00",
           undefined,
-          undefined
+          undefined,
+          undefined,
         );
       });
     });
@@ -327,12 +330,12 @@ describe("EventConflictController", () => {
         };
 
         vi.mocked(EventController.findConflictingEvents).mockRejectedValue(
-          new Error("Database error")
+          new Error("Database error"),
         );
 
         await EventConflictController.checkTimeConflict(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -349,12 +352,12 @@ describe("EventConflictController", () => {
         };
 
         vi.mocked(EventController.findConflictingEvents).mockRejectedValue(
-          new Error("Unexpected error")
+          new Error("Unexpected error"),
         );
 
         await EventConflictController.checkTimeConflict(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);
@@ -378,7 +381,7 @@ describe("EventConflictController", () => {
 
         await EventConflictController.checkTimeConflict(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(EventController.findConflictingEvents).toHaveBeenCalledWith(
@@ -387,7 +390,8 @@ describe("EventConflictController", () => {
           "2024-06-03",
           "12:00",
           undefined,
-          undefined
+          undefined,
+          undefined,
         );
         expect(statusMock).toHaveBeenCalledWith(200);
       });
@@ -407,7 +411,7 @@ describe("EventConflictController", () => {
 
         await EventConflictController.checkTimeConflict(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(EventController.findConflictingEvents).toHaveBeenCalledWith(
@@ -416,7 +420,8 @@ describe("EventConflictController", () => {
           "2024-06-01",
           "18:00",
           undefined,
-          "America/Los_Angeles"
+          "America/Los_Angeles",
+          undefined,
         );
       });
 
@@ -431,7 +436,7 @@ describe("EventConflictController", () => {
 
         await EventConflictController.checkTimeConflict(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const callArgs = vi.mocked(EventController.findConflictingEvents).mock
@@ -449,7 +454,7 @@ describe("EventConflictController", () => {
 
         await EventConflictController.checkTimeConflict(
           mockReq as Request,
-          mockRes as Response
+          mockRes as Response,
         );
 
         const callArgs = vi.mocked(EventController.findConflictingEvents).mock

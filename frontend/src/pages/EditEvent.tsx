@@ -139,7 +139,7 @@ export default function EditEvent() {
         if (mentorIds && mentorIds.length) {
           (setValue as unknown as (name: string, value: string[]) => void)(
             "mentorIds",
-            mentorIds
+            mentorIds,
           );
         }
         // Reset templateApplied flag when loading event
@@ -200,7 +200,7 @@ export default function EditEvent() {
         setValue as unknown as (
           name: string,
           value: FieldValidation,
-          options?: { shouldDirty?: boolean; shouldValidate?: boolean }
+          options?: { shouldDirty?: boolean; shouldValidate?: boolean },
         ) => void
       )(name, value, { shouldDirty: false, shouldValidate: false });
 
@@ -244,7 +244,7 @@ export default function EditEvent() {
 
   // Template selector states (for "Use Template" feature)
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(
-    null
+    null,
   );
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const [highlightTemplateSelector, setHighlightTemplateSelector] =
@@ -281,7 +281,7 @@ export default function EditEvent() {
   const originalPublishedRef = useRef<boolean | undefined>(undefined);
   const originalFormatRef = useRef<string | undefined>(undefined);
   const [formatWarningMissing, setFormatWarningMissing] = useState<string[]>(
-    []
+    [],
   );
 
   // Derive predictive missing fields if format changed on a published event
@@ -329,7 +329,7 @@ export default function EditEvent() {
       currentSignups: role.currentSignups || [],
     })),
     templates,
-    selectedEventType
+    selectedEventType,
   );
 
   // Convert selectedOrganizers to organizerDetails format (co-organizers only)
@@ -433,7 +433,7 @@ export default function EditEvent() {
         console.error("Error checking registrations:", error);
         notification.error(
           "Failed to check event registrations. Please try again.",
-          { title: "Error" }
+          { title: "Error" },
         );
         setIsSubmitting(false);
         return;
@@ -465,7 +465,7 @@ export default function EditEvent() {
         flyerUrl: deriveFlyerUrlForUpdate(originalFlyerUrl, data.flyerUrl),
         secondaryFlyerUrl: deriveFlyerUrlForUpdate(
           originalSecondaryFlyerUrl,
-          data.secondaryFlyerUrl
+          data.secondaryFlyerUrl,
         ),
         programLabels:
           (data as { programLabels?: string[] }).programLabels || [],
@@ -479,7 +479,7 @@ export default function EditEvent() {
             startTime: r.startTime,
             endTime: r.endTime,
             openToPublic: r.openToPublic === true,
-          })
+          }),
         ),
         organizerDetails: organizerDetails || [],
       };
@@ -572,6 +572,7 @@ export default function EditEvent() {
             originalFlyerUrl={originalFlyerUrl}
             originalSecondaryFlyerUrl={originalSecondaryFlyerUrl}
             id={id}
+            isEditMode={true}
           />
 
           {/* Format Settings */}

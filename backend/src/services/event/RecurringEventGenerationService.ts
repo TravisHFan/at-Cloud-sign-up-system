@@ -4,8 +4,9 @@
  * Handles recurring event series generation with intelligent conflict resolution.
  *
  * Key Responsibilities:
- * - Cycle calculation (every-two-weeks, monthly, every-two-months)
- * - Weekday preservation across month boundaries
+ * - Cycle calculation (weekly, biweekly, monthly, every-two-months, every-three-months)
+ * - Weekday preservation across month boundaries (same-weekday mode)
+ * - Same-date preservation for monthly-type frequencies (same-date mode)
  * - Conflict detection and auto-rescheduling (up to 6-day window)
  * - Skip/append tracking for maintaining occurrence count
  * - Auto-reschedule notifications to creator and co-organizers
@@ -26,10 +27,24 @@ import {
 import { UnifiedMessageController } from "../../controllers/unifiedMessageController";
 import { EmailService } from "../infrastructure/EmailServiceFacade";
 
+export type RecurringFrequency =
+  | "weekly"
+  | "biweekly"
+  | "every-two-weeks" // legacy alias for biweekly
+  | "monthly"
+  | "every-two-months"
+  | "every-three-months";
+
 interface RecurringConfig {
   isRecurring: boolean;
-  frequency: "every-two-weeks" | "monthly" | "every-two-months";
+  frequency: RecurringFrequency;
   occurrenceCount: number;
+  /** For monthly-type frequencies: how to compute the next date */
+  recurrenceMode?: "same-date" | "same-weekday";
+  /** 1-based ordinal (1st–4th) for same-weekday mode */
+  weekdayOrdinal?: number;
+  /** 0=Sun … 6=Sat for same-weekday mode */
+  weekday?: number;
 }
 
 interface EventData {
@@ -91,14 +106,20 @@ export class RecurringEventGenerationService {
     eventData: EventData,
     firstEventId: unknown,
     createEventFn: CreateEventFn,
-    currentUser: UserInfo
+    currentUser: UserInfo,
   ): Promise<GenerationResult> {
     // Validate recurring configuration
+    const validFrequencies: string[] = [
+      "weekly",
+      "biweekly",
+      "every-two-weeks",
+      "monthly",
+      "every-two-months",
+      "every-three-months",
+    ];
     const isValidRecurring =
       !!recurring?.isRecurring &&
-      (recurring.frequency === "every-two-weeks" ||
-        recurring.frequency === "monthly" ||
-        recurring.frequency === "every-two-months") &&
+      validFrequencies.includes(recurring.frequency) &&
       typeof recurring.occurrenceCount === "number" &&
       recurring.occurrenceCount > 1 &&
       recurring.occurrenceCount <= 24;
@@ -106,6 +127,22 @@ export class RecurringEventGenerationService {
     if (!isValidRecurring) {
       throw new Error("Invalid recurring configuration");
     }
+
+    // Normalize legacy alias
+    const normalizedFrequency: string =
+      recurring.frequency === "every-two-weeks"
+        ? "biweekly"
+        : recurring.frequency;
+
+    // Determine if this is a monthly-type frequency
+    const isMonthlyType = [
+      "monthly",
+      "every-two-months",
+      "every-three-months",
+    ].includes(normalizedFrequency);
+    const recurrenceMode = isMonthlyType
+      ? recurring.recurrenceMode || "same-weekday"
+      : undefined;
 
     // Validate required event data
     if (!eventData.endDate) {
@@ -116,38 +153,75 @@ export class RecurringEventGenerationService {
     const firstStartInstant = toInstantFromWallClock(
       eventData.date,
       eventData.time,
-      eventData.timeZone
+      eventData.timeZone,
     );
     const firstEndInstant = toInstantFromWallClock(
       eventData.endDate,
       eventData.endTime,
-      eventData.timeZone
+      eventData.timeZone,
     );
     const durationMs = firstEndInstant.getTime() - firstStartInstant.getTime();
 
     // Start with the first event ID (already created by caller)
     const seriesIds: string[] = [EventController.toIdString(firstEventId)];
 
-    const originalWeekday = firstStartInstant.getDay(); // 0-6
+    const originalWeekday = recurring.weekday ?? firstStartInstant.getDay(); // 0-6
+    const originalOrdinal =
+      recurring.weekdayOrdinal ?? this.getWeekdayOrdinal(firstStartInstant);
+    const originalDate = firstStartInstant.getDate();
 
     // Cycle advance function
     const addCycle = (base: Date): Date => {
       const d = new Date(base.getTime());
-      if (recurring.frequency === "every-two-weeks") {
+
+      // Weekly / Biweekly: simple day offset
+      if (normalizedFrequency === "weekly") {
+        d.setDate(d.getDate() + 7);
+        return d;
+      }
+      if (normalizedFrequency === "biweekly") {
         d.setDate(d.getDate() + 14);
         return d;
       }
-      // Monthly or Every Two Months: advance months first
-      const monthsToAdd = recurring.frequency === "monthly" ? 1 : 2;
-      const year = d.getFullYear();
-      const month = d.getMonth();
-      const date = d.getDate();
-      const advanced = new Date(d.getTime());
-      advanced.setFullYear(year, month + monthsToAdd, date);
-      // Adjust forward to same weekday (Mon-Sun)
+
+      // Monthly-type frequencies
+      const monthsMap: Record<string, number> = {
+        monthly: 1,
+        "every-two-months": 2,
+        "every-three-months": 3,
+      };
+      const monthsToAdd = monthsMap[normalizedFrequency] || 1;
+
+      if (recurrenceMode === "same-date") {
+        // Advance months, keep the same calendar date (clamped to month end)
+        const advanced = new Date(d.getTime());
+        advanced.setMonth(advanced.getMonth() + monthsToAdd);
+        // If original date > days in target month, setMonth already clamped it;
+        // try to restore original date
+        if (advanced.getDate() !== originalDate) {
+          advanced.setDate(0); // last day of intended month
+        }
+        return advanced;
+      }
+
+      // same-weekday mode (default for monthly-type)
+      // Find the Nth weekday of the target month
+      const targetMonth = d.getMonth() + monthsToAdd;
+      const targetYear = d.getFullYear();
+      const advanced = new Date(targetYear, targetMonth, 1);
+      // Find first occurrence of target weekday in the month
       while (advanced.getDay() !== originalWeekday) {
         advanced.setDate(advanced.getDate() + 1);
       }
+      // Advance to the Nth occurrence (ordinal is 1-based)
+      advanced.setDate(advanced.getDate() + (originalOrdinal - 1) * 7);
+      // Preserve the time of day from the base
+      advanced.setHours(
+        d.getHours(),
+        d.getMinutes(),
+        d.getSeconds(),
+        d.getMilliseconds(),
+      );
       return advanced;
     };
 
@@ -162,16 +236,16 @@ export class RecurringEventGenerationService {
 
     // Helper: try schedule at base start, then bump +24h up to 6 days if conflict
     const tryScheduleWithBump = async (
-      desiredStart: Date
+      desiredStart: Date,
     ): Promise<{ scheduledStart?: Date; offsetDays: number }> => {
       for (let offset = 0; offset <= 6; offset++) {
         const candidateStart = new Date(
-          desiredStart.getTime() + offset * 24 * 60 * 60 * 1000
+          desiredStart.getTime() + offset * 24 * 60 * 60 * 1000,
         );
         const candidateEnd = new Date(candidateStart.getTime() + durationMs);
         const wallStart = instantToWallClock(
           candidateStart,
-          eventData.timeZone
+          eventData.timeZone,
         );
         const wallEnd = instantToWallClock(candidateEnd, eventData.timeZone);
         const conflicts = await EventController.findConflictingEvents(
@@ -180,7 +254,7 @@ export class RecurringEventGenerationService {
           wallEnd.date,
           wallEnd.time,
           undefined,
-          eventData.timeZone
+          eventData.timeZone,
         );
         if (conflicts.length === 0) {
           return { scheduledStart: candidateStart, offsetDays: offset };
@@ -202,14 +276,13 @@ export class RecurringEventGenerationService {
     // Schedule each desired occurrence
     for (let i = 0; i < desiredStarts.length; i++) {
       const desiredStart = desiredStarts[i];
-      const { scheduledStart, offsetDays } = await tryScheduleWithBump(
-        desiredStart
-      );
+      const { scheduledStart, offsetDays } =
+        await tryScheduleWithBump(desiredStart);
       if (scheduledStart) {
         const candidateEnd = new Date(scheduledStart.getTime() + durationMs);
         const wallStart = instantToWallClock(
           scheduledStart,
-          eventData.timeZone
+          eventData.timeZone,
         );
         const wallEnd = instantToWallClock(candidateEnd, eventData.timeZone);
         const nextEventData: EventData = {
@@ -248,7 +321,7 @@ export class RecurringEventGenerationService {
         const candidateEnd = new Date(scheduledStart.getTime() + durationMs);
         const wallStart = instantToWallClock(
           scheduledStart,
-          eventData.timeZone
+          eventData.timeZone,
         );
         const wallEnd = instantToWallClock(candidateEnd, eventData.timeZone);
         const evData: EventData = {
@@ -265,7 +338,7 @@ export class RecurringEventGenerationService {
       } else {
         // If even appended cannot be scheduled, fail silently keeping system invariant
         console.warn(
-          "Auto-reschedule: unable to append extra occurrence within 6 days window; series count reduced."
+          "Auto-reschedule: unable to append extra occurrence within 6 days window; series count reduced.",
         );
       }
     }
@@ -277,7 +350,7 @@ export class RecurringEventGenerationService {
         moved,
         skipped,
         appended,
-        currentUser
+        currentUser,
       );
     }
 
@@ -300,7 +373,7 @@ export class RecurringEventGenerationService {
     moved: Array<{ originalStart: Date; newStart: Date; offsetDays: number }>,
     skipped: Array<{ originalStart: Date }>,
     appended: Array<{ newStart: Date; sourceSkipIndex: number }>,
-    currentUser: UserInfo
+    currentUser: UserInfo,
   ): Promise<void> {
     try {
       // Build human-readable summary
@@ -320,13 +393,13 @@ export class RecurringEventGenerationService {
         (m) =>
           `• Moved: ${fmt(m.originalStart)} → ${fmt(m.newStart)} (+${
             m.offsetDays
-          } day${m.offsetDays === 1 ? "" : "s"})`
+          } day${m.offsetDays === 1 ? "" : "s"})`,
       );
       const skippedLines = skipped.map(
-        (s) => `• Skipped: ${fmt(s.originalStart)}`
+        (s) => `• Skipped: ${fmt(s.originalStart)}`,
       );
       const appendedLines = appended.map(
-        (a) => `• Appended: ${fmt(a.newStart)}`
+        (a) => `• Appended: ${fmt(a.newStart)}`,
       );
 
       const content =
@@ -360,7 +433,7 @@ export class RecurringEventGenerationService {
         for (const org of eventData.organizerDetails) {
           if (org.userId && typeof org.userId === "string") {
             const u = await User.findById(org.userId).select(
-              "_id email firstName lastName username"
+              "_id email firstName lastName username",
             );
             if (u) {
               targetUserIds.push(EventController.toIdString(u._id));
@@ -398,7 +471,7 @@ export class RecurringEventGenerationService {
             gender: currentUser.gender || "male",
             authLevel: currentUser.role,
             roleInAtCloud: currentUser.roleInAtCloud,
-          }
+          },
         );
       }
 
@@ -414,12 +487,21 @@ export class RecurringEventGenerationService {
           console.error(
             "Failed to send auto-reschedule email to",
             rec.email,
-            e
+            e,
           );
         }
       }
     } catch (notifyErr) {
       console.error("Failed to notify about auto-reschedule:", notifyErr);
     }
+  }
+
+  /**
+   * Get the 1-based ordinal of a weekday within its month.
+   * e.g. the 2nd Tuesday → returns 2
+   */
+  private static getWeekdayOrdinal(date: Date): number {
+    const day = date.getDate();
+    return Math.ceil(day / 7);
   }
 }

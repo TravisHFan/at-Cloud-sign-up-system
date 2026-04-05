@@ -211,12 +211,6 @@ export function useEventActions({
         `"${event.title}" has been permanently deleted from the system.`,
         {
           title: "Event Deleted",
-          autoCloseDelay: 3000,
-          actionButton: {
-            text: "Browse Events",
-            onClick: () => navigate("/dashboard/upcoming"),
-            variant: "primary",
-          },
         },
       );
 

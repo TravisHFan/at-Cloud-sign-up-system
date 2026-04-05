@@ -24,7 +24,6 @@ import IncomeHistory from "./pages/IncomeHistory";
 import CreateNewProgram from "./pages/CreateNewProgram";
 import EditProgram from "./pages/EditProgram";
 import CreateEvent from "./pages/CreateEvent";
-import RecurringEventConfig from "./pages/RecurringEventConfig";
 import Management from "./pages/Management";
 import Profile from "./pages/Profile";
 import UserProfile from "./pages/UserProfile";
@@ -157,23 +156,6 @@ function App() {
                     allowedRoles={["Super Admin", "Administrator", "Leader"]}
                   >
                     <CreateNewProgram />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="event-config"
-                element={
-                  // Allow all authenticated roles; page will show access notice for Participants
-                  <ProtectedRoute
-                    allowedRoles={[
-                      "Super Admin",
-                      "Administrator",
-                      "Leader",
-                      "Participant",
-                      "Guest Expert",
-                    ]}
-                  >
-                    <RecurringEventConfig />
                   </ProtectedRoute>
                 }
               />

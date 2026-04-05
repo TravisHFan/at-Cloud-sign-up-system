@@ -130,7 +130,7 @@ export default function Sidebar({
       baseItems.push(
         {
           name: "Create Event",
-          href: "/dashboard/event-config",
+          href: "/dashboard/new-event",
           icon: PlusIcon,
         },
         {
@@ -154,7 +154,7 @@ export default function Sidebar({
       baseItems.push(
         {
           name: "Create Event",
-          href: "/dashboard/event-config",
+          href: "/dashboard/new-event",
           icon: PlusIcon,
         },
         {
@@ -169,7 +169,7 @@ export default function Sidebar({
       baseItems.push(
         {
           name: "Create Event",
-          href: "/dashboard/event-config",
+          href: "/dashboard/new-event",
           icon: PlusIcon,
         },
         {
