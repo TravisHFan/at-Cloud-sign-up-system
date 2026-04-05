@@ -57,6 +57,7 @@ interface ValidationStates {
   zoomLink: FieldValidation;
   startOverlap?: FieldValidation;
   endOverlap?: FieldValidation;
+  occurrenceCount?: FieldValidation;
 }
 
 interface BasicEventFieldsProps {
@@ -587,10 +588,8 @@ export default function BasicEventFields({
                   </option>
                 ))}
               </select>
-              {!occurrenceCount && (
-                <p className="mt-1 text-sm text-red-600">
-                  Please select how many times this event should recur
-                </p>
+              {validations.occurrenceCount && (
+                <ValidationIndicator validation={validations.occurrenceCount} />
               )}
             </div>
           )}
@@ -627,10 +626,10 @@ export default function BasicEventFields({
                     </option>
                   ))}
                 </select>
-                {!occurrenceCount && (
-                  <p className="mt-1 text-sm text-red-600">
-                    Please select how many times this event should recur
-                  </p>
+                {validations.occurrenceCount && (
+                  <ValidationIndicator
+                    validation={validations.occurrenceCount}
+                  />
                 )}
               </div>
 

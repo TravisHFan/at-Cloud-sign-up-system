@@ -641,7 +641,7 @@ export function getOverallValidationStatus(
   return {
     isValid: false,
     message: `${invalidCount} field(s) need attention before creating event`,
-    color: "text-orange-600",
+    color: "text-red-500",
     firstInvalidField,
   };
 }

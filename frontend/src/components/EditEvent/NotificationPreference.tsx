@@ -70,7 +70,7 @@ const NotificationPreference: React.FC<NotificationPreferenceProps> = ({
           </label>
         </div>
         {sendNotificationsPref === null && (
-          <p className="mt-2 text-sm text-red-600">
+          <p className="mt-2 text-sm font-medium text-red-500">
             Select a notification option is required.
           </p>
         )}
