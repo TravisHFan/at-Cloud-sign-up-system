@@ -20,7 +20,7 @@ describe("Welcome page", () => {
     return render(
       <MemoryRouter>
         <Welcome />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
   };
 
@@ -54,14 +54,14 @@ describe("Welcome page", () => {
       renderWithRouter();
 
       expect(
-        screen.getByText(/The vision of @Cloud is to celebrate/i)
+        screen.getByText(/The vision of @Cloud is to celebrate/i),
       ).toBeInTheDocument();
       expect(
-        screen.getByText(/call and equip Christian leaders/i)
+        screen.getByText(/call and equip Christian leaders/i),
       ).toBeInTheDocument();
     });
 
-    it("renders Visit @Cloud Website button", () => {
+    it("renders Return to @Cloud Website button", () => {
       mockedUseAuth.mockReturnValue({
         currentUser: { role: "Administrator" },
       } as any);
@@ -74,7 +74,7 @@ describe("Welcome page", () => {
       renderWithRouter();
 
       const link = screen.getByRole("link", {
-        name: /Visit @Cloud Website/i,
+        name: /Return to @Cloud Website/i,
       });
       expect(link).toBeInTheDocument();
       expect(link).toHaveAttribute("href", "https://at-cloud.biz/");
@@ -188,7 +188,7 @@ describe("Welcome page", () => {
       renderWithRouter();
 
       expect(
-        screen.getByTestId("upcoming-events-skeleton")
+        screen.getByTestId("upcoming-events-skeleton"),
       ).toBeInTheDocument();
     });
 
@@ -259,7 +259,7 @@ describe("Welcome page", () => {
 
       expect(screen.getByText("No upcoming events")).toBeInTheDocument();
       expect(
-        screen.getByText("Check back later for new events")
+        screen.getByText("Check back later for new events"),
       ).toBeInTheDocument();
     });
 
@@ -435,7 +435,7 @@ describe("Welcome page", () => {
       renderWithRouter();
 
       expect(
-        screen.getByRole("button", { name: /View All Upcoming Events/i })
+        screen.getByRole("button", { name: /View All Upcoming Events/i }),
       ).toBeInTheDocument();
     });
   });

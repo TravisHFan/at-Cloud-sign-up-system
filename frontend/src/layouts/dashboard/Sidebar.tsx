@@ -14,6 +14,7 @@ import {
   ComputerDesktopIcon,
   ChatBubbleLeftRightIcon,
   RectangleStackIcon,
+  AcademicCapIcon,
   GlobeAltIcon,
   ShieldCheckIcon,
   DocumentDuplicateIcon,
@@ -64,12 +65,17 @@ export default function Sidebar({
       return [
         { name: "Welcome", href: "/dashboard/welcome", icon: HomeIcon },
         {
-          name: "Programs",
+          name: "EMBA Program",
+          href: "/dashboard/emba-program",
+          icon: AcademicCapIcon,
+        },
+        {
+          name: "Other Programs",
           href: "/dashboard/programs",
           icon: RectangleStackIcon,
         },
         {
-          name: "Upcoming Events",
+          name: "Event Calendar",
           href: "/dashboard/upcoming",
           icon: CalendarDaysIcon,
         },
@@ -95,12 +101,17 @@ export default function Sidebar({
         icon: HomeIcon,
       },
       {
-        name: "Programs",
+        name: "EMBA Program",
+        href: "/dashboard/emba-program",
+        icon: AcademicCapIcon,
+      },
+      {
+        name: "Other Programs",
         href: "/dashboard/programs",
         icon: RectangleStackIcon,
       },
       {
-        name: "Upcoming Events",
+        name: "Event Calendar",
         href: "/dashboard/upcoming",
         icon: CalendarDaysIcon,
       },

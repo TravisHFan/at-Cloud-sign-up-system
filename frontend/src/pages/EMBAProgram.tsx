@@ -1,7 +1,7 @@
 import {
-  PlusIcon,
   ChevronDownIcon,
   ChevronUpIcon,
+  PlusIcon,
 } from "@heroicons/react/24/outline";
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
@@ -10,14 +10,13 @@ import { useAuth } from "../hooks/useAuth";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import type { ProgramType } from "../constants/programTypes";
 
-// Card model for UI
 interface ProgramCard {
   id: string;
   name: string;
   timeSpan: string;
   type: ProgramType;
   isFree?: boolean;
-  hasAccess?: boolean; // Whether user has access (admin, mentor, purchased, or free)
+  hasAccess?: boolean;
   accessReason?:
     | "admin"
     | "mentor"
@@ -27,61 +26,14 @@ interface ProgramCard {
     | "not_purchased";
 }
 
-// Static helpers live at module scope to avoid exhaustive-deps warnings
-const getProgramTypeColors = (type: ProgramCard["type"]) => {
-  switch (type) {
-    case "EMBA Mentor Circles":
-      return {
-        card: "bg-gradient-to-br from-blue-50 to-indigo-100 border-blue-200 hover:from-blue-100 hover:to-indigo-200",
-        badge: "bg-blue-100 text-blue-800 border-blue-300",
-        title: "group-hover:text-blue-700",
-        dot: "bg-blue-500 group-hover:bg-blue-700",
-        shadow: "hover:shadow-blue-200/50",
-      };
-    case "Effective Communication Workshops":
-      return {
-        card: "bg-gradient-to-br from-orange-50 to-amber-100 border-orange-200 hover:from-orange-100 hover:to-amber-200",
-        badge: "bg-orange-100 text-orange-800 border-orange-300",
-        title: "group-hover:text-orange-700",
-        dot: "bg-orange-500 group-hover:bg-orange-700",
-        shadow: "hover:shadow-orange-200/50",
-      };
-    case "Marketplace Church Incubator Program (MCIP)":
-      return {
-        card: "bg-gradient-to-br from-purple-50 to-violet-100 border-purple-200 hover:from-purple-100 hover:to-violet-200",
-        badge: "bg-purple-100 text-purple-800 border-purple-300",
-        title: "group-hover:text-purple-700",
-        dot: "bg-purple-500 group-hover:bg-purple-700",
-        shadow: "hover:shadow-purple-200/50",
-      };
-    case "Webinar":
-      return {
-        card: "bg-gradient-to-br from-sky-50 to-sky-100 border-sky-300 hover:from-sky-100 hover:to-sky-200",
-        badge: "bg-sky-100 text-sky-800 border-sky-400",
-        title: "group-hover:text-sky-700",
-        dot: "bg-sky-600 group-hover:bg-sky-700",
-        shadow: "hover:shadow-sky-200/50",
-      };
-    case "NextGen":
-      return {
-        card: "bg-gradient-to-br from-lime-50 to-olive-100 border-lime-200 hover:from-lime-100 hover:to-olive-200",
-        badge: "bg-lime-100 text-lime-800 border-lime-300",
-        title: "group-hover:text-lime-700",
-        dot: "bg-lime-600 group-hover:bg-lime-700",
-        shadow: "hover:shadow-lime-200/50",
-      };
-    default:
-      return {
-        card: "bg-gradient-to-br from-gray-50 to-slate-100 border-gray-200 hover:from-gray-100 hover:to-slate-200",
-        badge: "bg-gray-100 text-gray-800 border-gray-300",
-        title: "group-hover:text-gray-700",
-        dot: "bg-gray-500 group-hover:bg-gray-700",
-        shadow: "hover:shadow-gray-200/50",
-      };
-  }
+const EMBA_COLORS = {
+  card: "bg-gradient-to-br from-blue-50 to-indigo-100 border-blue-200 hover:from-blue-100 hover:to-indigo-200",
+  badge: "bg-blue-100 text-blue-800 border-blue-300",
+  title: "group-hover:text-blue-700",
+  dot: "bg-blue-500 group-hover:bg-blue-700",
+  shadow: "hover:shadow-blue-200/50",
 };
 
-// Helpers to format period
 const monthCodeToShort: Record<string, string> = {
   "01": "Jan",
   "02": "Feb",
@@ -114,7 +66,6 @@ const toShortMonth = (m?: string) => {
   if (!m) return "";
   if (monthCodeToShort[m]) return monthCodeToShort[m];
   if (fullToShort[m]) return fullToShort[m];
-  // fallback: first 3 letters
   return String(m).slice(0, 3);
 };
 const formatTimeSpan = (period?: {
@@ -133,7 +84,7 @@ const formatTimeSpan = (period?: {
   return [s, e].filter(Boolean).join(" - ");
 };
 
-export default function Programs() {
+export default function EMBAProgram() {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -153,15 +104,10 @@ export default function Programs() {
     [currentUser, navigate],
   );
 
-  // Controller visibility state
   const [showController, setShowController] = useState<boolean>(false);
-
-  // Sort and filter states
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [filterYear, setFilterYear] = useState<string>("all");
-  const [filterType, setFilterType] = useState<string>("all");
 
-  // Store raw program data with period info for sorting
   const [rawPrograms, setRawPrograms] = useState<
     Array<{
       id: string;
@@ -199,7 +145,7 @@ export default function Programs() {
         }>;
         if (cancelled) return;
         const mapped = (list || [])
-          .filter((p) => p.programType !== "EMBA Mentor Circles")
+          .filter((p) => p.programType === "EMBA Mentor Circles")
           .map((p) => ({
             id: (p.id || p._id || "").toString(),
             name: p.title || "(Untitled Program)",
@@ -210,9 +156,9 @@ export default function Programs() {
           }));
         setRawPrograms(mapped);
       } catch (err) {
-        console.error("Failed to load programs", err);
+        console.error("Failed to load EMBA programs", err);
         if (!cancelled)
-          setError("Failed to load programs. Please try again later.");
+          setError("Failed to load EMBA programs. Please try again later.");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -222,51 +168,38 @@ export default function Programs() {
     };
   }, []);
 
-  // Process programs with sorting and filtering
   useEffect(() => {
     let filtered = [...rawPrograms];
 
-    // Filter by year
     if (filterYear !== "all") {
       filtered = filtered.filter((p) => p.period?.startYear === filterYear);
     }
 
-    // Filter by type
-    if (filterType !== "all") {
-      filtered = filtered.filter((p) => p.type === filterType);
-    }
-
-    // Sort by start time (year + month)
     filtered.sort((a, b) => {
       const aYear = parseInt(a.period?.startYear || "0");
       const bYear = parseInt(b.period?.startYear || "0");
       const aMonth = parseInt(a.period?.startMonth || "0");
       const bMonth = parseInt(b.period?.startMonth || "0");
-
       const aTime = aYear * 12 + aMonth;
       const bTime = bYear * 12 + bMonth;
-
       return sortOrder === "asc" ? aTime - bTime : bTime - aTime;
     });
 
-    // Convert to ProgramCard format for display
     const programCards: ProgramCard[] = filtered.map((p) => ({
       id: p.id,
       name: p.name,
       type: p.type,
       timeSpan: p.timeSpan,
       isFree: p.isFree,
-      hasAccess: undefined, // Will be loaded async
+      hasAccess: undefined,
       accessReason: undefined,
     }));
 
     setPrograms(programCards);
-  }, [rawPrograms, sortOrder, filterYear, filterType]);
+  }, [rawPrograms, sortOrder, filterYear]);
 
-  // Check access for each program (after programs are set)
   useEffect(() => {
     if (programs.length === 0 || !currentUser) {
-      // Guest visitors: mark paid programs as "not_purchased" so Enroll button shows
       if (!currentUser && programs.length > 0) {
         setPrograms((prev) =>
           prev.map((p) =>
@@ -279,7 +212,6 @@ export default function Programs() {
       return;
     }
 
-    // Check access for all programs in parallel
     const checkAllAccess = async () => {
       try {
         const accessChecks = programs.map(async (program) => {
@@ -304,8 +236,6 @@ export default function Programs() {
         });
 
         const results = await Promise.all(accessChecks);
-
-        // Update programs with access info
         setPrograms((prev) =>
           prev.map((program) => {
             const result = results.find((r) => r.id === program.id);
@@ -327,23 +257,18 @@ export default function Programs() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [programs.length, currentUser?.id]);
 
-  // Get unique years and types for filter dropdowns
   const availableYears = Array.from(
     new Set(rawPrograms.map((p) => p.period?.startYear).filter(Boolean)),
   ).sort();
-  const availableTypes = Array.from(
-    new Set(rawPrograms.map((p) => p.type)),
-  ).sort();
-
-  const handleCreateProgram = () => {
-    navigate("/dashboard/programs/new");
-  };
 
   const handleProgramClick = (program: ProgramCard) => {
     navigate(`/dashboard/programs/${program.id}`);
   };
 
-  // Leaders and above can create programs
+  const handleCreateProgram = () => {
+    navigate("/dashboard/programs/new");
+  };
+
   const canCreateProgram =
     !!currentUser &&
     (currentUser.role === "Super Admin" ||
@@ -351,7 +276,6 @@ export default function Programs() {
       currentUser.role === "Leader");
 
   if (loading && programs.length === 0) {
-    // Standardized dashboard loading: centered, fullscreen, larger spinner
     return <LoadingSpinner size="lg" />;
   }
 
@@ -364,11 +288,10 @@ export default function Programs() {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">
-                  Other Programs
+                  EMBA Program
                 </h1>
                 <p className="mt-2 text-gray-600">
-                  Multi-month program series comprising various events and
-                  activities.
+                  EMBA Mentor Circles program series.
                 </p>
               </div>
               <button
@@ -390,7 +313,6 @@ export default function Programs() {
             </div>
           </div>
 
-          {/* Status banners */}
           {error && (
             <div className="mb-4 rounded border border-red-200 bg-red-50 text-red-700 px-4 py-3">
               {error}
@@ -400,7 +322,7 @@ export default function Programs() {
           {/* Controller Section */}
           {showController && (
             <div className="mb-6 bg-white rounded-lg border border-gray-200 overflow-hidden">
-              {/* Filter Zone */}
+              {/* Filter Zone — Start Year only */}
               <div className="p-4 bg-blue-50 border-b border-blue-100">
                 <h3 className="text-sm font-semibold text-blue-800 mb-3 flex items-center gap-2">
                   <svg
@@ -419,16 +341,15 @@ export default function Programs() {
                   Filters
                 </h3>
                 <div className="flex flex-wrap gap-4">
-                  {/* Filter by Year */}
                   <div className="flex items-center gap-2">
                     <label
-                      htmlFor="filter-year"
+                      htmlFor="emba-filter-year"
                       className="text-sm font-medium text-gray-700"
                     >
                       Start Year:
                     </label>
                     <select
-                      id="filter-year"
+                      id="emba-filter-year"
                       value={filterYear}
                       onChange={(e) => setFilterYear(e.target.value)}
                       className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -437,29 +358,6 @@ export default function Programs() {
                       {availableYears.map((year) => (
                         <option key={year} value={year}>
                           {year}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Filter by Program Type */}
-                  <div className="flex items-center gap-2">
-                    <label
-                      htmlFor="filter-type"
-                      className="text-sm font-medium text-gray-700"
-                    >
-                      Program Type:
-                    </label>
-                    <select
-                      id="filter-type"
-                      value={filterType}
-                      onChange={(e) => setFilterType(e.target.value)}
-                      className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="all">All Types</option>
-                      {availableTypes.map((type) => (
-                        <option key={type} value={type}>
-                          {type}
                         </option>
                       ))}
                     </select>
@@ -494,13 +392,13 @@ export default function Programs() {
                 <div className="flex flex-wrap gap-4 items-center justify-between">
                   <div className="flex items-center gap-2">
                     <label
-                      htmlFor="sort-order"
+                      htmlFor="emba-sort-order"
                       className="text-sm font-medium text-gray-700"
                     >
                       Sort by Start Time:
                     </label>
                     <select
-                      id="sort-order"
+                      id="emba-sort-order"
                       value={sortOrder}
                       onChange={(e) =>
                         setSortOrder(e.target.value as "asc" | "desc")
@@ -511,8 +409,6 @@ export default function Programs() {
                       <option value="desc">Descending</option>
                     </select>
                   </div>
-
-                  {/* Results count */}
                   <div className="text-sm text-gray-500">
                     {programs.length} program{programs.length !== 1 ? "s" : ""}{" "}
                     found
@@ -524,9 +420,7 @@ export default function Programs() {
 
           {/* Programs Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {/* Program Cards */}
             {(loading ? [] : programs).map((program) => {
-              const colors = getProgramTypeColors(program.type);
               const showEnrollButton =
                 !program.isFree &&
                 program.hasAccess === false &&
@@ -535,26 +429,23 @@ export default function Programs() {
               return (
                 <div
                   key={program.id}
-                  className={`rounded-lg shadow-sm border transition-all duration-300 group ${colors.card} ${colors.shadow} relative`}
-                  style={{ aspectRatio: "3/4" }} // Height > Width
+                  className={`rounded-lg shadow-sm border transition-all duration-300 group ${EMBA_COLORS.card} ${EMBA_COLORS.shadow} relative`}
+                  style={{ aspectRatio: "3/4" }}
                 >
                   <div
                     onClick={() => handleProgramClick(program)}
                     className="p-6 h-full flex flex-col justify-between cursor-pointer"
                   >
-                    {/* Program Type Badge */}
                     <div className="mb-4">
                       <span
-                        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${colors.badge}`}
+                        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${EMBA_COLORS.badge}`}
                       >
                         {program.type}
                       </span>
                     </div>
-
-                    {/* Program Content */}
                     <div className="flex-1">
                       <h3
-                        className={`text-xl font-bold text-gray-900 transition-colors ${colors.title}`}
+                        className={`text-xl font-bold text-gray-900 transition-colors ${EMBA_COLORS.title}`}
                       >
                         {program.name}
                       </h3>
@@ -562,8 +453,6 @@ export default function Programs() {
                         {program.timeSpan}
                       </p>
                     </div>
-
-                    {/* Bottom Info */}
                     <div className="mt-6 pt-4 border-t border-white/30 relative">
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-gray-600 uppercase tracking-wider font-bold">
@@ -571,11 +460,10 @@ export default function Programs() {
                         </span>
                         {!program.isFree && !showEnrollButton && (
                           <div
-                            className={`w-3 h-3 rounded-full transition-colors ${colors.dot}`}
+                            className={`w-3 h-3 rounded-full transition-colors ${EMBA_COLORS.dot}`}
                           ></div>
                         )}
                       </div>
-                      {/* Free program check mark */}
                       {program.isFree && (
                         <img
                           src="/check.svg"
@@ -583,7 +471,6 @@ export default function Programs() {
                           className="w-8 h-8 text-green-600 absolute -bottom-2 -right-2"
                         />
                       )}
-                      {/* Enrolled/Access granted check mark (for paid programs user has access to) */}
                       {!program.isFree &&
                         program.hasAccess &&
                         (program.accessReason === "purchased" ||
@@ -595,7 +482,6 @@ export default function Programs() {
                             className="w-8 h-8 text-green-600 absolute -bottom-2 -right-2"
                           />
                         )}
-                      {/* Enroll Button - positioned like check mark */}
                       {showEnrollButton && (
                         <button
                           onClick={(e) => handleEnrollClick(e, program.id)}
@@ -610,21 +496,22 @@ export default function Programs() {
               );
             })}
 
-            {/* Loading placeholder (when some programs already rendered) */}
             {loading && programs.length > 0 && (
               <div className="col-span-1 sm:col-span-2 lg:grid-cols-3 xl:col-span-4 flex justify-center items-center min-h-48">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
               </div>
             )}
 
-            {/* Empty state (when not loading and no programs) */}
             {!loading && programs.length === 0 && (
               <div className="col-span-1 sm:col-span-2 lg:col-span-3 xl:col-span-4">
                 <div className="rounded-lg border border-gray-200 bg-white p-8 text-center text-gray-700">
-                  <p className="font-medium">No programs found.</p>
+                  <p className="font-medium">
+                    No EMBA Mentor Circles programs found.
+                  </p>
                   {canCreateProgram ? (
                     <p className="text-sm text-gray-500 mt-1">
-                      Click "Create Program" to add your first program.
+                      Click &quot;Create Program&quot; to add your first
+                      program.
                     </p>
                   ) : (
                     <p className="text-sm text-gray-500 mt-1">
@@ -640,7 +527,7 @@ export default function Programs() {
               <div
                 onClick={handleCreateProgram}
                 className="bg-gradient-to-br from-slate-50 to-gray-100 rounded-lg shadow-sm border-2 border-dashed border-gray-300 hover:border-green-400 hover:from-green-50 hover:to-emerald-100 transition-all duration-300 cursor-pointer group flex items-center justify-center hover:shadow-green-200/50"
-                style={{ aspectRatio: "3/4" }} // Height > Width
+                style={{ aspectRatio: "3/4" }}
               >
                 <div className="text-center">
                   <PlusIcon className="w-12 h-12 text-gray-400 group-hover:text-green-600 transition-colors mx-auto mb-4" />
@@ -657,7 +544,6 @@ export default function Programs() {
         </div>
       </div>
 
-      {/* Guest Login Modal */}
       {showLoginModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm mx-4 w-full">

@@ -14,6 +14,7 @@ import PassedEvents from "./pages/PassedEvents";
 import MyEvents from "./pages/MyEvents";
 import PublishedEvents from "./pages/PublishedEvents";
 import Programs from "./pages/Programs";
+import EMBAProgram from "./pages/EMBAProgram";
 import ProgramDetail from "./pages/ProgramDetail";
 import EnrollProgram from "./pages/EnrollProgram";
 import PurchaseSuccess from "./pages/PurchaseSuccess";
@@ -115,6 +116,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route path="emba-program" element={<EMBAProgram />} />
               <Route path="programs" element={<Programs />} />
               <Route path="programs/:id" element={<ProgramDetail />} />
               <Route path="programs/:id/enroll" element={<EnrollProgram />} />

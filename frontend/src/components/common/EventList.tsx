@@ -29,7 +29,7 @@ interface EventListProps {
     sortOrder: "asc" | "desc";
     onChange: (
       field: "date" | "title" | "organizer" | "type",
-      order: "asc" | "desc"
+      order: "asc" | "desc",
     ) => void;
   };
 }
@@ -91,12 +91,14 @@ export default function EventList({
       {/* Event Statistics */}
       <EventStatsCards stats={stats} type={type} />
 
-      {/* Event Calendar */}
-      <EventCalendar
-        events={events}
-        type="upcoming"
-        onEventClick={(eventId) => handleViewDetails(eventId)}
-      />
+      {/* Event Calendar (upcoming only) */}
+      {type === "upcoming" && (
+        <EventCalendar
+          events={events}
+          type="upcoming"
+          onEventClick={(eventId) => handleViewDetails(eventId)}
+        />
+      )}
 
       {/* Search and Filter Controls */}
       <div className={getCardClass(false, "medium")}>
@@ -166,7 +168,7 @@ export default function EventList({
                 const shown = Math.min(
                   pageSize,
                   pagination.totalEvents -
-                    (pagination.currentPage - 1) * pageSize
+                    (pagination.currentPage - 1) * pageSize,
                 );
                 return `Showing ${shown} of ${pagination.totalEvents} events`;
               })()
