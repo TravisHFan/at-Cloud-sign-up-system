@@ -20,7 +20,7 @@ export const FORM_SECTIONS = {
     description: "Tell us about yourself",
   },
   contact: {
-    title: "Contact Information",
+    title: "Other Contact Information",
     description: "How can we reach you",
   },
   ministry: {

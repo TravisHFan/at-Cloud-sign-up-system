@@ -103,8 +103,7 @@ export default function UsernameRequirements({
 
       {username.trim().length > 0 && reqs.every((r) => r.met) && (
         <p className="mt-3 text-sm text-blue-600">
-          Please remember your username. You can also use your email to log in
-          later.
+          You can log in later using either your email or your username.
         </p>
       )}
     </div>

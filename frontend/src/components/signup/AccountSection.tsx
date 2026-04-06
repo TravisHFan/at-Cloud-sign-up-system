@@ -3,7 +3,7 @@ import type { SignUpFormData } from "../../schemas/signUpSchema";
 import { FORM_SECTIONS } from "../../config/signUpConstants";
 import UniversalPasswordField from "../forms/common/UniversalPasswordField";
 import UniversalPasswordRequirements from "../forms/common/UniversalPasswordRequirements";
-import FormField from "../forms/FormField";
+import { FormField } from "../ui";
 import UsernameRequirements from "../forms/common/UsernameRequirements";
 import { FormSectionWrapper } from "../forms/common";
 
@@ -25,6 +25,18 @@ export default function AccountSection({
       title={FORM_SECTIONS.account.title}
       description={FORM_SECTIONS.account.description}
     >
+      {/* Email */}
+      <FormField
+        label="Email"
+        name="email"
+        register={register}
+        errors={errors}
+        type="email"
+        placeholder="Enter your email address"
+        required={true}
+        helperText="You can log in later using either your email or your username."
+      />
+
       {/* Username */}
       <FormField
         label="Username"

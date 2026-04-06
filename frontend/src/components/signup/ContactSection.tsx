@@ -18,28 +18,15 @@ export default function ContactSection({
       title={FORM_SECTIONS.contact.title}
       description={FORM_SECTIONS.contact.description}
     >
-      {/* Contact Fields */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormField
-          label="Email"
-          name="email"
-          register={register}
-          errors={errors}
-          type="email"
-          placeholder="Enter your email address"
-          required={true}
-          helperText="You can also use your email to log in later."
-        />
-        <FormField
-          label="Phone"
-          name="phone"
-          register={register}
-          errors={errors}
-          type="tel"
-          placeholder="Enter your phone number"
-          required={false}
-        />
-      </div>
+      <FormField
+        label="Phone"
+        name="phone"
+        register={register}
+        errors={errors}
+        type="tel"
+        placeholder="Enter your phone number"
+        required={false}
+      />
     </FormSectionWrapper>
   );
 }
