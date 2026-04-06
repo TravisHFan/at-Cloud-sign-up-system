@@ -78,8 +78,8 @@ export const handleValidationErrors = (
 // User validation rules
 export const validateUserRegistration = [
   body("username")
-    .isLength({ min: 3, max: 20 })
-    .withMessage("Username must be between 3 and 20 characters")
+    .isLength({ min: 3, max: 40 })
+    .withMessage("Username must be between 3 and 40 characters")
     .custom((value) => {
       if (typeof value !== "string") throw new Error("Invalid username");
       // Option C rules

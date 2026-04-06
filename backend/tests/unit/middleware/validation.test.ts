@@ -47,7 +47,7 @@ import {
 const createMockRequest = (
   body: any = {},
   params: any = {},
-  query: any = {}
+  query: any = {},
 ): Partial<Request> => ({
   body,
   params,
@@ -157,7 +157,7 @@ describe("Validation Middleware", () => {
           ],
         },
         {},
-        {}
+        {},
       ) as Request;
       (req as any).method = "POST";
       (req as any).originalUrl = "/api/events";
@@ -181,7 +181,7 @@ describe("Validation Middleware", () => {
         expect(Array.isArray(validateUserRegistration)).toBe(true);
         expect(validateUserRegistration.length).toBeGreaterThan(0);
         expect(
-          validateUserRegistration[validateUserRegistration.length - 1]
+          validateUserRegistration[validateUserRegistration.length - 1],
         ).toBe(handleValidationErrors);
       });
 
@@ -198,7 +198,7 @@ describe("Validation Middleware", () => {
         expect(Array.isArray(validateUserLogin)).toBe(true);
         expect(validateUserLogin.length).toBeGreaterThan(0);
         expect(validateUserLogin[validateUserLogin.length - 1]).toBe(
-          handleValidationErrors
+          handleValidationErrors,
         );
       });
 
@@ -213,7 +213,7 @@ describe("Validation Middleware", () => {
         expect(Array.isArray(validateUserUpdate)).toBe(true);
         expect(validateUserUpdate.length).toBeGreaterThan(0);
         expect(validateUserUpdate[validateUserUpdate.length - 1]).toBe(
-          handleValidationErrors
+          handleValidationErrors,
         );
       });
 
@@ -228,7 +228,7 @@ describe("Validation Middleware", () => {
         expect(Array.isArray(validateEventCreation)).toBe(true);
         expect(validateEventCreation.length).toBeGreaterThan(0);
         expect(validateEventCreation[validateEventCreation.length - 1]).toBe(
-          handleValidationErrors
+          handleValidationErrors,
         );
       });
 
@@ -243,7 +243,7 @@ describe("Validation Middleware", () => {
         expect(Array.isArray(validateSearch)).toBe(true);
         expect(validateSearch.length).toBeGreaterThan(0);
         expect(validateSearch[validateSearch.length - 1]).toBe(
-          handleValidationErrors
+          handleValidationErrors,
         );
       });
 
@@ -258,7 +258,7 @@ describe("Validation Middleware", () => {
         expect(Array.isArray(validateObjectId)).toBe(true);
         expect(validateObjectId.length).toBeGreaterThan(0);
         expect(validateObjectId[validateObjectId.length - 1]).toBe(
-          handleValidationErrors
+          handleValidationErrors,
         );
       });
 
@@ -297,7 +297,7 @@ describe("Validation Middleware", () => {
         expect(Array.isArray(validateSystemMessage)).toBe(true);
         expect(validateSystemMessage.length).toBeGreaterThan(0);
         expect(validateSystemMessage[validateSystemMessage.length - 1]).toBe(
-          handleValidationErrors
+          handleValidationErrors,
         );
       });
 
@@ -337,7 +337,7 @@ describe("Validation Middleware", () => {
       const mockErrors = [
         {
           field: "username",
-          msg: "Username must be between 3 and 20 characters",
+          msg: "Username must be between 3 and 40 characters",
         },
         { field: "email", msg: "Please provide a valid email address" },
         {
@@ -484,7 +484,7 @@ describe("Validation Middleware", () => {
 
       validationArrays.forEach((validationArray) => {
         expect(validationArray[validationArray.length - 1]).toBe(
-          handleValidationErrors
+          handleValidationErrors,
         );
       });
     });

@@ -8,10 +8,10 @@ export const commonValidations = {
     .string()
     .required("Username is required")
     .min(3, "Username must be at least 3 characters")
-    .max(20, "Username must not exceed 20 characters")
+    .max(40, "Username must not exceed 40 characters")
     .matches(
       /^[a-zA-Z0-9_]+$/,
-      "Username can only contain letters, numbers, and underscores"
+      "Username can only contain letters, numbers, and underscores",
     ),
 
   firstName: yup
@@ -69,7 +69,7 @@ export const commonValidations = {
     is: "Yes",
     then: (schema) =>
       schema.required(
-        "Role in @Cloud is required when you are an @Cloud Co-worker"
+        "Role in @Cloud is required when you are an @Cloud Co-worker",
       ),
     otherwise: (schema) => schema.notRequired(),
   }),
@@ -170,7 +170,7 @@ export const eventSchema = yup.object({
 export const validateField = async (
   fieldName: string,
   value: unknown,
-  schema: yup.AnyObjectSchema
+  schema: yup.AnyObjectSchema,
 ): Promise<{ isValid: boolean; error?: string }> => {
   try {
     await schema.validateAt(fieldName, { [fieldName]: value });
@@ -185,7 +185,7 @@ export const validateField = async (
 
 export const validateForm = async (
   data: unknown,
-  schema: yup.AnyObjectSchema
+  schema: yup.AnyObjectSchema,
 ): Promise<{ isValid: boolean; errors?: Record<string, string> }> => {
   try {
     await schema.validate(data, { abortEarly: false });

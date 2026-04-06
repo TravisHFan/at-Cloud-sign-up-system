@@ -5,11 +5,11 @@ export class ValidationRules {
   static userRegistration(): ValidationChain[] {
     return [
       body("username")
-        .isLength({ min: 3, max: 20 })
-        .withMessage("Username must be between 3 and 20 characters")
+        .isLength({ min: 3, max: 40 })
+        .withMessage("Username must be between 3 and 40 characters")
         .matches(/^[a-zA-Z0-9_]+$/)
         .withMessage(
-          "Username can only contain letters, numbers, and underscores"
+          "Username can only contain letters, numbers, and underscores",
         ),
 
       body("email").isEmail().withMessage("Please provide a valid email"),
@@ -19,7 +19,7 @@ export class ValidationRules {
         .withMessage("Password must be at least 8 characters long")
         .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d@$!%*?&]/)
         .withMessage(
-          "Password must contain at least one uppercase letter, one lowercase letter, and one number"
+          "Password must contain at least one uppercase letter, one lowercase letter, and one number",
         ),
 
       body("confirmPassword").custom((value, { req }) => {
@@ -52,7 +52,7 @@ export class ValidationRules {
         .if(body("isAtCloudLeader").equals("true"))
         .notEmpty()
         .withMessage(
-          "Role in @Cloud is required when user is an @Cloud co-worker"
+          "Role in @Cloud is required when user is an @Cloud co-worker",
         ),
 
       body("phone")
@@ -85,8 +85,8 @@ export class ValidationRules {
     return [
       body("username")
         .optional()
-        .isLength({ min: 3, max: 20 })
-        .withMessage("Username must be between 3 and 20 characters"),
+        .isLength({ min: 3, max: 40 })
+        .withMessage("Username must be between 3 and 40 characters"),
 
       body("email")
         .optional()
@@ -191,14 +191,14 @@ export class ValidationRules {
         .optional()
         .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
         .withMessage(
-          "Role start time must be in HH:mm format (e.g., 09:30, 14:15)"
+          "Role start time must be in HH:mm format (e.g., 09:30, 14:15)",
         ),
 
       body("roles.*.endTime")
         .optional()
         .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
         .withMessage(
-          "Role end time must be in HH:mm format (e.g., 09:30, 14:15)"
+          "Role end time must be in HH:mm format (e.g., 09:30, 14:15)",
         ),
     ];
   }

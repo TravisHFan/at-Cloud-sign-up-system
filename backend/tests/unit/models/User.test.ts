@@ -46,7 +46,7 @@ describe("User Model", () => {
         const error = user.validateSync();
         expect(error?.errors?.username).toBeDefined();
         expect(error?.errors?.username?.message).toContain(
-          "Username is required"
+          "Username is required",
         );
       });
 
@@ -56,7 +56,7 @@ describe("User Model", () => {
         const error = user.validateSync();
         expect(error?.errors?.email).toBeDefined();
         expect(error?.errors?.email?.message).toContain(
-          "Email address is required"
+          "Email address is required",
         );
       });
 
@@ -66,7 +66,7 @@ describe("User Model", () => {
         const error = user.validateSync();
         expect(error?.errors?.password).toBeDefined();
         expect(error?.errors?.password?.message).toContain(
-          "Password is required"
+          "Password is required",
         );
       });
 
@@ -95,16 +95,16 @@ describe("User Model", () => {
         const error = user.validateSync();
         expect(error?.errors?.username).toBeDefined();
         expect(error?.errors?.username?.message).toContain(
-          "at least 3 characters"
+          "at least 3 characters",
         );
       });
 
       it("should reject username too long", () => {
-        const user = new User({ ...userData, username: "a".repeat(21) });
+        const user = new User({ ...userData, username: "a".repeat(41) });
         const error = user.validateSync();
         expect(error?.errors?.username).toBeDefined();
         expect(error?.errors?.username?.message).toContain(
-          "cannot exceed 20 characters"
+          "cannot exceed 40 characters",
         );
       });
 
@@ -185,7 +185,7 @@ describe("User Model", () => {
         const error = user.validateSync();
         expect(error?.errors?.password).toBeDefined();
         expect(error?.errors?.password?.message).toContain(
-          "at least 8 characters"
+          "at least 8 characters",
         );
       });
 
@@ -269,7 +269,7 @@ describe("User Model", () => {
         const error = user.validateSync();
         expect(error?.errors?.roleInAtCloud).toBeDefined();
         expect(error?.errors?.roleInAtCloud?.message).toContain(
-          "required for @Cloud co-workers"
+          "required for @Cloud co-workers",
         );
       });
 
@@ -316,7 +316,7 @@ describe("User Model", () => {
           const error = user.validateSync();
           expect(error?.errors?.[field]).toBeDefined();
           expect(error?.errors?.[field]?.message).toContain(
-            `cannot exceed ${maxLength} characters`
+            `cannot exceed ${maxLength} characters`,
           );
         });
       });
@@ -448,7 +448,7 @@ describe("User Model", () => {
         expect(result).toBe(true);
         expect(compareSpy).toHaveBeenCalledWith(
           "TestPassword123",
-          user.password
+          user.password,
         );
 
         compareSpy.mockRestore();
@@ -471,7 +471,7 @@ describe("User Model", () => {
           .mockRejectedValue(new Error("Bcrypt error"));
 
         await expect(user.comparePassword("password")).rejects.toThrow(
-          "Password comparison failed"
+          "Password comparison failed",
         );
 
         compareSpy.mockRestore();
@@ -486,7 +486,7 @@ describe("User Model", () => {
         (userWithoutPassword as any).password = undefined;
 
         await expect(
-          userWithoutPassword.comparePassword("anypassword")
+          userWithoutPassword.comparePassword("anypassword"),
         ).rejects.toThrow("Password comparison failed");
       });
     });
@@ -509,7 +509,7 @@ describe("User Model", () => {
         expect(user.emailVerificationToken).toBe("hashedtoken");
         expect(user.emailVerificationExpires).toBeInstanceOf(Date);
         expect(user.emailVerificationExpires!.getTime()).toBeGreaterThan(
-          Date.now()
+          Date.now(),
         );
 
         randomBytesSpy.mockRestore();
@@ -535,7 +535,7 @@ describe("User Model", () => {
         expect(user.passwordResetToken).toBe("hashedtoken");
         expect(user.passwordResetExpires).toBeInstanceOf(Date);
         expect(user.passwordResetExpires!.getTime()).toBeGreaterThan(
-          Date.now()
+          Date.now(),
         );
 
         randomBytesSpy.mockRestore();

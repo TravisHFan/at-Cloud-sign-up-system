@@ -16,8 +16,8 @@ describe("Validation Utils", () => {
       expect(result).toBe(false);
     });
 
-    it("should reject username longer than 20 characters", async () => {
-      const result = await commonValidations.username.isValid("a".repeat(21));
+    it("should reject username longer than 40 characters", async () => {
+      const result = await commonValidations.username.isValid("a".repeat(41));
       expect(result).toBe(false);
     });
 
@@ -231,7 +231,7 @@ describe("Validation Utils", () => {
 
     it("should reject home address longer than 200 characters", async () => {
       const result = await commonValidations.homeAddress.isValid(
-        "a".repeat(201)
+        "a".repeat(201),
       );
       expect(result).toBe(false);
     });
@@ -266,9 +266,8 @@ describe("Validation Utils", () => {
 
   describe("eventTitle validation", () => {
     it("should validate a correct event title", async () => {
-      const result = await commonValidations.eventTitle.isValid(
-        "Summer Workshop"
-      );
+      const result =
+        await commonValidations.eventTitle.isValid("Summer Workshop");
       expect(result).toBe(true);
     });
 
@@ -279,7 +278,7 @@ describe("Validation Utils", () => {
 
     it("should reject event title longer than 100 characters", async () => {
       const result = await commonValidations.eventTitle.isValid(
-        "a".repeat(101)
+        "a".repeat(101),
       );
       expect(result).toBe(false);
     });
@@ -293,7 +292,7 @@ describe("Validation Utils", () => {
   describe("eventDescription validation", () => {
     it("should validate a correct event description", async () => {
       const result = await commonValidations.eventDescription.isValid(
-        "This is a great workshop for everyone to learn new skills"
+        "This is a great workshop for everyone to learn new skills",
       );
       expect(result).toBe(true);
     });
@@ -305,7 +304,7 @@ describe("Validation Utils", () => {
 
     it("should reject event description longer than 1000 characters", async () => {
       const result = await commonValidations.eventDescription.isValid(
-        "a".repeat(1001)
+        "a".repeat(1001),
       );
       expect(result).toBe(false);
     });
@@ -318,9 +317,8 @@ describe("Validation Utils", () => {
 
   describe("currentPassword validation", () => {
     it("should validate a current password", async () => {
-      const result = await commonValidations.currentPassword.isValid(
-        "password123"
-      );
+      const result =
+        await commonValidations.currentPassword.isValid("password123");
       expect(result).toBe(true);
     });
 

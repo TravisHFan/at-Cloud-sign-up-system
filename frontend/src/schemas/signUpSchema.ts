@@ -6,26 +6,26 @@ export const signUpSchema = yup.object({
     .string()
     .required("Username is required")
     .min(3, "Username must be at least 3 characters")
-    .max(20, "Username must be less than 20 characters")
+    .max(40, "Username must be less than 40 characters")
     .transform((v) => (typeof v === "string" ? v.toLowerCase().trim() : v))
     .test(
       "start-letter",
       "Username must start with a letter",
-      (v) => !v || /^[a-z]/.test(v)
+      (v) => !v || /^[a-z]/.test(v),
     )
     .matches(
       /^[a-z0-9_]+$/,
-      "Username can only contain lowercase letters, numbers, and underscores"
+      "Username can only contain lowercase letters, numbers, and underscores",
     )
     .test(
       "no-double-underscore",
       "Username cannot contain consecutive underscores",
-      (v) => !v || !/__/.test(v)
+      (v) => !v || !/__/.test(v),
     )
     .test(
       "no-edge-underscore",
       "Username cannot start or end with an underscore",
-      (v) => !v || !/^_|_$/.test(v)
+      (v) => !v || !/^_|_$/.test(v),
     ),
 
   password: passwordValidation.password,
