@@ -6,7 +6,7 @@ export const signUpSchema = yup.object({
     .string()
     .required("Username is required")
     .min(3, "Username must be at least 3 characters")
-    .max(40, "Username must be less than 40 characters")
+    .max(20, "Username must be less than 20 characters")
     .transform((v) => (typeof v === "string" ? v.toLowerCase().trim() : v))
     .test(
       "start-letter",

@@ -16,8 +16,8 @@ describe("Validation Utils", () => {
       expect(result).toBe(false);
     });
 
-    it("should reject username longer than 40 characters", async () => {
-      const result = await commonValidations.username.isValid("a".repeat(41));
+    it("should reject username longer than 20 characters", async () => {
+      const result = await commonValidations.username.isValid("a".repeat(21));
       expect(result).toBe(false);
     });
 

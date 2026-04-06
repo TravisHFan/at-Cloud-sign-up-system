@@ -46,7 +46,7 @@ const options = {
             username: {
               type: "string",
               description:
-                "Unique username, 3-40 chars, lowercase [a-z0-9_], start with a letter, no consecutive or edge underscores",
+                "Unique username, 3-20 chars, lowercase [a-z0-9_], start with a letter, no consecutive or edge underscores",
               example: "john_doe",
             },
             email: {

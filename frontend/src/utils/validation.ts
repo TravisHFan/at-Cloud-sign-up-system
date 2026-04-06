@@ -8,7 +8,7 @@ export const commonValidations = {
     .string()
     .required("Username is required")
     .min(3, "Username must be at least 3 characters")
-    .max(40, "Username must not exceed 40 characters")
+    .max(20, "Username must not exceed 20 characters")
     .matches(
       /^[a-zA-Z0-9_]+$/,
       "Username can only contain letters, numbers, and underscores",

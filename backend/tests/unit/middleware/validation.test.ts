@@ -337,7 +337,7 @@ describe("Validation Middleware", () => {
       const mockErrors = [
         {
           field: "username",
-          msg: "Username must be between 3 and 40 characters",
+          msg: "Username must be between 3 and 20 characters",
         },
         { field: "email", msg: "Please provide a valid email address" },
         {

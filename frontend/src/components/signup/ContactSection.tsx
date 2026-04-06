@@ -28,6 +28,7 @@ export default function ContactSection({
           type="email"
           placeholder="Enter your email address"
           required={true}
+          helperText="You can also use your email to log in later."
         />
         <FormField
           label="Phone"

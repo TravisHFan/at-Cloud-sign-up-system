@@ -12,7 +12,7 @@ describe("Event registration user fields (role + systemAuthorizationLevel)", () 
     .toString(36)
     .slice(2, 8)}`;
   const adminEmail = `fields.admin.${uniq}@example.com`;
-  // Keep usernames under 40 chars per validation rules
+  // Keep usernames under 20 chars per validation rules
   const short = uniq.slice(0, 12);
   const adminUsername = `fa_${short}`;
   const leaderEmail = `fields.leader.${uniq}@example.com`;

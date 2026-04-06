@@ -5,8 +5,8 @@ export class ValidationRules {
   static userRegistration(): ValidationChain[] {
     return [
       body("username")
-        .isLength({ min: 3, max: 40 })
-        .withMessage("Username must be between 3 and 40 characters")
+        .isLength({ min: 3, max: 20 })
+        .withMessage("Username must be between 3 and 20 characters")
         .matches(/^[a-zA-Z0-9_]+$/)
         .withMessage(
           "Username can only contain letters, numbers, and underscores",
@@ -85,8 +85,8 @@ export class ValidationRules {
     return [
       body("username")
         .optional()
-        .isLength({ min: 3, max: 40 })
-        .withMessage("Username must be between 3 and 40 characters"),
+        .isLength({ min: 3, max: 20 })
+        .withMessage("Username must be between 3 and 20 characters"),
 
       body("email")
         .optional()

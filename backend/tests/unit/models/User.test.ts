@@ -100,11 +100,11 @@ describe("User Model", () => {
       });
 
       it("should reject username too long", () => {
-        const user = new User({ ...userData, username: "a".repeat(41) });
+        const user = new User({ ...userData, username: "a".repeat(21) });
         const error = user.validateSync();
         expect(error?.errors?.username).toBeDefined();
         expect(error?.errors?.username?.message).toContain(
-          "cannot exceed 40 characters",
+          "cannot exceed 20 characters",
         );
       });
 

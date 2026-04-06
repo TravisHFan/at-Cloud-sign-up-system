@@ -85,8 +85,8 @@ export default function UsernameRequirements({
                 r.met
                   ? "text-green-700"
                   : r.required
-                  ? "text-gray-600"
-                  : "text-blue-600"
+                    ? "text-gray-600"
+                    : "text-blue-600"
               }`}
             >
               {r.label}
@@ -100,6 +100,13 @@ export default function UsernameRequirements({
           Usernames are case-insensitive and must meet all required rules.
         </p>
       </div>
+
+      {username.trim().length > 0 && reqs.every((r) => r.met) && (
+        <p className="mt-3 text-sm text-blue-600">
+          Please remember your username. You can also use your email to log in
+          later.
+        </p>
+      )}
     </div>
   );
 }

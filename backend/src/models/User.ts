@@ -79,21 +79,21 @@ const userSchema: Schema = new Schema(
       unique: true,
       trim: true,
       minlength: [3, "Username must be at least 3 characters long"],
-      maxlength: [40, "Username cannot exceed 40 characters"],
+      maxlength: [20, "Username cannot exceed 20 characters"],
       validate: {
         validator: function (value: string) {
           if (!value) return false;
           // Option C rules:
           // - lowercase only [a-z0-9_]
-          // - 3-40 chars
+          // - 3-20 chars
           // - start with a letter
           // - end with letter/number (no trailing underscore)
           // - no consecutive underscores
-          const re = /^(?!.*__)[a-z][a-z0-9_]{1,38}[a-z0-9]$/;
+          const re = /^(?!.*__)[a-z][a-z0-9_]{1,18}[a-z0-9]$/;
           return re.test(value);
         },
         message:
-          "Username must be 3-40 chars, lowercase letters/numbers/underscore, start with a letter, no consecutive or edge underscores",
+          "Username must be 3-20 chars, lowercase letters/numbers/underscore, start with a letter, no consecutive or edge underscores",
       },
     },
     // Shadow field for case-insensitive uniqueness
