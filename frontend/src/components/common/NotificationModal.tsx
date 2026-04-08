@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import Icon from "./Icon";
 
@@ -35,9 +34,6 @@ export default function NotificationModal({
   showCloseButton = true,
   closeButtonText,
 }: NotificationModalProps) {
-  // No auto-close behavior; modal stays until user action.
-  useEffect(() => {}, []);
-
   if (!isOpen) return null;
 
   const getTypeStyles = () => {
@@ -167,6 +163,6 @@ export default function NotificationModal({
         </div>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }

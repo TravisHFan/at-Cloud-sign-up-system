@@ -14,6 +14,7 @@ const GUEST_ALLOWED_PATTERNS: RegExp[] = [
   /^\/dashboard\/welcome\/?$/i,
   /^\/dashboard\/programs\/?$/i,
   /^\/dashboard\/programs\/[a-f0-9]{24}\/?$/i, // program detail
+  /^\/dashboard\/emba-program\/?$/i,
   /^\/dashboard\/upcoming\/?$/i,
   /^\/dashboard\/passed\/?$/i,
   /^\/dashboard\/donate\/?$/i,

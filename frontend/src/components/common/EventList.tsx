@@ -1,4 +1,6 @@
+import { useNavigate } from "react-router-dom";
 import { useEventList } from "../../hooks/useEventList";
+import { useAuth } from "../../hooks/useAuth";
 import EventStatsCards from "../events/EventStatsCards";
 import EventListItem from "../events/EventListItem";
 import EventCalendar from "../events/EventCalendar";
@@ -69,6 +71,24 @@ export default function EventList({
     },
   });
 
+  const { currentUser } = useAuth();
+  const navigate = useNavigate();
+
+  // Calendar click: guests navigate to the public page if a slug exists,
+  // authenticated users go to the dashboard event detail page.
+  const handleCalendarEventClick = (eventId: string) => {
+    if (currentUser) {
+      handleViewDetails(eventId);
+      return;
+    }
+    const event = events.find((e) => e._id === eventId || e.id === eventId);
+    if (event?.publicSlug) {
+      navigate(`/p/${event.publicSlug}`);
+    } else {
+      handleViewDetails(eventId);
+    }
+  };
+
   // Get sort icon
   const getSortIcon = (field: string) => {
     if (sortBy !== field) return null;
@@ -96,7 +116,7 @@ export default function EventList({
         <EventCalendar
           events={events}
           type="upcoming"
-          onEventClick={(eventId) => handleViewDetails(eventId)}
+          onEventClick={(eventId) => handleCalendarEventClick(eventId)}
         />
       )}
 

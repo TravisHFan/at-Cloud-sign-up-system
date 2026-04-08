@@ -3,6 +3,8 @@ import React, {
   useContext,
   useState,
   useCallback,
+  useEffect,
+  useRef,
   useMemo,
 } from "react";
 import NotificationModal from "../components/common/NotificationModal";
@@ -39,14 +41,14 @@ interface NotificationContextType {
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(
-  undefined
+  undefined,
 );
 
 export const useNotification = () => {
   const context = useContext(NotificationContext);
   if (context === undefined) {
     throw new Error(
-      "useNotification must be used within a NotificationProvider"
+      "useNotification must be used within a NotificationProvider",
     );
   }
   return context;
@@ -60,9 +62,18 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
   children,
 }) => {
   const [notification, setNotification] = useState<NotificationOptions | null>(
-    null
+    null,
   );
   const [locked, setLocked] = useState(false);
+  const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Clear any pending auto-close timer
+  const clearAutoCloseTimer = useCallback(() => {
+    if (autoCloseTimerRef.current) {
+      clearTimeout(autoCloseTimerRef.current);
+      autoCloseTimerRef.current = null;
+    }
+  }, []);
 
   const showNotification = useCallback(
     (options: NotificationOptions) => {
@@ -70,13 +81,15 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
       if (locked) return;
       // Suppress error notifications when session has expired (SessionExpiredModal handles it)
       if (options.type === "error" && isSessionExpiredPromptShown()) return;
+      clearAutoCloseTimer();
       setNotification(options);
       if (options.lockUntilClose) setLocked(true);
     },
-    [locked]
+    [locked, clearAutoCloseTimer],
   );
 
   const hideNotification = useCallback(() => {
+    clearAutoCloseTimer();
     // Capture current, clear, then invoke its onClose
     setNotification((current) => {
       if (current) {
@@ -85,13 +98,23 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
       return null;
     });
     setLocked(false);
-  }, []);
+  }, [clearAutoCloseTimer]);
+
+  // Auto-close timer: start when notification has autoClose enabled
+  useEffect(() => {
+    if (notification?.autoClose && notification.autoCloseDelay) {
+      autoCloseTimerRef.current = setTimeout(() => {
+        hideNotification();
+      }, notification.autoCloseDelay);
+    }
+    return () => clearAutoCloseTimer();
+  }, [notification, hideNotification, clearAutoCloseTimer]);
 
   // Keep context value stable across renders to avoid unnecessary re-renders
   // and prevent dependency loops in consumers that include the whole context in deps.
   const contextValue = useMemo(
     () => ({ showNotification, hideNotification }),
-    [showNotification, hideNotification]
+    [showNotification, hideNotification],
   );
 
   return (
@@ -128,7 +151,7 @@ export const useToastReplacement = () => {
         ...options,
       });
     },
-    [showNotification]
+    [showNotification],
   );
 
   const error = useCallback(
@@ -142,7 +165,7 @@ export const useToastReplacement = () => {
         ...options,
       });
     },
-    [showNotification]
+    [showNotification],
   );
 
   const warning = useCallback(
@@ -156,7 +179,7 @@ export const useToastReplacement = () => {
         ...options,
       });
     },
-    [showNotification]
+    [showNotification],
   );
 
   const info = useCallback(
@@ -170,12 +193,12 @@ export const useToastReplacement = () => {
         ...options,
       });
     },
-    [showNotification]
+    [showNotification],
   );
 
   // Memoize object to keep stable reference if consumers depend on it as a whole
   return useMemo(
     () => ({ success, error, warning, info }),
-    [success, error, warning, info]
+    [success, error, warning, info],
   );
 };
