@@ -81,7 +81,7 @@ export default function EventList({
       handleViewDetails(eventId);
       return;
     }
-    const event = events.find((e) => e._id === eventId || e.id === eventId);
+    const event = events.find((e) => e.id === eventId);
     if (event?.publicSlug) {
       navigate(`/p/${event.publicSlug}`);
     } else {
