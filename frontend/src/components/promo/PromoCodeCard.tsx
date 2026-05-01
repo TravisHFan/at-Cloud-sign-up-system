@@ -13,7 +13,7 @@ export interface PromoCodeCardProps {
   code: string;
   type: "bundle_discount" | "staff_access" | "reward";
   discountAmount?: number; // For bundle: dollar amount (e.g., 50 for $50 off)
-  discountPercent?: number; // For staff: 100 (100% off) | For reward: 10-100%
+  discountPercent?: number; // For staff/reward: 10-100%
   expiresAt?: string; // ISO date string
   isUsed: boolean;
   usedForProgramTitle?: string;
@@ -92,7 +92,7 @@ export default function PromoCodeCard({
       ? "Bundle Discount"
       : type === "reward"
       ? "Reward"
-      : "Staff Access";
+      : "Staff Discount";
 
   // Get theme colors
   const getThemeColors = () => {

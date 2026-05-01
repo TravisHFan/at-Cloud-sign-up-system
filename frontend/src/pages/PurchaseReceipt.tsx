@@ -404,8 +404,8 @@ export default function PurchaseReceipt() {
                     <tr>
                       <td className="py-3 text-gray-900">
                         <div className="flex items-center">
-                          {receipt.promoDiscountPercent === 100
-                            ? "Staff Discount (100%)"
+                          {receipt.promoDiscountPercent
+                            ? `Promo Code Discount (${receipt.promoDiscountPercent}%)`
                             : "Promo Code Discount"}
                           <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
                             {receipt.promoCode}

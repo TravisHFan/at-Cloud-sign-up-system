@@ -11,6 +11,7 @@ import { apiClient } from "../../../services/api";
 import Button from "../../ui/Button";
 import LoadingSpinner from "../../common/LoadingSpinner";
 import UserSelectionModal from "../UserSelectionModal";
+import DiscountPercentageControl from "./DiscountPercentageControl";
 
 // ============================================================================
 // TypeScript Interfaces
@@ -348,42 +349,10 @@ export default function RewardCodeCreator({
           )}
         </div>
 
-        {/* Discount Percentage Slider */}
-        <div>
-          <label className="block text-base font-medium text-gray-700 mb-2">
-            Discount Percentage <span className="text-red-500">*</span>
-          </label>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-2xl font-bold text-purple-600">
-                {discountPercent}%
-              </span>
-              <span className="text-sm text-gray-500">
-                User will pay {100 - discountPercent}%
-              </span>
-            </div>
-            <input
-              type="range"
-              min="10"
-              max="100"
-              step="5"
-              value={discountPercent}
-              onChange={(e) => setDiscountPercent(Number(e.target.value))}
-              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
-              style={{
-                background: `linear-gradient(to right, rgb(147, 51, 234) 0%, rgb(147, 51, 234) ${
-                  ((discountPercent - 10) / 90) * 100
-                }%, rgb(229, 231, 235) ${
-                  ((discountPercent - 10) / 90) * 100
-                }%, rgb(229, 231, 235) 100%)`,
-              }}
-            />
-            <div className="flex justify-between text-xs text-gray-500">
-              <span>10% (Minimum)</span>
-              <span>100% (Maximum)</span>
-            </div>
-          </div>
-        </div>
+        <DiscountPercentageControl
+          value={discountPercent}
+          onChange={setDiscountPercent}
+        />
 
         {/* Access Scope Selection */}
         <div>

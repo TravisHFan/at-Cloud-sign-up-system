@@ -45,7 +45,7 @@ export interface IPromoCode extends Document, IPromoCodeMethods {
 
   // Discount configuration
   discountAmount?: number; // For bundle_discount: dollar amount (e.g., 50 for $50 off)
-  discountPercent?: number; // For staff_access/reward: typically 100 for staff, 10-100 for reward
+  discountPercent?: number; // For staff_access/reward percentage discounts
 
   // General code fields (for staff codes not tied to a specific user)
   isGeneral?: boolean; // True for general staff codes (no owner, all programs, unlimited uses)

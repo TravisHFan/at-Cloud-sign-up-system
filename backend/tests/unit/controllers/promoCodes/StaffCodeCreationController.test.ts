@@ -170,12 +170,12 @@ describe("StaffCodeCreationController", () => {
         expect(statusMock).toHaveBeenCalledWith(400);
         expect(jsonMock).toHaveBeenCalledWith({
           success: false,
-          message: "Discount percent must be between 0 and 100.",
+          message: "Discount percent must be between 10 and 100.",
         });
       });
 
-      it("should return 400 if discountPercent is negative", async () => {
-        mockReq.body = { userId: testUserId, discountPercent: -10 };
+      it("should return 400 if discountPercent is below 10", async () => {
+        mockReq.body = { userId: testUserId, discountPercent: 0 };
 
         await StaffCodeCreationController.createStaffCode(
           mockReq as Request,
@@ -185,7 +185,7 @@ describe("StaffCodeCreationController", () => {
         expect(statusMock).toHaveBeenCalledWith(400);
         expect(jsonMock).toHaveBeenCalledWith({
           success: false,
-          message: "Discount percent must be between 0 and 100.",
+          message: "Discount percent must be between 10 and 100.",
         });
       });
 
@@ -200,19 +200,19 @@ describe("StaffCodeCreationController", () => {
         expect(statusMock).toHaveBeenCalledWith(400);
         expect(jsonMock).toHaveBeenCalledWith({
           success: false,
-          message: "Discount percent must be between 0 and 100.",
+          message: "Discount percent must be between 10 and 100.",
         });
       });
 
-      it("should accept 0 as valid discountPercent", async () => {
-        mockReq.body = { userId: testUserId, discountPercent: 0 };
+      it("should accept 10 as valid discountPercent", async () => {
+        mockReq.body = { userId: testUserId, discountPercent: 10 };
 
         vi.mocked(PromoCode.generateUniqueCode).mockResolvedValue("STAFF123");
         const mockPromoCode = {
           _id: new mongoose.Types.ObjectId(),
           code: "STAFF123",
           type: "staff_access",
-          discountPercent: 0,
+          discountPercent: 10,
           ownerId: testUserId,
           isActive: true,
           createdBy: "admin",
@@ -849,6 +849,7 @@ describe("StaffCodeCreationController", () => {
           promoCode: "NOTIFY123",
           discountPercent: 75,
           allowedPrograms: undefined,
+          allowedEvents: undefined,
           expiresAt: undefined,
           createdBy: "admin",
         });
@@ -951,6 +952,7 @@ describe("StaffCodeCreationController", () => {
               ownerEmail: "user@test.com",
               ownerName: "Test User",
               allowedProgramIds: undefined,
+              allowedEventIds: undefined,
               expiresAt: undefined,
               isActive: true,
               createdAt,

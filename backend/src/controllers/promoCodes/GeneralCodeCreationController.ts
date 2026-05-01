@@ -1,6 +1,6 @@
 /**
  * GeneralCodeCreationController
- * Handles creation of general staff promo codes
+ * Handles creation of general staff discount promo codes
  * Extracted from promoCodeController.ts
  */
 
@@ -9,9 +9,9 @@ import { PromoCode } from "../../models";
 
 export default class GeneralCodeCreationController {
   /**
-   * Create general staff access promo code (Admin only)
+   * Create general staff discount promo code (Admin only)
    * POST /api/promo-codes/staff/general
-   * Body: { description: string, discountPercent: number, expiresAt?: Date, isGeneral: boolean }
+   * Body: { description: string, discountPercent: number (10-100), expiresAt?: Date, isGeneral: boolean }
    */
   static async createGeneralStaffCode(
     req: Request,
@@ -39,12 +39,12 @@ export default class GeneralCodeCreationController {
       // Validate discount percent
       if (
         typeof discountPercent !== "number" ||
-        discountPercent < 0 ||
+        discountPercent < 10 ||
         discountPercent > 100
       ) {
         res.status(400).json({
           success: false,
-          message: "Discount percent must be between 0 and 100.",
+          message: "Discount percent must be between 10 and 100.",
         });
         return;
       }

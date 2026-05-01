@@ -12,7 +12,7 @@ export type PurchaseStatus = "pending" | "completed" | "failed" | "refunded";
 export interface PromoCodeUsed {
   code: string;
   discountAmount?: number; // in cents
-  discountPercent?: number; // percentage (0-100)
+  discountPercent?: number; // percentage (10-100 for staff/reward codes)
 }
 
 export interface BillingInfo {

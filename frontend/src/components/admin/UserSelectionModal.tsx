@@ -210,6 +210,7 @@ export default function UserSelectionModal({
         const converted: User[] = usersRaw
           .map(mapAppUserToMgmtUser)
           .filter((user) => {
+            if (!user.id) return false;
             // Exclude specified user IDs
             if (excludeUserIds.includes(user.id)) return false;
             // Filter by allowed roles if specified
@@ -276,6 +277,7 @@ export default function UserSelectionModal({
         const converted: User[] = resultsRaw
           .map(mapAppUserToMgmtUser)
           .filter((user) => {
+            if (!user.id) return false;
             // Exclude specified user IDs
             if (excludeUserIds.includes(user.id)) return false;
             // Filter by allowed roles if specified

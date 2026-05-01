@@ -120,12 +120,12 @@ describe("GeneralCodeCreationController", () => {
         expect(statusMock).toHaveBeenCalledWith(400);
         expect(jsonMock).toHaveBeenCalledWith({
           success: false,
-          message: "Discount percent must be between 0 and 100.",
+          message: "Discount percent must be between 10 and 100.",
         });
       });
 
-      it("should return 400 when discountPercent is below 0", async () => {
-        mockReq.body = { description: "Test code", discountPercent: -10 };
+      it("should return 400 when discountPercent is below 10", async () => {
+        mockReq.body = { description: "Test code", discountPercent: 0 };
 
         await GeneralCodeCreationController.createGeneralStaffCode(
           mockReq as Request,
@@ -135,7 +135,7 @@ describe("GeneralCodeCreationController", () => {
         expect(statusMock).toHaveBeenCalledWith(400);
         expect(jsonMock).toHaveBeenCalledWith({
           success: false,
-          message: "Discount percent must be between 0 and 100.",
+          message: "Discount percent must be between 10 and 100.",
         });
       });
 
@@ -150,7 +150,7 @@ describe("GeneralCodeCreationController", () => {
         expect(statusMock).toHaveBeenCalledWith(400);
         expect(jsonMock).toHaveBeenCalledWith({
           success: false,
-          message: "Discount percent must be between 0 and 100.",
+          message: "Discount percent must be between 10 and 100.",
         });
       });
 

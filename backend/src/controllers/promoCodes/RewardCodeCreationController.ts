@@ -176,6 +176,17 @@ export default class RewardCodeCreationController {
                 .join(", ")
             : undefined;
 
+        const allowedEvents =
+          validatedEventIds && validatedEventIds.length > 0
+            ? (
+                promoCode.allowedEventIds as unknown as Array<{
+                  title: string;
+                }>
+              )
+                .map((event) => event.title)
+                .join(", ")
+            : undefined;
+
         // Send email notification with Reward Code branding
         await EmailService.sendStaffPromoCodeEmail({
           recipientEmail: owner.email,
@@ -183,6 +194,7 @@ export default class RewardCodeCreationController {
           promoCode: promoCode.code,
           discountPercent: promoCode.discountPercent ?? 10,
           allowedPrograms,
+          allowedEvents,
           expiresAt: promoCode.expiresAt?.toISOString(),
           createdBy: req.user.username || req.user.email,
           codeType: "reward", // Specify this is a reward code
@@ -193,9 +205,11 @@ export default class RewardCodeCreationController {
           "../unifiedMessageController"
         );
 
-        const programText = allowedPrograms
+        const accessText = allowedPrograms
           ? ` for ${allowedPrograms}`
-          : " for all programs";
+          : allowedEvents
+          ? ` for ${allowedEvents}`
+          : " for all programs and events";
 
         const expiryText = promoCode.expiresAt
           ? `\n\nExpires: ${new Date(promoCode.expiresAt).toLocaleDateString()}`
@@ -214,7 +228,7 @@ export default class RewardCodeCreationController {
             title: "🎁 You've Received a Reward Code",
             content: `You've been granted a ${
               promoCode.discountPercent ?? 10
-            }% discount reward code${programText} by ${creatorDisplay}.\n\nUse code: ${
+            }% discount reward code${accessText} by ${creatorDisplay}.\n\nUse code: ${
               promoCode.code
             }${expiryText}`,
             type: "announcement",

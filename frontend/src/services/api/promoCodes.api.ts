@@ -195,6 +195,7 @@ class PromoCodesApiClient extends BaseApiClient {
       ownerEmail?: string;
       ownerName?: string;
       allowedProgramIds?: string[];
+      allowedEventIds?: string[];
       isActive: boolean;
       isUsed: boolean;
       expiresAt?: string;
@@ -232,6 +233,7 @@ class PromoCodesApiClient extends BaseApiClient {
         ownerEmail?: string;
         ownerName?: string;
         allowedProgramIds?: string[];
+        allowedEventIds?: string[];
         isActive: boolean;
         isUsed: boolean;
         expiresAt?: string;
@@ -327,7 +329,7 @@ class PromoCodesApiClient extends BaseApiClient {
   }
 
   /**
-   * Create a staff access promo code (Admin only)
+   * Create a staff discount promo code (Admin only)
    * @param payload - Staff code creation data
    * @returns Created promo code with generated code
    */

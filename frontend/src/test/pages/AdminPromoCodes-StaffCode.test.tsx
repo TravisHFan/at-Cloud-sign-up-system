@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { BrowserRouter } from "react-router-dom";
@@ -7,6 +7,11 @@ import * as api from "../../services/api";
 
 // Mock API client
 vi.mock("../../services/api");
+vi.mock("../../services/api/events.api", () => ({
+  eventsService: {
+    getEvents: vi.fn().mockResolvedValue({ events: [] }),
+  },
+}));
 
 // Mock hooks
 vi.mock("../../hooks/useUserData", () => ({
@@ -156,7 +161,7 @@ describe("AdminPromoCodes - Staff Code Creation (Minimal Test)", () => {
       _id: "code123",
       code: "STAFF-ABC123",
       type: "staff_access" as const,
-      discountPercent: 100,
+      discountPercent: 40,
       ownerId: "user123",
       ownerEmail: "john.doe@example.com",
       ownerName: "John Doe",
@@ -254,6 +259,11 @@ describe("AdminPromoCodes - Staff Code Creation (Minimal Test)", () => {
     expect(screen.getByText("John Doe")).toBeInTheDocument();
     expect(screen.getByText("john.doe@example.com")).toBeInTheDocument();
 
+    // Set a partial staff discount to verify the new control is wired through
+    const discountSlider = screen.getByLabelText(/discount percentage/i);
+    fireEvent.change(discountSlider, { target: { value: "40" } });
+    expect(discountSlider).toHaveValue("40");
+
     // Submit the form (find the submit button, not the tab button)
     const submitButtons = screen.getAllByRole("button", {
       name: /create staff code/i,
@@ -281,6 +291,7 @@ describe("AdminPromoCodes - Staff Code Creation (Minimal Test)", () => {
     expect(firstCallArg.userId).toBe("user123"); // Must match mock user ID
     expect(firstCallArg.userId).toBeTruthy(); // Guard: not null/undefined
     expect(firstCallArg.userId.length).toBeGreaterThan(0); // Guard: not empty string
+    expect(firstCallArg.discountPercent).toBe(40);
 
     console.log(
       "✅ SUCCESS: User ID correctly passed to API:",

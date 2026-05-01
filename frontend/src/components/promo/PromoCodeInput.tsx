@@ -217,7 +217,7 @@ export default function PromoCodeInput({
                         ? "🎁 Bundle Discount"
                         : code.type === "reward"
                         ? "🎁 Reward"
-                        : "🎟️ Staff Access"}
+                        : "🎟️ Staff Discount"}
                     </span>
                     <span>•</span>
                     <span>{formatExpiryText(code.expiresAt)}</span>

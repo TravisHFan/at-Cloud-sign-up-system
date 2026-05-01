@@ -305,7 +305,7 @@ describe("MyPromoCodes Page", () => {
       expect(screen.getByText(/\$50/i)).toBeInTheDocument();
     });
 
-    it("displays staff access codes correctly", async () => {
+    it("displays staff discount codes correctly", async () => {
       mockGetMyPromoCodes.mockResolvedValue([mockActiveCodes[1]]);
 
       render(

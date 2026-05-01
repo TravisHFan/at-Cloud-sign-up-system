@@ -124,7 +124,7 @@ GET /api/promo-codes?type={type}&status={status}&search={query}&page={n}&limit={
 
 ---
 
-### Create Staff Access Code
+### Create Staff Discount Code
 
 ```http
 POST /api/promo-codes/staff
@@ -136,8 +136,9 @@ Content-Type: application/json
 ```json
 {
   "userId": "60d5ec49f1b2c72b8c8e4f1a",
-  "discountPercent": 100,
+  "discountPercent": 50,
   "allowedProgramIds": ["..."],
+  "allowedEventIds": ["..."],
   "expiresAt": "2025-12-31T23:59:59Z"
 }
 ```
@@ -145,8 +146,9 @@ Content-Type: application/json
 **Validation**:
 
 - `userId`: Required, must exist
-- `discountPercent`: Required, 0-100
+- `discountPercent`: Required, 10-100
 - `allowedProgramIds`: Optional (empty = all programs)
+- `allowedEventIds`: Optional (empty = all events)
 - `expiresAt`: Optional (must be future date)
 
 **Response**:
@@ -159,7 +161,7 @@ Content-Type: application/json
     "_id": "...",
     "code": "ABC12XYZ",
     "type": "staff_access",
-    "discountPercent": 100,
+    "discountPercent": 50,
     "ownerId": {...},
     "createdAt": "2025-10-18T10:30:00Z"
   }
@@ -299,11 +301,11 @@ PUT /api/promo-codes/:id/deactivate
 - **Restrictions**: Cannot use on excluded program (the one purchased)
 - **Ownership**: User-specific
 
-### Staff Access
+### Staff Discount
 
 - **Created by**: Admin
-- **Discount**: Percentage (0-100%)
-- **Restrictions**: Can specify allowed programs
+- **Discount**: Percentage (10-100%)
+- **Restrictions**: Can specify allowed programs or events
 - **Ownership**: Assigned to specific user
 
 ---
@@ -355,16 +357,16 @@ POST /validate {"code":"BUNDLE50","programId":"..."}
 → Checkout API applies discount
 ```
 
-### 3. Admin Creates 100% Staff Code
+### 3. Admin Creates Staff Discount Code
 
 ```
 POST /staff {
   "userId": "...",
-  "discountPercent": 100,
+  "discountPercent": 50,
   "allowedProgramIds": []
 }
 → Code works for all programs
-→ User can purchase for free
+→ User receives the selected percentage discount
 ```
 
 ### 4. Admin Searches for User's Codes

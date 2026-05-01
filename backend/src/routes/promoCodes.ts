@@ -54,7 +54,7 @@ router.get(
  * Create a staff access promo code (admin only)
  * Body: {
  *   userId: string,
- *   discountPercent: number (0-100),
+ *   discountPercent: number (10-100),
  *   allowedProgramIds?: string[] (empty = all programs),
  *   expiresAt?: Date (optional expiration)
  * }
@@ -66,7 +66,7 @@ router.post("/staff", requireAdmin, PromoCodeController.createStaffCode);
  * POST /api/promo-codes/general OR /api/promo-codes/staff/general
  * Body: {
  *   description: string,
- *   discountPercent: number (0-100, typically 100),
+ *   discountPercent: number (10-100, default UI value 100),
  *   expiresAt?: Date (optional expiration),
  *   isGeneral: boolean (must be true)
  * }
@@ -91,7 +91,7 @@ router.post(
  *   allowedProgramIds?: string[] (empty = all programs),
  *   expiresAt?: Date (optional expiration)
  * }
- * Note: Reward codes are similar to staff codes but require 10-100% discount
+ * Note: Reward codes are similar to personal staff codes and require 10-100% discount
  */
 router.post("/reward", requireAdmin, PromoCodeController.createRewardCode);
 

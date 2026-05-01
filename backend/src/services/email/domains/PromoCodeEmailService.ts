@@ -23,6 +23,7 @@ export class PromoCodeEmailService {
     promoCode: string;
     discountPercent: number;
     allowedPrograms?: string;
+    allowedEvents?: string;
     expiresAt?: string;
     createdBy: string;
     codeType?: "staff" | "reward"; // Add type parameter to distinguish code types
@@ -33,6 +34,7 @@ export class PromoCodeEmailService {
       promoCode,
       discountPercent,
       allowedPrograms,
+      allowedEvents,
       expiresAt,
       createdBy,
       codeType = "staff", // Default to "staff" for backward compatibility
@@ -60,13 +62,19 @@ export class PromoCodeEmailService {
         )}.`
       : "This code never expires.";
 
-    const programText = allowedPrograms
+    const accessText = allowedPrograms
       ? `for ${allowedPrograms}`
-      : "for all programs";
+      : allowedEvents
+      ? `for ${allowedEvents}`
+      : "for all programs and events";
+    const validForText =
+      allowedPrograms || allowedEvents || "All programs and events";
+    const htmlAccessText = escapeHtml(accessText);
+    const htmlValidForText = escapeHtml(validForText);
 
     // Dynamic text based on code type
     const codeLabel =
-      codeType === "reward" ? "Reward Discount Code" : "Staff Access Code";
+      codeType === "reward" ? "Reward Discount Code" : "Staff Discount Code";
     const emailTitle = `You've Received a ${codeLabel}`;
 
     const html = `
@@ -103,7 +111,7 @@ export class PromoCodeEmailService {
       <div class="content">
         <p>Hi ${escapeHtml(recipientName)},</p>
         
-        <p>Great news! You've been granted a <strong>${discountPercent}% discount code</strong> ${programText} by ${escapeHtml(
+        <p>Great news! You've been granted a <strong>${discountPercent}% discount code</strong> ${htmlAccessText} by ${escapeHtml(
       createdBy
     )}.</p>
         
@@ -116,9 +124,7 @@ export class PromoCodeEmailService {
         <div class="details">
           <h3>📋 Code Details</h3>
           <p><strong>Discount:</strong> ${discountPercent}% off</p>
-          <p><strong>Valid for:</strong> ${
-            allowedPrograms || "All programs"
-          }</p>
+          <p><strong>Valid for:</strong> ${htmlValidForText}</p>
           <p><strong>Status:</strong> ${expiryText}</p>
         </div>
         
@@ -150,13 +156,13 @@ ${emailTitle}!
 
 Hi ${recipientName},
 
-Great news! You've been granted a ${discountPercent}% discount code ${programText} by ${createdBy}.
+Great news! You've been granted a ${discountPercent}% discount code ${accessText} by ${createdBy}.
 
 Your Promo Code: ${promoCode}
 
 Code Details:
 - Discount: ${discountPercent}% off
-- Valid for: ${allowedPrograms || "All programs"}
+- Valid for: ${validForText}
 - Status: ${expiryText}
 
 View your promo codes: ${promoCodesUrl}
@@ -209,10 +215,6 @@ The @Cloud Ministry Team
 
     const frontend = process.env.FRONTEND_URL || "http://localhost:3000";
     const promoCodesUrl = `${frontend}/dashboard/promo-codes`;
-
-    const programText = allowedPrograms
-      ? `for ${allowedPrograms}`
-      : "for all programs";
 
     const html = `
 <!DOCTYPE html>
@@ -362,10 +364,6 @@ View your promo codes: ${promoCodesUrl}
           }
         )}.`
       : "This code never expires.";
-
-    const programText = allowedPrograms
-      ? `for ${allowedPrograms}`
-      : "for all programs";
 
     const html = `
 <!DOCTYPE html>

@@ -6,9 +6,9 @@ import { EmailService } from "../../services";
 
 export default class StaffCodeCreationController {
   /**
-   * Create staff access promo code (Admin only)
+   * Create staff discount promo code (Admin only)
    * POST /api/promo-codes/staff
-   * Body: { userId: string, discountPercent: number, allowedProgramIds?: string[], expiresAt?: Date }
+   * Body: { userId: string, discountPercent: number (10-100), allowedProgramIds?: string[], expiresAt?: Date }
    */
   static async createStaffCode(req: Request, res: Response): Promise<void> {
     try {
@@ -40,12 +40,12 @@ export default class StaffCodeCreationController {
       // Validate discount percent
       if (
         typeof discountPercent !== "number" ||
-        discountPercent < 0 ||
+        discountPercent < 10 ||
         discountPercent > 100
       ) {
         res.status(400).json({
           success: false,
-          message: "Discount percent must be between 0 and 100.",
+          message: "Discount percent must be between 10 and 100.",
         });
         return;
       }
@@ -175,13 +175,25 @@ export default class StaffCodeCreationController {
                 .join(", ")
             : undefined;
 
+        const allowedEvents =
+          validatedEventIds && validatedEventIds.length > 0
+            ? (
+                promoCode.allowedEventIds as unknown as Array<{
+                  title: string;
+                }>
+              )
+                .map((event) => event.title)
+                .join(", ")
+            : undefined;
+
         // Send email notification
         await EmailService.sendStaffPromoCodeEmail({
           recipientEmail: owner.email,
           recipientName,
           promoCode: promoCode.code,
-          discountPercent: promoCode.discountPercent ?? 100,
+          discountPercent: promoCode.discountPercent ?? discountPercent,
           allowedPrograms,
+          allowedEvents,
           expiresAt: promoCode.expiresAt?.toISOString(),
           createdBy: req.user.username || req.user.email,
         });
@@ -198,15 +210,20 @@ export default class StaffCodeCreationController {
             : req.user.username || req.user.email;
         const creatorAuthLevel = req.user.role || "Administrator"; // System auth level (Super Admin, Administrator, etc.)
         const creatorDisplay = `${creatorAuthLevel} ${creatorFullName}`;
+        const accessText = allowedPrograms
+          ? ` for ${allowedPrograms}`
+          : allowedEvents
+          ? ` for ${allowedEvents}`
+          : " for all programs and events";
 
         await UnifiedMessageController.createTargetedSystemMessage(
           {
-            title: "🎁 You've Received a Staff Access Code",
+            title: "🎁 You've Received a Staff Discount Code",
             content: `You've been granted a ${
-              promoCode.discountPercent ?? 100
-            }% discount code${
-              allowedPrograms ? ` for ${allowedPrograms}` : " for all programs"
-            } by ${creatorDisplay}.\n\nUse code: ${promoCode.code}`,
+              promoCode.discountPercent ?? discountPercent
+            }% discount code${accessText} by ${creatorDisplay}.\n\nUse code: ${
+              promoCode.code
+            }`,
             type: "announcement",
             priority: "high",
             hideCreator: false,
@@ -267,6 +284,7 @@ export default class StaffCodeCreationController {
             ownerEmail: ownerInfo.email,
             ownerName,
             allowedProgramIds: promoCode.allowedProgramIds,
+            allowedEventIds: promoCode.allowedEventIds,
             expiresAt: promoCode.expiresAt,
             isActive: promoCode.isActive,
             createdAt: promoCode.createdAt,

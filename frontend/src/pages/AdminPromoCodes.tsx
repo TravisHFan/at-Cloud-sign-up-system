@@ -32,7 +32,7 @@ export default function AdminPromoCodes() {
     <div className="space-y-6">
       <PageHeader
         title="Promo Codes Management"
-        subtitle="Manage promo codes, create staff access codes, and configure bundle discounts"
+        subtitle="Manage promo codes, create staff discount codes, and configure bundle discounts"
       />
 
       {/* Horizontal Tab Navigation */}

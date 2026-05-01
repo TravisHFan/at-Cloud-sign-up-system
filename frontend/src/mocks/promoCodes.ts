@@ -58,7 +58,7 @@ export const mockPromoCodes: MockPromoCode[] = [
     createdBy: "system",
   },
 
-  // Active Staff Access Code - 100% off, no expiry
+  // Active Staff Discount Code - 100% off, no expiry
   {
     _id: "promo-003",
     code: "STAFF2025",
@@ -103,7 +103,7 @@ export const mockPromoCodes: MockPromoCode[] = [
     createdBy: "system",
   },
 
-  // Used Staff Access Code
+  // Used Staff Discount Code
   {
     _id: "promo-006",
     code: "VOLUNT01",

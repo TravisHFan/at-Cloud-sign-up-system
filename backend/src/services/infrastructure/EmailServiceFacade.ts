@@ -910,6 +910,7 @@ export class EmailService {
     promoCode: string;
     discountPercent: number;
     allowedPrograms?: string;
+    allowedEvents?: string;
     expiresAt?: string;
     createdBy: string;
     codeType?: "staff" | "reward";

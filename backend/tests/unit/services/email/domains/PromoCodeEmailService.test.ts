@@ -103,7 +103,7 @@ describe("PromoCodeEmailService - Promo Code Email Operations", () => {
 
       const emailCall = mockTransporter.sendMail.mock.calls[0][0];
       expect(emailCall.to).toBe("staff@example.com");
-      expect(emailCall.subject).toContain("Staff Access Code");
+      expect(emailCall.subject).toContain("Staff Discount Code");
       expect(emailCall.html).toContain("Staff Member");
       expect(emailCall.html).toContain("STAFF20");
       expect(emailCall.html).toContain("20");
@@ -129,14 +129,14 @@ describe("PromoCodeEmailService - Promo Code Email Operations", () => {
       expect(emailCall.html).toContain("never expires");
     });
 
-    it("should handle promo code for all programs", async () => {
+    it("should handle promo code for all programs and events", async () => {
       // Arrange
       const params = {
         recipientEmail: "user@example.com",
         recipientName: "Test User",
         promoCode: "ALLPROGRAMS",
         discountPercent: 25,
-        // allowedPrograms is optional
+        // allowedPrograms/allowedEvents are optional
         createdBy: "Admin",
       };
 
@@ -145,7 +145,7 @@ describe("PromoCodeEmailService - Promo Code Email Operations", () => {
 
       // Assert
       const emailCall = mockTransporter.sendMail.mock.calls[0][0];
-      expect(emailCall.html).toContain("all programs");
+      expect(emailCall.html).toContain("all programs and events");
     });
 
     it("should include promo codes dashboard link", async () => {
@@ -260,8 +260,27 @@ describe("PromoCodeEmailService - Promo Code Email Operations", () => {
       expect(emailCall.html).toContain("http://localhost:3000");
     });
 
-    it("should fallback to 'All programs' when allowedPrograms is not set", async () => {
-      // Arrange - No allowedPrograms in params
+    it("should include event access when allowedEvents is set", async () => {
+      const params = {
+        recipientEmail: "test@example.com",
+        recipientName: "Test User",
+        promoCode: "EVENT20",
+        discountPercent: 20,
+        allowedEvents: "Spring Workshop",
+        expiresAt: "2025-12-31",
+        createdBy: "Admin User",
+        codeType: "staff" as const,
+      };
+
+      await PromoCodeEmailService.sendStaffPromoCodeEmail(params);
+
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain("Spring Workshop");
+      expect(emailCall.text).toContain("Spring Workshop");
+    });
+
+    it("should fallback to 'All programs and events' when access is not set", async () => {
+      // Arrange - No allowedPrograms or allowedEvents in params
       const params = {
         recipientEmail: "test@example.com",
         recipientName: "Test User",
@@ -277,8 +296,8 @@ describe("PromoCodeEmailService - Promo Code Email Operations", () => {
 
       // Assert
       const emailCall = mockTransporter.sendMail.mock.calls[0][0];
-      expect(emailCall.html).toContain("All programs");
-      expect(emailCall.text).toContain("All programs");
+      expect(emailCall.html).toContain("All programs and events");
+      expect(emailCall.text).toContain("All programs and events");
     });
   });
 

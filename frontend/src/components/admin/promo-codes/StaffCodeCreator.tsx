@@ -11,6 +11,7 @@ import { apiClient } from "../../../services/api";
 import Button from "../../ui/Button";
 import LoadingSpinner from "../../common/LoadingSpinner";
 import UserSelectionModal from "../UserSelectionModal";
+import DiscountPercentageControl from "./DiscountPercentageControl";
 
 // ============================================================================
 // TypeScript Interfaces
@@ -53,6 +54,7 @@ interface PromoCodeResponse {
   description?: string;
   discountPercent: number;
   allowedProgramIds?: string[];
+  allowedEventIds?: string[];
   usedBy?: string[];
   expiresAt?: string;
   isGeneral?: boolean;
@@ -88,6 +90,7 @@ export default function StaffCodeCreator({ onSuccess }: StaffCodeCreatorProps) {
   const [codeDescription, setCodeDescription] = useState("");
 
   // Shared states
+  const [discountPercent, setDiscountPercent] = useState(100);
   const [accessMode, setAccessMode] = useState<
     "all" | "specificPrograms" | "specificEvents"
   >("all");
@@ -207,6 +210,11 @@ export default function StaffCodeCreator({ onSuccess }: StaffCodeCreatorProps) {
       }
     }
 
+    if (discountPercent < 10 || discountPercent > 100) {
+      setError("Discount percentage must be between 10% and 100%");
+      return;
+    }
+
     if (expirationMode === "custom" && !expirationDate) {
       setError("Please select an expiration date");
       return;
@@ -227,7 +235,7 @@ export default function StaffCodeCreator({ onSuccess }: StaffCodeCreatorProps) {
           expiresAt?: string;
         } = {
           userId: selectedUser!.id,
-          discountPercent: 100, // Staff codes are always 100% discount
+          discountPercent,
         };
 
         if (accessMode === "specificPrograms") {
@@ -255,6 +263,7 @@ export default function StaffCodeCreator({ onSuccess }: StaffCodeCreatorProps) {
         setSelectedEvents([]);
         setExpirationMode("never");
         setExpirationDate("");
+        setDiscountPercent(100);
       } else if (codeType === "general") {
         // Create general staff code
         const payload: {
@@ -264,7 +273,7 @@ export default function StaffCodeCreator({ onSuccess }: StaffCodeCreatorProps) {
           isGeneral: boolean;
         } = {
           description: codeDescription,
-          discountPercent: 100,
+          discountPercent,
           isGeneral: true,
         };
 
@@ -280,6 +289,7 @@ export default function StaffCodeCreator({ onSuccess }: StaffCodeCreatorProps) {
         setCodeDescription("");
         setExpirationMode("never");
         setExpirationDate("");
+        setDiscountPercent(100);
       }
     } catch (err) {
       const errorMessage =
@@ -322,10 +332,11 @@ export default function StaffCodeCreator({ onSuccess }: StaffCodeCreatorProps) {
       {/* Header */}
       <div>
         <h2 className="text-lg font-semibold text-gray-900">
-          Create Staff Access Code
+          Create Staff Promo Code
         </h2>
         <p className="text-sm text-gray-500 mt-1">
-          Generate a 100% discount code for staff, volunteers, or special guests
+          Generate a percentage discount code for staff, volunteers, or special
+          guests
         </p>
       </div>
 
@@ -365,7 +376,7 @@ export default function StaffCodeCreator({ onSuccess }: StaffCodeCreatorProps) {
                     </h4>
                     <p className="text-sm text-gray-600">
                       Generate a code for a specific user with customizable
-                      program access and expiration
+                      discount, program access, and expiration
                     </p>
                   </div>
                 </div>
@@ -399,7 +410,8 @@ export default function StaffCodeCreator({ onSuccess }: StaffCodeCreatorProps) {
                     </h4>
                     <p className="text-sm text-gray-600">
                       Generate a reusable code for all programs, events,
-                      unlimited uses, manual distribution
+                      unlimited uses, discount selection, and manual
+                      distribution
                     </p>
                   </div>
                 </div>
@@ -499,7 +511,12 @@ export default function StaffCodeCreator({ onSuccess }: StaffCodeCreatorProps) {
               onClose={() => setShowUserModal(false)}
               onSelect={handleUserSelect}
               title="Select User for Staff Code"
-              description="Choose a user who will receive the 100% discount staff access code"
+              description="Choose a user who will receive the staff promo code"
+            />
+
+            <DiscountPercentageControl
+              value={discountPercent}
+              onChange={setDiscountPercent}
             />
 
             {/* Program/Event Access Selection */}
@@ -728,7 +745,7 @@ export default function StaffCodeCreator({ onSuccess }: StaffCodeCreatorProps) {
                 type="text"
                 value={codeDescription}
                 onChange={(e) => setCodeDescription(e.target.value)}
-                placeholder="e.g., Staff Access 2025"
+                placeholder="e.g., Staff Discount 2025"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
               />
@@ -736,6 +753,12 @@ export default function StaffCodeCreator({ onSuccess }: StaffCodeCreatorProps) {
                 Internal description to help identify this code
               </p>
             </div>
+
+            <DiscountPercentageControl
+              value={discountPercent}
+              onChange={setDiscountPercent}
+              accent="blue"
+            />
 
             {/* Expiration Date */}
             <div>
@@ -800,7 +823,9 @@ export default function StaffCodeCreator({ onSuccess }: StaffCodeCreatorProps) {
                 <div className="text-sm text-blue-800">
                   <p className="font-medium mb-1">General Staff Code</p>
                   <ul className="space-y-1 text-blue-700">
-                    <li>• 100% discount on all programs and events</li>
+                    <li>
+                      • {discountPercent}% discount on all programs and events
+                    </li>
                     <li>• Can be used by any user</li>
                     <li>• Unlimited number of uses</li>
                     <li>• Must be manually shared with users</li>
@@ -915,7 +940,7 @@ export default function StaffCodeCreator({ onSuccess }: StaffCodeCreatorProps) {
                     <div className="flex justify-between">
                       <span className="text-gray-600">Discount:</span>
                       <span className="font-medium text-gray-900">
-                        100% off
+                        {createdCode.discountPercent}% off
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -923,12 +948,8 @@ export default function StaffCodeCreator({ onSuccess }: StaffCodeCreatorProps) {
                       <span className="font-medium text-gray-900">
                         {createdCode.allowedProgramIds?.length
                           ? `${createdCode.allowedProgramIds.length} program(s)`
-                          : (createdCode as { allowedEventIds?: string[] })
-                              .allowedEventIds?.length
-                          ? `${
-                              (createdCode as { allowedEventIds?: string[] })
-                                .allowedEventIds?.length || 0
-                            } event(s)`
+                          : createdCode.allowedEventIds?.length
+                          ? `${createdCode.allowedEventIds.length} event(s)`
                           : "All programs and events"}
                       </span>
                     </div>

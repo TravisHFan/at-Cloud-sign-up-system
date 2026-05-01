@@ -50,9 +50,9 @@ export class PromoCodeController {
   }
 
   /**
-   * Create staff access promo code (Admin only)
+   * Create staff discount promo code (Admin only)
    * POST /api/promo-codes/staff
-   * Body: { userId: string, discountPercent: number, allowedProgramIds?: string[], expiresAt?: Date }
+   * Body: { userId: string, discountPercent: number (10-100), allowedProgramIds?: string[], expiresAt?: Date }
    */
   static async createStaffCode(req: Request, res: Response): Promise<void> {
     const { default: StaffCodeCreationController } = await import(
@@ -62,9 +62,9 @@ export class PromoCodeController {
   }
 
   /**
-   * Create general staff access promo code (Admin only)
+   * Create general staff discount promo code (Admin only)
    * POST /api/promo-codes/staff/general
-   * Body: { description: string, discountPercent: number, expiresAt?: Date, isGeneral: boolean }
+   * Body: { description: string, discountPercent: number (10-100), expiresAt?: Date, isGeneral: boolean }
    */
   static async createGeneralStaffCode(
     req: Request,
