@@ -149,6 +149,7 @@ export class EventCreationNotificationService {
               lastName: coOrganizer.lastName,
             },
             {
+              id: idToString(event._id),
               title: event.title,
               date: event.date,
               time: event.time,

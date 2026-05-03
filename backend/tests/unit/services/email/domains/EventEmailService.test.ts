@@ -381,6 +381,7 @@ describe("EventEmailService - Event Email Operations", () => {
       const email = "attendee@example.com";
       const userName = "Jane Smith";
       const eventData = {
+        id: "reminder-123",
         title: "Workshop Reminder",
         date: "2025-12-15",
         time: "14:00",
@@ -408,6 +409,13 @@ describe("EventEmailService - Event Email Operations", () => {
       expect(emailCall.subject).toContain("Reminder");
       expect(emailCall.html).toContain("Jane Smith");
       expect(emailCall.html).toContain("Workshop Reminder");
+      expect(emailCall.html).toContain(
+        'href="http://localhost:5173/dashboard/event/reminder-123" class="button">View Event Details</a>',
+      );
+      expect(emailCall.html).toContain(
+        'href="https://calendar.google.com/calendar/render?',
+      );
+      expect(emailCall.html).not.toContain("#{");
       // ICS attachments are created in actual implementation
     });
 
@@ -502,6 +510,7 @@ describe("EventEmailService - Event Email Operations", () => {
         lastName: "Organizer",
       };
       const eventData = {
+        id: "event-abc",
         title: "Big Conference",
         date: "2025-12-20",
         time: "09:00",
@@ -531,6 +540,13 @@ describe("EventEmailService - Event Email Operations", () => {
       expect(emailCall.html).toContain("Co");
       expect(emailCall.html).toContain("Big Conference");
       expect(emailCall.html).toContain("Main");
+      expect(emailCall.html).toContain(
+        'href="http://localhost:5173/dashboard/event/event-abc" class="button">View Event Details</a>',
+      );
+      expect(emailCall.html).not.toContain(
+        'class="button secondary">Event Management</a>',
+      );
+      expect(emailCall.html).not.toContain("#{");
     });
 
     it("should handle empty firstName and lastName with fallback", async () => {

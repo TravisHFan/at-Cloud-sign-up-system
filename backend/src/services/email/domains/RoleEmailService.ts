@@ -34,6 +34,28 @@ export class RoleEmailService {
     return EmailService.sendEmail(options);
   }
 
+  private static getFrontendUrl(): string {
+    return process.env.FRONTEND_URL || "http://localhost:5173";
+  }
+
+  private static buildEventDetailUrl(eventData: {
+    id?: string;
+    eventId?: string;
+    _id?: unknown;
+    title: string;
+  }): string {
+    const rawId =
+      eventData.id ||
+      eventData.eventId ||
+      (eventData._id && typeof eventData._id === "object"
+        ? eventData._id.toString()
+        : eventData._id);
+    const eventId = rawId ? String(rawId) : eventData.title;
+    return `${RoleEmailService.getFrontendUrl()}/dashboard/event/${encodeURIComponent(
+      eventId
+    )}`;
+  }
+
   /**
    * Helper method for formatting date/time ranges in emails
    */
@@ -1113,8 +1135,8 @@ export class RoleEmailService {
               <p>Please review this new leader's registration and take appropriate action:</p>
               
               <div style="text-align: center; margin: 30px 0;">
-                <a href="#{ADMIN_DASHBOARD_URL}/leaders" class="button">Review Leader</a>
-                <a href="#{ADMIN_DASHBOARD_URL}/users" class="button" style="background: #6c757d;">Manage Users</a>
+                <a href="${RoleEmailService.getFrontendUrl()}/dashboard/management" class="button">Review Leader</a>
+                <a href="${RoleEmailService.getFrontendUrl()}/dashboard/management" class="button" style="background: #6c757d;">Manage Users</a>
               </div>
 
               <p><em>This is an automated notification. Please review the new leader's information in the admin dashboard.</em></p>
@@ -1305,6 +1327,9 @@ export class RoleEmailService {
       lastName: string;
     },
     eventData: {
+      id?: string;
+      eventId?: string;
+      _id?: unknown;
       title: string;
       date: string;
       time: string;
@@ -1324,6 +1349,8 @@ export class RoleEmailService {
     const organizerName = `${assignedBy.firstName || ""} ${
       assignedBy.lastName || ""
     }`.trim();
+    const eventDetailUrl =
+      RoleEmailService.buildEventDetailUrl(eventData);
 
     const html = `
       <!DOCTYPE html>
@@ -1391,10 +1418,7 @@ export class RoleEmailService {
               </div>
 
               <div style="text-align: center; margin: 30px 0;">
-                <a href="#{EVENT_DASHBOARD_URL}/events/${
-                  eventData.title
-                }" class="button">View Event Details</a>
-                <a href="#{EVENT_DASHBOARD_URL}/organize" class="button secondary">Event Management</a>
+                <a href="${eventDetailUrl}" class="button">View Event Details</a>
               </div>
 
               <p>Thank you for volunteering to help organize this event. Your contribution makes a difference in our ministry!</p>
@@ -1424,7 +1448,7 @@ export class RoleEmailService {
         (eventData as any).timeZone
       )}. Location: ${
         eventData.location
-      }. Assigned by: ${organizerName}. Please check the event management dashboard for more details.`,
+      }. Assigned by: ${organizerName}. View event details: ${eventDetailUrl}`,
     }).catch((error) => {
       log.error(
         "Failed to send co-organizer assignment email",

@@ -38,6 +38,56 @@ export class EventEmailService {
     return EmailService.sendEmail(options);
   }
 
+  private static getFrontendUrl(): string {
+    return process.env.FRONTEND_URL || "http://localhost:5173";
+  }
+
+  private static buildEventDetailUrl(eventData: {
+    id?: string;
+    eventId?: string;
+    _id?: unknown;
+    title: string;
+  }): string {
+    const rawId =
+      eventData.id ||
+      eventData.eventId ||
+      (eventData._id && typeof eventData._id === "object"
+        ? eventData._id.toString()
+        : eventData._id);
+    const eventId = rawId ? String(rawId) : eventData.title;
+    return `${EventEmailService.getFrontendUrl()}/dashboard/event/${encodeURIComponent(
+      eventId,
+    )}`;
+  }
+
+  private static buildCalendarUrl(eventData: {
+    title: string;
+    date: string;
+    time: string;
+    endTime?: string;
+    endDate?: string;
+    location?: string;
+  }): string {
+    const formatDate = (date: string, time: string): string =>
+      `${date.replace(/-/g, "")}T${EmailHelpers.normalizeTimeTo24h(time).replace(
+        ":",
+        "",
+      )}00`;
+    const start = formatDate(eventData.date, eventData.time);
+    const end = eventData.endTime
+      ? formatDate(eventData.endDate || eventData.date, eventData.endTime)
+      : start;
+    const params = new URLSearchParams({
+      action: "TEMPLATE",
+      text: eventData.title,
+      dates: `${start}/${end}`,
+    });
+    if (eventData.location) {
+      params.set("location", eventData.location);
+    }
+    return `https://calendar.google.com/calendar/render?${params.toString()}`;
+  }
+
   /**
    * Helper method to format date/time range for email display
    */
@@ -482,6 +532,9 @@ export class EventEmailService {
       lastName: string;
     },
     eventData: {
+      id?: string;
+      eventId?: string;
+      _id?: unknown;
       title: string;
       date: string;
       time: string;
@@ -501,6 +554,8 @@ export class EventEmailService {
     const organizerName = `${assignedBy.firstName || ""} ${
       assignedBy.lastName || ""
     }`.trim();
+    const eventDetailUrl =
+      EventEmailService.buildEventDetailUrl(eventData);
 
     const html = `
       <!DOCTYPE html>
@@ -568,10 +623,7 @@ export class EventEmailService {
               </div>
 
               <div style="text-align: center; margin: 30px 0;">
-                <a href="#{EVENT_DASHBOARD_URL}/events/${
-                  eventData.title
-                }" class="button">View Event Details</a>
-                <a href="#{EVENT_DASHBOARD_URL}/organize" class="button secondary">Event Management</a>
+                <a href="${eventDetailUrl}" class="button">View Event Details</a>
               </div>
 
               <p>Thank you for volunteering to help organize this event. Your contribution makes a difference in our ministry!</p>
@@ -601,13 +653,16 @@ export class EventEmailService {
         (eventData as any).timeZone,
       )}. Location: ${
         eventData.location
-      }. Assigned by: ${organizerName}. Please check the event management dashboard for more details.`,
+      }. Assigned by: ${organizerName}. View event details: ${eventDetailUrl}`,
     });
   }
   static async sendEventReminderEmail(
     email: string,
     userName: string,
     eventData: {
+      id?: string;
+      eventId?: string;
+      _id?: unknown;
       title: string;
       date: string;
       time: string;
@@ -631,6 +686,9 @@ export class EventEmailService {
     const isOnline = eventData.format === "Online";
     const isHybrid = eventData.format === "Hybrid Participation";
     const isVirtual = isOnline || (isHybrid && eventData.zoomLink);
+    const eventDetailUrl =
+      EventEmailService.buildEventDetailUrl(eventData);
+    const calendarUrl = EventEmailService.buildCalendarUrl(eventData);
 
     const html = `
       <!DOCTYPE html>
@@ -749,9 +807,9 @@ export class EventEmailService {
                     ? `<a href="${eventData.zoomLink}" class="button virtual">${
                         isHybrid ? "Join Online" : "Join Now"
                       }</a>`
-                    : `<a href="#{EVENT_DETAILS_URL}/${eventData.title}" class="button">View Event Details</a>`
+                    : `<a href="${eventDetailUrl}" class="button">View Event Details</a>`
                 }
-                <a href="#{CALENDAR_URL}" class="button calendar">Add to Calendar</a>
+                <a href="${calendarUrl}" class="button calendar">Add to Calendar</a>
               </div>
 
               <p>
@@ -799,6 +857,9 @@ export class EventEmailService {
   static async sendEventReminderEmailBulk(
     recipients: Array<{ email: string; name?: string }>,
     eventData: {
+      id?: string;
+      eventId?: string;
+      _id?: unknown;
       title: string;
       date: string;
       time: string;

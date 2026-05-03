@@ -620,6 +620,10 @@ describe("RoleEmailService - Role Email Operations", () => {
       expect(emailCall.html).toContain("New Leader");
       expect(emailCall.html).toContain("leader@example.com");
       expect(emailCall.html).toContain("2025-12-15");
+      expect(emailCall.html).toContain(
+        'href="http://localhost:5173/dashboard/management" class="button">Review Leader</a>',
+      );
+      expect(emailCall.html).not.toContain("#{");
     });
 
     it("should include signup details in notification", async () => {
@@ -814,6 +818,7 @@ describe("RoleEmailService - Role Email Operations", () => {
         lastName: "Organizer",
       };
       const eventData = {
+        id: "event-123",
         title: "Big Conference",
         date: "2025-12-20",
         time: "09:00",
@@ -844,6 +849,16 @@ describe("RoleEmailService - Role Email Operations", () => {
       expect(emailCall.html).toContain("Big Conference");
       expect(emailCall.html).toContain("Main Organizer");
       expect(emailCall.html).toContain("Convention Center");
+      expect(emailCall.html).toContain(
+        'href="http://localhost:5173/dashboard/event/event-123" class="button">View Event Details</a>',
+      );
+      expect(emailCall.html).not.toContain(
+        'class="button secondary">Event Management</a>',
+      );
+      expect(emailCall.html).not.toContain("#{");
+      expect(emailCall.text).toContain(
+        "View event details: http://localhost:5173/dashboard/event/event-123",
+      );
     });
 
     it("should include event details in notification", async () => {

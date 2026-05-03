@@ -4,6 +4,8 @@
 
 export interface EventCreatedRequest {
   eventData: {
+    id?: string;
+    eventId?: string;
     title: string;
     date: string;
     time: string;
@@ -63,6 +65,8 @@ export interface CoOrganizerAssignedRequest {
     lastName: string;
   };
   eventData: {
+    id?: string;
+    eventId?: string;
     title: string;
     date: string;
     time: string;

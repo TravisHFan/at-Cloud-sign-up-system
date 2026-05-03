@@ -49,6 +49,8 @@ export default class CoOrganizerAssignedController {
           lastName: assignedUser.lastName || "",
         },
         {
+          id: eventData.id,
+          eventId: eventData.eventId,
           title: eventData.title,
           date: eventData.date || "TBD",
           time: eventData.time || "TBD",

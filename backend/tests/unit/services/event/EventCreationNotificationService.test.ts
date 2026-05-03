@@ -178,7 +178,10 @@ describe("EventCreationNotificationService", () => {
       expect(EmailService.sendCoOrganizerAssignedEmail).toHaveBeenCalledWith(
         "coorg@example.com",
         { firstName: "Jane", lastName: "Smith" },
-        expect.any(Object),
+        expect.objectContaining({
+          id: "event-123",
+          title: "Test Event",
+        }),
         { firstName: "John", lastName: "Doe" },
       );
       expect(

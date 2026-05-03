@@ -82,6 +82,7 @@ export class CoOrganizerNotificationService {
                 lastName: coOrganizer.lastName || "User",
               },
               {
+                id: EventController.toIdString(event._id),
                 title: event.title,
                 date: event.date,
                 time: event.time,

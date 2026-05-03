@@ -699,6 +699,9 @@ export class EmailService {
       lastName: string;
     },
     eventData: {
+      id?: string;
+      eventId?: string;
+      _id?: unknown;
       title: string;
       date: string;
       time: string;
@@ -727,6 +730,9 @@ export class EmailService {
     email: string,
     userName: string,
     eventData: {
+      id?: string;
+      eventId?: string;
+      _id?: unknown;
       title: string;
       date: string;
       time: string;

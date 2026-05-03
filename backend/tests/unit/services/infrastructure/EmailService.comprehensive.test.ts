@@ -362,6 +362,7 @@ describe("EmailService - Comprehensive Validation", () => {
       };
 
       const eventData = {
+        id: "community-outreach-1",
         title: "Community Outreach",
         date: "2025-01-25",
         time: "2:00 PM",
@@ -389,6 +390,13 @@ describe("EmailService - Comprehensive Validation", () => {
       expect(sentEmail.html).toContain("Jane");
       expect(sentEmail.html).toContain("Community Outreach");
       expect(sentEmail.html).toContain("Pastor Johnson");
+      expect(sentEmail.html).toContain(
+        'href="http://localhost:5173/dashboard/event/community-outreach-1" class="button">View Event Details</a>',
+      );
+      expect(sentEmail.html).not.toContain(
+        'class="button secondary">Event Management</a>',
+      );
+      expect(sentEmail.html).not.toContain("#{");
     });
 
     it("should send event reminder notifications with timing-specific content", async () => {
