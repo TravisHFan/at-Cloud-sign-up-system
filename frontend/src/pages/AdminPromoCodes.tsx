@@ -27,6 +27,7 @@ type PromoCodeStatusFilter = "all" | "active" | "used" | "expired";
 
 export default function AdminPromoCodes() {
   const [activeTab, setActiveTab] = useState<AdminTabType>("all");
+  const showAllCodesTab = () => setActiveTab("all");
 
   return (
     <div className="space-y-6">
@@ -87,8 +88,12 @@ export default function AdminPromoCodes() {
         {/* Tab Content */}
         <div className="p-6">
           {activeTab === "all" && <AllCodesTab />}
-          {activeTab === "create-staff" && <StaffCodeCreator />}
-          {activeTab === "create-reward" && <RewardCodeCreator />}
+          {activeTab === "create-staff" && (
+            <StaffCodeCreator onSuccess={showAllCodesTab} />
+          )}
+          {activeTab === "create-reward" && (
+            <RewardCodeCreator onSuccess={showAllCodesTab} />
+          )}
           {activeTab === "bundle-config" && <BundleConfigManager />}
         </div>
       </div>

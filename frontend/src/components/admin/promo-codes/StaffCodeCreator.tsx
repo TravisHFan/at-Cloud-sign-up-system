@@ -314,11 +314,11 @@ export default function StaffCodeCreator({ onSuccess }: StaffCodeCreatorProps) {
     }
   };
 
-  const closeSuccessModal = () => {
+  const closeSuccessModal = (notifySuccess = false) => {
     setSuccess(false);
     setCreatedCode(null);
     setCopiedCode(false);
-    if (onSuccess) {
+    if (notifySuccess && onSuccess) {
       onSuccess();
     }
   };
@@ -1034,7 +1034,7 @@ export default function StaffCodeCreator({ onSuccess }: StaffCodeCreatorProps) {
                     Create Another
                   </button>
                   <button
-                    onClick={closeSuccessModal}
+                    onClick={() => closeSuccessModal(true)}
                     className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
                   >
                     Done

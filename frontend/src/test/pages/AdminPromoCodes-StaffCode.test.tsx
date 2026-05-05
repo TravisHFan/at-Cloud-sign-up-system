@@ -125,6 +125,78 @@ describe("AdminPromoCodes - Staff Code Creation (Minimal Test)", () => {
     });
   });
 
+  it("should show a newly created staff code in View All Codes after Done", async () => {
+    const user = userEvent.setup();
+    const mockCreatedCode = {
+      _id: "code-general-123",
+      code: "STAFF-GEN123",
+      type: "staff_access" as const,
+      discountPercent: 100,
+      description: "Staff Discount 2026",
+      isGeneral: true,
+      ownerId: "",
+      isActive: true,
+      isUsed: false,
+      createdAt: new Date().toISOString(),
+      createdBy: "admin123",
+    };
+
+    vi.mocked(api.apiClient.createGeneralStaffPromoCode).mockResolvedValue({
+      code: mockCreatedCode,
+    });
+    vi.mocked(api.apiClient.getAllPromoCodes)
+      .mockResolvedValueOnce({
+        codes: [],
+        pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
+      })
+      .mockResolvedValueOnce({
+        codes: [mockCreatedCode],
+        pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+      });
+
+    render(
+      <BrowserRouter>
+        <AdminPromoCodes />
+      </BrowserRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Promo Codes Management")).toBeInTheDocument();
+    });
+
+    await user.click(
+      screen.getByRole("button", { name: /create staff code/i })
+    );
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: /create general staff code/i,
+      })
+    );
+
+    await user.type(
+      screen.getByPlaceholderText(/staff discount 2025/i),
+      "Staff Discount 2026"
+    );
+
+    const submitButtons = screen.getAllByRole("button", {
+      name: /create general staff code/i,
+    });
+    const generateButton = submitButtons.find(
+      (btn) => btn.getAttribute("type") === "submit"
+    );
+    expect(generateButton).toBeInTheDocument();
+    await user.click(generateButton!);
+
+    expect(await screen.findByText("Staff Code Created!")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /done/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("STAFF-GEN123")).toBeInTheDocument();
+    });
+    expect(api.apiClient.getAllPromoCodes).toHaveBeenCalledTimes(2);
+  });
+
   /**
    * CORE TEST: Verify user search and selection flow with valid ID
    * This is the critical bug prevention test

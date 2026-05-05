@@ -259,7 +259,7 @@ export default function RewardCodeCreator({
     }
   };
 
-  const closeSuccessModal = () => {
+  const closeSuccessModal = (notifySuccess = false) => {
     setSuccess(false);
     setCreatedCode(null);
     setError(null);
@@ -274,7 +274,7 @@ export default function RewardCodeCreator({
     setExpirationMode("never");
     setExpirationDate("");
 
-    if (onSuccess) {
+    if (notifySuccess && onSuccess) {
       onSuccess();
     }
   };
@@ -657,13 +657,13 @@ export default function RewardCodeCreator({
                   {/* Actions */}
                   <div className="flex gap-3">
                     <button
-                      onClick={closeSuccessModal}
+                      onClick={() => closeSuccessModal()}
                       className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                     >
                       Create Another
                     </button>
                     <button
-                      onClick={closeSuccessModal}
+                      onClick={() => closeSuccessModal(true)}
                       className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
                     >
                       Done

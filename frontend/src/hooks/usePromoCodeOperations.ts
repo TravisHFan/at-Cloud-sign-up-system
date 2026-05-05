@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { promoCodesService } from "../services/api/promoCodes.api";
+import { apiClient } from "../services/api";
 import type { PromoCodeResponse } from "../components/admin/promo-codes/PromoCodeList";
 
 export type PromoCodeTypeFilter =
@@ -91,7 +91,7 @@ export function usePromoCodeOperations(
       if (statusFilter !== "all") filters.status = statusFilter;
       if (searchQuery.trim()) filters.search = searchQuery.trim();
 
-      const response = await promoCodesService.getAllPromoCodes(filters);
+      const response = await apiClient.getAllPromoCodes(filters);
 
       setCodes(response.codes);
       setTotalPages(response.pagination.totalPages);
@@ -116,7 +116,7 @@ export function usePromoCodeOperations(
     async (id: string) => {
       try {
         setIsDeactivating(true);
-        await promoCodesService.deactivatePromoCode(id);
+        await apiClient.deactivatePromoCode(id);
         await fetchCodes(); // Refresh list
       } catch (err) {
         const errorMessage =
@@ -134,7 +134,7 @@ export function usePromoCodeOperations(
     async (id: string) => {
       try {
         setIsReactivating(true);
-        await promoCodesService.reactivatePromoCode(id);
+        await apiClient.reactivatePromoCode(id);
         await fetchCodes(); // Refresh list
       } catch (err) {
         const errorMessage =
@@ -152,7 +152,7 @@ export function usePromoCodeOperations(
     async (id: string) => {
       try {
         setIsDeleting(true);
-        await promoCodesService.deletePromoCode(id);
+        await apiClient.deletePromoCode(id);
         await fetchCodes(); // Refresh list
       } catch (err) {
         const errorMessage =
