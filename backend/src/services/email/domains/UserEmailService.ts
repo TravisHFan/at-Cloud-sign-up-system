@@ -206,7 +206,7 @@ export class UserEmailService {
             .content { padding: 30px; }
             .admin-alert { background: #e2e3f1; border-left: 4px solid #6f42c1; padding: 15px; margin: 20px 0; border-radius: 4px; }
             .user-details { background: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 4px; }
-            .button { display: inline-block; background: #6f42c1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
+            .button { display: inline-block; background: #6f42c1; color: #ffffff !important; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
             .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 12px; }
           </style>
         </head>
@@ -232,7 +232,7 @@ export class UserEmailService {
               <div style="text-align: center;">
                 <a href="${
                   process.env.FRONTEND_URL || "http://localhost:5173"
-                }/admin/users" class="button">
+                }/admin/users" class="button" style="color: #ffffff !important;">
                   Review in Admin Dashboard
                 </a>
               </div>

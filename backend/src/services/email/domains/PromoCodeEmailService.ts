@@ -95,7 +95,7 @@ export class PromoCodeEmailService {
       .details { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 20px; border-radius: 8px; margin: 25px 0; }
       .details h3 { margin: 0 0 15px 0; color: #92400e; font-size: 18px; }
       .details p { margin: 8px 0; color: #78350f; }
-      .cta-button { display: inline-block; background: #9333ea; color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; margin: 20px 0; }
+      .cta-button { display: inline-block; background: #9333ea; color: #ffffff !important; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; margin: 20px 0; }
       .cta-button:hover { background: #7e22ce; }
       .footer { background: #f9fafb; padding: 30px; text-align: center; color: #6b7280; font-size: 14px; }
       .emoji { font-size: 48px; margin-bottom: 20px; }
@@ -234,7 +234,7 @@ The @Cloud Ministry Team
       .details { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 20px; border-radius: 8px; margin: 25px 0; }
       .details h3 { margin: 0 0 15px 0; color: #92400e; font-size: 18px; }
       .details p { margin: 8px 0; color: #78350f; }
-      .cta-button { display: inline-block; background: #ef4444; color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; margin: 20px 0; }
+      .cta-button { display: inline-block; background: #ef4444; color: #ffffff !important; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; margin: 20px 0; }
       .cta-button:hover { background: #dc2626; }
       .footer { background: #f9fafb; padding: 30px; text-align: center; color: #6b7280; font-size: 14px; }
       .emoji { font-size: 48px; margin-bottom: 20px; }
@@ -383,7 +383,7 @@ View your promo codes: ${promoCodesUrl}
       .details { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 20px; border-radius: 8px; margin: 25px 0; }
       .details h3 { margin: 0 0 15px 0; color: #92400e; font-size: 18px; }
       .details p { margin: 8px 0; color: #78350f; }
-      .cta-button { display: inline-block; background: #10b981; color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; margin: 20px 0; }
+      .cta-button { display: inline-block; background: #10b981; color: #ffffff !important; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; margin: 20px 0; }
       .cta-button:hover { background: #059669; }
       .footer { background: #f9fafb; padding: 30px; text-align: center; color: #6b7280; font-size: 14px; }
       .emoji { font-size: 48px; margin-bottom: 20px; }

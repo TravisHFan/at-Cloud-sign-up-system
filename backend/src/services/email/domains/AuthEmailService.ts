@@ -209,7 +209,7 @@ export class AuthEmailService {
             .header h1 { margin: 0; font-size: 22px; }
             .content { background: #f9f9f9; padding: 28px; border-radius: 0 0 10px 10px; }
             .footer { text-align: center; margin-top: 20px; color: #666; font-size: 14px; }
-            .button { display: inline-block; padding: 12px 24px; background: #28a745; color: white; text-decoration: none; border-radius: 6px; }
+            .button { display: inline-block; padding: 12px 24px; background: #28a745; color: #ffffff !important; text-decoration: none; border-radius: 6px; }
           </style>
         </head>
         <body>
@@ -226,7 +226,7 @@ export class AuthEmailService {
               <p style="text-align:center;">
                 <a class="button" href="${
                   process.env.FRONTEND_URL || "http://localhost:5173"
-                }/login">Log In</a>
+                }/login" style="color: #ffffff !important;">Log In</a>
               </p>
               <p>Welcome back!</p>
               <p>Best regards,</p>

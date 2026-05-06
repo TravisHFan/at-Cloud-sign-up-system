@@ -13,7 +13,7 @@ exports[`EmailService - Email Template Snapshots > Auth Templates > should match
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
             .header { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
             .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .button { display: inline-block; padding: 12px 30px; background: #4facfe; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .button { display: inline-block; padding: 12px 30px; background: #4facfe; color: #ffffff !important; text-decoration: none; border-radius: 5px; margin: 20px 0; }
             .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
             .warning { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0; }
           </style>
@@ -33,7 +33,7 @@ exports[`EmailService - Email Template Snapshots > Auth Templates > should match
               
               <p>To confirm and complete your password change, click the button below:</p>
               <p style="text-align: center;">
-                <a href="http://localhost:5173/change-password/confirm/change-token-789" class="button">Confirm Password Change</a>
+                <a href="http://localhost:5173/change-password/confirm/change-token-789" class="button" style="color: #ffffff !important;">Confirm Password Change</a>
               </p>
               <p>Or copy and paste this link into your browser:<br>
                 <a href="http://localhost:5173/change-password/confirm/change-token-789">http://localhost:5173/change-password/confirm/change-token-789</a>
@@ -65,7 +65,7 @@ exports[`EmailService - Email Template Snapshots > Auth Templates > should match
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
             .header { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
             .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .button { display: inline-block; padding: 12px 30px; background: #f5576c; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .button { display: inline-block; padding: 12px 30px; background: #f5576c; color: #ffffff !important; text-decoration: none; border-radius: 5px; margin: 20px 0; }
             .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
           </style>
         </head>
@@ -79,7 +79,7 @@ exports[`EmailService - Email Template Snapshots > Auth Templates > should match
               <p>We received a request to reset your password for your @Cloud Ministry account.</p>
               <p>If you requested this password reset, please click the button below to create a new password:</p>
               <div style="text-align: center;">
-                <a href="http://localhost:5173/reset-password/reset-token-456" class="button">Reset My Password</a>
+                <a href="http://localhost:5173/reset-password/reset-token-456" class="button" style="color: #ffffff !important;">Reset My Password</a>
               </div>
               <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
               <p><a href="http://localhost:5173/reset-password/reset-token-456">http://localhost:5173/reset-password/reset-token-456</a></p>
@@ -159,7 +159,7 @@ exports[`EmailService - Email Template Snapshots > Auth Templates > should match
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
             .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
             .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .button { display: inline-block; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .button { display: inline-block; padding: 12px 30px; background: #667eea; color: #ffffff !important; text-decoration: none; border-radius: 5px; margin: 20px 0; }
             .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
           </style>
         </head>
@@ -173,7 +173,7 @@ exports[`EmailService - Email Template Snapshots > Auth Templates > should match
               <p>Thank you for joining @Cloud Ministry! We're excited to have you as part of our community.</p>
               <p>To complete your registration and start participating in our events, please verify your email address by clicking the button below:</p>
               <div style="text-align: center;">
-                <a href="http://localhost:5173/verify-email/test-token-123" class="button">Verify My Email</a>
+                <a href="http://localhost:5173/verify-email/test-token-123" class="button" style="color: #ffffff !important;">Verify My Email</a>
               </div>
               <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
               <p><a href="http://localhost:5173/verify-email/test-token-123">http://localhost:5173/verify-email/test-token-123</a></p>
@@ -204,7 +204,7 @@ exports[`EmailService - Email Template Snapshots > User Account Templates > shou
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
             .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
             .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .button { display: inline-block; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .button { display: inline-block; padding: 12px 30px; background: #667eea; color: #ffffff !important; text-decoration: none; border-radius: 5px; margin: 20px 0; }
             .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
           </style>
         </head>
@@ -224,7 +224,7 @@ exports[`EmailService - Email Template Snapshots > User Account Templates > shou
                 <li>Participate in our ministry activities</li>
               </ul>
               <div style="text-align: center;">
-                <a href="http://localhost:5173/dashboard" class="button">Go to Dashboard</a>
+                <a href="http://localhost:5173/dashboard" class="button" style="color: #ffffff !important;">Go to Dashboard</a>
               </div>
               <p>We're excited to have you as part of our family and look forward to growing together in faith!</p>
               <p>Blessings,<br>The @Cloud Ministry Team</p>

@@ -410,7 +410,7 @@ describe("EventEmailService - Event Email Operations", () => {
       expect(emailCall.html).toContain("Jane Smith");
       expect(emailCall.html).toContain("Workshop Reminder");
       expect(emailCall.html).toContain(
-        'href="http://localhost:5173/dashboard/event/reminder-123" class="button">View Event Details</a>',
+        'href="http://localhost:5173/dashboard/event/reminder-123" class="button" style="color: #ffffff !important;">View Event Details</a>',
       );
       expect(emailCall.html).toContain(
         'href="https://calendar.google.com/calendar/render?',
@@ -541,7 +541,7 @@ describe("EventEmailService - Event Email Operations", () => {
       expect(emailCall.html).toContain("Big Conference");
       expect(emailCall.html).toContain("Main");
       expect(emailCall.html).toContain(
-        'href="http://localhost:5173/dashboard/event/event-abc" class="button">View Event Details</a>',
+        'href="http://localhost:5173/dashboard/event/event-abc" class="button" style="color: #ffffff !important;">View Event Details</a>',
       );
       expect(emailCall.html).not.toContain(
         'class="button secondary">Event Management</a>',

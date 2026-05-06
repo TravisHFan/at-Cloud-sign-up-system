@@ -621,7 +621,7 @@ describe("RoleEmailService - Role Email Operations", () => {
       expect(emailCall.html).toContain("leader@example.com");
       expect(emailCall.html).toContain("2025-12-15");
       expect(emailCall.html).toContain(
-        'href="http://localhost:5173/dashboard/management" class="button">Review Leader</a>',
+        'href="http://localhost:5173/dashboard/management" class="button" style="color: #ffffff !important;">Review Leader</a>',
       );
       expect(emailCall.html).not.toContain("#{");
     });
@@ -850,7 +850,7 @@ describe("RoleEmailService - Role Email Operations", () => {
       expect(emailCall.html).toContain("Main Organizer");
       expect(emailCall.html).toContain("Convention Center");
       expect(emailCall.html).toContain(
-        'href="http://localhost:5173/dashboard/event/event-123" class="button">View Event Details</a>',
+        'href="http://localhost:5173/dashboard/event/event-123" class="button" style="color: #ffffff !important;">View Event Details</a>',
       );
       expect(emailCall.html).not.toContain(
         'class="button secondary">Event Management</a>',

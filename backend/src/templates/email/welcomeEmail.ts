@@ -24,7 +24,7 @@ export function generateWelcomeEmail(data: WelcomeEmailData): string {
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
             .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
             .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .button { display: inline-block; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .button { display: inline-block; padding: 12px 30px; background: #667eea; color: #ffffff !important; text-decoration: none; border-radius: 5px; margin: 20px 0; }
             .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
           </style>
         </head>
@@ -44,7 +44,7 @@ export function generateWelcomeEmail(data: WelcomeEmailData): string {
                 <li>Participate in our ministry activities</li>
               </ul>
               <div style="text-align: center;">
-                <a href="${dashboardUrl}" class="button">Go to Dashboard</a>
+                <a href="${dashboardUrl}" class="button" style="color: #ffffff !important;">Go to Dashboard</a>
               </div>
               <p>We're excited to have you as part of our family and look forward to growing together in faith!</p>
               <p>Blessings,<br>The @Cloud Ministry Team</p>

@@ -156,7 +156,7 @@ export class RoleEmailService {
             .new-role { background: #28a745; color: white; }
             .arrow { font-size: 20px; margin: 0 10px; color: #28a745; }
             .permissions-section { background: #e8f5e8; padding: 20px; border-radius: 8px; margin: 15px 0; }
-            .button { display: inline-block; padding: 12px 30px; background: #28a745; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .button { display: inline-block; padding: 12px 30px; background: #28a745; color: #ffffff !important; text-decoration: none; border-radius: 5px; margin: 20px 0; }
             .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
             .icon { font-size: 48px; margin-bottom: 10px; }
           </style>
@@ -201,7 +201,7 @@ export class RoleEmailService {
               <div style="text-align: center;">
                 <a href="${
                   process.env.FRONTEND_URL || "http://localhost:5173"
-                }/dashboard" class="button">
+                }/dashboard" class="button" style="color: #ffffff !important;">
                   Explore Your New Dashboard
                 </a>
               </div>
@@ -331,7 +331,7 @@ export class RoleEmailService {
               promotionInfo.color
             }; margin: 10px 0; }
             .action-section { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 8px; margin: 15px 0; }
-            .button { display: inline-block; padding: 10px 25px; background: #495057; color: white; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
+            .button { display: inline-block; padding: 10px 25px; background: #495057; color: #ffffff !important; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
             .button.primary { background: ${promotionInfo.color}; }
             .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
             .timestamp { color: #6c757d; font-size: 14px; }
@@ -383,12 +383,12 @@ export class RoleEmailService {
               <div style="text-align: center;">
                 <a href="${
                   process.env.FRONTEND_URL || "http://localhost:5173"
-                }/admin/users/${userData.email}" class="button primary">
+                }/admin/users/${userData.email}" class="button primary" style="color: #ffffff !important;">
                   View User Profile
                 </a>
                 <a href="${
                   process.env.FRONTEND_URL || "http://localhost:5173"
-                }/admin/audit-log" class="button">
+                }/admin/audit-log" class="button" style="color: #ffffff !important;">
                   View Audit Log
                 </a>
               </div>
@@ -529,7 +529,7 @@ export class RoleEmailService {
             .encouragement-section { background: #d1ecf1; border: 1px solid #86cfda; padding: 20px; border-radius: 8px; margin: 15px 0; }
             .button { display: inline-block; padding: 12px 30px; background: ${
               transitionInfo.color
-            }; color: white; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
+            }; color: #ffffff !important; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
             .button.support { background: #17a2b8; }
             .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
             .icon { font-size: 32px; margin-bottom: 10px; }
@@ -600,10 +600,10 @@ export class RoleEmailService {
               <div style="text-align: center;">
                 <a href="${
                   process.env.FRONTEND_URL || "http://localhost:5173"
-                }/dashboard" class="button">
+                }/dashboard" class="button" style="color: #ffffff !important;">
                   Access Your Dashboard
                 </a>
-                <a href="mailto:${changedBy.email}" class="button support">
+                <a href="mailto:${changedBy.email}" class="button support" style="color: #ffffff !important;">
                   Contact ${administratorName}
                 </a>
               </div>
@@ -765,7 +765,7 @@ export class RoleEmailService {
             .reason-section { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 8px; margin: 15px 0; }
             .action-section { background: #f8d7da; border: 1px solid #f5c6cb; padding: 15px; border-radius: 8px; margin: 15px 0; }
             .oversight-section { background: #d1ecf1; border: 1px solid #bee5eb; padding: 15px; border-radius: 8px; margin: 15px 0; }
-            .button { display: inline-block; padding: 10px 25px; background: #495057; color: white; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
+            .button { display: inline-block; padding: 10px 25px; background: #495057; color: #ffffff !important; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
             .button.primary { background: ${demotionInfo.color}; }
             .button.urgent { background: #dc3545; }
             .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
@@ -850,12 +850,12 @@ export class RoleEmailService {
               <div style="text-align: center;">
                 <a href="${
                   process.env.FRONTEND_URL || "http://localhost:5173"
-                }/admin/users/${userData.email}" class="button primary">
+                }/admin/users/${userData.email}" class="button primary" style="color: #ffffff !important;">
                   Review User Profile
                 </a>
                 <a href="${
                   process.env.FRONTEND_URL || "http://localhost:5173"
-                }/admin/audit-log" class="button">
+                }/admin/audit-log" class="button" style="color: #ffffff !important;">
                   View Audit Log
                 </a>
                 ${
@@ -863,7 +863,7 @@ export class RoleEmailService {
                     ? `
                 <a href="${
                   process.env.FRONTEND_URL || "http://localhost:5173"
-                }/admin/security-review" class="button urgent">
+                }/admin/security-review" class="button urgent" style="color: #ffffff !important;">
                   Security Review
                 </a>`
                     : ""
@@ -934,7 +934,7 @@ export class RoleEmailService {
             .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; }
             .content { padding: 30px; }
             .role-change { background: #f8f9fa; border-left: 4px solid #667eea; padding: 15px; margin: 20px 0; border-radius: 4px; }
-            .button { display: inline-block; background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
+            .button { display: inline-block; background: #667eea; color: #ffffff !important; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
             .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 12px; }
           </style>
         </head>
@@ -962,7 +962,7 @@ export class RoleEmailService {
               <div style="text-align: center;">
                 <a href="${
                   process.env.FRONTEND_URL || "http://localhost:5173"
-                }/ministry/dashboard" class="button">
+                }/ministry/dashboard" class="button" style="color: #ffffff !important;">
                   View Ministry Dashboard
                 </a>
               </div>
@@ -1023,7 +1023,7 @@ export class RoleEmailService {
             .content { padding: 30px; }
             .admin-alert { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px; }
             .user-details { background: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 4px; }
-            .button { display: inline-block; background: #dc3545; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
+            .button { display: inline-block; background: #dc3545; color: #ffffff !important; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
             .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 12px; }
           </style>
         </head>
@@ -1051,7 +1051,7 @@ export class RoleEmailService {
               <div style="text-align: center;">
                 <a href="${
                   process.env.FRONTEND_URL || "http://localhost:5173"
-                }/admin/users" class="button">
+                }/admin/users" class="button" style="color: #ffffff !important;">
                   Review in Admin Dashboard
                 </a>
               </div>
@@ -1105,7 +1105,7 @@ export class RoleEmailService {
             .content { padding: 30px; }
             .leader-info { background: #d4edda; border-left: 4px solid #28a745; padding: 15px; margin: 20px 0; border-radius: 4px; }
             .signup-details { background: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 4px; }
-            .button { display: inline-block; background: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
+            .button { display: inline-block; background: #28a745; color: #ffffff !important; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
             .button:hover { background: #218838; }
             .footer { background: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #6c757d; }
           </style>
@@ -1135,8 +1135,8 @@ export class RoleEmailService {
               <p>Please review this new leader's registration and take appropriate action:</p>
               
               <div style="text-align: center; margin: 30px 0;">
-                <a href="${RoleEmailService.getFrontendUrl()}/dashboard/management" class="button">Review Leader</a>
-                <a href="${RoleEmailService.getFrontendUrl()}/dashboard/management" class="button" style="background: #6c757d;">Manage Users</a>
+                <a href="${RoleEmailService.getFrontendUrl()}/dashboard/management" class="button" style="color: #ffffff !important;">Review Leader</a>
+                <a href="${RoleEmailService.getFrontendUrl()}/dashboard/management" class="button" style="background: #6c757d; color: #ffffff !important;">Manage Users</a>
               </div>
 
               <p><em>This is an automated notification. Please review the new leader's information in the admin dashboard.</em></p>
@@ -1189,7 +1189,7 @@ export class RoleEmailService {
             .content { padding: 30px; }
             .admin-alert { background: #d4edda; border-left: 4px solid #28a745; padding: 15px; margin: 20px 0; border-radius: 4px; }
             .user-details { background: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 4px; }
-            .button { display: inline-block; background: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
+            .button { display: inline-block; background: #28a745; color: #ffffff !important; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
             .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 12px; }
           </style>
         </head>
@@ -1215,7 +1215,7 @@ export class RoleEmailService {
               <div style="text-align: center;">
                 <a href="${
                   process.env.FRONTEND_URL || "http://localhost:5173"
-                }/admin/users" class="button">
+                }/admin/users" class="button" style="color: #ffffff !important;">
                   Review in Admin Dashboard
                 </a>
               </div>
@@ -1264,7 +1264,7 @@ export class RoleEmailService {
             .content { padding: 30px; }
             .admin-alert { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px; }
             .user-details { background: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 4px; }
-            .button { display: inline-block; background: #fd7e14; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
+            .button { display: inline-block; background: #fd7e14; color: #ffffff !important; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
             .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 12px; }
           </style>
         </head>
@@ -1292,7 +1292,7 @@ export class RoleEmailService {
               <div style="text-align: center;">
                 <a href="${
                   process.env.FRONTEND_URL || "http://localhost:5173"
-                }/admin/users" class="button">
+                }/admin/users" class="button" style="color: #ffffff !important;">
                   Review in Admin Dashboard
                 </a>
               </div>
@@ -1366,7 +1366,7 @@ export class RoleEmailService {
             .welcome-message { background: #e7e3ff; border-left: 4px solid #6f42c1; padding: 15px; margin: 20px 0; border-radius: 4px; }
             .event-details { background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 8px; border: 1px solid #dee2e6; }
             .responsibility-box { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px; }
-            .button { display: inline-block; background: #6f42c1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
+            .button { display: inline-block; background: #6f42c1; color: #ffffff !important; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
             .button:hover { background: #5a32a3; }
             .button.secondary { background: #6c757d; }
             .button.secondary:hover { background: #545b62; }
@@ -1418,7 +1418,7 @@ export class RoleEmailService {
               </div>
 
               <div style="text-align: center; margin: 30px 0;">
-                <a href="${eventDetailUrl}" class="button">View Event Details</a>
+                <a href="${eventDetailUrl}" class="button" style="color: #ffffff !important;">View Event Details</a>
               </div>
 
               <p>Thank you for volunteering to help organize this event. Your contribution makes a difference in our ministry!</p>

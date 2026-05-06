@@ -289,7 +289,7 @@ export class EventEmailService {
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
             .header { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
             .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .button { display: inline-block; padding: 12px 30px; background: #4facfe; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .button { display: inline-block; padding: 12px 30px; background: #4facfe; color: #ffffff !important; text-decoration: none; border-radius: 5px; margin: 20px 0; }
             .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
           </style>
         </head>
@@ -330,7 +330,7 @@ export class EventEmailService {
               <div style="text-align: center;">
                 <a href="${
                   process.env.FRONTEND_URL || "http://localhost:5173"
-                }/dashboard" class="button">View Dashboard</a>
+                }/dashboard" class="button" style="color: #ffffff !important;">View Dashboard</a>
               </div>
               <p>Thank you for your participation in @Cloud Ministry events!</p>
               <p>Blessings,<br>The @Cloud Ministry Team</p>
@@ -420,7 +420,7 @@ export class EventEmailService {
             .event-card { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #4facfe; }
             .event-detail { margin: 10px 0; }
             .event-detail strong { color: #4facfe; }
-            .button { display: inline-block; padding: 12px 30px; background: #4facfe; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .button { display: inline-block; padding: 12px 30px; background: #4facfe; color: #ffffff !important; text-decoration: none; border-radius: 5px; margin: 20px 0; }
             .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
           </style>
         </head>
@@ -489,7 +489,7 @@ export class EventEmailService {
               <div style="text-align: center;">
                 <a href="${
                   process.env.FRONTEND_URL || "http://localhost:5173"
-                }/dashboard/upcoming" class="button">View & Register for Event</a>
+                }/dashboard/upcoming" class="button" style="color: #ffffff !important;">View & Register for Event</a>
               </div>
               
               <p>We look forward to seeing you there!</p>
@@ -571,7 +571,7 @@ export class EventEmailService {
             .welcome-message { background: #e7e3ff; border-left: 4px solid #6f42c1; padding: 15px; margin: 20px 0; border-radius: 4px; }
             .event-details { background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 8px; border: 1px solid #dee2e6; }
             .responsibility-box { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px; }
-            .button { display: inline-block; background: #6f42c1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
+            .button { display: inline-block; background: #6f42c1; color: #ffffff !important; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
             .button:hover { background: #5a32a3; }
             .button.secondary { background: #6c757d; }
             .button.secondary:hover { background: #545b62; }
@@ -623,7 +623,7 @@ export class EventEmailService {
               </div>
 
               <div style="text-align: center; margin: 30px 0;">
-                <a href="${eventDetailUrl}" class="button">View Event Details</a>
+                <a href="${eventDetailUrl}" class="button" style="color: #ffffff !important;">View Event Details</a>
               </div>
 
               <p>Thank you for volunteering to help organize this event. Your contribution makes a difference in our ministry!</p>
@@ -713,7 +713,7 @@ export class EventEmailService {
             .countdown.low { background: #d1ecf1; border-left-color: #17a2b8; }
             .virtual-info { background: #d4edda; border-left: 4px solid #28a745; padding: 15px; margin: 20px 0; border-radius: 4px; }
             .location-info { background: #f8d7da; border-left: 4px solid #dc3545; padding: 15px; margin: 20px 0; border-radius: 4px; }
-            .button { display: inline-block; background: #dc3545; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 5px; font-weight: bold; }
+            .button { display: inline-block; background: #dc3545; color: #ffffff !important; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 5px; font-weight: bold; }
             .button:hover { background: #c82333; }
             .button.virtual { background: #28a745; }
             .button.virtual:hover { background: #218838; }
@@ -783,7 +783,7 @@ export class EventEmailService {
                   }
                   </p>
                   <div style="text-align: center; margin: 15px 0;">
-                    <a href="${eventData.zoomLink}" class="button virtual">${
+                    <a href="${eventData.zoomLink}" class="button virtual" style="color: #ffffff !important;">${
                       isHybrid ? "Join Online" : "Join Virtual Event"
                     }</a>
                   </div>
@@ -804,12 +804,12 @@ export class EventEmailService {
               <div style="text-align: center; margin: 30px 0;">
                 ${
                   isVirtual && eventData.zoomLink
-                    ? `<a href="${eventData.zoomLink}" class="button virtual">${
+                    ? `<a href="${eventData.zoomLink}" class="button virtual" style="color: #ffffff !important;">${
                         isHybrid ? "Join Online" : "Join Now"
                       }</a>`
-                    : `<a href="${eventDetailUrl}" class="button">View Event Details</a>`
+                    : `<a href="${eventDetailUrl}" class="button" style="color: #ffffff !important;">View Event Details</a>`
                 }
-                <a href="${calendarUrl}" class="button calendar">Add to Calendar</a>
+                <a href="${calendarUrl}" class="button calendar" style="color: #ffffff !important;">Add to Calendar</a>
               </div>
 
               <p>

@@ -589,6 +589,9 @@ describe("UserEmailService - User Account Email Operations", () => {
       expect(emailCall.html).toContain("New Leader");
       expect(emailCall.html).toContain("newleader@example.com");
       expect(emailCall.html).toContain("Youth Pastor");
+      expect(emailCall.html).toContain(
+        'class="button" style="color: #ffffff !important;">',
+      );
     });
 
     it("should include dashboard link for admin review", async () => {

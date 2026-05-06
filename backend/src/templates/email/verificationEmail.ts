@@ -24,7 +24,7 @@ export function generateVerificationEmail(data: VerificationEmailData): string {
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
             .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
             .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .button { display: inline-block; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .button { display: inline-block; padding: 12px 30px; background: #667eea; color: #ffffff !important; text-decoration: none; border-radius: 5px; margin: 20px 0; }
             .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
           </style>
         </head>
@@ -38,7 +38,7 @@ export function generateVerificationEmail(data: VerificationEmailData): string {
               <p>Thank you for joining @Cloud Ministry! We're excited to have you as part of our community.</p>
               <p>To complete your registration and start participating in our events, please verify your email address by clicking the button below:</p>
               <div style="text-align: center;">
-                <a href="${verificationUrl}" class="button">Verify My Email</a>
+                <a href="${verificationUrl}" class="button" style="color: #ffffff !important;">Verify My Email</a>
               </div>
               <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
               <p><a href="${verificationUrl}">${verificationUrl}</a></p>

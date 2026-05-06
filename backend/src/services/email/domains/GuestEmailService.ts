@@ -271,7 +271,7 @@ export class GuestEmailService {
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
             .header { background: linear-gradient(135deg, #22c1c3 0%, #fdbb2d 100%); color: white; padding: 24px; text-align: center; border-radius: 10px 10px 0 0; }
             .content { background: #f9f9f9; padding: 24px; border-radius: 0 0 10px 10px; }
-            .button { display: inline-block; padding: 10px 20px; background: #22c1c3; color: white; text-decoration: none; border-radius: 6px; margin: 16px 0; }
+            .button { display: inline-block; padding: 10px 20px; background: #22c1c3; color: #ffffff !important; text-decoration: none; border-radius: 6px; margin: 16px 0; }
             .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
             .section { margin: 18px 0; }
             .muted { color: #444; }
@@ -303,7 +303,7 @@ export class GuestEmailService {
                   <p>
                     <a href="${String(
                       params.event.zoomLink
-                    )}" class="button virtual">Join Online Meeting</a>
+                    )}" class="button virtual" style="color: #ffffff !important;">Join Online Meeting</a>
                   </p>
                   <p class="muted">If the button doesn't work, use this link: <a href="${String(
                     params.event.zoomLink
@@ -373,7 +373,7 @@ export class GuestEmailService {
               <div class="section">
                 <h3>Want Full Event Access?</h3>
                 <p>We recommend creating an @Cloud account so you can view full event details, receive updates, and manage your participation.</p>
-                <p style="text-align:center"><a href="${frontend}/signup" class="button">Sign Up / Create Account</a></p>
+                <p style="text-align:center"><a href="${frontend}/signup" class="button" style="color: #ffffff !important;">Sign Up / Create Account</a></p>
               </div>
 
               <p>If you have any other questions, please reply to this email.</p>

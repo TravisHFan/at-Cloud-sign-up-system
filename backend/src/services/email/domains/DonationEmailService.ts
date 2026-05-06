@@ -202,7 +202,7 @@ export class DonationEmailService {
             .button {
               display: inline-block;
               background-color: #22c55e;
-              color: white;
+              color: #ffffff !important;
               padding: 14px 32px;
               text-decoration: none;
               border-radius: 8px;
@@ -270,7 +270,7 @@ export class DonationEmailService {
               <div class="button-container">
                 <a href="${
                   process.env.FRONTEND_URL || "http://localhost:5173"
-                }/dashboard/donate" class="button">
+                }/dashboard/donate" class="button" style="color: #ffffff !important;">
                   View Donation History
                 </a>
               </div>

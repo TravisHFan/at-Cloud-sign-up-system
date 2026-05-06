@@ -26,7 +26,7 @@ export function generatePasswordResetEmail(
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
             .header { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
             .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .button { display: inline-block; padding: 12px 30px; background: #f5576c; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .button { display: inline-block; padding: 12px 30px; background: #f5576c; color: #ffffff !important; text-decoration: none; border-radius: 5px; margin: 20px 0; }
             .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
           </style>
         </head>
@@ -40,7 +40,7 @@ export function generatePasswordResetEmail(
               <p>We received a request to reset your password for your @Cloud Ministry account.</p>
               <p>If you requested this password reset, please click the button below to create a new password:</p>
               <div style="text-align: center;">
-                <a href="${resetUrl}" class="button">Reset My Password</a>
+                <a href="${resetUrl}" class="button" style="color: #ffffff !important;">Reset My Password</a>
               </div>
               <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
               <p><a href="${resetUrl}">${resetUrl}</a></p>

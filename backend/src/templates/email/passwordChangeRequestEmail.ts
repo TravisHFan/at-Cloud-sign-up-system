@@ -26,7 +26,7 @@ export function generatePasswordChangeRequestEmail(
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
             .header { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
             .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .button { display: inline-block; padding: 12px 30px; background: #4facfe; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .button { display: inline-block; padding: 12px 30px; background: #4facfe; color: #ffffff !important; text-decoration: none; border-radius: 5px; margin: 20px 0; }
             .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
             .warning { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0; }
           </style>
@@ -46,7 +46,7 @@ export function generatePasswordChangeRequestEmail(
               
               <p>To confirm and complete your password change, click the button below:</p>
               <p style="text-align: center;">
-                <a href="${confirmUrl}" class="button">Confirm Password Change</a>
+                <a href="${confirmUrl}" class="button" style="color: #ffffff !important;">Confirm Password Change</a>
               </p>
               <p>Or copy and paste this link into your browser:<br>
                 <a href="${confirmUrl}">${confirmUrl}</a>

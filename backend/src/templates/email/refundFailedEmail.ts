@@ -33,7 +33,7 @@ export function generateRefundFailedEmail(data: RefundFailedEmailData): string {
             .info-label { font-weight: bold; color: #666; }
             .info-value { color: #333; }
             .error-box { background: #fee2e2; border-left: 4px solid #ef4444; padding: 15px; margin: 20px 0; border-radius: 4px; }
-            .button { display: inline-block; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .button { display: inline-block; padding: 12px 30px; background: #667eea; color: #ffffff !important; text-decoration: none; border-radius: 5px; margin: 20px 0; }
             .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
           </style>
         </head>
@@ -71,7 +71,7 @@ export function generateRefundFailedEmail(data: RefundFailedEmailData): string {
               </ul>
 
               <div style="text-align: center;">
-                <a href="mailto:atcloudministry@gmail.com" class="button">Contact Support</a>
+                <a href="mailto:atcloudministry@gmail.com" class="button" style="color: #ffffff !important;">Contact Support</a>
               </div>
 
               <p>We apologize for any inconvenience and appreciate your patience.</p>
