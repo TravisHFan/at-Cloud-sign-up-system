@@ -55,13 +55,17 @@ export function useAvatarUpdates(
 
   const handleAvatarUpdate = useCallback(
     (data: AvatarUpdateData) => {
-      // Only process profile edits that include avatar changes
-      if (data.type === "profile_edited" && data.changes?.avatar) {
-        // Increment counter to trigger re-renders in dependent components
+      const shouldRefreshProfileSnapshot =
+        data.type === "profile_edited" &&
+        (data.changes?.avatar ||
+          data.changes?.roleInAtCloud ||
+          data.changes?.isAtCloudLeader);
+
+      if (shouldRefreshProfileSnapshot) {
+        // Increment counter to trigger re-renders/refetches in dependent components.
         setUpdateCounter((prev) => prev + 1);
 
-        // Call custom callback if provided
-        if (onAvatarUpdate) {
+        if (data.changes?.avatar && onAvatarUpdate) {
           onAvatarUpdate(data.userId, data.user.avatar);
         }
       }

@@ -3,6 +3,61 @@ import mongoose from "mongoose";
 import { Program, Purchase } from "../../models";
 import { sanitizeMentors } from "../../utils/privacy";
 
+type PopulatedMentorUser = {
+  _id?: unknown;
+  id?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  gender?: "male" | "female";
+  avatar?: string;
+  roleInAtCloud?: string;
+};
+
+type ProgramMentor = {
+  userId?: unknown;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  gender?: "male" | "female";
+  avatar?: string;
+  roleInAtCloud?: string;
+};
+
+function isPopulatedMentorUser(value: unknown): value is PopulatedMentorUser {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !(value instanceof mongoose.Types.ObjectId) &&
+    ("_id" in value || "id" in value)
+  );
+}
+
+function mentorUserIdToString(userId: unknown): string | undefined {
+  if (!userId) return undefined;
+  if (userId instanceof mongoose.Types.ObjectId) return userId.toString();
+  if (isPopulatedMentorUser(userId)) {
+    return userId.id || (userId._id ? String(userId._id) : undefined);
+  }
+  return String(userId);
+}
+
+function normalizeMentor(mentor: ProgramMentor): ProgramMentor {
+  const liveUser = isPopulatedMentorUser(mentor.userId)
+    ? mentor.userId
+    : undefined;
+
+  return {
+    userId: mentorUserIdToString(mentor.userId),
+    firstName: liveUser?.firstName ?? mentor.firstName,
+    lastName: liveUser?.lastName ?? mentor.lastName,
+    email: liveUser?.email ?? mentor.email,
+    gender: liveUser?.gender ?? mentor.gender,
+    avatar: liveUser?.avatar ?? mentor.avatar,
+    roleInAtCloud: liveUser?.roleInAtCloud ?? mentor.roleInAtCloud,
+  };
+}
+
 export default class RetrievalController {
   static async getById(req: Request, res: Response): Promise<void> {
     try {
@@ -19,6 +74,13 @@ export default class RetrievalController {
         return;
       }
 
+      if (typeof program.populate === "function") {
+        await program.populate({
+          path: "mentors.userId",
+          select: "firstName lastName email gender avatar roleInAtCloud",
+        });
+      }
+
       // Determine if user can view mentor contact information:
       // - Super Admin and Administrator can always see contacts
       // - Program mentors can see contacts
@@ -28,8 +90,8 @@ export default class RetrievalController {
       const isAdmin =
         user?.role === "Super Admin" || user?.role === "Administrator";
       const isMentor = program.mentors?.some(
-        (mentor: { userId: mongoose.Types.ObjectId }) =>
-          mentor.userId.toString() === String(user?._id),
+        (mentor: { userId: unknown }) =>
+          mentorUserIdToString(mentor.userId) === String(user?._id),
       );
 
       // Check enrollment status
@@ -62,6 +124,12 @@ export default class RetrievalController {
 
       // Convert to plain object for sanitization (include virtuals for 'id' field)
       const programObj = program.toObject({ virtuals: true });
+
+      if (programObj.mentors) {
+        programObj.mentors = (programObj.mentors as ProgramMentor[]).map(
+          normalizeMentor,
+        );
+      }
 
       // Sanitize mentor data if user cannot view contact info
       if (programObj.mentors) {

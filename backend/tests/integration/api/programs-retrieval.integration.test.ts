@@ -133,6 +133,48 @@ describe("Programs Retrieval API Integration Tests", () => {
         expect(response.body.data.mentors[0].firstName).toBe("John");
       });
 
+      it("should return the current mentor role from the user profile instead of the stored snapshot", async () => {
+        const mentor = await createAndLoginTestUser({
+          role: "Leader",
+        });
+        await User.findByIdAndUpdate(mentor.userId, {
+          firstName: "Live",
+          lastName: "Mentor",
+          isAtCloudLeader: true,
+          roleInAtCloud: "Updated Ministry Role",
+        });
+
+        const createdBy = new mongoose.Types.ObjectId();
+        const program = await Program.create({
+          title: "Live Mentor Role Program",
+          programType: "EMBA Mentor Circles",
+          fullPriceTicket: 20000,
+          createdBy,
+          mentors: [
+            {
+              userId: new mongoose.Types.ObjectId(mentor.userId),
+              firstName: "Snapshot",
+              lastName: "Mentor",
+              email: mentor.email,
+              gender: "male",
+              roleInAtCloud: "Old Snapshot Role",
+            },
+          ],
+        });
+
+        const response = await request(app)
+          .get(`/api/programs/${program._id}`)
+          .expect(200);
+
+        expect(response.body.data.mentors[0]).toMatchObject({
+          userId: mentor.userId,
+          firstName: "Live",
+          lastName: "Mentor",
+          roleInAtCloud: "Updated Ministry Role",
+        });
+        expect(response.body.data.mentors[0]).not.toHaveProperty("email");
+      });
+
       it("should retrieve program with admin enrollments", async () => {
         const createdBy = new mongoose.Types.ObjectId();
         const adminId = new mongoose.Types.ObjectId();
@@ -602,7 +644,7 @@ describe("Programs Retrieval API Integration Tests", () => {
           .set("Authorization", `Bearer ${leader.token}`)
           .expect(200);
 
-        expect(response.body.data.mentors[0].email).toBe("leader@test.com");
+        expect(response.body.data.mentors[0].email).toBe(leader.email);
         expect(response.body.data.mentors[1].email).toBe("mentor@test.com");
       });
 
