@@ -753,6 +753,29 @@ describe("EmailRecipientUtils", () => {
 
       expect(res).toHaveLength(2);
     });
+
+    it("can include organizers regardless of their email notification preference", async () => {
+      User.select.mockResolvedValueOnce(null).mockResolvedValueOnce([]);
+
+      await EmailRecipientUtils.getEventAllOrganizers(
+        {
+          createdBy: "main3",
+          organizerDetails: [{ userId: "main3" }, { userId: "co3" }],
+        } as any,
+        false
+      );
+
+      expect(User.findOne).toHaveBeenCalledWith({
+        _id: "main3",
+        isActive: true,
+        isVerified: true,
+      });
+      expect(User.find).toHaveBeenCalledWith({
+        _id: { $in: ["co3"] },
+        isActive: true,
+        isVerified: true,
+      });
+    });
   });
 
   describe("edge cases for extractIdString helper", () => {

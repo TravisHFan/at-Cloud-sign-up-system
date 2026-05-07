@@ -29,8 +29,9 @@ const NotificationPreference: React.FC<NotificationPreferenceProps> = ({
           <span className="text-red-500">*</span>
         </legend>
         <p className="text-xs text-gray-500 mb-2">
-          Choose whether to notify the registered users and guests now via email
-          and a system message.
+          Choose whether to notify the registered users, guests, event creator,
+          and co-organizers now via email. Registered users also receive a
+          system message.
         </p>
         <div className="space-y-2">
           <label className="flex items-start gap-2 cursor-pointer">
@@ -47,7 +48,7 @@ const NotificationPreference: React.FC<NotificationPreferenceProps> = ({
             />
             <span className="text-sm text-gray-700">
               <span className="font-medium">Send notifications now</span> (email
-              + system message to all users).
+              to all recipients + system message to registered users).
             </span>
           </label>
           <label className="flex items-start gap-2 cursor-pointer">

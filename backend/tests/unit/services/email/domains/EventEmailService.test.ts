@@ -226,6 +226,8 @@ describe("EventEmailService - Event Email Operations", () => {
         time: "14:00",
         endTime: "16:00",
         message: "The event time has been changed.",
+        updatedByName: "Jane Leader",
+        updatedByRoleInAtCloud: "Youth Pastor",
       };
 
       // Act
@@ -244,6 +246,10 @@ describe("EventEmailService - Event Email Operations", () => {
       expect(emailCall.html).toContain("John Doe");
       expect(emailCall.html).toContain("Updated Workshop");
       expect(emailCall.html).toContain("The event time has been changed");
+      expect(emailCall.html).toContain("Updated by:");
+      expect(emailCall.html).toContain("Jane Leader");
+      expect(emailCall.html).toContain("Role in @Cloud:");
+      expect(emailCall.html).toContain("Youth Pastor");
     });
 
     it("should handle multi-day events", async () => {

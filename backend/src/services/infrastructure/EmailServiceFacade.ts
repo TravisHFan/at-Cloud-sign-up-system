@@ -188,6 +188,8 @@ export class EmailService {
       endTime?: string;
       timeZone?: string;
       message?: string;
+      updatedByName?: string;
+      updatedByRoleInAtCloud?: string;
     },
   ): Promise<boolean[]> {
     return EventEmailService.sendEventNotificationEmailBulk(

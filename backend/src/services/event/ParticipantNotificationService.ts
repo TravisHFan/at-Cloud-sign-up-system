@@ -26,12 +26,19 @@ export class ParticipantNotificationService {
     req: Request
   ): Promise<void> {
     try {
-      const [participants, guests] = await Promise.all([
+      const [participants, guests, organizers] = await Promise.all([
         EmailRecipientUtils.getEventParticipants(eventId),
         EmailRecipientUtils.getEventGuests(eventId),
+        EmailRecipientUtils.getEventAllOrganizers(event, false),
       ]);
 
-      const actorDisplay = formatActorDisplay({
+      const actorFullName =
+        [req.user?.firstName, req.user?.lastName].filter(Boolean).join(" ") ||
+        req.user?.email ||
+        "An authorized user";
+      const actorRoleInAtCloud =
+        req.user?.roleInAtCloud?.trim() || "Not specified";
+      const systemActorDisplay = formatActorDisplay({
         firstName: req.user?.firstName,
         lastName: req.user?.lastName,
         email: req.user?.email || "",
@@ -40,8 +47,11 @@ export class ParticipantNotificationService {
 
       const updateMessage = `The event "${
         event.title
+      }" has been edited by ${actorFullName} (role in @Cloud: ${actorRoleInAtCloud}). Please review the updated details.`;
+      const systemUpdateMessage = `The event "${
+        event.title
       }" you registered for has been edited by ${
-        actorDisplay || "an authorized user"
+        systemActorDisplay || "an authorized user"
       }. Please review the updated details.`;
 
       const eventMeta = event as unknown as {
@@ -56,9 +66,11 @@ export class ParticipantNotificationService {
         endTime: event.endTime,
         timeZone: eventMeta.timeZone,
         message: updateMessage,
+        updatedByName: actorFullName,
+        updatedByRoleInAtCloud: actorRoleInAtCloud,
       };
 
-      // Combine participants and guests into a single array for deduplication
+      // Combine participants, guests, and organizers into a single array for deduplication
       // (Users with multiple roles should only receive one email)
       const allRecipients = [
         ...(participants || []).map(
@@ -73,6 +85,13 @@ export class ParticipantNotificationService {
             email: g.email,
             name:
               [g.firstName, g.lastName].filter(Boolean).join(" ") || g.email,
+          })
+        ),
+        ...(organizers || []).map(
+          (o: { email: string; firstName?: string; lastName?: string }) => ({
+            email: o.email,
+            name:
+              [o.firstName, o.lastName].filter(Boolean).join(" ") || o.email,
           })
         ),
       ];
@@ -154,7 +173,7 @@ export class ParticipantNotificationService {
           ? UnifiedMessageController.createTargetedSystemMessage(
               {
                 title: `Event Updated: ${event.title}`,
-                content: updateMessage,
+                content: systemUpdateMessage,
                 type: "update",
                 priority: "medium",
                 metadata: { eventId: eventId },
@@ -190,13 +209,13 @@ export class ParticipantNotificationService {
         })
         .catch((err) => {
           console.error(
-            "Error processing event edit notifications (participants/guests):",
+            "Error processing event edit notifications (participants/guests/organizers):",
             err
           );
         });
     } catch (notifyErr) {
       console.error(
-        "Error preparing participant/guest notifications for event edit:",
+        "Error preparing participant/guest/organizer notifications for event edit:",
         notifyErr
       );
     }

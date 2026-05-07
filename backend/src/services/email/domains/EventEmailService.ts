@@ -120,6 +120,8 @@ export class EventEmailService {
       endTime?: string;
       timeZone?: string;
       message?: string;
+      updatedByName?: string;
+      updatedByRoleInAtCloud?: string;
     },
   ): Promise<boolean[]> {
     const seen = new Set<string>();
@@ -303,6 +305,15 @@ export class EventEmailService {
               <p>We have an update regarding the event: <strong>${
                 data.eventTitle
               }</strong></p>
+              ${
+                data.updatedByName || data.updatedByRoleInAtCloud
+                  ? `<p><strong>Updated by:</strong> ${
+                      data.updatedByName || "An authorized user"
+                    }<br><strong>Role in @Cloud:</strong> ${
+                      data.updatedByRoleInAtCloud || "Not specified"
+                    }</p>`
+                  : ""
+              }
               <div class="event-detail">
                 <strong>📅 Date & Time:</strong> ${(() => {
                   const date = (data as any).eventDate || (data as any).date;

@@ -5,6 +5,7 @@ vi.mock("../../../../src/utils/emailRecipientUtils", () => ({
   EmailRecipientUtils: {
     getEventParticipants: vi.fn(),
     getEventGuests: vi.fn(),
+    getEventAllOrganizers: vi.fn(),
   },
 }));
 
@@ -69,9 +70,10 @@ const makeReq = (overrides: Partial<Request> = {}): Request =>
 describe("ParticipantNotificationService.sendEventUpdateNotifications", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    (EmailRecipientUtils.getEventAllOrganizers as any).mockResolvedValue([]);
   });
 
-  it("sends bulk emails to combined participant and guest list with deduped recipients", async () => {
+  it("sends bulk emails to combined participant, guest, creator, and co-organizer list", async () => {
     (EmailRecipientUtils.getEventParticipants as any).mockResolvedValue([
       { email: "p1@example.com", firstName: "P1", lastName: "User" },
       { email: "shared@example.com", firstName: "Shared", lastName: "User" },
@@ -84,6 +86,10 @@ describe("ParticipantNotificationService.sendEventUpdateNotifications", () => {
         lastName: "Person",
       },
     ]);
+    (EmailRecipientUtils.getEventAllOrganizers as any).mockResolvedValue([
+      { email: "creator@example.com", firstName: "Event", lastName: "Creator" },
+      { email: "co@example.com", firstName: "Co", lastName: "Organizer" },
+    ]);
 
     const req = makeReq();
 
@@ -93,17 +99,22 @@ describe("ParticipantNotificationService.sendEventUpdateNotifications", () => {
       req,
     );
 
+    expect(EmailRecipientUtils.getEventAllOrganizers).toHaveBeenCalledWith(
+      baseEvent,
+      false,
+    );
     expect(EmailService.sendEventNotificationEmailBulk).toHaveBeenCalled();
     const [recipients, payload] = (
       EmailService.sendEventNotificationEmailBulk as any
     ).mock.calls[0];
 
-    // Bulk method receives all recipients; it is responsible for deduplication.
     expect(recipients).toEqual([
       { email: "p1@example.com", name: "P1 User" },
       { email: "shared@example.com", name: "Shared User" },
       { email: "g1@example.com", name: "G1 Guest" },
       { email: "shared@example.com", name: "Duplicate Person" },
+      { email: "creator@example.com", name: "Event Creator" },
+      { email: "co@example.com", name: "Co Organizer" },
     ]);
 
     expect(payload).toMatchObject({
@@ -113,9 +124,13 @@ describe("ParticipantNotificationService.sendEventUpdateNotifications", () => {
       time: baseEvent.time,
       endTime: baseEvent.endTime,
       timeZone: baseEvent.timeZone,
+      updatedByName: "John Doe",
+      updatedByRoleInAtCloud: "organizer",
     });
     expect(payload.message).toContain("Test Event");
-    expect(payload.message).toContain("has been edited by");
+    expect(payload.message).toContain(
+      "has been edited by John Doe (role in @Cloud: organizer)",
+    );
   });
 
   it("resolves participant user IDs from existing _id and via email lookup", async () => {

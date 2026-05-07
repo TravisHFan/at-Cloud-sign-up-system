@@ -66,6 +66,7 @@ vi.mock("../../../src/utils/emailRecipientUtils", () => ({
   EmailRecipientUtils: {
     getActiveVerifiedUsers: vi.fn(),
     getEventCoOrganizers: vi.fn(),
+    getEventAllOrganizers: vi.fn(),
     getEventParticipants: vi.fn(),
     getEventGuests: vi.fn(),
   },
@@ -244,6 +245,7 @@ describe("EventController", () => {
         firstName: "Test",
         lastName: "User",
         username: "testuser",
+        roleInAtCloud: "Event Coordinator",
       } as any,
       headers: {},
     };
@@ -251,6 +253,9 @@ describe("EventController", () => {
     // Reset mongoose and permission mocks for each test
     vi.mocked(mongoose.Types.ObjectId.isValid).mockReturnValue(true);
     vi.mocked(hasPermission).mockReturnValue(true);
+    vi.mocked(EmailRecipientUtils.getEventAllOrganizers).mockResolvedValue(
+      [] as any,
+    );
   });
 
   describe("helpers: getEventStatus and updateEventStatusIfNeeded", () => {
@@ -3915,10 +3920,26 @@ describe("EventController", () => {
           vi.mocked(EmailRecipientUtils.getEventGuests).mockResolvedValue([
             { email: "g1@example.com", firstName: "G1", lastName: "Guest" },
           ] as any);
+          vi.mocked(
+            EmailRecipientUtils.getEventAllOrganizers,
+          ).mockResolvedValue([
+            {
+              _id: "u-main",
+              email: "creator@example.com",
+              firstName: "Event",
+              lastName: "Creator",
+            },
+            {
+              _id: "u-co",
+              email: "co@example.com",
+              firstName: "Co",
+              lastName: "Organizer",
+            },
+          ] as any);
 
           vi.mocked(
             EventEmailService.sendEventNotificationEmailBulk
-          ).mockResolvedValue([true, true, true] as any);
+          ).mockResolvedValue([true, true, true, true, true] as any);
           vi.mocked(
             UnifiedMessageController.createTargetedSystemMessage
           ).mockResolvedValue(true as any);
@@ -3939,15 +3960,27 @@ describe("EventController", () => {
             vi.mocked(EventEmailService.sendEventNotificationEmailBulk)
           ).toHaveBeenCalledTimes(1); // single combined call (dedupes internally)
 
-          // Verify the recipients array contains all 3 emails (2 participants + 1 guest)
+          // Verify the recipients array contains participants, guests, creator, and co-organizer
           const callArgs = vi.mocked(
             EventEmailService.sendEventNotificationEmailBulk
           ).mock.calls[0];
           const recipients = callArgs[0];
-          expect(recipients).toHaveLength(3);
+          const payload = callArgs[1];
+          expect(recipients).toHaveLength(5);
           expect(recipients.map((r) => r.email)).toContain("p1@example.com");
           expect(recipients.map((r) => r.email)).toContain("p2@example.com");
           expect(recipients.map((r) => r.email)).toContain("g1@example.com");
+          expect(recipients.map((r) => r.email)).toContain(
+            "creator@example.com"
+          );
+          expect(recipients.map((r) => r.email)).toContain("co@example.com");
+          expect(payload).toMatchObject({
+            updatedByName: "Test User",
+            updatedByRoleInAtCloud: "Event Coordinator",
+          });
+          expect(payload.message).toContain(
+            "has been edited by Test User (role in @Cloud: Event Coordinator)"
+          );
 
           // system message for participants (2 target IDs)
           expect(

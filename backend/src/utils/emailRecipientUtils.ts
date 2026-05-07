@@ -86,7 +86,8 @@ export class EmailRecipientUtils {
    * Used for: Auto-unpublish notifications, event-related alerts that should go to all organizers
    */
   static async getEventAllOrganizers(
-    event: IEvent
+    event: IEvent,
+    respectEmailPreferences = true
   ): Promise<
     Array<{ _id: string; email: string; firstName: string; lastName: string }>
   > {
@@ -107,7 +108,7 @@ export class EmailRecipientUtils {
         _id: mainOrganizerId,
         isActive: true,
         isVerified: true,
-        emailNotifications: true,
+        ...(respectEmailPreferences ? { emailNotifications: true } : {}),
       }).select("_id email firstName lastName");
 
       if (mainOrganizer) {
@@ -136,7 +137,7 @@ export class EmailRecipientUtils {
           _id: { $in: coOrganizerUserIds },
           isActive: true,
           isVerified: true,
-          emailNotifications: true,
+          ...(respectEmailPreferences ? { emailNotifications: true } : {}),
         }).select("_id email firstName lastName");
 
         organizerEmails.push(
