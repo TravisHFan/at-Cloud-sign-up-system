@@ -29,6 +29,7 @@ vi.mock("../../../../src/utils/roleUtils", () => ({
 
 vi.mock("../../../../src/utils/event/eventPermissions", () => ({
   isEventOrganizer: vi.fn(),
+  isAffiliatedProgramEditor: vi.fn(),
 }));
 
 vi.mock("../../../../src/services/CorrelatedLogger", () => ({
@@ -145,7 +146,10 @@ vi.mock("../../../../src/models/Program", () => ({
 }));
 
 import { hasPermission } from "../../../../src/utils/roleUtils";
-import { isEventOrganizer } from "../../../../src/utils/event/eventPermissions";
+import {
+  isAffiliatedProgramEditor,
+  isEventOrganizer,
+} from "../../../../src/utils/event/eventPermissions";
 import { Event } from "../../../../src/models";
 import { FieldNormalizationService } from "../../../../src/services/event/FieldNormalizationService";
 import { validatePricing } from "../../../../src/utils/event/eventValidation";
@@ -186,6 +190,8 @@ describe("UpdateController", () => {
       status: statusMock,
       json: jsonMock,
     } as unknown as Partial<Response>;
+
+    vi.mocked(isAffiliatedProgramEditor).mockResolvedValue(false);
   });
 
   describe("updateEvent - validation", () => {
@@ -246,7 +252,7 @@ describe("UpdateController", () => {
       expect(jsonMock).toHaveBeenCalledWith({
         success: false,
         message:
-          "Insufficient permissions to edit this event. You must be the event creator or a co-organizer.",
+          "Insufficient permissions to edit this event. You must be the event creator, a co-organizer, or a Leader who is a mentor/class rep of an affiliated program.",
       });
     });
 
@@ -292,6 +298,30 @@ describe("UpdateController", () => {
       await UpdateController.updateEvent(req as Request, res as Response);
 
       // Should not have 403
+      expect(statusMock).not.toHaveBeenCalledWith(403);
+    });
+
+    it("should allow Leader editing when they are a mentor/class rep of an affiliated program", async () => {
+      req.user = {
+        _id: "leader-id-123",
+        role: "Leader",
+      } as any;
+      vi.mocked(Event.findById).mockResolvedValue(mockEvent);
+      vi.mocked(hasPermission).mockReturnValue(false);
+      vi.mocked(isEventOrganizer).mockReturnValue(false);
+      vi.mocked(isAffiliatedProgramEditor).mockResolvedValue(true);
+
+      const { FieldNormalizationService } =
+        await import("../../../../src/services/event/FieldNormalizationService");
+      vi.mocked(
+        FieldNormalizationService.normalizeAndValidate,
+      ).mockResolvedValue({
+        success: false,
+        errors: ["Validation error"],
+      } as any);
+
+      await UpdateController.updateEvent(req as Request, res as Response);
+
       expect(statusMock).not.toHaveBeenCalledWith(403);
     });
   });

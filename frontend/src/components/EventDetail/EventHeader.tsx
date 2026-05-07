@@ -44,6 +44,7 @@ interface BackendRole {
 interface EventHeaderProps {
   event: EventData;
   isPassedEvent: boolean;
+  canEditEvent: boolean | null;
   canManageSignups: boolean | null;
   canDeleteEvent: boolean | null;
   publishing: boolean;
@@ -59,6 +60,7 @@ interface EventHeaderProps {
 function EventHeader({
   event,
   isPassedEvent,
+  canEditEvent,
   canManageSignups,
   canDeleteEvent,
   publishing,
@@ -213,7 +215,7 @@ function EventHeader({
       <div className="flex items-center space-x-3 mb-4">
         {!isPassedEvent && (
           <>
-            {canDeleteEvent && (
+            {canEditEvent && (
               <EditButton
                 onClick={() =>
                   navigate(`/dashboard/edit-event/${event.id}`, {
@@ -254,7 +256,7 @@ function EventHeader({
           </button>
         )}
         {/* Add YouTube Link button - only for past events and authorized users */}
-        {isPassedEvent && canDeleteEvent && (
+        {isPassedEvent && canEditEvent && (
           <button
             onClick={() => {
               setYoutubeUrlInput(event.youtubeUrl || "");

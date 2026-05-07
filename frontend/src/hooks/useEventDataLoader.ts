@@ -362,6 +362,7 @@ export function useEventDataLoader({
             programType?: string;
             isFree?: boolean;
             mentors?: Array<{ userId: string }>;
+            adminEnrollments?: { classReps?: string[] };
           };
 
           let filteredList = (list as ProgramListItem[]).map((p) => ({
@@ -370,10 +371,11 @@ export function useEventDataLoader({
             programType: p.programType || "",
             isFree: p.isFree,
             mentors: p.mentors,
+            adminEnrollments: p.adminEnrollments,
           }));
 
           // FOR LEADER USERS: Filter programs to only show accessible ones
-          // (free programs, purchased programs, or programs where they are a mentor)
+          // (free programs, purchased programs, mentor programs, or class rep programs)
           if (currentUser?.role === "Leader") {
             const accessiblePrograms: typeof filteredList = [];
 
@@ -393,7 +395,17 @@ export function useEventDataLoader({
                 continue;
               }
 
-              // Check 3: Has user purchased this program?
+              // Check 3: Is user an admin-enrolled class rep?
+              const isAdminEnrolledClassRep =
+                program.adminEnrollments?.classReps?.some(
+                  (classRepId) => classRepId === currentUser.id
+                ) ?? false;
+              if (isAdminEnrolledClassRep) {
+                accessiblePrograms.push(program);
+                continue;
+              }
+
+              // Check 4: Has user purchased this program?
               try {
                 const accessResult = await purchaseService.checkProgramAccess(
                   program.id

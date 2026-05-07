@@ -114,7 +114,8 @@ export interface EventData {
   createdBy:
     | string
     | {
-        id: string;
+        _id?: string;
+        id?: string;
         username?: string;
         firstName?: string;
         lastName?: string;

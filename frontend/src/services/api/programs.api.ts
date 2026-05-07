@@ -31,6 +31,10 @@ class ProgramsApiClient extends BaseApiClient {
         avatar?: string;
         roleInAtCloud?: string;
       }>;
+      adminEnrollments?: {
+        mentees?: string[];
+        classReps?: string[];
+      };
       fullPriceTicket: number;
       classRepDiscount?: number;
       earlyBirdDiscount?: number;

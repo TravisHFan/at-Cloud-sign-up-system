@@ -171,7 +171,7 @@ describe("DeletionController", () => {
         expect(jsonMock).toHaveBeenCalledWith({
           success: false,
           message:
-            "Insufficient permissions to delete this event. You must be the event creator or a co-organizer.",
+            "Insufficient permissions to delete this event. You must be the event creator.",
         });
       });
 
@@ -199,16 +199,22 @@ describe("DeletionController", () => {
         );
       });
 
-      it("should allow deletion with DELETE_OWN_EVENT permission if user is organizer", async () => {
+      it("should allow deletion with DELETE_OWN_EVENT permission if user is creator", async () => {
         const { hasPermission } =
           await import("../../../../src/utils/roleUtils");
-        const { isEventOrganizer } =
-          await import("../../../../src/utils/event/eventPermissions");
 
         vi.mocked(hasPermission).mockImplementation((role, permission) => {
           return permission === "delete_own_event";
         });
-        vi.mocked(isEventOrganizer).mockReturnValue(true);
+        vi.mocked(Event.findById).mockResolvedValue({
+          _id: "507f1f77bcf86cd799439011",
+          title: "Test Event",
+          type: "workshop",
+          date: new Date(),
+          location: "Test Location",
+          signedUp: 0,
+          createdBy: "user-id-123",
+        } as any);
 
         vi.mocked(EventCascadeService.deleteEventFully).mockResolvedValue({
           deletedRegistrations: 0,
@@ -243,7 +249,7 @@ describe("DeletionController", () => {
         expect(jsonMock).toHaveBeenCalledWith({
           success: false,
           message:
-            "Insufficient permissions to delete this event. You must be the event creator or a co-organizer.",
+            "Insufficient permissions to delete this event. You must be the event creator.",
         });
       });
     });
@@ -306,16 +312,22 @@ describe("DeletionController", () => {
         );
       });
 
-      it("should allow force deletion if user is organizer with DELETE_OWN_EVENT", async () => {
+      it("should allow force deletion if user is creator with DELETE_OWN_EVENT", async () => {
         const { hasPermission } =
           await import("../../../../src/utils/roleUtils");
-        const { isEventOrganizer } =
-          await import("../../../../src/utils/event/eventPermissions");
 
         vi.mocked(hasPermission).mockImplementation((role, permission) => {
           return permission === "delete_own_event";
         });
-        vi.mocked(isEventOrganizer).mockReturnValue(true);
+        vi.mocked(Event.findById).mockResolvedValue({
+          _id: "507f1f77bcf86cd799439011",
+          title: "Test Event",
+          type: "workshop",
+          date: new Date(),
+          location: "Test Location",
+          signedUp: 5,
+          createdBy: "user-id-123",
+        } as any);
 
         vi.mocked(EventCascadeService.deleteEventFully).mockResolvedValue({
           deletedRegistrations: 3,

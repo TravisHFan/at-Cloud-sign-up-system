@@ -12,8 +12,13 @@ vi.mock("../../../src/models", () => ({
   },
 }));
 
+vi.mock("../../../src/utils/event/eventPermissions", () => ({
+  isAffiliatedProgramEditor: vi.fn().mockResolvedValue(false),
+}));
+
 import { authorizeEventManagement } from "../../../src/middleware/auth";
 import { Event, User } from "../../../src/models";
+import { isAffiliatedProgramEditor } from "../../../src/utils/event/eventPermissions";
 
 describe("authorizeEventManagement middleware", () => {
   let mockReq: Partial<Request>;
@@ -24,6 +29,7 @@ describe("authorizeEventManagement middleware", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(isAffiliatedProgramEditor).mockResolvedValue(false);
 
     jsonMock = vi.fn();
     statusMock = vi.fn().mockReturnValue({ json: jsonMock });
@@ -213,6 +219,36 @@ describe("authorizeEventManagement middleware", () => {
     expect(statusMock).not.toHaveBeenCalled();
   });
 
+  it("should allow Leader mentor/class rep of an affiliated program to manage the event", async () => {
+    mockReq.user = {
+      _id: "program-leader-id",
+      role: "Leader",
+    } as any;
+    mockReq.params = { eventId: "event-456" };
+
+    vi.mocked(Event.findById).mockResolvedValue({
+      _id: "event-456",
+      createdBy: "different-creator",
+      organizerDetails: [],
+      programLabels: ["program-1"],
+    });
+    vi.mocked(isAffiliatedProgramEditor).mockResolvedValue(true);
+
+    await authorizeEventManagement(
+      mockReq as Request,
+      mockRes as Response,
+      mockNext,
+    );
+
+    expect(isAffiliatedProgramEditor).toHaveBeenCalledWith(
+      expect.objectContaining({ _id: "event-456" }),
+      "program-leader-id",
+      "Leader",
+    );
+    expect(mockNext).toHaveBeenCalled();
+    expect(statusMock).not.toHaveBeenCalled();
+  });
+
   it("should return 403 for non-admin, non-creator, non-organizer", async () => {
     mockReq.user = {
       _id: "random-user-id",
@@ -236,7 +272,7 @@ describe("authorizeEventManagement middleware", () => {
     expect(jsonMock).toHaveBeenCalledWith({
       success: false,
       message:
-        "Access denied. You must be an Administrator, Super Admin, event creator, or listed organizer to manage this event.",
+        "Access denied. You must be an Administrator, Super Admin, event creator, listed organizer, or a Leader who is a mentor/class rep of an affiliated program to manage this event.",
     });
     expect(mockNext).not.toHaveBeenCalled();
   });

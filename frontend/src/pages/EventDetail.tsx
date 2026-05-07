@@ -135,6 +135,7 @@ export default function EventDetail() {
     getProfileLink: _getProfileLink,
     handleNameCardClick,
     isCurrentUserOrganizer,
+    canEditEvent,
     canDeleteEvent,
     isPassedEvent,
     canManageSignups,
@@ -268,6 +269,7 @@ export default function EventDetail() {
       <EventHeader
         event={event}
         isPassedEvent={isPassedEvent}
+        canEditEvent={canEditEvent}
         canManageSignups={canManageSignups}
         canDeleteEvent={canDeleteEvent}
         publishing={publishing}

@@ -21,7 +21,10 @@ import { CachePatterns } from "../../services";
 import { formatActorDisplay } from "../../utils/systemMessageFormatUtils";
 import AuditLog from "../../models/AuditLog";
 import { toInstantFromWallClock } from "../../utils/event/timezoneUtils";
-import { isEventOrganizer } from "../../utils/event/eventPermissions";
+import {
+  isAffiliatedProgramEditor,
+  isEventOrganizer,
+} from "../../utils/event/eventPermissions";
 import { ResponseBuilderService } from "../../services/ResponseBuilderService";
 import { EventController } from "../eventController";
 import { FieldNormalizationService } from "../../services/event/FieldNormalizationService";
@@ -94,12 +97,21 @@ export class UpdateController {
         event,
         EventController.toIdString(req.user._id),
       );
+      const userIsAffiliatedProgramEditor = await isAffiliatedProgramEditor(
+        event,
+        EventController.toIdString(req.user._id),
+        req.user.role,
+      );
 
-      if (!canEditAnyEvent && !(canEditOwnEvent && userIsOrganizer)) {
+      if (
+        !canEditAnyEvent &&
+        !(canEditOwnEvent && userIsOrganizer) &&
+        !userIsAffiliatedProgramEditor
+      ) {
         res.status(403).json({
           success: false,
           message:
-            "Insufficient permissions to edit this event. You must be the event creator or a co-organizer.",
+            "Insufficient permissions to edit this event. You must be the event creator, a co-organizer, or a Leader who is a mentor/class rep of an affiliated program.",
         });
         return;
       }
@@ -526,8 +538,13 @@ export class UpdateController {
         (org: { userId?: unknown }) =>
           org.userId && EventController.toIdString(org.userId) === userId,
       );
+      const isProgramEditor = await isAffiliatedProgramEditor(
+        event,
+        userId,
+        req.user.role,
+      );
 
-      if (!isAdmin && !isCreator && !isCoOrganizer) {
+      if (!isAdmin && !isCreator && !isCoOrganizer && !isProgramEditor) {
         res.status(403).json({
           success: false,
           message:

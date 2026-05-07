@@ -6,6 +6,8 @@
  */
 
 import { Types } from "mongoose";
+import Program from "../../models/Program";
+import Purchase from "../../models/Purchase";
 
 /**
  * Helper function to check if a user is an organizer (creator or co-organizer) of an event
@@ -34,4 +36,56 @@ export function isEventOrganizer(
   }
 
   return false;
+}
+
+/**
+ * Check if a user can edit an event through one of the event's affiliated
+ * programs. This is intentionally narrower than general event management.
+ *
+ * A Leader qualifies when they are a mentor or class rep of any program in
+ * event.programLabels.
+ */
+export async function isAffiliatedProgramEditor(
+  event: {
+    programLabels?: Array<Types.ObjectId | string>;
+  },
+  userId: string,
+  userRole?: string
+): Promise<boolean> {
+  if (userRole !== "Leader") {
+    return false;
+  }
+
+  const programIds = (event.programLabels || [])
+    .map((id) => id?.toString())
+    .filter((id): id is string => !!id && Types.ObjectId.isValid(id))
+    .map((id) => new Types.ObjectId(id));
+
+  if (programIds.length === 0 || !Types.ObjectId.isValid(userId)) {
+    return false;
+  }
+
+  const userObjectId = new Types.ObjectId(userId);
+
+  const affiliatedProgram = await Program.findOne({
+    _id: { $in: programIds },
+    $or: [
+      { "mentors.userId": userObjectId },
+      { "adminEnrollments.classReps": userObjectId },
+    ],
+  }).select("_id");
+
+  if (affiliatedProgram) {
+    return true;
+  }
+
+  const classRepPurchase = await Purchase.findOne({
+    purchaseType: "program",
+    programId: { $in: programIds },
+    userId: userObjectId,
+    status: "completed",
+    isClassRep: true,
+  }).select("_id");
+
+  return !!classRepPurchase;
 }

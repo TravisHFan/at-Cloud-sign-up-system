@@ -347,7 +347,6 @@ router.put(
   "/:id",
   validateObjectId,
   handleValidationErrors,
-  authorizeEventManagement,
   EventController.updateEvent,
 );
 router.delete(

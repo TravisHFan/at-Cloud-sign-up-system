@@ -84,7 +84,7 @@ export class EventProgramLinkageService {
         }
       )
         .findById(pid)
-        .select("_id programType isFree mentors");
+        .select("_id programType isFree mentors adminEnrollments");
 
       if (!program) {
         return {
@@ -123,6 +123,7 @@ export class EventProgramLinkageService {
    * Leaders can only associate programs they have access to:
    * - Free programs (accessible to everyone)
    * - Programs where they are a mentor
+   * - Programs where they are a class rep
    * - Programs they have purchased
    */
   private static async validateLeaderAccess(
@@ -134,6 +135,7 @@ export class EventProgramLinkageService {
         _id: unknown;
         isFree?: boolean;
         mentors?: Array<{ userId: unknown }>;
+        adminEnrollments?: { classReps?: unknown[] };
       };
 
       // Check 1: Is program free?
@@ -149,7 +151,15 @@ export class EventProgramLinkageService {
         continue; // Mentors have access without purchasing
       }
 
-      // Check 3: Has user purchased this program?
+      // Check 3: Is user an admin-enrolled class rep?
+      const isAdminEnrolledClassRep = prog.adminEnrollments?.classReps?.some(
+        (classRepId) => String(classRepId) === String(userId)
+      );
+      if (isAdminEnrolledClassRep) {
+        continue;
+      }
+
+      // Check 4: Has user purchased this program?
       const purchase = await (
         Purchase as unknown as {
           findOne: (q: unknown) => Promise<unknown>;
@@ -167,7 +177,7 @@ export class EventProgramLinkageService {
           error: {
             status: 403,
             message:
-              "You can only associate programs that you have access to (free programs, purchased programs, or programs where you are a mentor).",
+              "You can only associate programs that you have access to (free programs, purchased programs, programs where you are a mentor, or programs where you are a class rep).",
             data: {
               programId: String(prog._id),
               reason: "no_access",

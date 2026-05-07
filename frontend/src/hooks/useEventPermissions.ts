@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { programService } from "../services/api";
 import type { EventData } from "../types/event";
 
 export interface EventPermissionsResult {
@@ -12,6 +14,7 @@ export interface EventPermissionsResult {
     userRole?: string
   ) => void;
   isCurrentUserOrganizer: boolean | null;
+  canEditEvent: boolean | null;
   canDeleteEvent: boolean | null;
   isPassedEvent: boolean;
   canManageSignups: boolean | null;
@@ -44,6 +47,8 @@ export function useEventPermissions({
   setNameCardModal,
 }: UseEventPermissionsParams): EventPermissionsResult {
   const navigate = useNavigate();
+  const [isAffiliatedProgramEditor, setIsAffiliatedProgramEditor] =
+    useState(false);
 
   // Check if current user can navigate to other user profiles
   const canNavigateToProfiles =
@@ -67,21 +72,92 @@ export function useEventPermissions({
     // Check if user is in organizerDetails array
     (event.organizerDetails?.some(
       (organizer) =>
-        organizer.name
+        organizer.userId === currentUserId ||
+        (organizer.name
           .toLowerCase()
           .includes(currentUser?.firstName?.toLowerCase() || "") &&
         organizer.name
           .toLowerCase()
-          .includes(currentUser?.lastName?.toLowerCase() || "")
+            .includes(currentUser?.lastName?.toLowerCase() || ""))
     ) ||
       // Check if user is the event creator
-      event.createdBy === currentUserId ||
+      (typeof event.createdBy === "string"
+        ? event.createdBy === currentUserId
+        : event.createdBy?.id === currentUserId ||
+          event.createdBy?._id === currentUserId) ||
       // Check if user is in the organizer string field
       event.organizer
         ?.toLowerCase()
         .includes(
           `${currentUser?.firstName} ${currentUser?.lastName}`.toLowerCase()
         ));
+
+  const isCurrentUserCreator =
+    !!event &&
+    (typeof event.createdBy === "string"
+      ? event.createdBy === currentUserId
+      : event.createdBy?.id === currentUserId ||
+        event.createdBy?._id === currentUserId);
+
+  useEffect(() => {
+    if (
+      !event?.programLabels?.length ||
+      !currentUser ||
+      currentUserRole !== "Leader"
+    ) {
+      setIsAffiliatedProgramEditor(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      for (const programId of event.programLabels || []) {
+        try {
+          const program = (await programService.getById(programId)) as {
+            mentors?: Array<{ userId?: string }>;
+            adminEnrollments?: { classReps?: string[] };
+          };
+
+          const isMentor =
+            program.mentors?.some((mentor) => mentor.userId === currentUser.id) ??
+            false;
+          const isAdminEnrolledClassRep =
+            program.adminEnrollments?.classReps?.some(
+              (classRepId) => classRepId === currentUser.id
+            ) ?? false;
+
+          if (isMentor || isAdminEnrolledClassRep) {
+            if (!cancelled) setIsAffiliatedProgramEditor(true);
+            return;
+          }
+
+          const participants = await programService.getParticipants(programId);
+          const isPaidClassRep =
+            participants.classReps?.some((classRep) => {
+              const userId = classRep.user?.id || classRep.user?._id;
+              return userId === currentUser.id;
+            }) ?? false;
+
+          if (isPaidClassRep) {
+            if (!cancelled) setIsAffiliatedProgramEditor(true);
+            return;
+          }
+        } catch (error) {
+          console.error(
+            `Failed to check event edit access for program ${programId}:`,
+            error
+          );
+        }
+      }
+
+      if (!cancelled) setIsAffiliatedProgramEditor(false);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [event?.programLabels, currentUser, currentUserRole]);
 
   // Check if current user can view Zoom information
   const canViewZoomInfo = (): boolean => {
@@ -133,11 +209,18 @@ export function useEventPermissions({
   };
 
   // Check if current user can delete this event (Administrator/Super Admin or Organizer)
+  const canEditEvent =
+    event &&
+    (currentUserRole === "Super Admin" ||
+      currentUserRole === "Administrator" ||
+      isCurrentUserOrganizer ||
+      isAffiliatedProgramEditor);
+
   const canDeleteEvent =
     event &&
     (currentUserRole === "Super Admin" ||
       currentUserRole === "Administrator" ||
-      isCurrentUserOrganizer);
+      isCurrentUserCreator);
 
   // Check if this is a passed event
   const isPassedEvent = event?.status === "completed";
@@ -148,7 +231,8 @@ export function useEventPermissions({
     !isPassedEvent &&
     (currentUserRole === "Super Admin" ||
       currentUserRole === "Administrator" ||
-      isCurrentUserOrganizer);
+      isCurrentUserOrganizer ||
+      isAffiliatedProgramEditor);
 
   // Universal role visibility: all roles are allowed for every user.
   const isRoleAllowedForUser = (_roleName: string): boolean => true;
@@ -160,6 +244,7 @@ export function useEventPermissions({
     getProfileLink,
     handleNameCardClick,
     isCurrentUserOrganizer,
+    canEditEvent,
     canDeleteEvent,
     isPassedEvent,
     canManageSignups,

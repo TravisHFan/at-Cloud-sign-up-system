@@ -72,6 +72,21 @@ class PurchaseAccessController {
         return;
       }
 
+      const isAdminEnrolled =
+        program.adminEnrollments?.mentees?.some(
+          (id: mongoose.Types.ObjectId) => id.toString() === String(req.user!._id),
+        ) ||
+        program.adminEnrollments?.classReps?.some(
+          (id: mongoose.Types.ObjectId) => id.toString() === String(req.user!._id),
+        );
+      if (isAdminEnrolled) {
+        res.status(200).json({
+          success: true,
+          data: { hasAccess: true, reason: "purchased" },
+        });
+        return;
+      }
+
       // Check if program is free
       if (program.isFree) {
         res.status(200).json({

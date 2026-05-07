@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import mongoose from "mongoose";
 import { Event, Registration } from "../../models";
 import { PERMISSIONS, hasPermission } from "../../utils/roleUtils";
-import { isEventOrganizer } from "../../utils/event/eventPermissions";
 import { CorrelatedLogger } from "../../services/CorrelatedLogger";
 import { Logger } from "../../services/LoggerService";
 import { EventCascadeService } from "../../services";
@@ -63,16 +62,16 @@ export class DeletionController {
         req.user.role,
         PERMISSIONS.DELETE_OWN_EVENT
       );
-      const userIsOrganizer = isEventOrganizer(
-        event,
-        EventController.toIdString(req.user._id)
-      );
+      const currentUserId = EventController.toIdString(req.user._id);
+      const userIsCreator =
+        event.createdBy &&
+        EventController.toIdString(event.createdBy) === currentUserId;
 
-      if (!canDeleteAnyEvent && !(canDeleteOwnEvent && userIsOrganizer)) {
+      if (!canDeleteAnyEvent && !(canDeleteOwnEvent && userIsCreator)) {
         res.status(403).json({
           success: false,
           message:
-            "Insufficient permissions to delete this event. You must be the event creator or a co-organizer.",
+            "Insufficient permissions to delete this event. You must be the event creator.",
         });
         return;
       }
@@ -80,7 +79,7 @@ export class DeletionController {
       // If event has participants, ensure caller has force-delete permission
       if (event.signedUp > 0) {
         const canForceDelete =
-          canDeleteAnyEvent || (canDeleteOwnEvent && userIsOrganizer);
+          canDeleteAnyEvent || (canDeleteOwnEvent && userIsCreator);
         if (!canForceDelete) {
           res.status(400).json({
             success: false,

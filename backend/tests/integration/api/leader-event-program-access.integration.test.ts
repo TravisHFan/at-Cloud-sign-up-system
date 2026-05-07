@@ -15,6 +15,7 @@ import { ensureIntegrationDB } from "../setup/connect";
  * 1. Free programs → Always accessible to everyone
  * 2. Purchased programs → Accessible if user has completed purchase
  * 3. Mentor programs → Accessible if user is a mentor of the program
+ * 4. Class Rep programs → Editable if user is a class rep of the program
  */
 describe("Leader Event Creation - Program Access Validation", () => {
   let leaderToken: string;
@@ -26,6 +27,7 @@ describe("Leader Event Creation - Program Access Validation", () => {
   let freeProgramId: string;
   let purchasedProgramId: string;
   let mentorProgramId: string;
+  let classRepProgramId: string;
   let inaccessibleProgramId: string;
 
   beforeAll(async () => {
@@ -192,7 +194,45 @@ describe("Leader Event Creation - Program Access Validation", () => {
     });
     mentorProgramId = mentorProgram._id.toString();
 
-    // 4. Inaccessible Program (Leader has no access)
+    // 4. Class Rep Program (Leader is a class rep)
+    const classRepProgram = await Program.create({
+      title: "Class Rep Workshop",
+      programType: "Effective Communication Workshops",
+      hostedBy: "@Cloud Marketplace Ministry",
+      isFree: false,
+      fullPriceTicket: 6000,
+      classRepDiscount: 1200,
+      earlyBirdDiscount: 600,
+      earlyBirdDeadline: "2025-06-30",
+      period: {
+        startYear: "2025",
+        startMonth: "1",
+        endYear: "2025",
+        endMonth: "12",
+      },
+      introduction: "Class rep program",
+      mentors: [],
+      createdBy: adminUserId,
+    });
+    classRepProgramId = classRepProgram._id.toString();
+
+    await Purchase.create({
+      userId: new mongoose.Types.ObjectId(leaderUserId),
+      programId: new mongoose.Types.ObjectId(classRepProgramId),
+      fullPrice: 6000,
+      classRepDiscount: 1200,
+      finalPrice: 4800,
+      isClassRep: true,
+      isEarlyBird: false,
+      status: "completed",
+      orderNumber: "ORD-TEST-CLASSREP-001",
+      stripeSessionId: "sess_test_classrep_001",
+      purchaseDate: new Date(),
+      paymentMethod: { type: "card", cardBrand: "visa", last4: "4242" },
+      billingInfo: { fullName: "Test Leader", email: "leader@test.com" },
+    });
+
+    // 5. Inaccessible Program (Leader has no access)
     const inaccessibleProgram = await Program.create({
       title: "Premium Executive Program",
       programType: "EMBA Mentor Circles",
@@ -271,6 +311,19 @@ describe("Leader Event Creation - Program Access Validation", () => {
 
     it("should ALLOW Leader to create event with MENTOR program", async () => {
       const payload = createEventPayload([mentorProgramId]);
+
+      const response = await request(app)
+        .post("/api/events")
+        .set("Authorization", `Bearer ${leaderToken}`)
+        .send(payload);
+
+      expect(response.status).toBe(201);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.event.programLabels).toHaveLength(1);
+    });
+
+    it("should ALLOW Leader to create event with CLASS REP program", async () => {
+      const payload = createEventPayload([classRepProgramId]);
 
       const response = await request(app)
         .post("/api/events")
@@ -389,6 +442,78 @@ describe("Leader Event Creation - Program Access Validation", () => {
         .send({
           programLabels: [purchasedProgramId], // Change to purchased program
         });
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+    });
+
+    it("should ALLOW Leader to edit event they did not create when they are mentor of an affiliated program", async () => {
+      const event = await Event.create({
+        title: "Mentor Editable Event",
+        type: "Mentor Circle",
+        date: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split("T")[0],
+        time: "13:00",
+        endTime: "14:00",
+        location: "Test Location",
+        organizer: "Admin Organizer",
+        agenda: "Test agenda",
+        format: "In-person",
+        programLabels: [mentorProgramId],
+        roles: [
+          {
+            id: "role-mentor-edit",
+            name: "Participant",
+            description: "Event participant",
+            maxParticipants: 50,
+          },
+        ],
+        createdBy: adminUserId,
+        signedUp: 0,
+        totalSlots: 50,
+      });
+
+      const response = await request(app)
+        .put(`/api/events/${event._id}`)
+        .set("Authorization", `Bearer ${leaderToken}`)
+        .send({ title: "Updated by Mentor Leader" });
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+    });
+
+    it("should ALLOW Leader to edit event they did not create when they are class rep of an affiliated program", async () => {
+      const event = await Event.create({
+        title: "Class Rep Editable Event",
+        type: "Effective Communication Workshop",
+        date: new Date(Date.now() + 9 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split("T")[0],
+        time: "13:00",
+        endTime: "14:00",
+        location: "Test Location",
+        organizer: "Admin Organizer",
+        agenda: "Test agenda",
+        format: "In-person",
+        programLabels: [classRepProgramId],
+        roles: [
+          {
+            id: "role-classrep-edit",
+            name: "Participant",
+            description: "Event participant",
+            maxParticipants: 50,
+          },
+        ],
+        createdBy: adminUserId,
+        signedUp: 0,
+        totalSlots: 50,
+      });
+
+      const response = await request(app)
+        .put(`/api/events/${event._id}`)
+        .set("Authorization", `Bearer ${leaderToken}`)
+        .send({ title: "Updated by Class Rep Leader" });
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);

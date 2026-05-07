@@ -48,6 +48,10 @@ vi.mock("../../../src/utils/roleUtils", () => ({
   Permission: {},
 }));
 
+vi.mock("../../../src/utils/event/eventPermissions", () => ({
+  isAffiliatedProgramEditor: vi.fn().mockResolvedValue(false),
+}));
+
 // Test helpers
 const createMockRequest = (authHeader?: string): Partial<Request> => ({
   headers: authHeader ? { authorization: authHeader } : {},
@@ -1033,12 +1037,12 @@ describe("Auth Middleware", () => {
       await authorizeEventManagement(req, res, next);
 
       expect(res.status).toHaveBeenCalledWith(403);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        message:
-          "Access denied. You must be an Administrator, Super Admin, event creator, or listed organizer to manage this event.",
+        expect(res.json).toHaveBeenCalledWith({
+          success: false,
+          message:
+            "Access denied. You must be an Administrator, Super Admin, event creator, listed organizer, or a Leader who is a mentor/class rep of an affiliated program to manage this event.",
+        });
       });
-    });
   });
 
   describe("authenticateOptional", () => {

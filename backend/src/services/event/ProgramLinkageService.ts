@@ -72,7 +72,7 @@ export class ProgramLinkageService {
         }
       )
         .findById(pid)
-        .select("_id isFree mentors");
+        .select("_id isFree mentors adminEnrollments");
 
       if (!program) {
         return {
@@ -107,7 +107,8 @@ export class ProgramLinkageService {
 
   /**
    * Validate that a Leader user has access to all specified programs.
-   * Access is granted if: program is free, user is a mentor, or user purchased it.
+   * Access is granted if: program is free, user is a mentor, user is a class
+   * rep, or user purchased it.
    */
   private static async validateLeaderAccess(
     linkedPrograms: Array<{ _id: unknown }>,
@@ -121,6 +122,7 @@ export class ProgramLinkageService {
         _id: unknown;
         isFree?: boolean;
         mentors?: Array<{ userId: unknown }>;
+        adminEnrollments?: { classReps?: unknown[] };
       };
 
       // Check 1: Is program free?
@@ -136,7 +138,15 @@ export class ProgramLinkageService {
         continue; // Mentors have access without purchasing
       }
 
-      // Check 3: Has user purchased this program?
+      // Check 3: Is user an admin-enrolled class rep?
+      const isAdminEnrolledClassRep = prog.adminEnrollments?.classReps?.some(
+        (classRepId) => String(classRepId) === String(userId)
+      );
+      if (isAdminEnrolledClassRep) {
+        continue;
+      }
+
+      // Check 4: Has user purchased this program?
       const purchase = await (
         Purchase as unknown as {
           findOne: (q: unknown) => Promise<unknown>;
@@ -154,7 +164,7 @@ export class ProgramLinkageService {
           error: {
             status: 403,
             message:
-              "You can only associate programs that you have access to (free programs, purchased programs, or programs where you are a mentor).",
+              "You can only associate programs that you have access to (free programs, purchased programs, programs where you are a mentor, or programs where you are a class rep).",
             data: {
               programId: String(prog._id),
               reason: "no_access",
