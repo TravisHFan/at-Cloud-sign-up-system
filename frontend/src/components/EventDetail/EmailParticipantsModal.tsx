@@ -33,6 +33,10 @@ interface EmailParticipantsModalProps {
   };
 }
 
+function buildShortLinkUrl(shortUrl: string): string {
+  return new URL(shortUrl, window.location.origin).toString();
+}
+
 /**
  * EmailParticipantsModal - Modal for composing and sending emails to event participants
  *
@@ -88,8 +92,7 @@ export default function EmailParticipantsModal({
       const shortUrl = record.url;
       if (!shortUrl) return prev;
 
-      // Construct full URL
-      const fullUrl = `${window.location.origin}${shortUrl}`;
+      const fullUrl = buildShortLinkUrl(shortUrl);
       const defaultText = `Detailed meeting agenda: <a href="${fullUrl}">${fullUrl}</a>`;
 
       return { ...prev, bodyHtml: defaultText };
