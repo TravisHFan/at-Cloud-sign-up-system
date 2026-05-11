@@ -13,6 +13,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { programService } from "../services/api";
+import {
+  toProgramMentorPayloads,
+  type ProgramMentorPayload,
+} from "../utils/programMentorPayload";
 
 interface Mentor {
   id: string;
@@ -25,16 +29,6 @@ interface Mentor {
   email: string;
   phone?: string;
 }
-
-type MentorPayload = {
-  userId: string;
-  firstName?: string;
-  lastName?: string;
-  email?: string;
-  gender?: "male" | "female";
-  avatar?: string | null;
-  roleInAtCloud?: string;
-};
 
 type ProgramPayload = {
   programType: string;
@@ -50,7 +44,7 @@ type ProgramPayload = {
   flyerUrl?: string;
   earlyBirdDeadline?: string;
   isFree?: boolean;
-  mentors?: MentorPayload[];
+  mentors?: ProgramMentorPayload[];
   fullPriceTicket: number;
   classRepDiscount?: number;
   classRepLimit?: number;
@@ -91,19 +85,6 @@ const MONTH_NAME_TO_CODE: Record<string, string> = {
   November: "11",
   December: "12",
 };
-
-/**
- * Transform mentor data to API format
- */
-const transformMentor = (mentor: Mentor): MentorPayload => ({
-  userId: mentor.id,
-  firstName: mentor.firstName,
-  lastName: mentor.lastName,
-  email: mentor.email,
-  gender: mentor.gender,
-  avatar: mentor.avatar,
-  roleInAtCloud: mentor.roleInAtCloud,
-});
 
 /**
  * Custom hook for program creation
@@ -157,7 +138,7 @@ export function useProgramCreation() {
       };
 
       // Add unified mentors for all program types
-      payload.mentors = mentors.map(transformMentor);
+      payload.mentors = toProgramMentorPayloads(mentors);
 
       // Create the program via API
       await programService.createProgram(payload);

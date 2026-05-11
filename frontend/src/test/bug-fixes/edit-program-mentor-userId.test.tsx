@@ -1,0 +1,198 @@
+/**
+ * Bug Fix Test: Edit Program mentor payload userId
+ *
+ * Issue: Adding a mentor could submit mentors with a missing userId, causing
+ * the backend to reject the update with "mentors.0.userId: Path `userId` is required."
+ *
+ * Fix: Normalize mentor IDs from id, _id, or userId before building the API payload,
+ * and filter out rows that still do not have a usable ID.
+ */
+
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { NotificationProvider } from "../../contexts/NotificationModalContext";
+import EditProgram from "../../pages/EditProgram";
+
+const mockedProgramService = vi.hoisted(() => ({
+  getById: vi.fn(),
+  updateProgram: vi.fn(),
+}));
+
+const mockedPurchaseService = vi.hoisted(() => ({
+  checkProgramAccess: vi.fn(),
+}));
+
+const mockedUserService = vi.hoisted(() => ({
+  getUsers: vi.fn(),
+}));
+
+vi.mock("../../services/api", () => ({
+  programService: mockedProgramService,
+  purchaseService: mockedPurchaseService,
+  userService: mockedUserService,
+  searchService: {
+    searchUsers: vi.fn(),
+  },
+  fileService: {
+    uploadGenericImage: vi.fn(),
+  },
+}));
+
+vi.mock("../../hooks/useAuth", () => ({
+  useAuth: () => ({
+    currentUser: {
+      id: "admin-user-id",
+      firstName: "Admin",
+      lastName: "User",
+      email: "admin@example.com",
+      role: "Super Admin",
+      roleInAtCloud: "Admin",
+      gender: "male",
+      avatar: null,
+      phone: "555-0100",
+    },
+  }),
+}));
+
+vi.mock("../../hooks/useProgramValidation", () => ({
+  useProgramValidation: () => ({
+    validations: {
+      title: { isValid: true, message: "", color: "text-green-600" },
+      programType: { isValid: true, message: "", color: "text-green-600" },
+      hostedBy: { isValid: true, message: "", color: "text-green-600" },
+      introduction: { isValid: true, message: "", color: "text-green-600" },
+      flyerUrl: { isValid: true, message: "", color: "text-green-600" },
+      fullPriceTicket: { isValid: true, message: "", color: "text-green-600" },
+      classRepDiscount: { isValid: true, message: "", color: "text-green-600" },
+      earlyBirdDiscount: {
+        isValid: true,
+        message: "",
+        color: "text-green-600",
+      },
+      earlyBirdDeadline: {
+        isValid: true,
+        message: "",
+        color: "text-green-600",
+      },
+      period: { isValid: true, message: "", color: "text-green-600" },
+      mentors: { isValid: true, message: "", color: "text-green-600" },
+      startYear: { isValid: true, message: "", color: "text-green-600" },
+      startMonth: { isValid: true, message: "", color: "text-green-600" },
+      endYear: { isValid: true, message: "", color: "text-green-600" },
+      endMonth: { isValid: true, message: "", color: "text-green-600" },
+    },
+    overallStatus: { isValid: true, errorCount: 0 },
+  }),
+}));
+
+const renderEditProgram = () =>
+  render(
+    <NotificationProvider>
+      <MemoryRouter initialEntries={["/dashboard/programs/program1/edit"]}>
+        <Routes>
+          <Route
+            path="/dashboard/programs/:id/edit"
+            element={<EditProgram />}
+          />
+          <Route
+            path="/dashboard/programs/:id"
+            element={<div>Program Detail</div>}
+          />
+        </Routes>
+      </MemoryRouter>
+    </NotificationProvider>,
+  );
+
+describe("Bug Fix: Edit Program mentor userId payload", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    mockedProgramService.getById.mockResolvedValue({
+      id: "program1",
+      title: "Test Mentor Circle Program",
+      programType: "EMBA Mentor Circles",
+      hostedBy: "@Cloud Marketplace Ministry",
+      period: {
+        startYear: "2026",
+        startMonth: "01",
+        endYear: "2026",
+        endMonth: "12",
+      },
+      introduction: "Test introduction",
+      flyerUrl: "",
+      isFree: true,
+      earlyBirdDeadline: "",
+      fullPriceTicket: 0,
+      classRepDiscount: 0,
+      earlyBirdDiscount: 0,
+      classRepLimit: 0,
+      mentors: [],
+    });
+
+    mockedPurchaseService.checkProgramAccess.mockResolvedValue({
+      hasAccess: true,
+      reason: "admin",
+    });
+
+    mockedUserService.getUsers.mockResolvedValue({
+      users: [
+        {
+          _id: "mentor-object-id",
+          username: "mentor",
+          email: "mentor@example.com",
+          firstName: "Mentor",
+          lastName: "OnlyId",
+          role: "Leader",
+          roleInAtCloud: "Mentor",
+          gender: "female",
+          avatar: null,
+          phone: "555-0200",
+          isActive: true,
+        },
+      ],
+      pagination: {
+        currentPage: 1,
+        totalPages: 1,
+        totalUsers: 1,
+        hasNext: false,
+        hasPrev: false,
+      },
+    });
+  });
+
+  it("normalizes an added mentor from _id into mentors[].userId", async () => {
+    renderEditProgram();
+
+    await waitFor(() => {
+      expect(
+        screen.getByDisplayValue("Test Mentor Circle Program"),
+      ).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /add mentors/i }));
+
+    const mentorOption = await screen.findByRole("button", {
+      name: /Mentor OnlyId/i,
+    });
+    fireEvent.click(mentorOption);
+
+    fireEvent.click(screen.getByRole("button", { name: /update program/i }));
+
+    await waitFor(() => {
+      expect(mockedProgramService.updateProgram).toHaveBeenCalled();
+    });
+
+    const [, payload] = mockedProgramService.updateProgram.mock.calls[0];
+
+    expect(payload.mentors).toHaveLength(1);
+    expect(payload.mentors[0]).toEqual(
+      expect.objectContaining({
+        userId: "mentor-object-id",
+        firstName: "Mentor",
+        lastName: "OnlyId",
+        email: "mentor@example.com",
+      }),
+    );
+  });
+});

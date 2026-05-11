@@ -11,6 +11,11 @@ import ProgramFormFields from "../components/EditProgram/ProgramFormFields";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import { programService, purchaseService } from "../services/api";
 import { type ProgramType } from "../constants/programTypes";
+import {
+  getProgramMentorUserId,
+  toProgramMentorPayloads,
+  type ProgramMentorPayload,
+} from "../utils/programMentorPayload";
 
 interface Mentor {
   id: string;
@@ -47,16 +52,6 @@ interface ProgramFormData {
 }
 
 // Payload types sent to backend
-type MentorPayload = {
-  userId: string;
-  firstName?: string;
-  lastName?: string;
-  email?: string;
-  gender?: "male" | "female";
-  avatar?: string | null;
-  roleInAtCloud?: string;
-};
-
 type ProgramUpdatePayload = {
   title: string;
   programType: ProgramType;
@@ -72,7 +67,7 @@ type ProgramUpdatePayload = {
   flyerUrl?: string | null;
   isFree?: boolean;
   earlyBirdDeadline?: string;
-  mentors?: MentorPayload[];
+  mentors?: ProgramMentorPayload[];
   // Pricing fields
   fullPriceTicket: number;
   classRepDiscount?: number;
@@ -306,7 +301,9 @@ export default function EditProgram() {
           isFree?: boolean;
           earlyBirdDeadline?: string;
           mentors?: Array<{
-            userId: string;
+            userId?: unknown;
+            id?: unknown;
+            _id?: unknown;
             firstName?: string;
             lastName?: string;
             email?: string;
@@ -407,35 +404,42 @@ export default function EditProgram() {
 
         // Transform backend mentors to frontend format
         const transformMentorFromBackend = (m: {
-          userId: string;
+          userId?: unknown;
+          id?: unknown;
+          _id?: unknown;
           firstName?: string;
           lastName?: string;
           email?: string;
           gender?: "male" | "female";
           avatar?: string;
           roleInAtCloud?: string;
-        }): Mentor => ({
-          id: m.userId,
-          firstName: m.firstName || "",
-          lastName: m.lastName || "",
-          systemAuthorizationLevel: "Leader", // Default for mentors
-          roleInAtCloud: m.roleInAtCloud,
-          gender: (m.gender as "male" | "female") || "male",
-          avatar: m.avatar || null,
-          email: m.email || "",
-          phone: "", // Not stored in program mentors
-        });
+        }): Mentor | null => {
+          const userId = getProgramMentorUserId(m);
+          if (!userId) return null;
+
+          return {
+            id: userId,
+            firstName: m.firstName || "",
+            lastName: m.lastName || "",
+            systemAuthorizationLevel: "Leader", // Default for mentors
+            roleInAtCloud: m.roleInAtCloud,
+            gender: (m.gender as "male" | "female") || "male",
+            avatar: m.avatar || null,
+            email: m.email || "",
+            phone: "", // Not stored in program mentors
+          };
+        };
 
         // Load unified mentors for all program types
         if (program.mentors) {
           const transformedMentors = program.mentors.map(
             transformMentorFromBackend,
-          );
+          ).filter((mentor): mentor is Mentor => mentor !== null);
           setMentors(transformedMentors);
           setOriginalMentors(transformedMentors);
           // Store mentor user IDs for permission checking
           setProgramMentorIds(
-            program.mentors.map((m: { userId: string }) => m.userId),
+            program.mentors.map(getProgramMentorUserId).filter(Boolean),
           );
         }
       } catch (error) {
@@ -497,17 +501,6 @@ export default function EditProgram() {
         December: "12",
       };
 
-      // Transform mentor data to API format
-      const transformMentor = (mentor: Mentor): MentorPayload => ({
-        userId: mentor.id,
-        firstName: mentor.firstName,
-        lastName: mentor.lastName,
-        email: mentor.email,
-        gender: mentor.gender,
-        avatar: mentor.avatar,
-        roleInAtCloud: mentor.roleInAtCloud,
-      });
-
       // Prepare program payload based on program type
       const payload: ProgramUpdatePayload = {
         title: data.title,
@@ -544,7 +537,7 @@ export default function EditProgram() {
       };
 
       // Add unified mentors for all program types
-      payload.mentors = mentors.map(transformMentor);
+      payload.mentors = toProgramMentorPayloads(mentors);
 
       console.log("Updating program with payload:", payload);
 

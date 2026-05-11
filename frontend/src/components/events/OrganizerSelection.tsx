@@ -7,10 +7,12 @@ import {
   getAvatarAlt,
 } from "../../utils/avatarUtils";
 import type { User } from "../../types/management";
+import { searchService, userService } from "../../services/api";
 
 // Minimal backend user shape used here (matches fields exposed by API)
 type RawUser = {
-  id: string;
+  id?: string | null;
+  _id?: string | null;
   username: string;
   email: string;
   firstName?: string | null;
@@ -31,7 +33,9 @@ type RawUser = {
   churchAddress?: string | null;
   isActive?: boolean | null;
 };
-import { searchService, userService } from "../../services/api";
+
+const getRawUserId = (user: Pick<RawUser, "id" | "_id">) =>
+  (user.id || user._id || "").trim();
 
 interface Organizer {
   id: string; // UUID to match User interface
@@ -108,11 +112,16 @@ export default function OrganizerSelection({
   );
 
   const baseFilter = useCallback(
-    (user: User) =>
-      (excludeMainOrganizer ? user.id !== mainOrganizer.id : true) &&
-      !selectedOrganizers.some((org) => org.id === user.id) &&
-      // Only allow specific roles
-      (allowedRolesList as readonly string[]).includes(user.role),
+    (user: User) => {
+      const userId = user.id.trim();
+      return (
+        Boolean(userId) &&
+        (excludeMainOrganizer ? userId !== mainOrganizer.id : true) &&
+        !selectedOrganizers.some((org) => org.id === userId) &&
+        // Only allow specific roles
+        (allowedRolesList as readonly string[]).includes(user.role)
+      );
+    },
     [
       excludeMainOrganizer,
       mainOrganizer.id,
@@ -125,6 +134,7 @@ export default function OrganizerSelection({
 
   const handleAddOrganizer = (user: User) => {
     const newOrganizer = convertUserToOrganizer(user);
+    if (!newOrganizer.id.trim()) return;
     onOrganizersChange([...selectedOrganizers, newOrganizer]);
     setShowUserList(false);
   };
@@ -137,7 +147,7 @@ export default function OrganizerSelection({
 
   // Map backend AppUser -> management User once
   const mapAppUserToMgmtUser = (u: RawUser): User => ({
-    id: u.id,
+    id: getRawUserId(u),
     username: u.username,
     firstName: u.firstName || "",
     lastName: u.lastName || "",
@@ -254,7 +264,7 @@ export default function OrganizerSelection({
 
         // Map AppUser -> management User shape that OrganizerSelection expects via convertUserToOrganizer
         const toUser = (u: RawUser): User => ({
-          id: u.id,
+          id: getRawUserId(u),
           username: u.username,
           firstName: u.firstName || "",
           lastName: u.lastName || "",

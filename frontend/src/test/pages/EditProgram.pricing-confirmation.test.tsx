@@ -16,6 +16,12 @@ vi.mock("../../services/api", () => ({
     getById: vi.fn(),
     updateProgram: vi.fn(),
   },
+  purchaseService: {
+    checkProgramAccess: vi.fn().mockResolvedValue({
+      hasAccess: true,
+      reason: "admin",
+    }),
+  },
   fileService: {
     uploadFile: vi.fn(),
   },
