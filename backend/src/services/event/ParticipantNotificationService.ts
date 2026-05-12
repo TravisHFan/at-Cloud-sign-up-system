@@ -59,6 +59,7 @@ export class ParticipantNotificationService {
         timeZone?: string;
       };
       const emailPayload = {
+        eventId,
         eventTitle: event.title,
         date: event.date,
         endDate: eventMeta.endDate,

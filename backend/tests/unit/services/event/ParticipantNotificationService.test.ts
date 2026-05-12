@@ -118,6 +118,7 @@ describe("ParticipantNotificationService.sendEventUpdateNotifications", () => {
     ]);
 
     expect(payload).toMatchObject({
+      eventId: baseEvent.id,
       eventTitle: baseEvent.title,
       date: baseEvent.date,
       endDate: baseEvent.endDate,

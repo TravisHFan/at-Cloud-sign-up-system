@@ -448,6 +448,11 @@ export class GuestEmailService {
           location: params.event.location || "",
           purpose: params.event.purpose || "",
           timeZone: params.event.timeZone || "UTC",
+          format: params.event.format,
+          isHybrid: params.event.isHybrid,
+          zoomLink: params.event.zoomLink,
+          meetingId: params.event.meetingId,
+          passcode: params.event.passcode,
         },
         role: {
           name: params.role.name,

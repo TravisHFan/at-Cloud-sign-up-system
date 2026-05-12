@@ -279,6 +279,12 @@ export class EventEmailService {
     name: string,
     data: EmailTemplateData,
   ): Promise<boolean> {
+    const eventDetailUrl = EventEmailService.buildEventDetailUrl({
+      id: data.eventId as string | undefined,
+      _id: data._id,
+      title: data.eventTitle || "event",
+    });
+
     const html = `
       <!DOCTYPE html>
       <html>
@@ -291,7 +297,7 @@ export class EventEmailService {
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
             .header { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
             .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .button { display: inline-block; padding: 12px 30px; background: #4facfe; color: #ffffff !important; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .button { display: inline-block; padding: 12px 30px; background: #2563eb; background-color: #2563eb; color: #ffffff !important; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold; }
             .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
           </style>
         </head>
@@ -339,9 +345,13 @@ export class EventEmailService {
                 data.message || "Please check your dashboard for more details."
               }</p>
               <div style="text-align: center;">
-                <a href="${
-                  process.env.FRONTEND_URL || "http://localhost:5173"
-                }/dashboard" class="button" style="color: #ffffff !important;">View Dashboard</a>
+                <table role="presentation" border="0" cellspacing="0" cellpadding="0" style="margin: 20px auto;">
+                  <tr>
+                    <td bgcolor="#2563eb" style="background: #2563eb; background-color: #2563eb; border-radius: 5px; text-align: center;">
+                      <a href="${eventDetailUrl}" class="button" style="display: inline-block; padding: 12px 30px; background: #2563eb !important; background-color: #2563eb !important; color: #ffffff !important; text-decoration: none; border-radius: 5px; margin: 0; font-weight: bold;">View Event</a>
+                    </td>
+                  </tr>
+                </table>
               </div>
               <p>Thank you for your participation in @Cloud Ministry events!</p>
               <p>Blessings,<br>The @Cloud Ministry Team</p>
@@ -1103,6 +1113,11 @@ export class EventEmailService {
           location: event.location,
           purpose: event.purpose,
           timeZone: event.timeZone,
+          format: event.format,
+          isHybrid: event.isHybrid,
+          zoomLink: event.zoomLink,
+          meetingId: event.meetingId,
+          passcode: event.passcode,
         },
         role: { name: roleName, description: `Role: ${roleName}` },
         attendeeEmail: to,
@@ -1314,6 +1329,11 @@ export class EventEmailService {
           location: event.location,
           purpose: event.purpose,
           timeZone: event.timeZone,
+          format: event.format,
+          isHybrid: event.isHybrid,
+          zoomLink: event.zoomLink,
+          meetingId: event.meetingId,
+          passcode: event.passcode,
         },
         role: { name: toRoleName, description: `Role: ${toRoleName}` },
         attendeeEmail: to,

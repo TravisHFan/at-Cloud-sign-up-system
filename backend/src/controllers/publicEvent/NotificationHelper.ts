@@ -57,6 +57,11 @@ export class NotificationHelper {
           location: event.location,
           purpose: event.purpose,
           timeZone: event.timeZone,
+          isHybrid: event.isHybrid,
+          zoomLink: event.zoomLink,
+          meetingId: event.meetingId,
+          passcode: event.passcode,
+          format: event.format,
         },
         role: roleSnapshot
           ? {

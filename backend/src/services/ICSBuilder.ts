@@ -2,23 +2,28 @@ import { IEvent, IEventRole } from "../models/Event";
 import crypto from "crypto";
 import { findUtcInstantFromLocal } from "../shared/time/timezoneSearch";
 
+type RegistrationICSEvent = Pick<
+  IEvent,
+  | "_id"
+  | "title"
+  | "date"
+  | "endDate"
+  | "time"
+  | "endTime"
+  | "location"
+  | "purpose"
+  | "timeZone"
+> &
+  Partial<
+    Pick<IEvent, "format" | "isHybrid" | "zoomLink" | "meetingId" | "passcode">
+  >;
+
 /**
  * Build a minimal RFC5545 VCALENDAR text for an event registration.
  * Uses proper timezone conversion to build accurate UTC times for ICS format.
  */
 export function buildRegistrationICS(options: {
-  event: Pick<
-    IEvent,
-    | "_id"
-    | "title"
-    | "date"
-    | "endDate"
-    | "time"
-    | "endTime"
-    | "location"
-    | "purpose"
-    | "timeZone"
-  >;
+  event: RegistrationICSEvent;
   role?: Pick<IEventRole, "name" | "description"> | null;
   attendeeEmail?: string;
 }): { filename: string; content: string } {
@@ -66,6 +71,17 @@ export function buildRegistrationICS(options: {
   const descriptionParts: string[] = [];
   if (role?.description) descriptionParts.push(role.description);
   if (event.purpose) descriptionParts.push(event.purpose);
+  const zoomLink = event.zoomLink?.trim();
+  const meetingId = event.meetingId?.trim();
+  const passcode = event.passcode?.trim();
+  const meetingDetails = [
+    zoomLink ? `Online Meeting Link: ${zoomLink}` : "",
+    meetingId ? `Meeting ID: ${meetingId}` : "",
+    passcode ? `Passcode: ${passcode}` : "",
+  ].filter(Boolean);
+  if (meetingDetails.length > 0) {
+    descriptionParts.push(meetingDetails.join("\n"));
+  }
   if (event.timeZone) descriptionParts.push(`Time Zone: ${event.timeZone}`);
   const description = descriptionParts.join("\n\n");
 
@@ -83,6 +99,7 @@ export function buildRegistrationICS(options: {
     `SUMMARY:${esc(summary)}`,
     `DESCRIPTION:${esc(description)}`,
     `LOCATION:${esc(event.location)}`,
+    ...(zoomLink ? [`URL:${esc(zoomLink)}`] : []),
     "END:VEVENT",
     "END:VCALENDAR",
     "",

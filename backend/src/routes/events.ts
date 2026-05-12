@@ -19,6 +19,7 @@ import { EmailService } from "../services/infrastructure/EmailServiceFacade";
 import { EmailRecipientUtils } from "../utils/emailRecipientUtils";
 import { Event } from "../models";
 import { buildRegistrationICS } from "../services/ICSBuilder";
+import EventAccessControlService from "../services/event/EventAccessControlService";
 import { UpdateController } from "../controllers/event/UpdateController";
 import {
   sanitizeGuestBody,
@@ -38,6 +39,7 @@ router.get("/check-conflict", EventController.checkTimeConflict);
 // IMPORTANT: This must come BEFORE /:id route to avoid route matching conflicts
 router.get(
   "/:id/calendar",
+  authenticateOptional,
   validateObjectId,
   handleValidationErrors,
   async (req: Request, res: Response) => {
@@ -52,6 +54,16 @@ router.get(
         });
       }
 
+      let includeVirtualMeetingDetails = false;
+      const userId = req.user?._id?.toString();
+      if (userId) {
+        const access = await EventAccessControlService.checkUserAccess(
+          userId,
+          id,
+        );
+        includeVirtualMeetingDetails = access.hasAccess;
+      }
+
       // Generate ICS file using the same logic as email attachments
       const ics = buildRegistrationICS({
         event: {
@@ -64,6 +76,15 @@ router.get(
           location: event.location,
           purpose: event.purpose,
           timeZone: event.timeZone,
+          ...(includeVirtualMeetingDetails
+            ? {
+                format: event.format,
+                isHybrid: event.isHybrid,
+                zoomLink: event.zoomLink,
+                meetingId: event.meetingId,
+                passcode: event.passcode,
+              }
+            : {}),
         },
         role: null, // No specific role for general event calendar
         attendeeEmail: undefined, // No specific attendee

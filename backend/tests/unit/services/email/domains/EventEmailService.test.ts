@@ -221,6 +221,7 @@ describe("EventEmailService - Event Email Operations", () => {
       const email = "attendee@example.com";
       const name = "John Doe";
       const payload = {
+        eventId: "event-update-123",
         eventTitle: "Updated Workshop",
         date: "2025-12-15",
         time: "14:00",
@@ -250,6 +251,15 @@ describe("EventEmailService - Event Email Operations", () => {
       expect(emailCall.html).toContain("Jane Leader");
       expect(emailCall.html).toContain("Role in @Cloud:");
       expect(emailCall.html).toContain("Youth Pastor");
+      expect(emailCall.html).toContain("View Event");
+      expect(emailCall.html).not.toContain("View Dashboard");
+      expect(emailCall.html).toContain(
+        'href="http://localhost:5173/dashboard/event/event-update-123"',
+      );
+      expect(emailCall.html).toContain('bgcolor="#2563eb"');
+      expect(emailCall.html).toContain(
+        "background-color: #2563eb !important; color: #ffffff !important;",
+      );
     });
 
     it("should handle multi-day events", async () => {

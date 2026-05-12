@@ -152,6 +152,38 @@ describe("ICSBuilder", () => {
       expect(result.content).toContain("DESCRIPTION:Lead the presentation");
     });
 
+    it("should include virtual meeting logistics when provided", () => {
+      const mockEvent = {
+        _id: "test-event-id-virtual",
+        title: "Online Workshop",
+        date: "2024-06-15",
+        endDate: "2024-06-15",
+        time: "14:00",
+        endTime: "15:00",
+        location: "Online",
+        purpose: "Testing virtual meeting details",
+        format: "Online",
+        zoomLink: "https://zoom.us/j/123456789?pwd=abc123",
+        meetingId: "123 456 789",
+        passcode: "abc123",
+        timeZone: "America/Los_Angeles",
+      };
+
+      const result = buildRegistrationICS({
+        event: mockEvent,
+        attendeeEmail: "virtual@example.com",
+      });
+
+      expect(result.content).toContain(
+        "Online Meeting Link: https://zoom.us/j/123456789?pwd=abc123",
+      );
+      expect(result.content).toContain("Meeting ID: 123 456 789");
+      expect(result.content).toContain("Passcode: abc123");
+      expect(result.content).toContain(
+        "URL:https://zoom.us/j/123456789?pwd=abc123",
+      );
+    });
+
     it("should fallback to naive conversion when endTime is missing", () => {
       const mockEvent = {
         _id: "test-event-id-7",
