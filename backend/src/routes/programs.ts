@@ -74,11 +74,13 @@ router.post("/:id/email", authenticate, async (req: Request, res: Response) => {
 
     // Check authorization: user must be:
     // 1. Super Admin or Administrator, OR
-    // 2. Leader who is a Mentor or Class Rep of this program
-    const user = req.user as { id?: string; role?: string } | undefined;
+    // 2. Mentor or Class Rep of this program
+    const user = req.user as
+      | { id?: string; _id?: unknown; role?: string }
+      | undefined;
+    const userId = String(user?._id || user?.id || "");
     const isAdmin =
       user?.role === "Super Admin" || user?.role === "Administrator";
-    const isLeader = user?.role === "Leader";
 
     // Check if user is a mentor
     const isMentor =
@@ -96,16 +98,16 @@ router.post("/:id/email", authenticate, async (req: Request, res: Response) => {
         } else {
           mentorId = String(mentorUserId);
         }
-        return mentorId === user?.id;
+        return mentorId === userId;
       }) ?? false;
 
     // Check if user is a class rep (via purchase or admin enrollment)
     let isClassRep = false;
-    if (isLeader && user?.id && !isMentor) {
+    if (userId && !isMentor) {
       const Purchase = (await import("../models/Purchase")).default;
       const classRepPurchase = await Purchase.findOne({
         programId: id,
-        userId: user.id,
+        userId,
         isClassRep: true,
         status: "completed",
       });
@@ -115,18 +117,18 @@ router.post("/:id/email", authenticate, async (req: Request, res: Response) => {
         // Also check admin enrollments for class reps
         isClassRep =
           program.adminEnrollments?.classReps?.some(
-            (crId: unknown) => String(crId) === user.id,
+            (crId: unknown) => String(crId) === userId,
           ) ?? false;
       }
     }
 
     // Authorization check
-    const canSendEmail = isAdmin || (isLeader && (isMentor || isClassRep));
+    const canSendEmail = isAdmin || isMentor || isClassRep;
     if (!canSendEmail) {
       res.status(403).json({
         success: false,
         message:
-          "You must be an admin, or a Leader who is a mentor/class rep of this program to send emails",
+          "You must be an admin, mentor, or class rep of this program to send emails",
       });
       return;
     }

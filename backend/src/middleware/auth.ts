@@ -599,7 +599,7 @@ export const authorizeEventManagement = async (
     res.status(403).json({
       success: false,
       message:
-        "Access denied. You must be an Administrator, Super Admin, event creator, listed organizer, or a Leader who is a mentor/class rep of an affiliated program to manage this event.",
+        "Access denied. You must be an Administrator, Super Admin, event creator, listed organizer, or a mentor/class rep of an affiliated program to manage this event.",
     });
   } catch (error) {
     console.error("Event management authorization error:", error);

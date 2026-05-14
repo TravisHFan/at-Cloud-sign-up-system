@@ -132,7 +132,17 @@ export default class ParticipantsController {
         (mentor: { userId: mongoose.Types.ObjectId }) =>
           mentor.userId.toString() === String(user?._id),
       );
-      const canViewContact = isAdmin || isMentor;
+      const isClassRep = allClassReps.some((participant) => {
+        const participantUser = participant.user as {
+          _id?: unknown;
+          id?: unknown;
+        };
+        return (
+          String(participantUser._id || participantUser.id) ===
+          String(user?._id)
+        );
+      });
+      const canViewContact = isAdmin || isMentor || isClassRep;
 
       res.status(200).json({
         success: true,

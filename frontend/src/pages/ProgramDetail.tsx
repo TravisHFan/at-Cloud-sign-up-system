@@ -120,6 +120,7 @@ export default function ProgramDetail({
     | "creator"
     | "free"
     | "purchased"
+    | "class_rep"
     | "not_purchased"
     | null
   >(null);
@@ -188,6 +189,7 @@ export default function ProgramDetail({
         if (cancelled) return;
         setHasAccess(result.hasAccess);
         setAccessReason(result.reason);
+        setIsCurrentUserClassRep(result.reason === "class_rep");
       } catch (error) {
         console.error("Failed to check program access:", error);
         if (!cancelled) {
@@ -501,7 +503,8 @@ export default function ProgramDetail({
             (program.mentors?.some(
               (mentor: { userId: string }) => mentor.userId === currentUser?.id,
             ) ??
-              false)
+              false) ||
+            isCurrentUserClassRep
           }
           canDelete={
             hasRole(["Administrator", "Super Admin"]) ||
@@ -513,6 +516,12 @@ export default function ProgramDetail({
             hasRole(["Administrator", "Super Admin"]) ||
             // Program creator can create events
             accessReason === "creator" ||
+            // Mentors and class reps can create events in their program
+            (program.mentors?.some(
+              (mentor: { userId: string }) => mentor.userId === currentUser?.id,
+            ) ??
+              false) ||
+            isCurrentUserClassRep ||
             // Leaders can create events in programs they have access to
             (hasRole(["Leader"]) && hasAccess === true)
           }
@@ -521,14 +530,12 @@ export default function ProgramDetail({
             hasRole(["Administrator", "Super Admin"]) ||
             // Program creator can email participants
             accessReason === "creator" ||
-            // Leaders can email if they are a Mentor or Class Rep of this program
-            (hasRole(["Leader"]) &&
-              ((program.mentors?.some(
-                (mentor: { userId: string }) =>
-                  mentor.userId === currentUser?.id,
-              ) ??
-                false) ||
-                isCurrentUserClassRep))
+            // Mentors and class reps can email participants for their program
+            (program.mentors?.some(
+              (mentor: { userId: string }) => mentor.userId === currentUser?.id,
+            ) ??
+              false) ||
+            isCurrentUserClassRep
           }
           onDelete={openDelete}
           onEmailParticipants={openEmailModal}

@@ -20,6 +20,7 @@ interface ProgramCard {
   accessReason?:
     | "admin"
     | "mentor"
+    | "class_rep"
     | "creator"
     | "free"
     | "purchased"
@@ -475,6 +476,7 @@ export default function EMBAProgram() {
                         program.hasAccess &&
                         (program.accessReason === "purchased" ||
                           program.accessReason === "admin" ||
+                          program.accessReason === "class_rep" ||
                           program.accessReason === "mentor") && (
                           <img
                             src="/check.svg"

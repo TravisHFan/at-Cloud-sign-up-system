@@ -82,12 +82,13 @@ export class CoOrganizerProgramAccessService {
       }
     )
       .find({ _id: { $in: programIds } })
-      .select("_id isFree mentors");
+      .select("_id isFree mentors adminEnrollments");
 
     const typedPrograms = programs as Array<{
       _id: mongoose.Types.ObjectId;
       isFree?: boolean;
       mentors?: Array<{ userId: unknown }>;
+      adminEnrollments?: { classReps?: unknown[] };
     }>;
 
     // Check if at least one program is paid
@@ -131,7 +132,18 @@ export class CoOrganizerProgramAccessService {
           break; // Found access, no need to check other programs
         }
 
-        // Check 2: Has user purchased this program?
+        // Check 2: Is user an admin-enrolled class rep of this program?
+        const isAdminEnrolledClassRep =
+          program.adminEnrollments?.classReps?.some(
+            (classRepId) => String(classRepId) === userIdStr
+          ) ?? false;
+
+        if (isAdminEnrolledClassRep) {
+          hasAccessToAny = true;
+          break;
+        }
+
+        // Check 3: Has user purchased this program?
         const purchase = await (
           Purchase as unknown as {
             findOne: (q: unknown) => Promise<unknown>;

@@ -89,6 +89,7 @@ class PurchasesApiClient extends BaseApiClient {
       | "admin"
       | "creator"
       | "mentor"
+      | "class_rep"
       | "free"
       | "purchased"
       | "not_purchased";
@@ -99,6 +100,7 @@ class PurchasesApiClient extends BaseApiClient {
         | "admin"
         | "creator"
         | "mentor"
+        | "class_rep"
         | "free"
         | "purchased"
         | "not_purchased";

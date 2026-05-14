@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { Request, Response } from "express";
 import UpdateController from "../../../../src/controllers/programs/UpdateController";
-import { Program } from "../../../../src/models";
+import { Program, Purchase } from "../../../../src/models";
 import { RoleUtils } from "../../../../src/utils/roleUtils";
 import mongoose from "mongoose";
 
@@ -10,6 +10,9 @@ vi.mock("../../../../src/models", () => ({
   Program: {
     findById: vi.fn(),
     findByIdAndUpdate: vi.fn(),
+  },
+  Purchase: {
+    findOne: vi.fn(),
   },
 }));
 
@@ -197,6 +200,9 @@ describe("UpdateController", () => {
 
         vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
         vi.mocked(RoleUtils.isAdmin).mockReturnValue(false);
+        vi.mocked(Purchase.findOne).mockReturnValue({
+          select: vi.fn().mockResolvedValue(null),
+        } as any);
 
         await UpdateController.update(mockReq as Request, mockRes as Response);
 
@@ -204,8 +210,86 @@ describe("UpdateController", () => {
         expect(jsonMock).toHaveBeenCalledWith({
           success: false,
           message:
-            "You do not have permission to edit this program. Only Administrators, the program creator, and assigned mentors can edit programs.",
+            "You do not have permission to edit this program. Only Administrators, the program creator, assigned mentors, and class reps can edit programs.",
         });
+      });
+
+      it("should allow admin-enrolled class reps to update their program", async () => {
+        const classRepId = new mongoose.Types.ObjectId();
+        mockReq.user = {
+          _id: classRepId,
+          role: "Participant",
+        };
+
+        const mockProgram = {
+          _id: programId,
+          title: "Original Title",
+          mentors: [],
+          adminEnrollments: {
+            classReps: [classRepId],
+          },
+        };
+
+        vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
+        vi.mocked(RoleUtils.isAdmin).mockReturnValue(false);
+
+        const updatedProgram = {
+          ...mockProgram,
+          title: "Updated Title",
+        };
+
+        vi.mocked(Program.findByIdAndUpdate).mockResolvedValue(
+          updatedProgram as any,
+        );
+
+        await UpdateController.update(mockReq as Request, mockRes as Response);
+
+        expect(Purchase.findOne).not.toHaveBeenCalled();
+        expect(statusMock).toHaveBeenCalledWith(200);
+        expect(jsonMock).toHaveBeenCalledWith({
+          success: true,
+          data: updatedProgram,
+        });
+      });
+
+      it("should allow paid class reps to update their program", async () => {
+        const classRepId = new mongoose.Types.ObjectId();
+        mockReq.user = {
+          _id: classRepId,
+          role: "Participant",
+        };
+
+        const mockProgram = {
+          _id: programId,
+          title: "Original Title",
+          mentors: [],
+        };
+
+        vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
+        vi.mocked(RoleUtils.isAdmin).mockReturnValue(false);
+        vi.mocked(Purchase.findOne).mockReturnValue({
+          select: vi.fn().mockResolvedValue({ _id: "purchase-1" }),
+        } as any);
+
+        const updatedProgram = {
+          ...mockProgram,
+          title: "Updated Title",
+        };
+
+        vi.mocked(Program.findByIdAndUpdate).mockResolvedValue(
+          updatedProgram as any,
+        );
+
+        await UpdateController.update(mockReq as Request, mockRes as Response);
+
+        expect(Purchase.findOne).toHaveBeenCalledWith({
+          purchaseType: "program",
+          programId: mockProgram._id,
+          userId: classRepId,
+          status: "completed",
+          isClassRep: true,
+        });
+        expect(statusMock).toHaveBeenCalledWith(200);
       });
 
       it("should reject Leader role for programs they don't mentor", async () => {
@@ -222,6 +306,9 @@ describe("UpdateController", () => {
 
         vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
         vi.mocked(RoleUtils.isAdmin).mockReturnValue(false);
+        vi.mocked(Purchase.findOne).mockReturnValue({
+          select: vi.fn().mockResolvedValue(null),
+        } as any);
 
         await UpdateController.update(mockReq as Request, mockRes as Response);
 
@@ -242,6 +329,9 @@ describe("UpdateController", () => {
 
         vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
         vi.mocked(RoleUtils.isAdmin).mockReturnValue(false);
+        vi.mocked(Purchase.findOne).mockReturnValue({
+          select: vi.fn().mockResolvedValue(null),
+        } as any);
 
         await UpdateController.update(mockReq as Request, mockRes as Response);
 
@@ -262,6 +352,9 @@ describe("UpdateController", () => {
 
         vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
         vi.mocked(RoleUtils.isAdmin).mockReturnValue(false);
+        vi.mocked(Purchase.findOne).mockReturnValue({
+          select: vi.fn().mockResolvedValue(null),
+        } as any);
 
         await UpdateController.update(mockReq as Request, mockRes as Response);
 

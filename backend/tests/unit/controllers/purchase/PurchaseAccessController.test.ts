@@ -246,6 +246,7 @@ describe("PurchaseAccessController", () => {
         userId,
         programId,
         status: "completed",
+        isClassRep: false,
       };
 
       vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
@@ -265,6 +266,70 @@ describe("PurchaseAccessController", () => {
       expect(jsonMock).toHaveBeenCalledWith({
         success: true,
         data: { hasAccess: true, reason: "purchased" },
+      });
+    });
+
+    it("should grant class rep access for admin-enrolled class reps", async () => {
+      mockReq.user = { _id: userId, role: "Participant" };
+      mockReq.params = { programId };
+
+      const mockProgram = {
+        _id: programId,
+        title: "Paid Program",
+        isFree: false,
+        mentors: [],
+        adminEnrollments: {
+          mentees: [],
+          classReps: [userId],
+        },
+      };
+
+      vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
+
+      await PurchaseAccessController.checkProgramAccess(
+        mockReq as Request,
+        mockRes as Response,
+      );
+
+      expect(Purchase.findOne).not.toHaveBeenCalled();
+      expect(statusMock).toHaveBeenCalledWith(200);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: true,
+        data: { hasAccess: true, reason: "class_rep" },
+      });
+    });
+
+    it("should grant class rep access for completed class rep purchases", async () => {
+      mockReq.user = { _id: userId, role: "Participant" };
+      mockReq.params = { programId };
+
+      const mockProgram = {
+        _id: programId,
+        title: "Paid Program",
+        isFree: false,
+        mentors: [],
+      };
+
+      const mockPurchase = {
+        _id: "purchase123",
+        userId,
+        programId,
+        status: "completed",
+        isClassRep: true,
+      };
+
+      vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
+      vi.mocked(Purchase.findOne).mockResolvedValue(mockPurchase as any);
+
+      await PurchaseAccessController.checkProgramAccess(
+        mockReq as Request,
+        mockRes as Response,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(200);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: true,
+        data: { hasAccess: true, reason: "class_rep" },
       });
     });
 

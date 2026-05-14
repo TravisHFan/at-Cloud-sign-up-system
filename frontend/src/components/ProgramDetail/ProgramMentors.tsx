@@ -21,6 +21,7 @@ interface ProgramMentorsProps {
     | "creator"
     | "free"
     | "purchased"
+    | "class_rep"
     | "not_purchased"
     | null;
 }
@@ -77,7 +78,9 @@ export default function ProgramMentors({
             currentUserRole === "Super Admin" ||
             currentUserRole === "Administrator";
           const isEnrolled =
-            accessReason === "purchased" || accessReason === "free";
+            accessReason === "purchased" ||
+            accessReason === "class_rep" ||
+            accessReason === "free";
           const canViewContact = isAdmin || isEnrolled;
 
           const isOwnCard = currentUserId === m.userId;

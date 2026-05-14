@@ -145,7 +145,13 @@ function App() {
                 path="programs/:id/edit"
                 element={
                   <ProtectedRoute
-                    allowedRoles={["Super Admin", "Administrator", "Leader"]}
+                    allowedRoles={[
+                      "Super Admin",
+                      "Administrator",
+                      "Leader",
+                      "Participant",
+                      "Guest Expert",
+                    ]}
                   >
                     <EditProgram />
                   </ProtectedRoute>
@@ -165,7 +171,13 @@ function App() {
                 path="new-event"
                 element={
                   <ProtectedRoute
-                    allowedRoles={["Super Admin", "Administrator", "Leader"]}
+                    allowedRoles={[
+                      "Super Admin",
+                      "Administrator",
+                      "Leader",
+                      "Participant",
+                      "Guest Expert",
+                    ]}
                   >
                     <CreateEvent />
                   </ProtectedRoute>
@@ -199,7 +211,13 @@ function App() {
                 path="edit-event/:id"
                 element={
                   <ProtectedRoute
-                    allowedRoles={["Super Admin", "Administrator", "Leader"]}
+                    allowedRoles={[
+                      "Super Admin",
+                      "Administrator",
+                      "Leader",
+                      "Participant",
+                      "Guest Expert",
+                    ]}
                   >
                     <EditEvent />
                   </ProtectedRoute>

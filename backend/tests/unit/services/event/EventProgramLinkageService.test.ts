@@ -48,6 +48,21 @@ describe("EventProgramLinkageService", () => {
       expect(result.linkedPrograms).toEqual([]);
     });
 
+    it("requires a selected program when scoped event creators lack global permission", async () => {
+      const result = await EventProgramLinkageService.validateAndLinkPrograms(
+        [],
+        { _id: "class-rep-1", role: "Participant" },
+        { requireProgramManagementAccess: true },
+      );
+
+      expect(result.valid).toBe(false);
+      expect(result.error).toEqual({
+        status: 403,
+        message:
+          "You must select a program where you are a mentor or class rep to create an event.",
+      });
+    });
+
     it("returns empty result when rawProgramLabels is undefined", async () => {
       const result = await EventProgramLinkageService.validateAndLinkPrograms(
         undefined,
@@ -204,6 +219,72 @@ describe("EventProgramLinkageService", () => {
         userId: mockUser._id,
         programId: validProgramId1,
         status: "completed",
+      });
+    });
+
+    it("allows scoped non-Leader event creation for class rep purchases", async () => {
+      const classRepUser = { _id: "class-rep-1", role: "Participant" };
+
+      (Program.findById as ReturnType<typeof vi.fn>).mockImplementation(
+        (id: string) => ({
+          select: vi.fn().mockResolvedValue({
+            _id: id,
+            isFree: false,
+            mentors: [],
+          }),
+        }),
+      );
+      (Purchase.findOne as ReturnType<typeof vi.fn>).mockResolvedValue({
+        _id: "purchase-123",
+        status: "completed",
+        isClassRep: true,
+      });
+
+      const result = await EventProgramLinkageService.validateAndLinkPrograms(
+        [validProgramId1],
+        classRepUser,
+        { requireProgramManagementAccess: true },
+      );
+
+      expect(result.valid).toBe(true);
+      expect(Purchase.findOne).toHaveBeenCalledWith({
+        userId: classRepUser._id,
+        programId: validProgramId1,
+        status: "completed",
+        isClassRep: true,
+      });
+    });
+
+    it("denies scoped non-Leader event creation for regular purchases", async () => {
+      const participantUser = { _id: "participant-1", role: "Participant" };
+
+      (Program.findById as ReturnType<typeof vi.fn>).mockImplementation(
+        (id: string) => ({
+          select: vi.fn().mockResolvedValue({
+            _id: id,
+            isFree: false,
+            mentors: [],
+          }),
+        }),
+      );
+      (Purchase.findOne as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+
+      const result = await EventProgramLinkageService.validateAndLinkPrograms(
+        [validProgramId1],
+        participantUser,
+        { requireProgramManagementAccess: true },
+      );
+
+      expect(result.valid).toBe(false);
+      expect(result.error?.status).toBe(403);
+      expect(result.error?.message).toBe(
+        "You can only create events for programs where you are a mentor or class rep.",
+      );
+      expect(Purchase.findOne).toHaveBeenCalledWith({
+        userId: participantUser._id,
+        programId: validProgramId1,
+        status: "completed",
+        isClassRep: true,
       });
     });
 

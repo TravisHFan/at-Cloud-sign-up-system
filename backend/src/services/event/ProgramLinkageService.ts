@@ -24,7 +24,8 @@ export class ProgramLinkageService {
   static async processAndValidate(
     rawProgramLabels: unknown,
     userId?: unknown,
-    userRole?: string
+    userRole?: string,
+    options: { requireProgramManagementAccess?: boolean } = {}
   ): Promise<{
     success: boolean;
     programIds?: string[];
@@ -87,11 +88,16 @@ export class ProgramLinkageService {
       linkedProgramDocs.push(program as { _id: unknown });
     }
 
-    // FOR LEADER USERS: Validate they can only associate programs they have access to
-    if (userRole === "Leader") {
+    // FOR LEADER USERS: Validate they can only associate programs they have access to.
+    // For program-scoped editors without global event permissions, require
+    // mentor/class-rep management access to every selected program.
+    if (userRole === "Leader" || options.requireProgramManagementAccess) {
       const accessCheck = await this.validateLeaderAccess(
         linkedProgramDocs,
-        userId
+        userId,
+        {
+          managementOnly: options.requireProgramManagementAccess,
+        }
       );
       if (!accessCheck.success) {
         return accessCheck;
@@ -112,7 +118,8 @@ export class ProgramLinkageService {
    */
   private static async validateLeaderAccess(
     linkedPrograms: Array<{ _id: unknown }>,
-    userId?: unknown
+    userId?: unknown,
+    options: { managementOnly?: boolean } = {}
   ): Promise<{
     success: boolean;
     error?: { status: number; message: string; data?: unknown };
@@ -126,7 +133,7 @@ export class ProgramLinkageService {
       };
 
       // Check 1: Is program free?
-      if (prog.isFree === true) {
+      if (!options.managementOnly && prog.isFree === true) {
         continue; // Free programs are accessible to everyone
       }
 
@@ -155,6 +162,7 @@ export class ProgramLinkageService {
         userId: userId,
         programId: prog._id,
         status: "completed",
+        ...(options.managementOnly ? { isClassRep: true } : {}),
       });
 
       if (!purchase) {
@@ -164,7 +172,9 @@ export class ProgramLinkageService {
           error: {
             status: 403,
             message:
-              "You can only associate programs that you have access to (free programs, purchased programs, programs where you are a mentor, or programs where you are a class rep).",
+              options.managementOnly
+                ? "You can only associate programs where you are a mentor or class rep."
+                : "You can only associate programs that you have access to (free programs, purchased programs, programs where you are a mentor, or programs where you are a class rep).",
             data: {
               programId: String(prog._id),
               reason: "no_access",

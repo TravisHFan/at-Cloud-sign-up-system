@@ -149,7 +149,8 @@ describe("CreationController", () => {
       expect(statusMock).toHaveBeenCalledWith(403);
       expect(jsonMock).toHaveBeenCalledWith({
         success: false,
-        message: "Insufficient permissions to create events.",
+        message:
+          "Insufficient permissions to create events. Select a program where you are a mentor or class rep.",
       });
     });
 

@@ -111,7 +111,7 @@ export class UpdateController {
         res.status(403).json({
           success: false,
           message:
-            "Insufficient permissions to edit this event. You must be the event creator, a co-organizer, or a Leader who is a mentor/class rep of an affiliated program.",
+            "Insufficient permissions to edit this event. You must be the event creator, a co-organizer, or a mentor/class rep of an affiliated program.",
         });
         return;
       }
@@ -238,6 +238,12 @@ export class UpdateController {
           rawProgramLabels,
           req.user?._id,
           req.user?.role,
+          {
+            requireProgramManagementAccess:
+              userIsAffiliatedProgramEditor &&
+              !canEditAnyEvent &&
+              !(canEditOwnEvent && userIsOrganizer),
+          },
         );
 
         if (!result.success && result.error) {

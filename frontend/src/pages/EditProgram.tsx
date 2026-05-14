@@ -124,6 +124,8 @@ export default function EditProgram() {
   const [programMentorIds, setProgramMentorIds] = useState<string[]>([]);
   // Track if current user is the program creator
   const [isCreator, setIsCreator] = useState(false);
+  // Track if current user is a class rep of this program
+  const [isClassRep, setIsClassRep] = useState(false);
 
   const {
     register,
@@ -464,6 +466,7 @@ export default function EditProgram() {
         const result = await purchaseService.checkProgramAccess(id);
         if (cancelled) return;
         setIsCreator(result.reason === "creator");
+        setIsClassRep(result.reason === "class_rep");
       } catch (error) {
         console.error("Failed to check program access:", error);
       }
@@ -560,12 +563,13 @@ export default function EditProgram() {
   };
 
   // Check if user needs the restricted access overlay
-  // Allow Super Admin, Administrator, program mentors, and program creator to edit
+  // Allow Super Admin, Administrator, program mentors, class reps, and program creator to edit
   const isAdmin =
     currentUser?.role === "Super Admin" ||
     currentUser?.role === "Administrator";
   const isMentor = currentUser?.id && programMentorIds.includes(currentUser.id);
-  const shouldShowRestrictedOverlay = !isAdmin && !isMentor && !isCreator;
+  const shouldShowRestrictedOverlay =
+    !isAdmin && !isMentor && !isClassRep && !isCreator;
 
   if (loading) {
     // Standardized dashboard loading: centered, fullscreen, larger spinner
@@ -602,9 +606,9 @@ export default function EditProgram() {
               </h2>
               <p className="text-sm text-gray-600">
                 To edit programs, you need Administrator, Super Admin
-                privileges, be the program creator, or be assigned as a mentor
-                for this program. Please contact your system administrators to
-                request access.
+                privileges, be the program creator, be assigned as a mentor, or
+                be a class rep for this program. Please contact your system
+                administrators to request access.
               </p>
             </div>
           </div>

@@ -408,6 +408,68 @@ describe("ParticipantsController", () => {
         expect(response.data.classReps[1].isPaid).toBe(false);
       });
 
+      it("should show participant contact info to class reps", async () => {
+        mockReq.user = {
+          _id: userId4,
+          role: "Participant",
+        };
+
+        vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
+
+        const mockPurchases = [
+          {
+            userId: {
+              _id: userId1,
+              firstName: "Paid",
+              lastName: "Mentee",
+              email: "paid@example.com",
+              phone: "555-0101",
+            },
+            isClassRep: false,
+            purchaseDate: new Date("2024-01-10"),
+          },
+        ];
+
+        const mockPurchaseFind = vi.fn().mockReturnValue({
+          populate: vi.fn().mockReturnValue({
+            sort: vi.fn().mockResolvedValue(mockPurchases),
+          }),
+        });
+        vi.mocked(Purchase.find).mockImplementation(mockPurchaseFind);
+
+        vi.mocked(User.find).mockImplementation(((query: any) => {
+          const ids = query._id?.$in || [];
+          if (ids.includes(userId4)) {
+            return {
+              select: vi.fn().mockResolvedValue([
+                {
+                  _id: userId4,
+                  firstName: "Admin",
+                  lastName: "ClassRep",
+                  email: "admin.classrep@example.com",
+                  phone: "555-0104",
+                },
+              ]),
+            };
+          }
+          return {
+            select: vi.fn().mockResolvedValue([]),
+          };
+        }) as any);
+
+        await ParticipantsController.getParticipants(
+          mockReq as Request,
+          mockRes as Response,
+        );
+
+        const response = jsonMock.mock.calls[0][0];
+        expect(response.data.mentees[0].user.email).toBe("paid@example.com");
+        expect(response.data.mentees[0].user.phone).toBe("555-0101");
+        expect(response.data.classReps[0].user.email).toBe(
+          "admin.classrep@example.com",
+        );
+      });
+
       it("should sort purchases by purchaseDate ascending", async () => {
         vi.mocked(Program.findById).mockResolvedValue({
           ...mockProgram,

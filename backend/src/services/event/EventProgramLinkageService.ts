@@ -31,6 +31,10 @@ interface UserContext {
   role: string;
 }
 
+interface ProgramLinkageOptions {
+  requireProgramManagementAccess?: boolean;
+}
+
 export class EventProgramLinkageService {
   /**
    * Validate and prepare program linkage for event creation
@@ -41,10 +45,21 @@ export class EventProgramLinkageService {
    */
   static async validateAndLinkPrograms(
     rawProgramLabels: unknown,
-    user: UserContext
+    user: UserContext,
+    options: ProgramLinkageOptions = {}
   ): Promise<ProgramLinkageResult> {
     // If no program labels provided, return empty result
     if (!Array.isArray(rawProgramLabels) || rawProgramLabels.length === 0) {
+      if (options.requireProgramManagementAccess) {
+        return {
+          valid: false,
+          error: {
+            status: 403,
+            message:
+              "You must select a program where you are a mentor or class rep to create an event.",
+          },
+        };
+      }
       return {
         valid: true,
         validatedProgramLabels: [],
@@ -100,11 +115,16 @@ export class EventProgramLinkageService {
       validatedProgramLabels.push(new mongoose.Types.ObjectId(pid));
     }
 
-    // Step 3: FOR LEADER USERS - Validate access to each program
-    if (user.role === "Leader") {
+    // Step 3: Validate program access for non-admin scoped event creation/editing.
+    // Leaders keep their existing broader access rule; non-Leaders must be
+    // program managers (mentor/class rep) when explicitly allowed through this path.
+    if (user.role === "Leader" || options.requireProgramManagementAccess) {
       const leaderAccessResult = await this.validateLeaderAccess(
         linkedPrograms,
-        user._id
+        user._id,
+        {
+          managementOnly: options.requireProgramManagementAccess,
+        }
       );
       if (!leaderAccessResult.valid) {
         return leaderAccessResult;
@@ -128,7 +148,8 @@ export class EventProgramLinkageService {
    */
   private static async validateLeaderAccess(
     linkedPrograms: Array<{ _id: unknown }>,
-    userId: unknown
+    userId: unknown,
+    options: { managementOnly?: boolean } = {}
   ): Promise<ProgramLinkageResult> {
     for (const program of linkedPrograms) {
       const prog = program as {
@@ -139,7 +160,7 @@ export class EventProgramLinkageService {
       };
 
       // Check 1: Is program free?
-      if (prog.isFree === true) {
+      if (!options.managementOnly && prog.isFree === true) {
         continue; // Free programs are accessible to everyone
       }
 
@@ -168,6 +189,7 @@ export class EventProgramLinkageService {
         userId: userId,
         programId: prog._id,
         status: "completed",
+        ...(options.managementOnly ? { isClassRep: true } : {}),
       });
 
       if (!purchase) {
@@ -177,7 +199,9 @@ export class EventProgramLinkageService {
           error: {
             status: 403,
             message:
-              "You can only associate programs that you have access to (free programs, purchased programs, programs where you are a mentor, or programs where you are a class rep).",
+              options.managementOnly
+                ? "You can only create events for programs where you are a mentor or class rep."
+                : "You can only associate programs that you have access to (free programs, purchased programs, programs where you are a mentor, or programs where you are a class rep).",
             data: {
               programId: String(prog._id),
               reason: "no_access",

@@ -82,7 +82,15 @@ class PurchaseAccessController {
       if (isAdminEnrolled) {
         res.status(200).json({
           success: true,
-          data: { hasAccess: true, reason: "purchased" },
+          data: {
+            hasAccess: true,
+            reason: program.adminEnrollments?.classReps?.some(
+              (id: mongoose.Types.ObjectId) =>
+                id.toString() === String(req.user!._id),
+            )
+              ? "class_rep"
+              : "purchased",
+          },
         });
         return;
       }
@@ -106,7 +114,10 @@ class PurchaseAccessController {
       if (purchase) {
         res.status(200).json({
           success: true,
-          data: { hasAccess: true, reason: "purchased" },
+          data: {
+            hasAccess: true,
+            reason: purchase.isClassRep ? "class_rep" : "purchased",
+          },
         });
         return;
       }

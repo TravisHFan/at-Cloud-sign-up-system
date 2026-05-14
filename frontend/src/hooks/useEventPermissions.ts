@@ -100,11 +100,7 @@ export function useEventPermissions({
         event.createdBy?._id === currentUserId);
 
   useEffect(() => {
-    if (
-      !event?.programLabels?.length ||
-      !currentUser ||
-      currentUserRole !== "Leader"
-    ) {
+    if (!event?.programLabels?.length || !currentUser) {
       setIsAffiliatedProgramEditor(false);
       return;
     }
@@ -116,16 +112,29 @@ export function useEventPermissions({
         try {
           const program = (await programService.getById(programId)) as {
             mentors?: Array<{ userId?: string }>;
-            adminEnrollments?: { classReps?: string[] };
+            adminEnrollments?: {
+              classReps?: Array<
+                | string
+                | {
+                    id?: string;
+                    _id?: string;
+                    userId?: string;
+                  }
+              >;
+            };
           };
 
           const isMentor =
             program.mentors?.some((mentor) => mentor.userId === currentUser.id) ??
             false;
           const isAdminEnrolledClassRep =
-            program.adminEnrollments?.classReps?.some(
-              (classRepId) => classRepId === currentUser.id
-            ) ?? false;
+            program.adminEnrollments?.classReps?.some((classRep) => {
+              const classRepId =
+                typeof classRep === "string"
+                  ? classRep
+                  : classRep.userId || classRep.id || classRep._id;
+              return classRepId === currentUser.id;
+            }) ?? false;
 
           if (isMentor || isAdminEnrolledClassRep) {
             if (!cancelled) setIsAffiliatedProgramEditor(true);
@@ -157,7 +166,7 @@ export function useEventPermissions({
     return () => {
       cancelled = true;
     };
-  }, [event?.programLabels, currentUser, currentUserRole]);
+  }, [event?.programLabels, currentUser]);
 
   // Check if current user can view Zoom information
   const canViewZoomInfo = (): boolean => {

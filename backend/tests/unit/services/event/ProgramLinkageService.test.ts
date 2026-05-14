@@ -198,6 +198,54 @@ describe("ProgramLinkageService.processAndValidate", () => {
       purchasedProgramId,
     ]);
   });
+
+  it("allows scoped non-Leader updates only for mentor/class-rep managed programs", async () => {
+    const classRepProgramId = "507f191e810c19729de860ea";
+    const regularPurchaseProgramId = "507f191e810c19729de860eb";
+
+    (Program.findById as any).mockImplementation((id: string) => ({
+      select: vi.fn().mockResolvedValue({
+        _id: id,
+        isFree: false,
+        mentors: [],
+      }),
+    }));
+
+    (Purchase.findOne as any).mockImplementation((query: any) => {
+      if (String(query.programId) === classRepProgramId && query.isClassRep) {
+        return Promise.resolve({ _id: "class-rep-purchase" });
+      }
+      return Promise.resolve(null);
+    });
+
+    const okResult = await ProgramLinkageService.processAndValidate(
+      [classRepProgramId],
+      "class-rep-1",
+      "Participant",
+      { requireProgramManagementAccess: true },
+    );
+
+    expect(okResult.success).toBe(true);
+    expect(Purchase.findOne).toHaveBeenCalledWith({
+      userId: "class-rep-1",
+      programId: classRepProgramId,
+      status: "completed",
+      isClassRep: true,
+    });
+
+    const failResult = await ProgramLinkageService.processAndValidate(
+      [regularPurchaseProgramId],
+      "participant-1",
+      "Participant",
+      { requireProgramManagementAccess: true },
+    );
+
+    expect(failResult.success).toBe(false);
+    expect(failResult.error?.status).toBe(403);
+    expect(failResult.error?.message).toBe(
+      "You can only associate programs where you are a mentor or class rep.",
+    );
+  });
 });
 
 describe("ProgramLinkageService.toObjectIdArray", () => {

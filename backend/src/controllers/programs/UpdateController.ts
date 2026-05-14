@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
-import { Program } from "../../models";
+import { Program, Purchase } from "../../models";
 import { RoleUtils } from "../../utils/roleUtils";
 
 export default class UpdateController {
@@ -41,12 +41,30 @@ export default class UpdateController {
           (mentor: { userId: unknown }) =>
             String(mentor.userId) === String(req.user!._id),
         ) ?? false;
+      const needsClassRepCheck = !isAdmin && !isCreator && !isMentor;
+      const isAdminEnrolledClassRep =
+        needsClassRepCheck &&
+        (program.adminEnrollments?.classReps?.some(
+          (classRepId: unknown) => String(classRepId) === String(req.user!._id),
+        ) ??
+          false);
+      const classRepPurchase =
+        needsClassRepCheck && !isAdminEnrolledClassRep
+          ? await Purchase.findOne({
+              purchaseType: "program",
+              programId: program._id,
+              userId: req.user._id,
+              status: "completed",
+              isClassRep: true,
+            }).select("_id")
+          : null;
+      const isClassRep = isAdminEnrolledClassRep || !!classRepPurchase;
 
-      if (!isAdmin && !isCreator && !isMentor) {
+      if (!isAdmin && !isCreator && !isMentor && !isClassRep) {
         res.status(403).json({
           success: false,
           message:
-            "You do not have permission to edit this program. Only Administrators, the program creator, and assigned mentors can edit programs.",
+            "You do not have permission to edit this program. Only Administrators, the program creator, assigned mentors, and class reps can edit programs.",
         });
         return;
       }

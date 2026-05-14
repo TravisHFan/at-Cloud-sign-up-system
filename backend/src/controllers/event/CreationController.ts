@@ -171,11 +171,31 @@ export class CreationController {
         return;
       }
 
-      // Check permissions
-      if (!hasPermission(req.user.role, PERMISSIONS.CREATE_EVENT)) {
+      const hasCreateEventPermission = hasPermission(
+        req.user.role,
+        PERMISSIONS.CREATE_EVENT,
+      );
+      const rawProgramLabels = (req.body as { programLabels?: unknown })
+        .programLabels;
+      const hasProgramLabels =
+        Array.isArray(rawProgramLabels) &&
+        rawProgramLabels.some(
+          (id) =>
+            id !== null &&
+            id !== undefined &&
+            String(id).trim() !== "" &&
+            id !== "none",
+        );
+
+      // Users without global event-creation permission may still create
+      // program-scoped events when they are a mentor or class rep of the
+      // selected program(s). The program linkage step below enforces that
+      // narrower access.
+      if (!hasCreateEventPermission && !hasProgramLabels) {
         res.status(403).json({
           success: false,
-          message: "Insufficient permissions to create events.",
+          message:
+            "Insufficient permissions to create events. Select a program where you are a mentor or class rep.",
         });
         return;
       }
@@ -318,8 +338,11 @@ export class CreationController {
       // Validate and prepare program linkage
       const programLinkageResult =
         await EventProgramLinkageService.validateAndLinkPrograms(
-          (req.body as { programLabels?: unknown }).programLabels,
+          rawProgramLabels,
           { _id: req.user!._id, role: req.user!.role },
+          {
+            requireProgramManagementAccess: !hasCreateEventPermission,
+          },
         );
 
       if (!programLinkageResult.valid && programLinkageResult.error) {

@@ -42,7 +42,7 @@ export function isEventOrganizer(
  * Check if a user can edit an event through one of the event's affiliated
  * programs. This is intentionally narrower than general event management.
  *
- * A Leader qualifies when they are a mentor or class rep of any program in
+ * A user qualifies when they are a mentor or class rep of any program in
  * event.programLabels.
  */
 export async function isAffiliatedProgramEditor(
@@ -50,12 +50,8 @@ export async function isAffiliatedProgramEditor(
     programLabels?: Array<Types.ObjectId | string>;
   },
   userId: string,
-  userRole?: string
+  _userRole?: string
 ): Promise<boolean> {
-  if (userRole !== "Leader") {
-    return false;
-  }
-
   const programIds = (event.programLabels || [])
     .map((id) => id?.toString())
     .filter((id): id is string => !!id && Types.ObjectId.isValid(id))

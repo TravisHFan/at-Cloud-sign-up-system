@@ -255,14 +255,20 @@ export default function NewEvent() {
             adminEnrollments: p.adminEnrollments,
           }));
 
-          // FOR LEADER USERS: Filter programs to only show accessible ones
-          // (free programs, purchased programs, mentor programs, or class rep programs)
-          if (currentUser?.role === "Leader") {
+          const isAdmin =
+            currentUser?.role === "Super Admin" ||
+            currentUser?.role === "Administrator";
+
+          // For non-admin users, only show programs they can actually create
+          // events for. Leaders keep existing broad access; other roles must be
+          // mentors or class reps.
+          if (currentUser && !isAdmin) {
             const accessiblePrograms: typeof filteredList = [];
+            const isLeader = currentUser.role === "Leader";
 
             for (const program of filteredList) {
               // Check 1: Is program free?
-              if (program.isFree === true) {
+              if (isLeader && program.isFree === true) {
                 accessiblePrograms.push(program);
                 continue;
               }
@@ -291,7 +297,13 @@ export default function NewEvent() {
                 const accessResult = await purchaseService.checkProgramAccess(
                   program.id,
                 );
-                if (accessResult.hasAccess) {
+                if (
+                  isLeader
+                    ? accessResult.hasAccess
+                    : accessResult.reason === "mentor" ||
+                      accessResult.reason === "class_rep" ||
+                      accessResult.reason === "creator"
+                ) {
                   accessiblePrograms.push(program);
                 }
               } catch (error) {
