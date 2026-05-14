@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import Message from "../../models/Message";
 import type { IMessage } from "../../models/Message";
+import User from "../../models/User";
 import { socketService } from "../../services/infrastructure/SocketService";
 import { CachePatterns } from "../../services";
 
@@ -31,6 +32,7 @@ export default class TargetedSystemMessagesController {
       type?: string;
       priority?: string;
       hideCreator?: boolean;
+      targetRoles?: string[];
       metadata?: Record<string, unknown>;
     },
     targetUserIds: string[],
@@ -58,6 +60,14 @@ export default class TargetedSystemMessagesController {
         roleInAtCloud: "System",
       };
 
+      const targetUserIdsForMessage =
+        messageData.targetRoles && messageData.targetRoles.length > 0
+          ? await TargetedSystemMessagesController.filterTargetUsersByRole(
+              targetUserIds,
+              messageData.targetRoles
+            )
+          : targetUserIds;
+
       // Create targeted message
       const targetedMessage = new Message({
         title: messageData.title,
@@ -67,19 +77,20 @@ export default class TargetedSystemMessagesController {
         hideCreator: messageData.hideCreator === true,
         creator: messageCreator,
         isActive: true,
+        targetRoles: messageData.targetRoles,
         metadata: messageData.metadata,
         // For single-recipient messages that target specific users, persist the target for frontend filtering
         targetUserId:
           (messageData.type === "auth_level_change" ||
             messageData.type === "event_role_change") &&
-          targetUserIds.length === 1
-            ? targetUserIds[0]
+          targetUserIdsForMessage.length === 1
+            ? targetUserIdsForMessage[0]
             : undefined,
         userStates: new Map(),
       });
 
       // Initialize user states for target users only
-      for (const userId of targetUserIds) {
+      for (const userId of targetUserIdsForMessage) {
         const userState = {
           isReadInSystem: false,
           isReadInBell: false,
@@ -97,12 +108,12 @@ export default class TargetedSystemMessagesController {
       await targetedMessage.save();
 
       // Invalidate user caches for targeted message recipients
-      for (const userId of targetUserIds) {
+      for (const userId of targetUserIdsForMessage) {
         await CachePatterns.invalidateUserCache(userId);
       }
 
       // Emit real-time notifications only to target users
-      for (const userId of targetUserIds) {
+      for (const userId of targetUserIdsForMessage) {
         socketService.emitSystemMessageUpdate(userId, "message_created", {
           message: {
             ...targetedMessage.toJSON(),
@@ -137,5 +148,24 @@ export default class TargetedSystemMessagesController {
       console.error("Error creating targeted system message:", error);
       throw error;
     }
+  }
+
+  private static async filterTargetUsersByRole(
+    targetUserIds: string[],
+    targetRoles: string[]
+  ): Promise<string[]> {
+    if (targetUserIds.length === 0) {
+      return [];
+    }
+
+    const allowedUsers = await User.find({
+      _id: { $in: targetUserIds },
+      role: { $in: targetRoles },
+    }).select("_id");
+    const allowedUserIds = new Set(
+      allowedUsers.map((user) => user._id.toString())
+    );
+
+    return targetUserIds.filter((userId) => allowedUserIds.has(userId));
   }
 }

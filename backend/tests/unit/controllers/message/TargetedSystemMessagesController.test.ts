@@ -5,20 +5,31 @@ import TargetedSystemMessagesController from "../../../../src/controllers/messag
 const mockSave = vi.fn().mockResolvedValue(true);
 const mockToJSON = vi.fn().mockReturnValue({ _id: "message-id" });
 const mockGetBellDisplayTitle = vi.fn().mockReturnValue("Test Title");
+const { mockUserFind } = vi.hoisted(() => ({
+  mockUserFind: vi.fn(),
+}));
 
 vi.mock("../../../../src/models/Message", () => {
-  const mockMessage = vi.fn().mockImplementation((data) => ({
-    ...data,
-    _id: "message-id",
-    userStates: new Map(),
-    save: mockSave,
-    toJSON: mockToJSON,
-    getBellDisplayTitle: mockGetBellDisplayTitle,
-    metadata: data.metadata,
-  }));
+  const mockMessage = vi.fn().mockImplementation(function (data) {
+    return {
+      ...data,
+      _id: "message-id",
+      userStates: new Map(),
+      save: mockSave,
+      toJSON: mockToJSON,
+      getBellDisplayTitle: mockGetBellDisplayTitle,
+      metadata: data.metadata,
+    };
+  });
   (mockMessage as any).getUnreadCountsForUser = vi.fn();
   return { default: mockMessage };
 });
+
+vi.mock("../../../../src/models/User", () => ({
+  default: {
+    find: mockUserFind,
+  },
+}));
 
 vi.mock("../../../../src/services/infrastructure/SocketService", () => ({
   socketService: {
@@ -46,6 +57,9 @@ describe("TargetedSystemMessagesController", () => {
     consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     mockSave.mockResolvedValue(true);
+    mockUserFind.mockReturnValue({
+      select: vi.fn().mockResolvedValue([]),
+    });
     (Message as any).getUnreadCountsForUser = vi.fn().mockResolvedValue({
       bellNotifications: 1,
       systemMessages: 1,
@@ -212,6 +226,44 @@ describe("TargetedSystemMessagesController", () => {
           expect.objectContaining({
             metadata,
           })
+        );
+      });
+
+      it("should restrict targetRole messages to matching user ids", async () => {
+        mockUserFind.mockReturnValueOnce({
+          select: vi.fn().mockResolvedValue([{ _id: "user1" }]),
+        });
+
+        const result =
+          await TargetedSystemMessagesController.createTargetedSystemMessage(
+            {
+              ...validMessageData,
+              targetRoles: ["Super Admin", "Administrator"],
+            },
+            validTargetUserIds,
+            validCreator
+          );
+
+        expect(mockUserFind).toHaveBeenCalledWith({
+          _id: { $in: validTargetUserIds },
+          role: { $in: ["Super Admin", "Administrator"] },
+        });
+        expect(Message).toHaveBeenCalledWith(
+          expect.objectContaining({
+            targetRoles: ["Super Admin", "Administrator"],
+          })
+        );
+        expect((result as any).userStates.has("user1")).toBe(true);
+        expect((result as any).userStates.has("user2")).toBe(false);
+        expect(CachePatterns.invalidateUserCache).toHaveBeenCalledWith("user1");
+        expect(CachePatterns.invalidateUserCache).not.toHaveBeenCalledWith(
+          "user2"
+        );
+        expect(socketService.emitSystemMessageUpdate).toHaveBeenCalledTimes(1);
+        expect(socketService.emitSystemMessageUpdate).toHaveBeenCalledWith(
+          "user1",
+          "message_created",
+          expect.any(Object)
         );
       });
 

@@ -38,6 +38,7 @@ export interface TrioRequest {
     type?: string;
     priority?: string;
     hideCreator?: boolean;
+    targetRoles?: string[];
     metadata?: any;
   };
   recipients: string[]; // User IDs to receive the trio

@@ -710,6 +710,7 @@ describe("WebhookController", () => {
             title: "General Staff Code Used",
             type: "announcement",
             priority: "medium",
+            targetRoles: ["Super Admin", "Administrator"],
             hideCreator: true,
           }),
           recipients: expect.arrayContaining([

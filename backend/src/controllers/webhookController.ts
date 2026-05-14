@@ -367,6 +367,7 @@ export class WebhookController {
                         content: `${userName} (${userEmail}) used general staff code "${promoCode.code}" for ${itemType} "${itemTitle}".`,
                         type: "announcement",
                         priority: "medium",
+                        targetRoles: ["Super Admin", "Administrator"],
                         hideCreator: true, // System-generated notification, no sender
                         metadata,
                       },

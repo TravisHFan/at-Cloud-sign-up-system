@@ -392,6 +392,7 @@ class PurchaseCheckoutController {
                         content: `${userName} (${userEmail}) used general staff code "${validatedPromoCode.code}" for program "${program.title}".`,
                         type: "announcement",
                         priority: "medium",
+                        targetRoles: ["Super Admin", "Administrator"],
                         hideCreator: true, // System-generated notification, no sender
                         metadata: {
                           promoCodeId: (
