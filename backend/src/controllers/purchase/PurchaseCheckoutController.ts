@@ -10,6 +10,10 @@ import type { IPromoCode } from "../../models/PromoCode";
 import { createCheckoutSession as stripeCreateCheckoutSession } from "../../services/stripeService";
 import { lockService } from "../../services/LockService";
 import { TrioNotificationService } from "../../services/notifications/TrioNotificationService";
+import {
+  getProgramEnrollmentWindow,
+  PROGRAM_ENROLLMENT_CLOSED_MESSAGE,
+} from "../../services/ProgramEnrollmentWindowService";
 
 /**
  * Controller for handling purchase checkout operations
@@ -52,6 +56,21 @@ class PurchaseCheckoutController {
       const program = await Program.findById(programId);
       if (!program) {
         res.status(404).json({ success: false, message: "Program not found." });
+        return;
+      }
+
+      const enrollmentWindow = getProgramEnrollmentWindow(program);
+      if (enrollmentWindow.isEnrollmentClosed) {
+        res.status(400).json({
+          success: false,
+          message: PROGRAM_ENROLLMENT_CLOSED_MESSAGE,
+          data: {
+            enrollmentClosed: true,
+            programStartDate: enrollmentWindow.startDate?.toISOString(),
+            enrollmentClosesAt:
+              enrollmentWindow.enrollmentClosesAt?.toISOString(),
+          },
+        });
         return;
       }
 
@@ -127,7 +146,9 @@ class PurchaseCheckoutController {
       const existingCompletedPurchase = await Purchase.findOne({
         userId: req.user._id,
         programId: program._id,
+        purchaseType: "program",
         status: "completed",
+        unenrolledAt: { $exists: false },
       });
 
       if (existingCompletedPurchase) {

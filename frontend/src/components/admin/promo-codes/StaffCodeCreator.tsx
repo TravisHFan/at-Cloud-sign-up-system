@@ -8,6 +8,7 @@ import {
   ClipboardDocumentIcon,
 } from "@heroicons/react/24/outline";
 import { apiClient } from "../../../services/api";
+import { eventsService } from "../../../services/api/events.api";
 import Button from "../../ui/Button";
 import LoadingSpinner from "../../common/LoadingSpinner";
 import UserSelectionModal from "../UserSelectionModal";
@@ -129,9 +130,6 @@ export default function StaffCodeCreator({ onSuccess }: StaffCodeCreatorProps) {
   const loadEvents = async () => {
     try {
       setLoadingEvents(true);
-      const { eventsService } = await import(
-        "../../../services/api/events.api"
-      );
       const response = await eventsService.getEvents({});
 
       // Filter out past events and free events

@@ -41,15 +41,18 @@ interface Purchase {
   refundInitiatedAt?: string;
   refundFailureReason?: string;
   stripeRefundId?: string;
+  unenrolledAt?: string;
   createdAt?: string;
 }
 
 interface RefundEligibility {
   isEligible: boolean;
+  requiresApproval: boolean;
   reason?: string;
   daysRemaining?: number;
   purchaseDate: string;
   refundDeadline: string;
+  refundWindowExpired?: boolean;
 }
 
 export default function PurchaseHistory() {
@@ -105,6 +108,20 @@ export default function PurchaseHistory() {
     if (purchaseTypeFilter === "all") return true;
     return p.purchaseType === purchaseTypeFilter;
   });
+
+  const getPurchaseItemLabel = (purchase: Purchase) =>
+    purchase.purchaseType === "event" ? "Event" : "Program";
+
+  const getPurchaseItemTitle = (purchase: Purchase) => {
+    if (purchase.purchaseType === "event") {
+      return typeof purchase.eventId === "object"
+        ? purchase.eventId.title
+        : "Event";
+    }
+    return typeof purchase.programId === "object"
+      ? purchase.programId.title
+      : "Program";
+  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -173,7 +190,7 @@ export default function PurchaseHistory() {
         purchase.id
       );
 
-      if (!eligibility.isEligible) {
+      if (!eligibility.isEligible && !eligibility.requiresApproval) {
         setErrorModal({
           title: "Refund Not Available",
           message:
@@ -198,18 +215,29 @@ export default function PurchaseHistory() {
 
     try {
       setRefundingId(refundConfirm.purchase.id);
-      await purchaseService.initiateRefund(refundConfirm.purchase.id);
+      const result = await purchaseService.initiateRefund(
+        refundConfirm.purchase.id
+      );
 
       // Reload purchases to show updated status
       await loadPurchases();
       setRefundConfirm(null);
 
       // Show success message
-      setErrorModal({
-        title: "Refund Initiated",
-        message:
-          "Your refund request has been submitted. You'll receive a confirmation email shortly, and the refund should appear in your account within 5-10 business days.",
-      });
+      if (result.approvalRequired) {
+        setErrorModal({
+          title: "Request Sent for Review",
+          message: result.existingRequest
+            ? "Your earlier refund request is still waiting for administrator review. You will be notified by email and system message when a decision is made."
+            : "Your refund request has been sent to administrators for review. You will be notified by email and system message when a decision is made.",
+        });
+      } else {
+        setErrorModal({
+          title: "Refund Initiated",
+          message:
+            "Your refund request has been submitted. You'll receive a confirmation email shortly, and the refund should appear in your account within 5-10 business days.",
+        });
+      }
     } catch (err) {
       console.error("Error initiating refund:", err);
       const errorMessage =
@@ -226,7 +254,7 @@ export default function PurchaseHistory() {
     }
   };
 
-  const getStatusBadge = (status: Purchase["status"]) => {
+  const getStatusBadge = (purchase: Purchase) => {
     const badges = {
       completed: "bg-green-100 text-green-800",
       pending: "bg-yellow-100 text-yellow-800",
@@ -234,6 +262,7 @@ export default function PurchaseHistory() {
       refunded: "bg-blue-100 text-blue-800",
       refund_processing: "bg-purple-100 text-purple-800",
       refund_failed: "bg-red-100 text-red-800",
+      unenrolled: "bg-gray-100 text-gray-800",
     };
 
     const labels = {
@@ -243,7 +272,13 @@ export default function PurchaseHistory() {
       refunded: "Refunded",
       refund_processing: "Refund Processing",
       refund_failed: "Refund Failed",
+      unenrolled: "Unenrolled",
     };
+
+    const status =
+      purchase.status === "completed" && purchase.unenrolledAt
+        ? "unenrolled"
+        : purchase.status;
 
     return (
       <span
@@ -791,7 +826,7 @@ export default function PurchaseHistory() {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {getStatusBadge(purchase.status)}
+                          {getStatusBadge(purchase)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="relative inline-block text-left">
@@ -875,13 +910,25 @@ export default function PurchaseHistory() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg max-w-lg w-full p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Request Refund
+                {refundConfirm.eligibility.requiresApproval
+                  ? "Request Admin Approval"
+                  : "Request Refund"}
               </h3>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+              <div
+                className={`border rounded-lg p-4 mb-4 ${
+                  refundConfirm.eligibility.requiresApproval
+                    ? "bg-yellow-50 border-yellow-200"
+                    : "bg-blue-50 border-blue-200"
+                }`}
+              >
                 <div className="flex items-start">
                   <svg
-                    className="h-5 w-5 text-blue-600 mt-0.5 mr-3"
+                    className={`h-5 w-5 mt-0.5 mr-3 ${
+                      refundConfirm.eligibility.requiresApproval
+                        ? "text-yellow-600"
+                        : "text-blue-600"
+                    }`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -894,17 +941,47 @@ export default function PurchaseHistory() {
                     />
                   </svg>
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-blue-900">
-                      Refund Eligibility
+                    <p
+                      className={`text-sm font-medium ${
+                        refundConfirm.eligibility.requiresApproval
+                          ? "text-yellow-900"
+                          : "text-blue-900"
+                      }`}
+                    >
+                      {refundConfirm.eligibility.requiresApproval
+                        ? "Admin Approval Required"
+                        : "Refund Eligibility"}
                     </p>
-                    <p className="text-sm text-blue-800 mt-1">
-                      This purchase is eligible for a full refund. You have{" "}
-                      <strong>
-                        {refundConfirm.eligibility.daysRemaining} days
-                      </strong>{" "}
-                      remaining.
+                    <p
+                      className={`text-sm mt-1 ${
+                        refundConfirm.eligibility.requiresApproval
+                          ? "text-yellow-900"
+                          : "text-blue-800"
+                      }`}
+                    >
+                      {refundConfirm.eligibility.requiresApproval ? (
+                        <>
+                          This payment is outside the 30-day refund window, so
+                          an administrator must review it before a refund can be
+                          granted.
+                        </>
+                      ) : (
+                        <>
+                          This purchase is eligible for a full refund. You have{" "}
+                          <strong>
+                            {refundConfirm.eligibility.daysRemaining} days
+                          </strong>{" "}
+                          remaining.
+                        </>
+                      )}
                     </p>
-                    <p className="text-xs text-blue-700 mt-1">
+                    <p
+                      className={`text-xs mt-1 ${
+                        refundConfirm.eligibility.requiresApproval
+                          ? "text-yellow-800"
+                          : "text-blue-700"
+                      }`}
+                    >
                       Refund deadline:{" "}
                       {new Date(
                         refundConfirm.eligibility.refundDeadline
@@ -926,11 +1003,11 @@ export default function PurchaseHistory() {
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Program:</span>
+                  <span className="text-gray-600">
+                    {getPurchaseItemLabel(refundConfirm.purchase)}:
+                  </span>
                   <span className="font-medium text-gray-900">
-                    {typeof refundConfirm.purchase.programId === "object"
-                      ? refundConfirm.purchase.programId.title
-                      : "Program"}
+                    {getPurchaseItemTitle(refundConfirm.purchase)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
@@ -943,10 +1020,10 @@ export default function PurchaseHistory() {
 
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
                 <p className="text-sm text-yellow-900">
-                  <strong>Please Note:</strong> The refund will be processed
-                  within 5-10 business days and will be credited to your
-                  original payment method. You'll lose access to the program
-                  immediately upon confirmation.
+                  <strong>Please Note:</strong>{" "}
+                  {refundConfirm.eligibility.requiresApproval
+                    ? "Your request will be sent to administrators. If approved, you will be unenrolled and the refund will be submitted. If rejected, you can still choose whether to unenroll without a refund."
+                    : `The refund will be processed within 5-10 business days and credited to your original payment method. You'll lose access to this ${refundConfirm.purchase.purchaseType} immediately upon confirmation.`}
                 </p>
               </div>
 
@@ -964,8 +1041,12 @@ export default function PurchaseHistory() {
                   className="px-4 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
                 >
                   {refundingId === refundConfirm.purchase.id
-                    ? "Processing..."
-                    : "Confirm Refund"}
+                    ? refundConfirm.eligibility.requiresApproval
+                      ? "Sending..."
+                      : "Processing..."
+                    : refundConfirm.eligibility.requiresApproval
+                      ? "Submit Request"
+                      : "Confirm Refund"}
                 </button>
               </div>
             </div>
@@ -1005,7 +1086,7 @@ export default function PurchaseHistory() {
                     View Receipt
                   </button>
 
-                  {purchase.status === "completed" && (
+                  {purchase.status === "completed" && !purchase.unenrolledAt && (
                     <button
                       onClick={() => {
                         handleRequestRefund(purchase);

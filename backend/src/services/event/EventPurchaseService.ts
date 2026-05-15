@@ -140,6 +140,7 @@ class EventPurchaseService {
         purchaseType: "event",
         eventId: eventIdObj,
         status: "completed",
+        unenrolledAt: { $exists: false },
       });
 
       return !!purchase;

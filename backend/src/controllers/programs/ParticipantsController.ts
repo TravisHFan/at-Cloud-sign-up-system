@@ -30,8 +30,10 @@ export default class ParticipantsController {
 
       // Get all completed purchases for this program
       const purchases = await Purchase.find({
+        purchaseType: "program",
         programId: id,
         status: "completed",
+        unenrolledAt: { $exists: false },
       })
         .populate<{
           userId: {

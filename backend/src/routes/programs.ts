@@ -30,6 +30,12 @@ router.delete(
   authenticate,
   ProgramController.adminUnenroll,
 );
+router.get(
+  "/:id/unenroll-preview",
+  authenticate,
+  ProgramController.selfUnenrollPreview,
+);
+router.post("/:id/unenroll", authenticate, ProgramController.selfUnenroll);
 
 // Email all participants (mentors, class reps, mentees) - authenticated
 router.post("/:id/email", authenticate, async (req: Request, res: Response) => {
@@ -106,10 +112,12 @@ router.post("/:id/email", authenticate, async (req: Request, res: Response) => {
     if (userId && !isMentor) {
       const Purchase = (await import("../models/Purchase")).default;
       const classRepPurchase = await Purchase.findOne({
+        purchaseType: "program",
         programId: id,
         userId,
         isClassRep: true,
         status: "completed",
+        unenrolledAt: { $exists: false },
       });
       if (classRepPurchase) {
         isClassRep = true;

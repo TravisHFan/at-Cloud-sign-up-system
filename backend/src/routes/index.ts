@@ -23,6 +23,7 @@ import webhookRoutes from "./webhooks"; // Stripe webhooks
 import promoCodeRoutes from "./promoCodes"; // Promo code system
 import adminPurchaseRoutes from "./admin/purchases"; // Admin payment records
 import donationRoutes from "./donations"; // Donation system
+import refundRequestRoutes from "./refundRequests"; // Refund approval workflow
 
 const router = Router();
 
@@ -52,6 +53,7 @@ router.use("/webhooks", webhookRoutes);
 router.use("/promo-codes", promoCodeRoutes);
 router.use("/admin/purchases", adminPurchaseRoutes);
 router.use("/donations", donationRoutes);
+router.use("/refund-requests", refundRequestRoutes);
 
 // Health check endpoint
 router.get("/health", (req, res) => {

@@ -530,7 +530,9 @@ export class EmailRecipientUtils {
     // Get paid participants (class reps and mentees) from purchases
     const purchases = await Purchase.find({
       programId: programId,
+      purchaseType: "program",
       status: "completed",
+      unenrolledAt: { $exists: false },
     }).populate<{
       userId: {
         _id: mongoose.Types.ObjectId;

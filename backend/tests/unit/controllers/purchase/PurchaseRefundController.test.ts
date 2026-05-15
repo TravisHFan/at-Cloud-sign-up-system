@@ -20,9 +20,17 @@ vi.mock("../../../../src/services/email/domains/PurchaseEmailService", () => ({
   },
 }));
 
+vi.mock("../../../../src/services/RefundRequestService", () => ({
+  RefundRequestService: {
+    createApprovalRequest: vi.fn(),
+    notifyAdminsOfAutomaticRefund: vi.fn(),
+  },
+}));
+
 import { Purchase } from "../../../../src/models";
 import { processRefund } from "../../../../src/services/stripeService";
 import { PurchaseEmailService } from "../../../../src/services/email/domains/PurchaseEmailService";
+import { RefundRequestService } from "../../../../src/services/RefundRequestService";
 
 interface MockRequest {
   params: Record<string, string>;
@@ -44,6 +52,22 @@ describe("PurchaseRefundController", () => {
 
   const mockUserId = "507f1f77bcf86cd799439011";
   const mockPurchaseId = "507f1f77bcf86cd799439012";
+
+  function mockPurchaseFindByIdResult(result: unknown) {
+    const secondPopulate = vi.fn().mockResolvedValue(result);
+    const firstPopulate = vi.fn().mockReturnValue({ populate: secondPopulate });
+    vi.mocked(Purchase.findById).mockReturnValue({
+      populate: firstPopulate,
+    } as any);
+  }
+
+  function mockPurchaseFindByIdError(error: Error) {
+    const secondPopulate = vi.fn().mockRejectedValue(error);
+    const firstPopulate = vi.fn().mockReturnValue({ populate: secondPopulate });
+    vi.mocked(Purchase.findById).mockReturnValue({
+      populate: firstPopulate,
+    } as any);
+  }
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -109,9 +133,7 @@ describe("PurchaseRefundController", () => {
       });
 
       it("should return 404 if purchase not found", async () => {
-        vi.mocked(Purchase.findById).mockReturnValue({
-          populate: vi.fn().mockResolvedValue(null),
-        } as any);
+        mockPurchaseFindByIdResult(null);
 
         await PurchaseRefundController.checkRefundEligibility(
           mockReq as any,
@@ -134,10 +156,7 @@ describe("PurchaseRefundController", () => {
           status: "completed",
           purchaseDate: new Date(),
         };
-
-        vi.mocked(Purchase.findById).mockReturnValue({
-          populate: vi.fn().mockResolvedValue(mockPurchase),
-        } as any);
+        mockPurchaseFindByIdResult(mockPurchase);
 
         await PurchaseRefundController.checkRefundEligibility(
           mockReq as any,
@@ -162,11 +181,10 @@ describe("PurchaseRefundController", () => {
           userId: { toString: () => mockUserId },
           status: "completed",
           purchaseDate: recentDate,
+          finalPrice: 5000,
+          stripePaymentIntentId: "pi_test123",
         };
-
-        vi.mocked(Purchase.findById).mockReturnValue({
-          populate: vi.fn().mockResolvedValue(mockPurchase),
-        } as any);
+        mockPurchaseFindByIdResult(mockPurchase);
 
         await PurchaseRefundController.checkRefundEligibility(
           mockReq as any,
@@ -189,11 +207,10 @@ describe("PurchaseRefundController", () => {
           userId: { toString: () => mockUserId },
           status: "completed",
           purchaseDate: oldDate,
+          finalPrice: 5000,
+          stripePaymentIntentId: "pi_test123",
         };
-
-        vi.mocked(Purchase.findById).mockReturnValue({
-          populate: vi.fn().mockResolvedValue(mockPurchase),
-        } as any);
+        mockPurchaseFindByIdResult(mockPurchase);
 
         await PurchaseRefundController.checkRefundEligibility(
           mockReq as any,
@@ -204,6 +221,7 @@ describe("PurchaseRefundController", () => {
         const response = jsonMock.mock.calls[0][0];
         expect(response.success).toBe(true);
         expect(response.data.isEligible).toBe(false);
+        expect(response.data.requiresApproval).toBe(true);
         expect(response.data.reason).toContain("expired");
       });
 
@@ -214,10 +232,7 @@ describe("PurchaseRefundController", () => {
           status: "pending",
           purchaseDate: new Date(),
         };
-
-        vi.mocked(Purchase.findById).mockReturnValue({
-          populate: vi.fn().mockResolvedValue(mockPurchase),
-        } as any);
+        mockPurchaseFindByIdResult(mockPurchase);
 
         await PurchaseRefundController.checkRefundEligibility(
           mockReq as any,
@@ -240,10 +255,7 @@ describe("PurchaseRefundController", () => {
           status: "refunded",
           purchaseDate: recentDate,
         };
-
-        vi.mocked(Purchase.findById).mockReturnValue({
-          populate: vi.fn().mockResolvedValue(mockPurchase),
-        } as any);
+        mockPurchaseFindByIdResult(mockPurchase);
 
         await PurchaseRefundController.checkRefundEligibility(
           mockReq as any,
@@ -261,9 +273,7 @@ describe("PurchaseRefundController", () => {
 
     describe("Error Handling", () => {
       it("should return 500 on database error", async () => {
-        vi.mocked(Purchase.findById).mockReturnValue({
-          populate: vi.fn().mockRejectedValue(new Error("Database error")),
-        } as any);
+        mockPurchaseFindByIdError(new Error("Database error"));
 
         await PurchaseRefundController.checkRefundEligibility(
           mockReq as any,
@@ -333,9 +343,7 @@ describe("PurchaseRefundController", () => {
       });
 
       it("should return 404 if purchase not found", async () => {
-        vi.mocked(Purchase.findById).mockReturnValue({
-          populate: vi.fn().mockResolvedValue(null),
-        } as any);
+        mockPurchaseFindByIdResult(null);
 
         await PurchaseRefundController.initiateRefund(
           mockReq as any,
@@ -358,10 +366,7 @@ describe("PurchaseRefundController", () => {
           status: "completed",
           purchaseDate: new Date(),
         };
-
-        vi.mocked(Purchase.findById).mockReturnValue({
-          populate: vi.fn().mockResolvedValue(mockPurchase),
-        } as any);
+        mockPurchaseFindByIdResult(mockPurchase);
 
         await PurchaseRefundController.initiateRefund(
           mockReq as any,
@@ -386,11 +391,48 @@ describe("PurchaseRefundController", () => {
           userId: { toString: () => mockUserId },
           status: "completed",
           purchaseDate: oldDate,
+          finalPrice: 5000,
+          stripePaymentIntentId: "pi_test123",
+          orderNumber: "ORD-12345",
         };
 
-        vi.mocked(Purchase.findById).mockReturnValue({
-          populate: vi.fn().mockResolvedValue(mockPurchase),
-        } as any);
+        vi.mocked(RefundRequestService.createApprovalRequest).mockResolvedValue({
+          request: { _id: "refund-request-1" } as any,
+          created: true,
+        });
+        mockPurchaseFindByIdResult(mockPurchase);
+
+        await PurchaseRefundController.initiateRefund(
+          mockReq as any,
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(200);
+        const response = jsonMock.mock.calls[0][0];
+        expect(response.success).toBe(true);
+        expect(response.data.approvalRequired).toBe(true);
+        expect(response.data.status).toBe("pending_approval");
+        expect(RefundRequestService.createApprovalRequest).toHaveBeenCalledWith(
+          expect.objectContaining({
+            purchase: mockPurchase,
+            requester: mockReq.user,
+            source: "purchase_history",
+          }),
+        );
+      });
+
+      it("should return 400 if purchase cannot be refunded automatically or by approval", async () => {
+        const recentDate = new Date();
+        recentDate.setDate(recentDate.getDate() - 5);
+
+        const mockPurchase = {
+          _id: mockPurchaseId,
+          userId: { toString: () => mockUserId },
+          status: "completed",
+          purchaseDate: recentDate,
+          finalPrice: 0,
+        };
+        mockPurchaseFindByIdResult(mockPurchase);
 
         await PurchaseRefundController.initiateRefund(
           mockReq as any,
@@ -400,7 +442,7 @@ describe("PurchaseRefundController", () => {
         expect(statusMock).toHaveBeenCalledWith(400);
         const response = jsonMock.mock.calls[0][0];
         expect(response.success).toBe(false);
-        expect(response.message).toContain("expired");
+        expect(response.message).toContain("No payment was collected");
       });
 
       it("should return 400 if purchase is already refunding", async () => {
@@ -410,10 +452,7 @@ describe("PurchaseRefundController", () => {
           status: "refund_processing",
           purchaseDate: new Date(),
         };
-
-        vi.mocked(Purchase.findById).mockReturnValue({
-          populate: vi.fn().mockResolvedValue(mockPurchase),
-        } as any);
+        mockPurchaseFindByIdResult(mockPurchase);
 
         await PurchaseRefundController.initiateRefund(
           mockReq as any,
@@ -433,10 +472,7 @@ describe("PurchaseRefundController", () => {
           status: "refunded",
           purchaseDate: new Date(),
         };
-
-        vi.mocked(Purchase.findById).mockReturnValue({
-          populate: vi.fn().mockResolvedValue(mockPurchase),
-        } as any);
+        mockPurchaseFindByIdResult(mockPurchase);
 
         await PurchaseRefundController.initiateRefund(
           mockReq as any,
@@ -467,10 +503,7 @@ describe("PurchaseRefundController", () => {
           billingInfo: { email: "user@test.com", fullName: "Test User" },
           save: vi.fn().mockResolvedValue(undefined),
         };
-
-        vi.mocked(Purchase.findById).mockReturnValue({
-          populate: vi.fn().mockResolvedValue(mockPurchase),
-        } as any);
+        mockPurchaseFindByIdResult(mockPurchase);
 
         vi.mocked(processRefund).mockResolvedValue({ id: "re_test123" } as any);
         vi.mocked(
@@ -488,6 +521,58 @@ describe("PurchaseRefundController", () => {
         expect(response.message).toContain("Refund initiated successfully");
         expect(response.data.refundId).toBe("re_test123");
         expect(mockPurchase.save).toHaveBeenCalled();
+        expect(mockPurchase.unenrolledAt).toBeInstanceOf(Date);
+        expect(mockPurchase.unenrollReason).toBe("refund_requested");
+        expect(
+          RefundRequestService.notifyAdminsOfAutomaticRefund,
+        ).toHaveBeenCalledWith({
+          purchase: mockPurchase,
+          requester: mockReq.user,
+          source: "purchase_history",
+          refundId: "re_test123",
+        });
+      });
+
+      it("should immediately unenroll event purchases when refund is initiated within 30 days", async () => {
+        const recentDate = new Date();
+        recentDate.setDate(recentDate.getDate() - 5);
+
+        const mockPurchase = {
+          _id: { toString: () => mockPurchaseId },
+          userId: { toString: () => mockUserId },
+          purchaseType: "event",
+          status: "completed",
+          purchaseDate: recentDate,
+          finalPrice: 2500,
+          stripePaymentIntentId: "pi_test_event",
+          orderNumber: "ORD-EVENT-1",
+          eventId: { title: "Paid Event" },
+          billingInfo: { email: "user@test.com", fullName: "Test User" },
+          save: vi.fn().mockResolvedValue(undefined),
+        };
+        mockPurchaseFindByIdResult(mockPurchase);
+
+        vi.mocked(processRefund).mockResolvedValue({ id: "re_event123" } as any);
+        vi.mocked(
+          PurchaseEmailService.sendRefundInitiatedEmail,
+        ).mockResolvedValue(true);
+
+        await PurchaseRefundController.initiateRefund(
+          mockReq as any,
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(200);
+        expect(mockPurchase.unenrolledAt).toBeInstanceOf(Date);
+        expect(mockPurchase.unenrollReason).toBe("refund_requested");
+        expect(
+          RefundRequestService.notifyAdminsOfAutomaticRefund,
+        ).toHaveBeenCalledWith({
+          purchase: mockPurchase,
+          requester: mockReq.user,
+          source: "purchase_history",
+          refundId: "re_event123",
+        });
       });
 
       it("should handle email failure gracefully during refund initiation", async () => {
@@ -506,10 +591,7 @@ describe("PurchaseRefundController", () => {
           billingInfo: { email: "user@test.com", fullName: "Test User" },
           save: vi.fn().mockResolvedValue(undefined),
         };
-
-        vi.mocked(Purchase.findById).mockReturnValue({
-          populate: vi.fn().mockResolvedValue(mockPurchase),
-        } as any);
+        mockPurchaseFindByIdResult(mockPurchase);
 
         vi.mocked(
           PurchaseEmailService.sendRefundInitiatedEmail,
@@ -543,10 +625,7 @@ describe("PurchaseRefundController", () => {
           billingInfo: { email: "user@test.com", fullName: "Test User" },
           save: vi.fn().mockResolvedValue(undefined),
         };
-
-        vi.mocked(Purchase.findById).mockReturnValue({
-          populate: vi.fn().mockResolvedValue(mockPurchase),
-        } as any);
+        mockPurchaseFindByIdResult(mockPurchase);
 
         vi.mocked(
           PurchaseEmailService.sendRefundInitiatedEmail,
@@ -571,7 +650,7 @@ describe("PurchaseRefundController", () => {
         expect(PurchaseEmailService.sendRefundFailedEmail).toHaveBeenCalled();
       });
 
-      it("should throw error if no stripePaymentIntentId", async () => {
+      it("should return 400 if no stripePaymentIntentId is available", async () => {
         const recentDate = new Date();
         recentDate.setDate(recentDate.getDate() - 5);
 
@@ -587,10 +666,7 @@ describe("PurchaseRefundController", () => {
           billingInfo: { email: "user@test.com", fullName: "Test User" },
           save: vi.fn().mockResolvedValue(undefined),
         };
-
-        vi.mocked(Purchase.findById).mockReturnValue({
-          populate: vi.fn().mockResolvedValue(mockPurchase),
-        } as any);
+        mockPurchaseFindByIdResult(mockPurchase);
 
         vi.mocked(
           PurchaseEmailService.sendRefundInitiatedEmail,
@@ -604,9 +680,9 @@ describe("PurchaseRefundController", () => {
           mockRes as Response,
         );
 
-        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(statusMock).toHaveBeenCalledWith(400);
         const response = jsonMock.mock.calls[0][0];
-        expect(response.error).toContain("No payment intent");
+        expect(response.message).toContain("No card payment");
       });
 
       it("should use Unknown error for non-Error Stripe failures", async () => {
@@ -626,10 +702,7 @@ describe("PurchaseRefundController", () => {
           refundFailureReason: null,
           save: vi.fn().mockResolvedValue(undefined),
         };
-
-        vi.mocked(Purchase.findById).mockReturnValue({
-          populate: vi.fn().mockResolvedValue(mockPurchase),
-        } as any);
+        mockPurchaseFindByIdResult(mockPurchase);
 
         vi.mocked(
           PurchaseEmailService.sendRefundInitiatedEmail,
@@ -668,10 +741,7 @@ describe("PurchaseRefundController", () => {
           refundFailureReason: null,
           save: vi.fn().mockResolvedValue(undefined),
         };
-
-        vi.mocked(Purchase.findById).mockReturnValue({
-          populate: vi.fn().mockResolvedValue(mockPurchase),
-        } as any);
+        mockPurchaseFindByIdResult(mockPurchase);
 
         vi.mocked(
           PurchaseEmailService.sendRefundInitiatedEmail,
@@ -702,9 +772,7 @@ describe("PurchaseRefundController", () => {
 
     describe("Error Handling", () => {
       it("should return 500 on database error", async () => {
-        vi.mocked(Purchase.findById).mockReturnValue({
-          populate: vi.fn().mockRejectedValue(new Error("Database error")),
-        } as any);
+        mockPurchaseFindByIdError(new Error("Database error"));
 
         await PurchaseRefundController.initiateRefund(
           mockReq as any,

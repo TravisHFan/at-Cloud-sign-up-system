@@ -162,6 +162,7 @@ export class ProgramLinkageService {
         userId: userId,
         programId: prog._id,
         status: "completed",
+        unenrolledAt: { $exists: false },
         ...(options.managementOnly ? { isClassRep: true } : {}),
       });
 

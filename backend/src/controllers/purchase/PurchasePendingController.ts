@@ -55,7 +55,9 @@ class PurchasePendingController {
           existingCompletedPurchase = await Purchase.findOne({
             userId: req.user._id,
             programId: programId,
+            purchaseType: "program",
             status: "completed",
+            unenrolledAt: { $exists: false },
           });
         } else if (pending.purchaseType === "event" && pending.eventId) {
           const eventId = (pending.eventId as { _id: unknown })._id;
@@ -63,6 +65,7 @@ class PurchasePendingController {
             userId: req.user._id,
             eventId: eventId,
             status: "completed",
+            unenrolledAt: { $exists: false },
           });
         }
 

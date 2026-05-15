@@ -108,7 +108,9 @@ class PurchaseAccessController {
       const purchase = await Purchase.findOne({
         userId: req.user._id,
         programId: program._id,
+        purchaseType: "program",
         status: "completed",
+        unenrolledAt: { $exists: false },
       });
 
       if (purchase) {

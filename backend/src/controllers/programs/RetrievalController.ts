@@ -105,7 +105,9 @@ export default class RetrievalController {
           const purchase = await Purchase.findOne({
             userId: user._id,
             programId: program._id,
+            purchaseType: "program",
             status: "completed",
+            unenrolledAt: { $exists: false },
           });
           const isAdminEnrolled =
             program.adminEnrollments?.mentees?.some(

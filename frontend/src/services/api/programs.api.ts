@@ -1,4 +1,9 @@
-import { BaseApiClient, type ProgramParticipantsResponse } from "./common";
+import {
+  BaseApiClient,
+  type ProgramParticipantsResponse,
+  type ProgramUnenrollPreview,
+  type ProgramUnenrollResult,
+} from "./common";
 import type { ProgramType } from "../../constants/programTypes";
 
 /**
@@ -234,6 +239,29 @@ class ProgramsApiClient extends BaseApiClient {
     return (res as { data?: unknown }).data;
   }
 
+  async getUnenrollPreview(id: string): Promise<ProgramUnenrollPreview> {
+    const res = await this.request<ProgramUnenrollPreview>(
+      `/programs/${id}/unenroll-preview`,
+    );
+    if (!res.data) {
+      throw new Error(res.message || "Failed to load unenrollment details");
+    }
+    return res.data;
+  }
+
+  async selfUnenrollProgram(id: string): Promise<ProgramUnenrollResult> {
+    const res = await this.request<ProgramUnenrollResult>(
+      `/programs/${id}/unenroll`,
+      {
+        method: "POST",
+      },
+    );
+    if (!res.data) {
+      throw new Error(res.message || "Failed to unenroll from program");
+    }
+    return res.data;
+  }
+
   async sendProgramEmails(
     id: string,
     payload: {
@@ -295,6 +323,10 @@ export const programsService = {
     programsApiClient.adminEnrollProgram(id, enrollAs),
   adminUnenrollProgram: (id: string) =>
     programsApiClient.adminUnenrollProgram(id),
+  getUnenrollPreview: (id: string) =>
+    programsApiClient.getUnenrollPreview(id),
+  selfUnenrollProgram: (id: string) =>
+    programsApiClient.selfUnenrollProgram(id),
   sendProgramEmails: (
     id: string,
     payload: Parameters<typeof programsApiClient.sendProgramEmails>[1]

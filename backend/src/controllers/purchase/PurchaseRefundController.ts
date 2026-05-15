@@ -3,6 +3,12 @@ import mongoose from "mongoose";
 import { Purchase } from "../../models";
 import { processRefund } from "../../services/stripeService";
 import { PurchaseEmailService } from "../../services/email/domains/PurchaseEmailService";
+import {
+  calculateRefundEligibility,
+  getPurchaseItemDetails,
+  markProgramPurchaseUnenrolled,
+} from "../../services/PurchaseRefundService";
+import { RefundRequestService } from "../../services/RefundRequestService";
 
 /**
  * PurchaseRefundController
@@ -34,10 +40,9 @@ class PurchaseRefundController {
         return;
       }
 
-      const purchase = await Purchase.findById(purchaseId).populate(
-        "programId",
-        "title"
-      );
+      const purchase = await Purchase.findById(purchaseId)
+        .populate("programId", "title")
+        .populate("eventId", "title");
 
       if (!purchase) {
         res
@@ -59,7 +64,7 @@ class PurchaseRefundController {
       }
 
       // Check if purchase is eligible for refund
-      const eligibility = this.calculateRefundEligibility(purchase);
+      const eligibility = calculateRefundEligibility(purchase);
 
       res.status(200).json({
         success: true,
@@ -97,10 +102,9 @@ class PurchaseRefundController {
         return;
       }
 
-      const purchase = await Purchase.findById(purchaseId).populate(
-        "programId",
-        "title programType"
-      );
+      const purchase = await Purchase.findById(purchaseId)
+        .populate("programId", "title programType")
+        .populate("eventId", "title");
 
       if (!purchase) {
         res
@@ -122,7 +126,33 @@ class PurchaseRefundController {
       }
 
       // Check eligibility
-      const eligibility = this.calculateRefundEligibility(purchase);
+      const eligibility = calculateRefundEligibility(purchase);
+
+      if (eligibility.requiresApproval) {
+        const { request, created } =
+          await RefundRequestService.createApprovalRequest({
+            purchase,
+            requester: req.user,
+            source: "purchase_history",
+            reason: eligibility.reason,
+          });
+
+        res.status(200).json({
+          success: true,
+          message: created
+            ? "Your refund request has been sent to administrators for review."
+            : "You already have a pending refund request for this purchase.",
+          data: {
+            purchaseId: purchase._id,
+            orderNumber: purchase.orderNumber,
+            status: "pending_approval",
+            approvalRequired: true,
+            refundRequestId: request._id,
+            existingRequest: !created,
+          },
+        });
+        return;
+      }
 
       if (!eligibility.isEligible) {
         res.status(400).json({
@@ -146,9 +176,13 @@ class PurchaseRefundController {
         return;
       }
 
+      const { itemTitle } = getPurchaseItemDetails(purchase);
+
       // Update purchase status to refund_processing
       purchase.status = "refund_processing";
       purchase.refundInitiatedAt = new Date();
+      purchase.refundFailureReason = undefined;
+      await markProgramPurchaseUnenrolled(purchase, "refund_requested");
       await purchase.save();
 
       // Send refund initiated email to user
@@ -157,10 +191,7 @@ class PurchaseRefundController {
           userEmail: purchase.billingInfo.email,
           userName: purchase.billingInfo.fullName,
           orderNumber: purchase.orderNumber,
-          programTitle:
-            typeof purchase.programId === "object"
-              ? purchase.programId.title
-              : "Program",
+          programTitle: itemTitle,
           refundAmount: purchase.finalPrice,
           purchaseDate: purchase.purchaseDate,
         });
@@ -189,6 +220,20 @@ class PurchaseRefundController {
         // Update purchase with refund ID
         purchase.stripeRefundId = refund.id;
         await purchase.save();
+
+        try {
+          await RefundRequestService.notifyAdminsOfAutomaticRefund({
+            purchase,
+            requester: req.user,
+            source: "purchase_history",
+            refundId: refund.id,
+          });
+        } catch (adminNotifyError) {
+          console.error(
+            "Failed to notify admins of automatic refund:",
+            adminNotifyError,
+          );
+        }
 
         // Note: The webhook handler will update status to 'refunded' and send completion email
         // when Stripe confirms the refund
@@ -219,10 +264,7 @@ class PurchaseRefundController {
             userEmail: purchase.billingInfo.email,
             userName: purchase.billingInfo.fullName,
             orderNumber: purchase.orderNumber,
-            programTitle:
-              typeof purchase.programId === "object"
-                ? purchase.programId.title
-                : "Program",
+            programTitle: itemTitle,
             failureReason: purchase.refundFailureReason || "Unknown error",
           });
         } catch (emailError) {
@@ -247,64 +289,6 @@ class PurchaseRefundController {
     }
   }
 
-  /**
-   * Calculate refund eligibility for a purchase
-   * @private
-   */
-  private static calculateRefundEligibility(purchase: any): {
-    isEligible: boolean;
-    reason?: string;
-    daysRemaining?: number;
-    purchaseDate: Date;
-    refundDeadline: Date;
-  } {
-    const REFUND_WINDOW_DAYS = 30;
-    const now = new Date();
-    const purchaseDate = new Date(purchase.purchaseDate);
-    const refundDeadline = new Date(purchaseDate);
-    refundDeadline.setDate(refundDeadline.getDate() + REFUND_WINDOW_DAYS);
-
-    const daysElapsed = Math.floor(
-      (now.getTime() - purchaseDate.getTime()) / (1000 * 60 * 60 * 24)
-    );
-    const daysRemaining = REFUND_WINDOW_DAYS - daysElapsed;
-
-    // Check if purchase is completed or in refund_failed state
-    // Note: "refunded" status is also caught here - Only completed/refund_failed purchases can be refunded
-    if (
-      purchase.status !== "completed" &&
-      purchase.status !== "refund_failed"
-    ) {
-      return {
-        isEligible: false,
-        reason: `Purchase status is "${purchase.status}". Only completed purchases can be refunded.`,
-        purchaseDate,
-        refundDeadline,
-      };
-    }
-
-    // Check if within 30-day window
-    if (now > refundDeadline) {
-      return {
-        isEligible: false,
-        reason: `Refund window has expired. Refunds are only available within ${REFUND_WINDOW_DAYS} days of purchase.`,
-        daysRemaining: 0,
-        purchaseDate,
-        refundDeadline,
-      };
-    }
-
-    // Eligible for refund
-    return {
-      isEligible: true,
-      reason: `You have ${daysRemaining} day${
-        daysRemaining !== 1 ? "s" : ""
-      } remaining to request a refund.`,
-      daysRemaining,
-      purchaseDate,
-      refundDeadline,
-    };
-  }
 }
 
 export default PurchaseRefundController;

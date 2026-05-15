@@ -141,6 +141,7 @@ class EventPurchaseController {
         eventId: event._id,
         purchaseType: "event",
         status: "completed",
+        unenrolledAt: { $exists: false },
       });
 
       if (existingCompletedPurchase) {

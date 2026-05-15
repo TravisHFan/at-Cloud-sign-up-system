@@ -1,4 +1,9 @@
 import { formatCurrency } from "../../utils/currency";
+import {
+  getProgramEnrollmentWindow,
+  PROGRAM_ENROLLMENT_CLOSED_MESSAGE,
+  type ProgramPeriodLike,
+} from "../../utils/programEnrollmentWindow";
 
 interface ProgramPricingProps {
   isFree?: boolean;
@@ -19,6 +24,7 @@ interface ProgramPricingProps {
     | "not_purchased"
     | null;
   onEnrollClick: () => void;
+  period?: ProgramPeriodLike;
   // Legacy pricing object for compatibility
   pricing?: {
     fullPriceTicket?: number;
@@ -38,8 +44,12 @@ export default function ProgramPricing({
   hasAccess,
   accessReason,
   onEnrollClick,
+  period,
   pricing,
 }: ProgramPricingProps) {
+  const enrollmentWindow = getProgramEnrollmentWindow(period);
+  const enrollmentClosed = enrollmentWindow.isEnrollmentClosed;
+
   return (
     <div className="bg-white rounded-lg shadow-sm p-6">
       <h2 className="text-xl font-semibold text-gray-900 mb-3">Tuition</h2>
@@ -208,23 +218,45 @@ export default function ProgramPricing({
                   <div className="mt-6">
                     <button
                       onClick={onEnrollClick}
-                      className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-8 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
+                      disabled={enrollmentClosed}
+                      aria-describedby={
+                        enrollmentClosed
+                          ? "program-enrollment-closed-note"
+                          : undefined
+                      }
+                      className={`w-full font-semibold py-3 px-8 rounded-lg shadow-md transition-all duration-200 flex items-center justify-center gap-2 ${
+                        enrollmentClosed
+                          ? "bg-gray-300 text-gray-600 cursor-not-allowed shadow-none"
+                          : "bg-purple-600 hover:bg-purple-700 text-white hover:shadow-lg"
+                      }`}
                     >
-                      <span>Enroll Now</span>
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 5l7 7-7 7"
-                        />
-                      </svg>
+                      <span>
+                        {enrollmentClosed ? "Enrollment Closed" : "Enroll Now"}
+                      </span>
+                      {!enrollmentClosed && (
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 5l7 7-7 7"
+                          />
+                        </svg>
+                      )}
                     </button>
+                    {enrollmentClosed && (
+                      <p
+                        id="program-enrollment-closed-note"
+                        className="mt-2 text-sm text-gray-600"
+                      >
+                        {PROGRAM_ENROLLMENT_CLOSED_MESSAGE}
+                      </p>
+                    )}
                   </div>
                 ))}
             </div>

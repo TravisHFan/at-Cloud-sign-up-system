@@ -56,6 +56,7 @@ export default class UpdateController {
               userId: req.user._id,
               status: "completed",
               isClassRep: true,
+              unenrolledAt: { $exists: false },
             }).select("_id")
           : null;
       const isClassRep = isAdminEnrolledClassRep || !!classRepPurchase;

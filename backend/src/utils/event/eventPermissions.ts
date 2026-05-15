@@ -81,6 +81,7 @@ export async function isAffiliatedProgramEditor(
     userId: userObjectId,
     status: "completed",
     isClassRep: true,
+    unenrolledAt: { $exists: false },
   }).select("_id");
 
   return !!classRepPurchase;

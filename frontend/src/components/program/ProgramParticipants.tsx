@@ -4,7 +4,9 @@ import {
   programService,
   apiClient,
   type ProgramParticipant,
+  type ProgramUnenrollPreview,
 } from "../../services/api";
+import { formatCurrency } from "../../utils/currency";
 import { getAvatarAlt } from "../../utils/avatarUtils";
 import { useAvatarUpdates } from "../../hooks/useAvatarUpdates";
 import { useAuth } from "../../contexts/AuthContext";
@@ -155,7 +157,7 @@ function UserCard({
           )}
         </div>
       )}
-      {canUnenroll && onUnenroll && !isPaid && (
+      {canUnenroll && onUnenroll && (
         <button
           onClick={onUnenroll}
           disabled={isUnenrolling}
@@ -174,11 +176,13 @@ interface ParticipantsSectionProps {
     id: string;
     mentors?: Array<{ userId: string }>;
   };
+  onEnrollmentChanged?: () => void;
 }
 
 export function ProgramParticipants({
   programId,
   program,
+  onEnrollmentChanged,
 }: ParticipantsSectionProps) {
   const { currentUser } = useAuth();
   const notification = useToastReplacement();
@@ -189,16 +193,15 @@ export function ProgramParticipants({
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState(false);
   const [unenrolling, setUnenrolling] = useState(false);
+  const [loadingUnenrollPreview, setLoadingUnenrollPreview] = useState(false);
+  const [selfUnenrollConfirm, setSelfUnenrollConfirm] =
+    useState<ProgramUnenrollPreview | null>(null);
 
   const user = currentUser;
 
   // Check if current user is admin
   const isAdmin =
     user?.role === "Super Admin" || user?.role === "Administrator";
-
-  // Check if current user can view contact info
-  const isMentor = program.mentors?.some((m) => m.userId === user?.id);
-  const canViewContact = !!(isAdmin || isMentor);
 
   // Check if current user is enrolled
   const currentUserMentee = mentees.find(
@@ -208,6 +211,9 @@ export function ProgramParticipants({
     (c) => getUserId(c.user) === String(user?.id)
   );
   const isEnrolled = !!(currentUserMentee || currentUserClassRep);
+  const isMentor = program.mentors?.some((m) => m.userId === user?.id);
+  const canViewContact = !!(isAdmin || isMentor || currentUserClassRep);
+  const canSelfUnenroll = !!user && !isAdmin;
 
   // Fetch participants
   const fetchParticipants = async () => {
@@ -253,8 +259,64 @@ export function ProgramParticipants({
       await apiClient.adminUnenroll(programId);
       notification.success("Successfully unenrolled from program.");
       await fetchParticipants();
+      onEnrollmentChanged?.();
     } catch (error) {
       console.error("Error unenrolling:", error);
+      notification.error("Failed to unenroll. Please try again.");
+    } finally {
+      setUnenrolling(false);
+    }
+  };
+
+  const getEnrollmentLabel = (type: "mentee" | "classRep") =>
+    type === "classRep" ? "class representative" : "mentee";
+
+  const handleSelfUnenrollClick = async () => {
+    try {
+      setLoadingUnenrollPreview(true);
+      const preview = await programService.getUnenrollPreview(programId);
+      setSelfUnenrollConfirm(preview);
+    } catch (error) {
+      console.error("Error loading unenroll preview:", error);
+      notification.error(
+        "Failed to load unenrollment details. Please try again.",
+      );
+    } finally {
+      setLoadingUnenrollPreview(false);
+    }
+  };
+
+  const handleConfirmSelfUnenroll = async () => {
+    if (!selfUnenrollConfirm) return;
+
+    try {
+      setUnenrolling(true);
+      const result = await programService.selfUnenrollProgram(programId);
+      await fetchParticipants();
+      if (result.refundStatus !== "pending_approval") {
+        onEnrollmentChanged?.();
+      }
+      setSelfUnenrollConfirm(null);
+
+      if (result.refundStatus === "processing") {
+        notification.success(
+          "You have been unenrolled. Your refund request has been submitted.",
+        );
+      } else if (result.refundStatus === "pending_approval") {
+        notification.success(
+          result.existingRequest
+            ? "Your earlier request is still waiting for administrator review."
+            : "Your request has been sent to administrators for review. You will remain enrolled until a decision is made.",
+        );
+      } else if (result.refundStatus === "failed") {
+        notification.error(
+          "You have been unenrolled, but the automatic refund request failed. Please contact support.",
+        );
+      } else {
+        notification.success("You have been unenrolled from this program.");
+      }
+    } catch (error) {
+      console.error("Error self-unenrolling:", error);
       notification.error("Failed to unenroll. Please try again.");
     } finally {
       setUnenrolling(false);
@@ -294,7 +356,9 @@ export function ProgramParticipants({
                     disabled={unenrolling}
                     className="px-4 py-2 bg-red-50 text-red-700 border border-red-200 rounded-md hover:bg-red-100 transition-colors disabled:opacity-50"
                   >
-                    {unenrolling ? "Unenrolling..." : "Unenroll from Mentees"}
+                    {unenrolling
+                      ? "Unenrolling..."
+                      : "Unenroll from Mentees"}
                   </button>
                 </div>
               )}
@@ -340,17 +404,17 @@ export function ProgramParticipants({
                 currentUserId={user?.id}
                 currentUserRole={user?.role}
                 onUnenroll={
-                  isAdmin &&
-                  !classRep.isPaid &&
-                  getUserId(classRep.user) === String(user?.id)
-                    ? handleUnenroll
+                  getUserId(classRep.user) === String(user?.id) &&
+                  ((isAdmin && !classRep.isPaid) || canSelfUnenroll)
+                    ? isAdmin
+                      ? handleUnenroll
+                      : handleSelfUnenrollClick
                     : undefined
                 }
-                isUnenrolling={unenrolling}
+                isUnenrolling={unenrolling || loadingUnenrollPreview}
                 canUnenroll={
-                  isAdmin &&
-                  !classRep.isPaid &&
-                  getUserId(classRep.user) === String(user?.id)
+                  getUserId(classRep.user) === String(user?.id) &&
+                  ((isAdmin && !classRep.isPaid) || canSelfUnenroll)
                 }
               />
             ))}
@@ -383,23 +447,103 @@ export function ProgramParticipants({
                 currentUserId={user?.id}
                 currentUserRole={user?.role}
                 onUnenroll={
-                  isAdmin &&
-                  !mentee.isPaid &&
-                  getUserId(mentee.user) === String(user?.id)
-                    ? handleUnenroll
+                  getUserId(mentee.user) === String(user?.id) &&
+                  ((isAdmin && !mentee.isPaid) || canSelfUnenroll)
+                    ? isAdmin
+                      ? handleUnenroll
+                      : handleSelfUnenrollClick
                     : undefined
                 }
-                isUnenrolling={unenrolling}
+                isUnenrolling={unenrolling || loadingUnenrollPreview}
                 canUnenroll={
-                  isAdmin &&
-                  !mentee.isPaid &&
-                  getUserId(mentee.user) === String(user?.id)
+                  getUserId(mentee.user) === String(user?.id) &&
+                  ((isAdmin && !mentee.isPaid) || canSelfUnenroll)
                 }
               />
             ))}
           </div>
         )}
       </div>
+
+      {selfUnenrollConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-lg w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              {selfUnenrollConfirm.refundEligible
+                ? "Leave Program and Request Refund"
+                : selfUnenrollConfirm.requiresApproval
+                  ? "Request Admin Approval"
+                : "Unenroll Without Refund"}
+            </h3>
+
+            <p className="text-gray-700 mb-4">
+              You are currently enrolled as a{" "}
+              <strong>
+                {getEnrollmentLabel(selfUnenrollConfirm.enrollmentType)}
+              </strong>
+              {". "}
+              {selfUnenrollConfirm.requiresApproval
+                ? "If you continue, your request will be sent to administrators."
+                : "If you continue, you will be removed from this program immediately."}
+            </p>
+
+            {selfUnenrollConfirm.refundEligible ? (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <p className="text-sm text-blue-900">
+                  Your payment is within the 30-day refund window. A full refund
+                  of{" "}
+                  <strong>
+                    {formatCurrency(selfUnenrollConfirm.refundAmount)}
+                  </strong>{" "}
+                  will be requested and returned to your original payment
+                  method.
+                </p>
+              </div>
+            ) : selfUnenrollConfirm.requiresApproval ? (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                <p className="text-sm text-yellow-900">
+                  This payment is outside the 30-day refund window, so an
+                  administrator must review the request. If approved, you will
+                  be unenrolled and the refund will be submitted. Until an admin
+                  responds, you will remain enrolled.
+                </p>
+              </div>
+            ) : (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+                <p className="text-sm text-gray-700">
+                  A refund is not available for this enrollment. Are you sure you
+                  want to unenroll?
+                </p>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setSelfUnenrollConfirm(null)}
+                disabled={unenrolling}
+                className="px-4 py-2 text-sm border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmSelfUnenroll}
+                disabled={unenrolling}
+                className="px-4 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
+              >
+                {unenrolling
+                  ? selfUnenrollConfirm.requiresApproval
+                    ? "Sending..."
+                    : "Unenrolling..."
+                  : selfUnenrollConfirm.refundEligible
+                    ? "Yes, Unenroll and Refund"
+                    : selfUnenrollConfirm.requiresApproval
+                      ? "Send Request"
+                    : "Yes, Unenroll"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

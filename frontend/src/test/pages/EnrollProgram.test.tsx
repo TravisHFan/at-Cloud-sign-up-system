@@ -24,6 +24,7 @@ vi.mock("../../contexts/AuthContext", () => ({
 }));
 
 describe("EnrollProgram Component", () => {
+  const mockNavigate = vi.fn();
   const mockProgram = {
     id: "prog1",
     title: "Advanced Leadership Training",
@@ -51,6 +52,7 @@ describe("EnrollProgram Component", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockNavigate.mockClear();
     mockProgramService.getById.mockResolvedValue(mockProgram);
     mockPurchaseService.createCheckoutSession.mockResolvedValue({
       url: "https://checkout.stripe.com/test",
@@ -59,6 +61,9 @@ describe("EnrollProgram Component", () => {
     vi.doMock("../../services/api", () => ({
       programService: mockProgramService,
       purchaseService: mockPurchaseService,
+      apiClient: {
+        getMyPromoCodes: vi.fn().mockResolvedValue({ codes: [] }),
+      },
     }));
 
     vi.doMock("react-router-dom", async () => {
@@ -67,7 +72,7 @@ describe("EnrollProgram Component", () => {
       );
       return {
         ...actual,
-        useNavigate: () => vi.fn(),
+        useNavigate: () => mockNavigate,
         useParams: () => ({ id: "prog1" }),
       };
     });
@@ -102,6 +107,48 @@ describe("EnrollProgram Component", () => {
 
     expect(screen.getByText("Leadership Training")).toBeInTheDocument();
     expect(screen.getByText(/\$19\.00/)).toBeInTheDocument();
+  });
+
+  it("blocks direct enrollment page checkout when program enrollment is closed", async () => {
+    mockProgramService.getById.mockResolvedValueOnce({
+      ...mockProgram,
+      period: {
+        startYear: "2020",
+        startMonth: "01",
+      },
+    });
+
+    const { default: EnrollProgram } = await import(
+      "../../pages/EnrollProgram"
+    );
+    const { NotificationProvider } = await import(
+      "../../contexts/NotificationModalContext"
+    );
+
+    render(
+      <NotificationProvider>
+        <MemoryRouter initialEntries={["/dashboard/programs/prog1/enroll"]}>
+          <Routes>
+            <Route
+              path="/dashboard/programs/:id/enroll"
+              element={<EnrollProgram />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </NotificationProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Enrollment Closed").length).toBeGreaterThan(
+        0
+      );
+    });
+
+    const enrollButton = screen.getByRole("button", {
+      name: /enrollment closed/i,
+    });
+    expect(enrollButton).toBeDisabled();
+    expect(mockPurchaseService.createCheckoutSession).not.toHaveBeenCalled();
   });
 
   it("calculates pricing without discounts", async () => {

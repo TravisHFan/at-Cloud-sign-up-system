@@ -125,6 +125,7 @@ export default function ProgramDetail({
     | null
   >(null);
   const [isCurrentUserClassRep, setIsCurrentUserClassRep] = useState(false);
+  const [enrollmentRefreshKey, setEnrollmentRefreshKey] = useState(0);
 
   useEffect(() => {
     if (!id) return;
@@ -171,7 +172,14 @@ export default function ProgramDetail({
     return () => {
       cancelled = true;
     };
-  }, [id, serverPaginationEnabled, limit, sortDir, avatarUpdateCounter]);
+  }, [
+    id,
+    serverPaginationEnabled,
+    limit,
+    sortDir,
+    avatarUpdateCounter,
+    enrollmentRefreshKey,
+  ]);
 
   // Check program access (skip for guests — no token means no purchase)
   useEffect(() => {
@@ -201,7 +209,7 @@ export default function ProgramDetail({
     return () => {
       cancelled = true;
     };
-  }, [id, currentUser]);
+  }, [id, currentUser, enrollmentRefreshKey]);
 
   // Check if current user is a class rep of this program (for email permission)
   useEffect(() => {
@@ -225,7 +233,7 @@ export default function ProgramDetail({
     return () => {
       cancelled = true;
     };
-  }, [id, currentUser]);
+  }, [id, currentUser, enrollmentRefreshKey]);
 
   // Connect to WebSocket for real-time updates
   useEffect(() => {
@@ -560,7 +568,13 @@ export default function ProgramDetail({
 
         {/* Program Participants (Mentees & Class Representatives) - Only shown for paid programs */}
         {program && !program.isFree && (
-          <ProgramParticipants programId={program.id} program={program} />
+          <ProgramParticipants
+            programId={program.id}
+            program={program}
+            onEnrollmentChanged={() =>
+              setEnrollmentRefreshKey((key) => key + 1)
+            }
+          />
         )}
 
         {/* Pricing panel (UI label changed to Tuition; internal naming unchanged) */}
@@ -575,6 +589,7 @@ export default function ProgramDetail({
           hasAccess={hasAccess}
           accessReason={accessReason}
           onEnrollClick={handleEnrollClick}
+          period={program.period}
           pricing={program.pricing}
         />
 

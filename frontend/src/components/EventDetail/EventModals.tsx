@@ -6,6 +6,7 @@ import NameCardActionModal from "../common/NameCardActionModal";
 import ShareModal from "../share/ShareModal";
 import EmailParticipantsModal from "./EmailParticipantsModal";
 import type { EventData } from "../../types/event";
+import { friendlyGenericError } from "../../utils/errorMessages";
 
 interface Guest {
   id?: string;
@@ -244,9 +245,6 @@ function EventModals({
               title: "Email Sent",
             });
           } catch (e: unknown) {
-            const { friendlyGenericError } = await import(
-              "../../utils/errorMessages"
-            );
             notification.error(
               friendlyGenericError(e, "Failed to send manage link."),
               { title: "Send Failed" }

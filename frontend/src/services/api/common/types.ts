@@ -80,6 +80,33 @@ export type ProgramParticipantsResponse = {
   classReps: ProgramParticipant[];
 };
 
+export type ProgramUnenrollPreview = {
+  enrollmentType: "mentee" | "classRep";
+  isPaid: boolean;
+  refundEligible: boolean;
+  requiresApproval: boolean;
+  refundAmount: number;
+  daysRemaining?: number;
+  purchaseDate?: string;
+  refundDeadline?: string;
+  refundWindowExpired: boolean;
+  reason?: string;
+};
+
+export type ProgramUnenrollResult = {
+  refundStatus:
+    | "processing"
+    | "pending_approval"
+    | "failed"
+    | "not_eligible"
+    | "not_applicable";
+  refundId?: string;
+  refundRequestId?: string;
+  existingRequest?: boolean;
+  enrollmentType: "mentee" | "classRep";
+  reason?: string;
+};
+
 // Re-export public event types from main types
 export type {
   PublicEventData,

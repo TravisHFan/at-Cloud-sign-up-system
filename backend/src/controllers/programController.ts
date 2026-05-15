@@ -171,4 +171,21 @@ export class ProgramController {
     );
     return AdminUnenrollController.adminUnenroll(req, res);
   }
+
+  static async selfUnenrollPreview(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    const { default: SelfUnenrollController } = await import(
+      "./programs/SelfUnenrollController"
+    );
+    return SelfUnenrollController.preview(req, res);
+  }
+
+  static async selfUnenroll(req: Request, res: Response): Promise<void> {
+    const { default: SelfUnenrollController } = await import(
+      "./programs/SelfUnenrollController"
+    );
+    return SelfUnenrollController.unenroll(req, res);
+  }
 }

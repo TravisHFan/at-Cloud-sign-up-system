@@ -320,7 +320,7 @@ The @Cloud Ministry Team
                   <span class="info-value">${orderNumber}</span>
                 </div>
                 <div class="info-row">
-                  <span class="info-label">Program:</span>
+                  <span class="info-label">Purchase:</span>
                   <span class="info-value">${programTitle}</span>
                 </div>
                 <div class="info-row">
@@ -366,7 +366,7 @@ We have received your refund request and have initiated the process.
 
 Order Details:
 - Order Number: ${orderNumber}
-- Program: ${programTitle}
+- Purchase: ${programTitle}
 - Purchase Date: ${formattedDate}
 - Refund Amount: ${formatCurrency(refundAmount)}
 
@@ -458,7 +458,7 @@ The @Cloud Ministry Team
                   <span class="info-value">${orderNumber}</span>
                 </div>
                 <div class="info-row">
-                  <span class="info-label">Program:</span>
+                  <span class="info-label">Purchase:</span>
                   <span class="info-value">${programTitle}</span>
                 </div>
                 <div class="info-row">
@@ -500,7 +500,7 @@ Good news! Your refund has been successfully processed.
 
 Refund Details:
 - Order Number: ${orderNumber}
-- Program: ${programTitle}
+- Purchase: ${programTitle}
 - Refund Date: ${formattedDate}
 - Refund Amount: ${formatCurrency(refundAmount)}
 
@@ -577,7 +577,7 @@ The @Cloud Ministry Team
                   <span class="info-value">${orderNumber}</span>
                 </div>
                 <div class="info-row">
-                  <span class="info-label">Program:</span>
+                  <span class="info-label">Purchase:</span>
                   <span class="info-value">${programTitle}</span>
                 </div>
               </div>
@@ -620,7 +620,7 @@ We're sorry, but we encountered an issue while processing your refund request.
 
 Order Details:
 - Order Number: ${orderNumber}
-- Program: ${programTitle}
+- Purchase: ${programTitle}
 
 Failure Reason:
 ${failureReason}
@@ -730,7 +730,7 @@ The @Cloud Ministry Team
                   <span class="info-value">${orderNumber}</span>
                 </div>
                 <div class="info-row">
-                  <span class="info-label">Program:</span>
+                  <span class="info-label">Purchase:</span>
                   <span class="info-value">${programTitle}</span>
                 </div>
                 <div class="info-row">
@@ -779,7 +779,7 @@ User Information:
 
 Purchase Information:
 - Order Number: ${orderNumber}
-- Program: ${programTitle}
+- Purchase: ${programTitle}
 - Purchase Date: ${formatDate(purchaseDate)}
 
 Refund Information:

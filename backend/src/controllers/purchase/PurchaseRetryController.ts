@@ -74,13 +74,16 @@ class PurchaseRetryController {
         existingCompletedPurchase = await Purchase.findOne({
           userId: req.user._id,
           programId: pendingPurchase.programId,
+          purchaseType: "program",
           status: "completed",
+          unenrolledAt: { $exists: false },
         });
       } else if (pendingPurchase.purchaseType === "event") {
         existingCompletedPurchase = await Purchase.findOne({
           userId: req.user._id,
           eventId: pendingPurchase.eventId,
           status: "completed",
+          unenrolledAt: { $exists: false },
         });
       }
 

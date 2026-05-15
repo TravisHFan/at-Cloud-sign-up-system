@@ -85,6 +85,7 @@ const mockRefundFailedPurchase = {
 
 const mockEligibleResponse = {
   isEligible: true,
+  requiresApproval: false,
   daysRemaining: 25,
   purchaseDate: new Date().toISOString(),
   refundDeadline: new Date(Date.now() + 25 * 86400000).toISOString(),
@@ -92,6 +93,15 @@ const mockEligibleResponse = {
 
 const mockIneligibleResponse = {
   isEligible: false,
+  requiresApproval: false,
+  reason: "No payment was collected for this purchase, so there is no refund to issue.",
+  purchaseDate: new Date().toISOString(),
+  refundDeadline: new Date(Date.now() + 30 * 86400000).toISOString(),
+};
+
+const mockRequiresApprovalResponse = {
+  isEligible: false,
+  requiresApproval: true,
   reason:
     "Refund window has expired. Refunds are only available within 30 days of purchase.",
   purchaseDate: new Date(Date.now() - 31 * 86400000).toISOString(),
@@ -357,7 +367,41 @@ describe("PurchaseHistory - Refund UI", () => {
 
       // Should show reason
       expect(
-        screen.getByText(/Refund window has expired/i)
+        screen.getByText(/No payment was collected/i)
+      ).toBeInTheDocument();
+    });
+
+    it("should show admin approval modal when purchase is outside the 30-day automatic refund window", async () => {
+      (purchaseService.getMyPurchases as any).mockResolvedValue([
+        mockCompletedPurchase,
+      ]);
+      (purchaseService.getMyPendingPurchases as any).mockResolvedValue([]);
+      (purchaseService.checkRefundEligibility as any).mockResolvedValue(
+        mockRequiresApprovalResponse
+      );
+
+      renderWithRouter(<PurchaseHistory />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Test Program")).toBeInTheDocument();
+      });
+
+      const actionsButton = screen.getByRole("button", { name: /actions/i });
+      fireEvent.click(actionsButton);
+
+      const requestRefundButton = await screen.findByText("Request Refund");
+      fireEvent.click(requestRefundButton);
+
+      await waitFor(() => {
+        expect(screen.getByText("Request Admin Approval")).toBeInTheDocument();
+      });
+
+      expect(screen.getByText("Admin Approval Required")).toBeInTheDocument();
+      expect(
+        screen.getByText(/outside the 30-day refund window/i)
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /submit request/i })
       ).toBeInTheDocument();
     });
 
@@ -484,8 +528,10 @@ describe("PurchaseHistory - Refund UI", () => {
         mockEligibleResponse
       );
       (purchaseService.initiateRefund as any).mockResolvedValue({
-        success: true,
-        message: "Refund initiated successfully",
+        purchaseId: "purchase-1",
+        orderNumber: "ORD-20250110-00001",
+        refundId: "re_test",
+        status: "refund_processing",
       });
 
       renderWithRouter(<PurchaseHistory />);
@@ -528,8 +574,10 @@ describe("PurchaseHistory - Refund UI", () => {
         mockEligibleResponse
       );
       (purchaseService.initiateRefund as any).mockResolvedValue({
-        success: true,
-        message: "Refund initiated successfully",
+        purchaseId: "purchase-1",
+        orderNumber: "ORD-20250110-00001",
+        refundId: "re_test",
+        status: "refund_processing",
       });
 
       renderWithRouter(<PurchaseHistory />);
@@ -565,6 +613,48 @@ describe("PurchaseHistory - Refund UI", () => {
       ).toBeInTheDocument();
     });
 
+    it("should show review message after submitting an over-30-day refund request", async () => {
+      (purchaseService.getMyPurchases as any).mockResolvedValue([
+        mockCompletedPurchase,
+      ]);
+      (purchaseService.getMyPendingPurchases as any).mockResolvedValue([]);
+      (purchaseService.checkRefundEligibility as any).mockResolvedValue(
+        mockRequiresApprovalResponse
+      );
+      (purchaseService.initiateRefund as any).mockResolvedValue({
+        purchaseId: "purchase-1",
+        orderNumber: "ORD-20250110-00001",
+        refundRequestId: "refund-request-1",
+        status: "pending_approval",
+        approvalRequired: true,
+      });
+
+      renderWithRouter(<PurchaseHistory />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Test Program")).toBeInTheDocument();
+      });
+
+      const actionsButton = screen.getByRole("button", { name: /actions/i });
+      fireEvent.click(actionsButton);
+      const requestRefundButton = await screen.findByText("Request Refund");
+      fireEvent.click(requestRefundButton);
+
+      await waitFor(() => {
+        expect(screen.getByText("Request Admin Approval")).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole("button", { name: /submit request/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText("Request Sent for Review")).toBeInTheDocument();
+      });
+
+      expect(
+        screen.getByText(/sent to administrators for review/i)
+      ).toBeInTheDocument();
+    });
+
     it("should reload purchases after successful refund", async () => {
       const getMyPurchasesSpy = vi.fn();
       getMyPurchasesSpy.mockResolvedValueOnce([mockCompletedPurchase]);
@@ -576,7 +666,10 @@ describe("PurchaseHistory - Refund UI", () => {
         mockEligibleResponse
       );
       (purchaseService.initiateRefund as any).mockResolvedValue({
-        success: true,
+        purchaseId: "purchase-1",
+        orderNumber: "ORD-20250110-00001",
+        refundId: "re_test",
+        status: "refund_processing",
       });
 
       renderWithRouter(<PurchaseHistory />);

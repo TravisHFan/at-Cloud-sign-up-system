@@ -142,6 +142,55 @@ describe("PurchaseCheckoutController", () => {
       });
     });
 
+    it("should return 400 if program enrollment closed more than 45 days after program start", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2025-03-05T12:00:00.000Z"));
+
+      try {
+        mockReq.user = {
+          _id: userId,
+          email: "test@test.com",
+          firstName: "Test",
+          lastName: "User",
+        };
+        mockReq.body = { programId: programId.toString() };
+
+        const mockProgram = {
+          _id: programId,
+          title: "Closed Program",
+          isFree: false,
+          fullPriceTicket: 10000,
+          period: {
+            startYear: "2025",
+            startMonth: "01",
+          },
+        };
+
+        vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
+
+        await PurchaseCheckoutController.createCheckoutSession(
+          mockReq as Request,
+          mockRes as Response,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(400);
+        expect(jsonMock).toHaveBeenCalledWith({
+          success: false,
+          message:
+            "Enrollment is closed. Program enrollment is only available for 45 days after the program start date.",
+          data: {
+            enrollmentClosed: true,
+            programStartDate: expect.any(String),
+            enrollmentClosesAt: expect.any(String),
+          },
+        });
+        expect(Purchase.findOne).not.toHaveBeenCalled();
+        expect(lockService.withLock).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it("should return 400 if program is free", async () => {
       mockReq.user = {
         _id: userId,

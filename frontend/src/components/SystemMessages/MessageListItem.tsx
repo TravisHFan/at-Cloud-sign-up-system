@@ -16,6 +16,11 @@ interface RoleInviteMetadata {
   timing?: TimingMeta;
 }
 
+interface GenericCtaMetadata {
+  ctaUrl?: string;
+  ctaLabel?: string;
+}
+
 interface MessageCreator {
   id: string;
   firstName: string;
@@ -84,6 +89,16 @@ function readRoleInviteMetadata(message: SystemMessage): RoleInviteMetadata {
   const timingRaw = metaRec["timing"];
   const timing = isTimingMeta(timingRaw) ? timingRaw : undefined;
   return { eventId, eventDetailUrl, rejectionLink, timing };
+}
+
+function readGenericCtaMetadata(message: SystemMessage): GenericCtaMetadata {
+  const meta = message.metadata;
+  if (!isRecord(meta)) return {};
+  const ctaUrl =
+    typeof meta.ctaUrl === "string" ? String(meta.ctaUrl) : undefined;
+  const ctaLabel =
+    typeof meta.ctaLabel === "string" ? String(meta.ctaLabel) : undefined;
+  return { ctaUrl, ctaLabel };
 }
 
 /**
@@ -206,6 +221,22 @@ export default function MessageListItem({
                 </a>
               </div>
             )}
+
+          {(() => {
+            const { ctaUrl, ctaLabel } = readGenericCtaMetadata(message);
+            if (!ctaUrl) return null;
+            return (
+              <div className="mt-4">
+                <a
+                  href={ctaUrl}
+                  onClick={(e) => e.stopPropagation()}
+                  className="block w-full text-center bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 px-4 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all"
+                >
+                  {ctaLabel || "Open"}
+                </a>
+              </div>
+            );
+          })()}
 
           {/* CTA buttons for Role Invited system messages */}
           {message.type === "event_role_change" &&

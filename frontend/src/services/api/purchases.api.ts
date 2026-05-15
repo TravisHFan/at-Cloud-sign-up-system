@@ -112,21 +112,26 @@ class PurchasesApiClient extends BaseApiClient {
 
   async checkRefundEligibility(purchaseId: string): Promise<{
     isEligible: boolean;
+    requiresApproval: boolean;
     reason?: string;
     daysRemaining?: number;
     purchaseDate: string;
     refundDeadline: string;
+    refundWindowExpired?: boolean;
   }> {
     const res = await this.request<{
       isEligible: boolean;
+      requiresApproval: boolean;
       reason?: string;
       daysRemaining?: number;
       purchaseDate: string;
       refundDeadline: string;
+      refundWindowExpired?: boolean;
     }>(`/purchases/refund-eligibility/${purchaseId}`);
     return (
       res.data || {
         isEligible: false,
+        requiresApproval: false,
         reason: "Unknown error",
         purchaseDate: "",
         refundDeadline: "",
@@ -137,14 +142,20 @@ class PurchasesApiClient extends BaseApiClient {
   async initiateRefund(purchaseId: string): Promise<{
     purchaseId: string;
     orderNumber: string;
-    refundId: string;
+    refundId?: string;
+    refundRequestId?: string;
     status: string;
+    approvalRequired?: boolean;
+    existingRequest?: boolean;
   }> {
     const res = await this.request<{
       purchaseId: string;
       orderNumber: string;
-      refundId: string;
+      refundId?: string;
+      refundRequestId?: string;
       status: string;
+      approvalRequired?: boolean;
+      existingRequest?: boolean;
     }>(`/purchases/refund`, {
       method: "POST",
       body: JSON.stringify({ purchaseId }),
@@ -153,7 +164,6 @@ class PurchasesApiClient extends BaseApiClient {
       res.data || {
         purchaseId: "",
         orderNumber: "",
-        refundId: "",
         status: "",
       }
     );

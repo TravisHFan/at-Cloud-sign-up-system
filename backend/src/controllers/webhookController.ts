@@ -18,6 +18,10 @@ import {
 import { EmailService } from "../services/infrastructure/EmailServiceFacade";
 import { lockService } from "../services/LockService";
 import { TrioNotificationService } from "../services/notifications/TrioNotificationService";
+import {
+  getPurchaseItemDetails,
+  markProgramPurchaseUnenrolled,
+} from "../services/PurchaseRefundService";
 
 export class WebhookController {
   /**
@@ -614,10 +618,9 @@ export class WebhookController {
     }
 
     // Find the purchase
-    const purchase = await Purchase.findById(purchaseId).populate(
-      "programId",
-      "title"
-    );
+    const purchase = await Purchase.findById(purchaseId)
+      .populate("programId", "title")
+      .populate("eventId", "title");
 
     if (!purchase) {
       console.log("No purchase found for refund:", refund.id);
@@ -628,6 +631,7 @@ export class WebhookController {
     const { PurchaseEmailService } = await import(
       "../services/email/domains/PurchaseEmailService"
     );
+    const { itemTitle } = getPurchaseItemDetails(purchase);
 
     // Handle refund status
     switch (refund.status) {
@@ -639,6 +643,7 @@ export class WebhookController {
         // Update purchase status
         purchase.status = "refunded";
         purchase.refundedAt = new Date();
+        await markProgramPurchaseUnenrolled(purchase, "refund_requested");
         await purchase.save();
 
         // Recover promo code if one was used
@@ -648,12 +653,43 @@ export class WebhookController {
               code: purchase.promoCode,
             });
 
-            if (promoCode && promoCode.isUsed) {
+            if (promoCode?.isGeneral && Array.isArray(promoCode.usageHistory)) {
+              const originalLength = promoCode.usageHistory.length;
+              promoCode.usageHistory = promoCode.usageHistory.filter((entry) => {
+                const sameUser =
+                  entry.userId?.toString() === purchase.userId.toString();
+                const sameProgram =
+                  purchase.purchaseType === "program" &&
+                  purchase.programId &&
+                  entry.programId?.toString() ===
+                    (typeof purchase.programId === "object" &&
+                    "_id" in purchase.programId
+                      ? purchase.programId._id.toString()
+                      : purchase.programId.toString());
+                const sameEvent =
+                  purchase.purchaseType === "event" &&
+                  purchase.eventId &&
+                  entry.eventId?.toString() ===
+                    (typeof purchase.eventId === "object" &&
+                    "_id" in purchase.eventId
+                      ? purchase.eventId._id.toString()
+                      : purchase.eventId.toString());
+                return !(sameUser && (sameProgram || sameEvent));
+              });
+
+              if (promoCode.usageHistory.length !== originalLength) {
+                await promoCode.save();
+                console.log(
+                  `✅ Removed general promo code usage ${purchase.promoCode} for refunded order ${orderNumber}`
+                );
+              }
+            } else if (promoCode && promoCode.isUsed) {
               // Mark the promo code as not used and active again
               promoCode.isUsed = false;
               promoCode.isActive = true;
               promoCode.usedAt = undefined;
               promoCode.usedForProgramId = undefined;
+              promoCode.usedForEventId = undefined;
               await promoCode.save();
 
               console.log(
@@ -705,10 +741,7 @@ export class WebhookController {
             userEmail: purchase.billingInfo.email,
             userName: purchase.billingInfo.fullName,
             orderNumber: purchase.orderNumber,
-            programTitle:
-              typeof purchase.programId === "object"
-                ? purchase.programId.title
-                : "Program",
+            programTitle: itemTitle,
             refundAmount: purchase.finalPrice,
             refundDate: new Date(),
           });
@@ -725,10 +758,7 @@ export class WebhookController {
               userName: `${user.firstName} ${user.lastName}`,
               userEmail: user.email,
               orderNumber: purchase.orderNumber,
-              programTitle:
-                typeof purchase.programId === "object"
-                  ? purchase.programId.title
-                  : "Program",
+              programTitle: itemTitle,
               refundAmount: purchase.finalPrice,
               purchaseDate: purchase.purchaseDate,
               refundInitiatedAt: purchase.refundInitiatedAt || new Date(),
@@ -753,9 +783,7 @@ export class WebhookController {
                   content: `Refund completed for ${user.firstName} ${
                     user.lastName
                   } (${user.email}). Order ${purchase.orderNumber} - ${
-                    typeof purchase.programId === "object"
-                      ? purchase.programId.title
-                      : "Program"
+                    itemTitle
                   }. Amount: ${formatCurrency(purchase.finalPrice)}.`,
                   type: "announcement",
                   priority: "high",
@@ -802,10 +830,7 @@ export class WebhookController {
             userEmail: purchase.billingInfo.email,
             userName: purchase.billingInfo.fullName,
             orderNumber: purchase.orderNumber,
-            programTitle:
-              typeof purchase.programId === "object"
-                ? purchase.programId.title
-                : "Program",
+            programTitle: itemTitle,
             failureReason: purchase.refundFailureReason || "Unknown error",
           });
           console.log(`Sent refund failed email for order ${orderNumber}`);
@@ -841,10 +866,7 @@ export class WebhookController {
             userEmail: purchase.billingInfo.email,
             userName: purchase.billingInfo.fullName,
             orderNumber: purchase.orderNumber,
-            programTitle:
-              typeof purchase.programId === "object"
-                ? purchase.programId.title
-                : "Program",
+            programTitle: itemTitle,
             failureReason:
               "The refund was canceled by the payment processor. This is rare and may indicate an issue with the original payment. Please contact support for assistance.",
           });
@@ -874,9 +896,7 @@ export class WebhookController {
                   content: `Refund was CANCELED by payment processor for ${
                     user.firstName
                   } ${user.email}. Order ${purchase.orderNumber} - ${
-                    typeof purchase.programId === "object"
-                      ? purchase.programId.title
-                      : "Program"
+                    itemTitle
                   }. Amount: ${formatCurrency(
                     purchase.finalPrice
                   )}. This is unusual and may require investigation.`,

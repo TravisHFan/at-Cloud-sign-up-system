@@ -10,7 +10,7 @@ import LoadingSpinner from "../components/common/LoadingSpinner";
  * Any other /dashboard/* path redirects to /login.
  */
 const GUEST_ALLOWED_PATTERNS: RegExp[] = [
-  /^\/dashboard\/?$/i, // index (Programs)
+  /^\/dashboard\/?$/i, // index (EMBA Program)
   /^\/dashboard\/welcome\/?$/i,
   /^\/dashboard\/programs\/?$/i,
   /^\/dashboard\/programs\/[a-f0-9]{24}\/?$/i, // program detail

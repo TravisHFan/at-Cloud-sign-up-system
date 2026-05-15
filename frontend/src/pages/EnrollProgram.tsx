@@ -8,6 +8,11 @@ import PromoCodeInput, {
 import { promoCodeService } from "../services/promoCodeService";
 import AlertModal from "../components/common/AlertModal";
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import {
+  getProgramEnrollmentWindow,
+  PROGRAM_ENROLLMENT_CLOSED_MESSAGE,
+  type ProgramPeriodLike,
+} from "../utils/programEnrollmentWindow";
 
 interface Program {
   id: string;
@@ -22,6 +27,7 @@ interface Program {
   classRepLimit?: number;
   classRepCount?: number; // Current number of Class Rep purchases
   earlyBirdDeadline?: string;
+  period?: ProgramPeriodLike;
 }
 
 export default function EnrollProgram() {
@@ -66,6 +72,8 @@ export default function EnrollProgram() {
     deadline.setHours(23, 59, 59, 999);
     return new Date() <= deadline;
   })();
+  const enrollmentWindow = getProgramEnrollmentWindow(program?.period);
+  const enrollmentClosed = enrollmentWindow.isEnrollmentClosed;
 
   // Calculate final price
   const calculatePrice = () => {
@@ -225,6 +233,15 @@ export default function EnrollProgram() {
 
   const handleEnroll = async () => {
     if (!program || !id) return;
+    if (enrollmentClosed) {
+      setAlertModal({
+        isOpen: true,
+        title: "Enrollment Closed",
+        message: PROGRAM_ENROLLMENT_CLOSED_MESSAGE,
+        type: "warning",
+      });
+      return;
+    }
 
     try {
       setIsProcessing(true);
@@ -274,6 +291,7 @@ export default function EnrollProgram() {
 
       // Determine modal type based on error message
       const isClassRepFull = message.includes("Class Rep slots are full");
+      const isEnrollmentClosed = message.includes("Enrollment is closed");
 
       setAlertModal({
         isOpen: true,
@@ -281,9 +299,14 @@ export default function EnrollProgram() {
           ? "Early Bird Period Expired"
           : isClassRepFull
           ? "Class Rep Slots Full"
+          : isEnrollmentClosed
+          ? "Enrollment Closed"
           : "Checkout Error",
         message: message,
-        type: isEarlyBirdExpired || isClassRepFull ? "warning" : "error",
+        type:
+          isEarlyBirdExpired || isClassRepFull || isEnrollmentClosed
+            ? "warning"
+            : "error",
         onClose: () => {
           setAlertModal((prev) => ({ ...prev, isOpen: false }));
           // If Early Bird expired, reload the page to refresh pricing
@@ -416,6 +439,15 @@ export default function EnrollProgram() {
           Enrollment Options
         </h2>
 
+        {enrollmentClosed && (
+          <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4">
+            <p className="font-medium text-amber-900">Enrollment Closed</p>
+            <p className="mt-1 text-sm text-amber-800">
+              {PROGRAM_ENROLLMENT_CLOSED_MESSAGE}
+            </p>
+          </div>
+        )}
+
         {/* Class Rep Option */}
         {program.classRepDiscount &&
           program.classRepDiscount > 0 &&
@@ -426,6 +458,7 @@ export default function EnrollProgram() {
                   <input
                     type="checkbox"
                     checked={isClassRep}
+                    disabled={enrollmentClosed}
                     onChange={(e) => setIsClassRep(e.target.checked)}
                     className="h-5 w-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
                   />
@@ -461,7 +494,7 @@ export default function EnrollProgram() {
             onRemove={handlePromoRemove}
             appliedCode={appliedPromoCode}
             appliedDiscount={calculatePromoDiscountAmount()}
-            isLoading={isProcessing}
+            isLoading={isProcessing || enrollmentClosed}
           />
         </div>
 
@@ -526,7 +559,7 @@ export default function EnrollProgram() {
         </button>
         <button
           onClick={handleEnroll}
-          disabled={isProcessing}
+          disabled={isProcessing || enrollmentClosed}
           className="px-6 py-3 text-sm font-medium text-white bg-purple-600 border border-transparent rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isProcessing ? (
@@ -552,6 +585,8 @@ export default function EnrollProgram() {
               </svg>
               Processing...
             </span>
+          ) : enrollmentClosed ? (
+            "Enrollment Closed"
           ) : (
             `Proceed to Payment - ${formatCurrency(finalPrice)}`
           )}

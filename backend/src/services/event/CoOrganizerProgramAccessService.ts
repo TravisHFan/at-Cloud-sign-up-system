@@ -152,6 +152,7 @@ export class CoOrganizerProgramAccessService {
           userId: new mongoose.Types.ObjectId(userIdStr),
           programId: program._id,
           status: "completed",
+          unenrolledAt: { $exists: false },
         });
 
         if (purchase) {

@@ -3,6 +3,7 @@ import { MessageCleanupService } from "./MessageCleanupService";
 import { PromoCodeCleanupService } from "./promoCodeCleanupService";
 import { PendingPurchaseCleanupService } from "./PendingPurchaseCleanupService";
 import { AutoUnpublishService } from "./event/AutoUnpublishService";
+import { RefundRequestService } from "./RefundRequestService";
 
 const logger = Logger.getInstance().child("SchedulerService");
 
@@ -50,6 +51,9 @@ export class SchedulerService {
 
     // Schedule pending purchase cleanup - runs daily at 4:00 AM
     this.schedulePendingPurchaseCleanup();
+
+    // Schedule refund request cleanup - runs daily at 5:00 AM
+    this.scheduleRefundRequestCleanup();
 
     // Schedule auto-unpublish execution - runs every 15 minutes
     this.scheduleAutoUnpublishExecution();
@@ -296,6 +300,60 @@ export class SchedulerService {
         error instanceof Error ? error : new Error(String(error))
       );
       // Don't throw - we want the scheduler to continue running
+    }
+  }
+
+  /**
+   * Schedule refund request cleanup to run daily at 5:00 AM
+   */
+  private static scheduleRefundRequestCleanup(): void {
+    const now = new Date();
+    const next5AM = new Date();
+    next5AM.setHours(5, 0, 0, 0);
+
+    if (next5AM <= now) {
+      next5AM.setDate(next5AM.getDate() + 1);
+    }
+
+    const timeUntilNext5AM = next5AM.getTime() - now.getTime();
+
+    logger.info(
+      `Refund request cleanup scheduled for ${next5AM.toISOString()} (in ${Math.round(
+        timeUntilNext5AM / 1000 / 60,
+      )} minutes)`,
+    );
+
+    const initialTimeout = setTimeout(() => {
+      this.executeRefundRequestCleanup();
+
+      const dailyInterval = setInterval(() => {
+        this.executeRefundRequestCleanup();
+      }, 24 * 60 * 60 * 1000);
+
+      this.intervals.push(dailyInterval);
+    }, timeUntilNext5AM);
+
+    this.intervals.push(initialTimeout as unknown as NodeJS.Timeout);
+  }
+
+  /**
+   * Execute refund request expiration and cleanup.
+   */
+  private static async executeRefundRequestCleanup(): Promise<void> {
+    try {
+      logger.info("Starting scheduled refund request cleanup...");
+
+      const { expiredNotified, deletedFinished } =
+        await RefundRequestService.runCleanup();
+
+      logger.info(
+        `Scheduled refund request cleanup completed: expired ${expiredNotified}, deleted ${deletedFinished} finished requests`,
+      );
+    } catch (error) {
+      logger.error(
+        "Failed to execute scheduled refund request cleanup",
+        error instanceof Error ? error : new Error(String(error)),
+      );
     }
   }
 

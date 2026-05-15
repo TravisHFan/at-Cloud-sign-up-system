@@ -113,6 +113,7 @@ class EventAccessControlService {
           purchaseType: "program",
           programId: { $in: event.programLabels },
           status: "completed",
+          unenrolledAt: { $exists: false },
         });
 
         if (hasProgramPurchase) {
@@ -130,6 +131,7 @@ class EventAccessControlService {
         purchaseType: "event",
         eventId: eventIdObj,
         status: "completed",
+        unenrolledAt: { $exists: false },
       });
 
       if (hasEventPurchase) {

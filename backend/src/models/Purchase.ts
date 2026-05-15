@@ -68,6 +68,11 @@ export interface IPurchase extends Document {
   refundInitiatedAt?: Date; // When the refund was initiated
   refundFailureReason?: string; // Reason if refund failed
   stripeRefundId?: string; // Stripe Refund ID
+  unenrolledAt?: Date; // When program access/enrollment was ended
+  unenrollReason?:
+    | "self_unenroll_refund"
+    | "self_unenroll_no_refund"
+    | "refund_requested";
 
   // Timestamps
   purchaseDate: Date; // When the purchase was completed
@@ -265,6 +270,17 @@ const purchaseSchema = new Schema<IPurchase>(
       type: String,
       trim: true,
       maxlength: 255,
+    },
+    unenrolledAt: {
+      type: Date,
+    },
+    unenrollReason: {
+      type: String,
+      enum: [
+        "self_unenroll_refund",
+        "self_unenroll_no_refund",
+        "refund_requested",
+      ],
     },
     purchaseDate: {
       type: Date,

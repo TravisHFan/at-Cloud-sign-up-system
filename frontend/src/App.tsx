@@ -57,6 +57,8 @@ import AdminPromoCodes from "./pages/AdminPromoCodes";
 import PromoCodeDetail from "./pages/PromoCodeDetail";
 import DonationPage from "./pages/DonationPage";
 import DonationReceipt from "./pages/DonationReceipt";
+import RefundRequestApproval from "./pages/RefundRequestApproval";
+import RefundRequestDecision from "./pages/RefundRequestDecision";
 import SessionExpiredModal from "./components/common/SessionExpiredModal";
 import EventPurchase from "./pages/EventPurchase";
 import EventPurchaseSuccess from "./pages/EventPurchaseSuccess";
@@ -101,7 +103,7 @@ function App() {
               element={<CompletePasswordChange />}
             />
             <Route path="/dashboard" element={<DashboardLayout />}>
-              <Route index element={<Programs />} />
+              <Route index element={<EMBAProgram />} />
               <Route path="welcome" element={<Welcome />} />
               <Route path="upcoming" element={<UpcomingEvents />} />
               <Route path="passed" element={<PassedEvents />} />
@@ -141,6 +143,20 @@ function App() {
               />
               <Route path="purchase/success" element={<PurchaseSuccess />} />
               <Route path="purchase/cancel" element={<PurchaseCancel />} />
+              <Route
+                path="refund-requests/:id/approval"
+                element={
+                  <ProtectedRoute
+                    allowedRoles={["Super Admin", "Administrator"]}
+                  >
+                    <RefundRequestApproval />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="refund-requests/:id/decision"
+                element={<RefundRequestDecision />}
+              />
               <Route
                 path="programs/:id/edit"
                 element={

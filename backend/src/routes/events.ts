@@ -308,6 +308,7 @@ router.get(
         purchaseType: "event",
         eventId: id,
         status: "completed",
+        unenrolledAt: { $exists: false },
       })
         .populate("userId", "firstName lastName email")
         .sort({ purchaseDate: -1 });

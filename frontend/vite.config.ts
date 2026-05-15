@@ -8,6 +8,12 @@ import { visualizer } from "rollup-plugin-visualizer";
 // Read version from package.json
 import packageJson from "./package.json";
 
+function chunkNameFromPath(id: string, marker: string, prefix: string) {
+  const [, rest] = id.split(marker);
+  const firstSegment = rest?.split("/")[0]?.replace(/\.[jt]sx?$/, "");
+  return firstSegment ? `${prefix}-${firstSegment}` : prefix;
+}
+
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
@@ -27,12 +33,56 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Vendor chunks - separate large dependencies
-          "react-vendor": ["react", "react-dom"],
-          "router-vendor": ["react-router-dom"],
-          "form-vendor": ["react-hook-form", "@hookform/resolvers", "yup"],
-          "utils-vendor": ["socket.io-client", "xlsx"],
+        manualChunks(id) {
+          if (id.includes("node_modules")) {
+            if (
+              id.includes("/react/") ||
+              id.includes("/react-dom/") ||
+              id.includes("scheduler")
+            ) {
+              return "react-vendor";
+            }
+            if (
+              id.includes("react-hook-form") ||
+              id.includes("@hookform/resolvers") ||
+              id.includes("/yup/")
+            ) {
+              return "form-vendor";
+            }
+            if (id.includes("@heroicons/react")) {
+              return "icons-vendor";
+            }
+            if (id.includes("recharts") || id.includes("d3-")) {
+              return "charts-vendor";
+            }
+            if (
+              id.includes("html2pdf.js") ||
+              id.includes("html2canvas") ||
+              id.includes("jspdf")
+            ) {
+              return "pdf-vendor";
+            }
+            if (id.includes("xlsx")) {
+              return "spreadsheet-vendor";
+            }
+            if (id.includes("socket.io-client") || id.includes("engine.io-client")) {
+              return "realtime-vendor";
+            }
+            if (id.includes("@stripe")) {
+              return "payments-vendor";
+            }
+            return "vendor";
+          }
+
+          if (id.includes("/src/pages/")) {
+            return chunkNameFromPath(id, "/src/pages/", "page");
+          }
+          if (id.includes("/src/components/admin/")) {
+            return "admin-components";
+          }
+          if (id.includes("/src/components/analytics/")) {
+            return "analytics-components";
+          }
         },
       },
     },
