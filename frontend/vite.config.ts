@@ -14,6 +14,10 @@ function chunkNameFromPath(id: string, marker: string, prefix: string) {
   return firstSegment ? `${prefix}-${firstSegment}` : prefix;
 }
 
+function isCommonJsHelper(id: string) {
+  return id.includes("commonjsHelpers");
+}
+
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
@@ -34,10 +38,21 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
+          // Keep Rollup's shared CommonJS interop helpers out of feature chunks.
+          // If a helper lands in a lazy/specialized vendor chunk, the browser can
+          // evaluate chunks in a cycle before React's namespace export is ready.
+          if (isCommonJsHelper(id)) {
+            return "vendor";
+          }
+
           if (id.includes("node_modules")) {
             if (
               id.includes("/react/") ||
               id.includes("/react-dom/") ||
+              id.includes("/react-router/") ||
+              id.includes("/react-router-dom/") ||
+              id.includes("/react-redux/") ||
+              id.includes("/use-sync-external-store/") ||
               id.includes("scheduler")
             ) {
               return "react-vendor";
