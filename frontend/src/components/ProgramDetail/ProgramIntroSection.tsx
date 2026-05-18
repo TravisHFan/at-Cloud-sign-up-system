@@ -6,7 +6,6 @@ interface ProgramIntroSectionProps {
   programId: string;
   introduction?: string;
   flyerUrl?: string;
-  isFree?: boolean;
   hasAccess: boolean | null;
   accessReason:
     | "admin"
@@ -24,7 +23,7 @@ interface ProgramIntroSectionProps {
  *
  * Displays program introduction text and enrollment status:
  * - Introduction text with proper whitespace handling
- * - Enrollment CTA for non-enrolled users (paid programs only)
+ * - Enrollment CTA for non-enrolled users
  * - Success message for enrolled users with role-specific messaging
  * - Optional program flyer image display
  *
@@ -32,7 +31,6 @@ interface ProgramIntroSectionProps {
  * - Conditional enrollment messaging based on access reason (admin/mentor/purchased)
  * - "Enroll Now" button with navigation to enrollment page
  * - Responsive flyer image display with proper sizing
- * - Free program awareness (no enrollment UI for free programs)
  *
  * Extracted from ProgramDetail.tsx (Phase 6.5.3)
  */
@@ -40,7 +38,6 @@ export default function ProgramIntroSection({
   programId,
   introduction,
   flyerUrl,
-  isFree,
   hasAccess,
   accessReason,
 }: ProgramIntroSectionProps) {
@@ -63,8 +60,7 @@ export default function ProgramIntroSection({
               </p>
 
               {/* Enrollment CTA or Thank You Message */}
-              {!isFree &&
-                hasAccess !== null &&
+              {hasAccess !== null &&
                 (hasAccess ? (
                   <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
                     <div className="flex items-center">

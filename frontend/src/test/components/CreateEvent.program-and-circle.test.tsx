@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { BrowserRouter } from "react-router-dom";
+import { BrowserRouter, MemoryRouter } from "react-router-dom";
 import { AuthProvider } from "../../contexts/AuthContext";
 import { NotificationProvider } from "../../contexts/NotificationModalContext";
 import NewEvent from "../../pages/CreateEvent";
@@ -89,10 +89,60 @@ const Wrapper = ({ children }: { children: React.ReactNode }) => (
   </BrowserRouter>
 );
 
+const MemoryWrapper = ({
+  children,
+  initialEntries,
+}: {
+  children: React.ReactNode;
+  initialEntries: string[];
+}) => (
+  <MemoryRouter initialEntries={initialEntries}>
+    <AuthProvider>
+      <NotificationProvider>{children}</NotificationProvider>
+    </AuthProvider>
+  </MemoryRouter>
+);
+
 describe("CreateEvent - Program Labels wiring", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.setItem("authToken", "test-token");
+    window.history.pushState({}, "", "/");
+  });
+
+  it("copies program Zoom fields when opened from a program detail page", async () => {
+    mockedProgramService.getById.mockResolvedValueOnce({
+      mentors: [],
+      zoomLink: "https://zoom.us/j/123456789",
+      meetingId: "123 456 789",
+      passcode: "cloud",
+    });
+    render(
+      <MemoryWrapper initialEntries={["/dashboard/events/new?programId=p1"]}>
+        <NewEvent />
+      </MemoryWrapper>,
+    );
+
+    const formatSelect = await screen.findByLabelText(/^format/i);
+    await waitFor(() =>
+      expect(mockedProgramService.getById).toHaveBeenCalledWith("p1"),
+    );
+
+    fireEvent.change(formatSelect, {
+      target: { value: "Online" },
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByPlaceholderText(/enter zoom meeting link/i),
+      ).toHaveValue("https://zoom.us/j/123456789");
+      expect(screen.getByPlaceholderText(/enter meeting id/i)).toHaveValue(
+        "123 456 789",
+      );
+      expect(screen.getByPlaceholderText(/enter passcode/i)).toHaveValue(
+        "cloud",
+      );
+    });
   });
 
   it("shows Program multi-select and submits with programLabels array", async () => {

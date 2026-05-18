@@ -1,9 +1,15 @@
 import type {
   UseFormRegister,
   UseFormWatch,
+  UseFormSetValue,
   FieldErrors,
 } from "react-hook-form";
 import { formatCurrency } from "../../utils/currency";
+import type { ProgramStudentRoleForm } from "../../types/program";
+import {
+  createStudentRoleForm,
+  DEFAULT_STUDENT_ROLES,
+} from "../../utils/programRoles";
 
 interface ProgramFormData {
   programType: string;
@@ -16,6 +22,11 @@ interface ProgramFormData {
   introduction: string;
   flyerUrl?: string;
   flyer?: FileList;
+  zoomLink?: string;
+  meetingId?: string;
+  passcode?: string;
+  teacherRoleName?: string;
+  studentRoles?: ProgramStudentRoleForm[];
   isFree?: string;
   earlyBirdDeadline?: string;
   fullPriceTicket: number | undefined;
@@ -27,18 +38,54 @@ interface ProgramFormData {
 interface PricingSectionProps {
   register: UseFormRegister<ProgramFormData>;
   watch: UseFormWatch<ProgramFormData>;
+  setValue: UseFormSetValue<ProgramFormData>;
   errors: FieldErrors<ProgramFormData>;
 }
 
 export default function PricingSection({
   register,
   watch,
+  setValue,
   errors,
 }: PricingSectionProps) {
   const isFreeProgram = watch("isFree");
   const fullPrice = watch("fullPriceTicket");
   const earlyBirdDiscountValue = watch("earlyBirdDiscount");
   const earlyBirdDeadline = watch("earlyBirdDeadline");
+  const studentRoles =
+    watch("studentRoles") && watch("studentRoles")!.length > 0
+      ? watch("studentRoles")!
+      : DEFAULT_STUDENT_ROLES;
+  const discountRoleIndex = Math.max(
+    0,
+    studentRoles.findIndex((role) => role.discountEligible),
+  );
+  const discountRole = studentRoles[discountRoleIndex] || studentRoles[0];
+
+  const updateStudentRoles = (nextRoles: ProgramStudentRoleForm[]) => {
+    const hasDiscountRole = nextRoles.some((role) => role.discountEligible);
+    const normalizedRoles = hasDiscountRole
+      ? nextRoles
+      : nextRoles.map((role, index) => ({
+          ...role,
+          discountEligible: index === 0,
+        }));
+    setValue("studentRoles", normalizedRoles, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  };
+
+  const selectDiscountRole = (index: number) => {
+    updateStudentRoles(
+      studentRoles.map((role, roleIndex) => ({
+        ...role,
+        discountEligible: roleIndex === index,
+        discountAmount: roleIndex === index ? role.discountAmount : 0,
+        limit: roleIndex === index ? role.limit : 0,
+      })),
+    );
+  };
 
   return (
     <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
@@ -68,6 +115,81 @@ export default function PricingSection({
             />
             <span className="ml-3 text-lg text-gray-700">No</span>
           </label>
+        </div>
+      </div>
+
+      <div className="mb-4 border-t border-gray-200 pt-4">
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900">
+              Student Roles
+            </h3>
+            <p className="text-xs text-gray-500">
+              These are the enrollment choices students will see.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() =>
+              updateStudentRoles([
+                ...studentRoles,
+                createStudentRoleForm(studentRoles.length),
+              ])
+            }
+            className="px-3 py-2 text-sm border border-gray-300 rounded-md bg-white hover:bg-gray-50"
+          >
+            Add Role
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          {studentRoles.map((role, index) => (
+            <div
+              key={role.id || index}
+              className="bg-white border border-gray-200 rounded-md p-3"
+            >
+              <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
+                <div className="flex-1">
+                  <label
+                    htmlFor={`studentRoles.${index}.name`}
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Role Name
+                  </label>
+                  <input
+                    id={`studentRoles.${index}.name`}
+                    {...register(`studentRoles.${index}.name`)}
+                    type="text"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder={`Student Role ${index + 1}`}
+                  />
+                </div>
+                <label className="flex items-center gap-2 text-sm text-gray-700 pb-2">
+                  <input
+                    type="radio"
+                    name="discountRole"
+                    checked={!!role.discountEligible}
+                    onChange={() => selectDiscountRole(index)}
+                    className="h-4 w-4 text-blue-600 border-gray-300"
+                  />
+                  Tuition discount role
+                </label>
+                {studentRoles.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateStudentRoles(
+                        studentRoles.filter((_, roleIndex) => roleIndex !== index),
+                      )
+                    }
+                    className="px-3 py-2 text-sm border border-red-200 text-red-700 rounded-md hover:bg-red-50"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -147,55 +269,53 @@ export default function PricingSection({
             </div>
           </div>
 
-          {/* Row 2: Class Rep Discount + Class Rep Limit */}
+          {/* Row 2: Discount Role Amount + Limit */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div>
               <label
-                htmlFor="classRepDiscount"
+                htmlFor={`studentRoles.${discountRoleIndex}.discountAmount`}
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
-                Class Rep Discount
+                {discountRole?.name || "Student Role"} Discount
               </label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 pointer-events-none">
                   $
                 </span>
                 <input
-                  id="classRepDiscount"
+                  id={`studentRoles.${discountRoleIndex}.discountAmount`}
                   type="number"
                   inputMode="decimal"
                   min={0}
                   max={100000}
                   step={0.01}
-                  {...register("classRepDiscount", {
+                  {...register(
+                    `studentRoles.${discountRoleIndex}.discountAmount`,
+                    {
                     valueAsNumber: true,
                     min: { value: 0, message: "Must be ≥ $0" },
                     max: { value: 100000, message: "Must be ≤ $100,000" },
-                  })}
+                    },
+                  )}
                   className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-              {errors.classRepDiscount && (
-                <p className="mt-1 text-sm text-red-500">
-                  {errors.classRepDiscount.message}
-                </p>
-              )}
             </div>
             <div>
               <label
-                htmlFor="classRepLimit"
+                htmlFor={`studentRoles.${discountRoleIndex}.limit`}
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
-                Class Rep Limit
+                {discountRole?.name || "Student Role"} Limit
               </label>
               <input
-                id="classRepLimit"
+                id={`studentRoles.${discountRoleIndex}.limit`}
                 type="number"
                 inputMode="numeric"
                 min={0}
                 max={5}
                 step={1}
-                {...register("classRepLimit", {
+                {...register(`studentRoles.${discountRoleIndex}.limit`, {
                   valueAsNumber: true,
                   min: { value: 0, message: "Must be ≥ 0" },
                   max: { value: 5, message: "Must be ≤ 5" },
@@ -206,13 +326,8 @@ export default function PricingSection({
                 })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              {errors.classRepLimit && (
-                <p className="mt-1 text-sm text-red-500">
-                  {errors.classRepLimit.message}
-                </p>
-              )}
               <p className="mt-1 text-xs text-gray-500">
-                Maximum number of Class Rep slots. Set to 0 for unlimited.
+                Maximum number of discounted slots. Set to 0 for unlimited.
               </p>
             </div>
           </div>
@@ -297,13 +412,13 @@ export default function PricingSection({
           </div>
           {(() => {
             const full = Number(fullPrice || 0) * 100;
-            const rep = Number(watch("classRepDiscount") || 0) * 100;
+            const rep = Number(discountRole?.discountAmount || 0) * 100;
             const early = Number(earlyBirdDiscountValue || 0) * 100;
             const singleDiscountTooLarge = rep > full || early > full;
             return singleDiscountTooLarge ? (
               <p className="mt-2 text-sm text-red-500">
-                Individual discounts cannot exceed the full price. (Class Rep
-                and Early Bird are mutually exclusive)
+                Individual discounts cannot exceed the full price. The student
+                role discount and Early Bird are mutually exclusive.
               </p>
             ) : null;
           })()}
@@ -312,12 +427,15 @@ export default function PricingSection({
             {(() => {
               // Convert dollar values to cents for display
               const full = Number(fullPrice || 0) * 100;
-              const rep = Number(watch("classRepDiscount") || 0) * 100;
+              const rep = Number(discountRole?.discountAmount || 0) * 100;
               const early = Number(earlyBirdDiscountValue || 0) * 100;
               const clamp = (n: number) => Math.max(0, n);
               const examples = [
                 { label: "Standard", value: clamp(full) },
-                { label: "Class Rep", value: clamp(full - rep) },
+                {
+                  label: discountRole?.name || "Discount Role",
+                  value: clamp(full - rep),
+                },
                 { label: "Early Bird", value: clamp(full - early) },
               ];
               return (
@@ -337,7 +455,7 @@ export default function PricingSection({
               );
             })()}
             <p className="text-xs text-gray-500 mt-2" aria-live="polite">
-              Class Rep and Early Bird discounts are mutually exclusive.
+              Student role and Early Bird discounts are mutually exclusive.
               Examples are illustrative. Final pricing is validated on the
               server.
             </p>

@@ -17,6 +17,8 @@ import {
   toProgramMentorPayloads,
   type ProgramMentorPayload,
 } from "../utils/programMentorPayload";
+import type { ProgramRoles, ProgramStudentRoleForm } from "../types/program";
+import { buildProgramRolesPayload } from "../utils/programRoles";
 
 interface Mentor {
   id: string;
@@ -42,8 +44,12 @@ type ProgramPayload = {
   };
   introduction?: string;
   flyerUrl?: string;
+  zoomLink?: string;
+  meetingId?: string;
+  passcode?: string;
   earlyBirdDeadline?: string;
   isFree?: boolean;
+  programRoles?: ProgramRoles;
   mentors?: ProgramMentorPayload[];
   fullPriceTicket: number;
   classRepDiscount?: number;
@@ -62,6 +68,11 @@ interface ProgramFormData {
   introduction: string;
   flyerUrl?: string;
   flyer?: FileList;
+  zoomLink?: string;
+  meetingId?: string;
+  passcode?: string;
+  teacherRoleName?: string;
+  studentRoles?: ProgramStudentRoleForm[];
   earlyBirdDeadline?: string;
   isFree?: string;
   fullPriceTicket: number | undefined;
@@ -104,6 +115,13 @@ export function useProgramCreation() {
       setIsSubmitting(true);
 
       // Prepare program payload
+      const programRoles = buildProgramRolesPayload({
+        teacherRoleName: data.teacherRoleName,
+        studentRoles: data.studentRoles,
+      });
+      const discountRole = programRoles.studentRoles.find(
+        (role) => role.discountEligible
+      );
       const payload: ProgramPayload = {
         title: data.title,
         programType: data.programType,
@@ -118,6 +136,10 @@ export function useProgramCreation() {
         },
         introduction: data.introduction,
         flyerUrl: data.flyerUrl,
+        zoomLink: data.zoomLink,
+        meetingId: data.meetingId,
+        passcode: data.passcode,
+        programRoles,
         earlyBirdDeadline: data.earlyBirdDeadline
           ? data.earlyBirdDeadline
           : undefined,
@@ -126,12 +148,8 @@ export function useProgramCreation() {
         fullPriceTicket: Number.isFinite(data.fullPriceTicket as number)
           ? Math.round((data.fullPriceTicket as number) * 100)
           : 0,
-        classRepDiscount: Number.isFinite(data.classRepDiscount as number)
-          ? Math.round((data.classRepDiscount as number) * 100)
-          : 0,
-        classRepLimit: Number.isFinite(data.classRepLimit as number)
-          ? (data.classRepLimit as number)
-          : 0,
+        classRepDiscount: discountRole?.discountAmount ?? 0,
+        classRepLimit: discountRole?.limit ?? 0,
         earlyBirdDiscount: Number.isFinite(data.earlyBirdDiscount as number)
           ? Math.round((data.earlyBirdDiscount as number) * 100)
           : 0,

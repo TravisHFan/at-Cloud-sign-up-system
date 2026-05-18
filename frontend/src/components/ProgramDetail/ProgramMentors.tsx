@@ -13,6 +13,7 @@ interface Mentor {
 
 interface ProgramMentorsProps {
   mentors: Mentor[];
+  teacherRoleName?: string;
   currentUserId: string | null;
   currentUserRole: string | null;
   accessReason:
@@ -41,6 +42,7 @@ interface ProgramMentorsProps {
  */
 export default function ProgramMentors({
   mentors,
+  teacherRoleName = "Mentor",
   currentUserId,
   currentUserRole,
   accessReason,
@@ -49,11 +51,13 @@ export default function ProgramMentors({
 
   return (
     <div className="bg-white rounded-lg shadow-sm p-6">
-      <h2 className="text-xl font-semibold text-gray-900 mb-2">Mentors</h2>
+      <h2 className="text-xl font-semibold text-gray-900 mb-2">
+        {teacherRoleName}s
+      </h2>
       <p className="text-gray-600 text-sm mb-4 italic">
         — Spiritual Guides and Leadership Coaches
         <br />
-        Mentors are seasoned ministry & business leaders who model
+        {teacherRoleName}s are seasoned ministry & business leaders who model
         Christ-centered leadership and guide others in faith, personal growth,
         and practical skills.
       </p>
@@ -114,7 +118,7 @@ export default function ProgramMentors({
                   }`}
                 >
                   {[m.firstName, m.lastName].filter(Boolean).join(" ") ||
-                    "Mentor"}
+                    teacherRoleName}
                 </div>
                 {m.roleInAtCloud && (
                   <div className="text-sm text-gray-600">{m.roleInAtCloud}</div>

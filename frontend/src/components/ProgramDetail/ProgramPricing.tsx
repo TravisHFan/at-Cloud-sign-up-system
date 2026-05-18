@@ -4,6 +4,8 @@ import {
   PROGRAM_ENROLLMENT_CLOSED_MESSAGE,
   type ProgramPeriodLike,
 } from "../../utils/programEnrollmentWindow";
+import type { ProgramRoles } from "../../types/program";
+import { getDiscountStudentRole } from "../../utils/programRoles";
 
 interface ProgramPricingProps {
   isFree?: boolean;
@@ -12,6 +14,7 @@ interface ProgramPricingProps {
   earlyBirdDiscount?: number;
   classRepLimit?: number;
   classRepCount?: number;
+  programRoles?: ProgramRoles;
   earlyBirdDeadline?: string;
   hasAccess: boolean | null;
   accessReason:
@@ -40,6 +43,7 @@ export default function ProgramPricing({
   earlyBirdDiscount,
   classRepLimit,
   classRepCount,
+  programRoles,
   earlyBirdDeadline,
   hasAccess,
   accessReason,
@@ -49,12 +53,20 @@ export default function ProgramPricing({
 }: ProgramPricingProps) {
   const enrollmentWindow = getProgramEnrollmentWindow(period);
   const enrollmentClosed = enrollmentWindow.isEnrollmentClosed;
+  const discountRole = getDiscountStudentRole(programRoles);
+  const discountRoleLabel = discountRole?.name || "Discount Role";
+  const discountAmount =
+    discountRole?.discountAmount ?? classRepDiscount ?? pricing?.classRepDiscount;
+  const discountLimit = discountRole?.limit ?? classRepLimit;
+  const discountCount = discountRole?.count ?? classRepCount;
+  const isStudentEnrolled =
+    accessReason === "purchased" || accessReason === "class_rep";
 
   return (
     <div className="bg-white rounded-lg shadow-sm p-6">
       <h2 className="text-xl font-semibold text-gray-900 mb-3">Tuition</h2>
       {isFree ? (
-        <div className="text-center py-8">
+        <div className="py-8 space-y-6">
           <div className="inline-flex items-center px-4 py-2 bg-green-50 border border-green-200 rounded-lg">
             <svg
               className="w-5 h-5 text-green-500 mr-2"
@@ -74,11 +86,60 @@ export default function ProgramPricing({
               This is a free program
             </span>
           </div>
+          {isStudentEnrolled ? (
+            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-center">
+                <img
+                  src="/check.svg"
+                  alt="Enrolled"
+                  className="w-6 h-6 mr-3"
+                />
+                <div>
+                  <p className="font-semibold text-green-900">
+                    You're enrolled!
+                  </p>
+                  <p className="text-sm text-green-700 mt-1">
+                    Thank you for enrolling. You now have access to all events
+                    in this program.
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <button
+                onClick={onEnrollClick}
+                disabled={enrollmentClosed}
+                aria-describedby={
+                  enrollmentClosed
+                    ? "program-enrollment-closed-note"
+                    : undefined
+                }
+                className={`w-full font-semibold py-3 px-8 rounded-lg shadow-md transition-all duration-200 flex items-center justify-center gap-2 ${
+                  enrollmentClosed
+                    ? "bg-gray-300 text-gray-600 cursor-not-allowed shadow-none"
+                    : "bg-purple-600 hover:bg-purple-700 text-white hover:shadow-lg"
+                }`}
+              >
+                <span>
+                  {enrollmentClosed ? "Enrollment Closed" : "Enroll Now"}
+                </span>
+              </button>
+              {enrollmentClosed && (
+                <p
+                  id="program-enrollment-closed-note"
+                  className="mt-2 text-sm text-gray-600"
+                >
+                  {PROGRAM_ENROLLMENT_CLOSED_MESSAGE}
+                </p>
+              )}
+            </div>
+          )}
         </div>
       ) : (
         (() => {
           const full = fullPriceTicket ?? pricing?.fullPriceTicket;
-          const rep = classRepDiscount ?? pricing?.classRepDiscount;
+          const rep = discountAmount;
           const early = earlyBirdDiscount ?? pricing?.earlyBirdDiscount;
           if (full == null) {
             return <p className="text-gray-700">Tuition is being set up.</p>;
@@ -92,11 +153,11 @@ export default function ProgramPricing({
                 </div>
                 <div>
                   <div className="text-sm text-gray-600">
-                    Class Rep Discount
+                    {discountRoleLabel} Discount
                   </div>
                   <div className="font-medium">{formatCurrency(rep ?? 0)}</div>
-                  {/* Class Rep Slot Availability */}
-                  {classRepLimit !== undefined && classRepLimit > 0 && (
+                  {/* Discount Role Slot Availability */}
+                  {discountLimit !== undefined && discountLimit > 0 && (
                     <div className="mt-1 text-xs text-gray-600 bg-purple-50 px-2 py-1 rounded border border-purple-200 max-w-fit">
                       <span className="inline-flex items-center">
                         <svg
@@ -106,9 +167,9 @@ export default function ProgramPricing({
                         >
                           <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
                         </svg>
-                        Slots: {classRepCount ?? 0} / {classRepLimit}
-                        {classRepCount !== undefined &&
-                          classRepCount >= classRepLimit && (
+                        Slots: {discountCount ?? 0} / {discountLimit}
+                        {discountCount !== undefined &&
+                          discountCount >= discountLimit && (
                             <span className="ml-1 text-red-600 font-medium">
                               (Full)
                             </span>
@@ -157,7 +218,7 @@ export default function ProgramPricing({
                   const examples = [
                     { label: "Standard", value: clamp(f) },
                     { label: "Early Bird", value: clamp(f - e) },
-                    { label: "Class Rep", value: clamp(f - r) },
+                    { label: discountRoleLabel, value: clamp(f - r) },
                   ];
                   return (
                     <ul className="grid grid-cols-1 gap-2">
@@ -176,7 +237,7 @@ export default function ProgramPricing({
                   );
                 })()}
                 <p className="text-xs text-gray-500 mt-2" aria-live="polite">
-                  Class Rep and Early Bird discounts are mutually exclusive.
+                  Student role and Early Bird discounts are mutually exclusive.
                   Final tuition is validated at checkout.
                 </p>
               </div>
@@ -208,7 +269,7 @@ export default function ProgramPricing({
                               : accessReason === "mentor"
                                 ? "As a mentor of this program, you have full access."
                                 : accessReason === "class_rep"
-                                  ? "As a class rep of this program, you have full access."
+                                  ? `As a ${discountRoleLabel.toLowerCase()} of this program, you have full access.`
                                 : "Thank you for enrolling. You now have access to all events in this program."}
                         </p>
                       </div>

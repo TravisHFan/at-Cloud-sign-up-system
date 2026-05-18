@@ -16,6 +16,16 @@ import {
   toProgramMentorPayloads,
   type ProgramMentorPayload,
 } from "../utils/programMentorPayload";
+import type {
+  ProgramRoles,
+  ProgramStudentRoleForm,
+} from "../types/program";
+import {
+  buildProgramRolesPayload,
+  DEFAULT_STUDENT_ROLES,
+  DEFAULT_TEACHER_ROLE_NAME,
+  rolesToFormRoles,
+} from "../utils/programRoles";
 
 interface Mentor {
   id: string;
@@ -40,6 +50,11 @@ interface ProgramFormData {
   introduction: string;
   flyerUrl?: string;
   flyer?: FileList;
+  zoomLink?: string;
+  meetingId?: string;
+  passcode?: string;
+  teacherRoleName?: string;
+  studentRoles?: ProgramStudentRoleForm[];
   // Free program toggle
   isFree?: string; // "true" or "false"
   // Early Bird deadline (optional)
@@ -65,9 +80,13 @@ type ProgramUpdatePayload = {
   introduction?: string;
   // flyerUrl can be string | null (explicit null signals removal)
   flyerUrl?: string | null;
+  zoomLink?: string;
+  meetingId?: string;
+  passcode?: string;
   isFree?: boolean;
   earlyBirdDeadline?: string;
   mentors?: ProgramMentorPayload[];
+  programRoles?: ProgramRoles;
   // Pricing fields
   fullPriceTicket: number;
   classRepDiscount?: number;
@@ -114,6 +133,7 @@ export default function EditProgram() {
     classRepDiscount?: number;
     earlyBirdDiscount?: number;
     earlyBirdDeadline?: string;
+    programRoles?: ProgramRoles;
   }>({});
 
   // Unified mentor state for all program types
@@ -136,6 +156,11 @@ export default function EditProgram() {
   } = useForm<ProgramFormData>({
     defaultValues: {
       hostedBy: "@Cloud Marketplace Ministry",
+      teacherRoleName: DEFAULT_TEACHER_ROLE_NAME,
+      studentRoles: DEFAULT_STUDENT_ROLES,
+      zoomLink: "",
+      meetingId: "",
+      passcode: "",
       startYear: currentYear.toString(),
       endYear: currentYear.toString(),
       isFree: "true", // Default to free program
@@ -226,7 +251,13 @@ export default function EditProgram() {
     const currentIsFree = isFreeProgram === "true";
     // Convert current dollar values to cents for comparison
     const currentFullPrice = Math.round((fullPrice ?? 0) * 100);
-    const currentClassRep = Math.round((watch("classRepDiscount") ?? 0) * 100);
+    const currentProgramRoles = buildProgramRolesPayload({
+      teacherRoleName: watch("teacherRoleName"),
+      studentRoles: watch("studentRoles"),
+    });
+    const currentClassRep =
+      currentProgramRoles.studentRoles.find((role) => role.discountEligible)
+        ?.discountAmount ?? 0;
     const currentEarlyBird = Math.round((earlyBirdDiscountValue ?? 0) * 100);
     const currentDeadline = earlyBirdDeadline ?? "";
 
@@ -235,7 +266,9 @@ export default function EditProgram() {
       originalPricing.fullPriceTicket !== currentFullPrice ||
       originalPricing.classRepDiscount !== currentClassRep ||
       originalPricing.earlyBirdDiscount !== currentEarlyBird ||
-      originalPricing.earlyBirdDeadline !== currentDeadline
+      originalPricing.earlyBirdDeadline !== currentDeadline ||
+      JSON.stringify(originalPricing.programRoles) !==
+        JSON.stringify(currentProgramRoles)
     );
   }, [
     originalPricing,
@@ -300,6 +333,10 @@ export default function EditProgram() {
           };
           introduction?: string;
           flyerUrl?: string;
+          zoomLink?: string;
+          meetingId?: string;
+          passcode?: string;
+          programRoles?: ProgramRoles;
           isFree?: boolean;
           earlyBirdDeadline?: string;
           mentors?: Array<{
@@ -317,6 +354,7 @@ export default function EditProgram() {
           classRepDiscount?: number;
           earlyBirdDiscount?: number;
           classRepLimit?: number;
+          classRepCount?: number;
         };
 
         if (cancelled) return;
@@ -361,6 +399,22 @@ export default function EditProgram() {
         );
         setValue("introduction", program.introduction || "");
         setValue("flyerUrl", program.flyerUrl || "");
+        setValue("zoomLink", program.zoomLink || "");
+        setValue("meetingId", program.meetingId || "");
+        setValue("passcode", program.passcode || "");
+        setValue(
+          "teacherRoleName",
+          program.programRoles?.teacherRoleName || DEFAULT_TEACHER_ROLE_NAME,
+        );
+        setValue(
+          "studentRoles",
+          rolesToFormRoles({
+            programRoles: program.programRoles,
+            classRepDiscount: program.classRepDiscount,
+            classRepLimit: program.classRepLimit,
+            classRepCount: program.classRepCount,
+          }),
+        );
         setOriginalFlyerUrl(program.flyerUrl || null);
         // Set isFree based on backend data (convert boolean to string)
         setValue("isFree", (program.isFree ?? false) ? "true" : "false");
@@ -402,6 +456,17 @@ export default function EditProgram() {
           earlyBirdDeadline: program.earlyBirdDeadline
             ? program.earlyBirdDeadline.split("T")[0]
             : "",
+          programRoles: buildProgramRolesPayload({
+            teacherRoleName:
+              program.programRoles?.teacherRoleName ||
+              DEFAULT_TEACHER_ROLE_NAME,
+            studentRoles: rolesToFormRoles({
+              programRoles: program.programRoles,
+              classRepDiscount: program.classRepDiscount,
+              classRepLimit: program.classRepLimit,
+              classRepCount: program.classRepCount,
+            }),
+          }),
         });
 
         // Transform backend mentors to frontend format
@@ -504,6 +569,14 @@ export default function EditProgram() {
         December: "12",
       };
 
+      const programRoles = buildProgramRolesPayload({
+        teacherRoleName: data.teacherRoleName,
+        studentRoles: data.studentRoles,
+      });
+      const discountRole = programRoles.studentRoles.find(
+        (role) => role.discountEligible,
+      );
+
       // Prepare program payload based on program type
       const payload: ProgramUpdatePayload = {
         title: data.title,
@@ -520,6 +593,10 @@ export default function EditProgram() {
         introduction: data.introduction,
         // Centralized flyer removal/replacement/no-op logic
         flyerUrl: deriveFlyerUrlForUpdate(originalFlyerUrl, data.flyerUrl),
+        zoomLink: data.zoomLink,
+        meetingId: data.meetingId,
+        passcode: data.passcode,
+        programRoles,
         isFree: data.isFree === "true",
         earlyBirdDeadline: data.earlyBirdDeadline
           ? data.earlyBirdDeadline
@@ -528,15 +605,11 @@ export default function EditProgram() {
         fullPriceTicket: Number.isFinite(data.fullPriceTicket as number)
           ? Math.round((data.fullPriceTicket as number) * 100)
           : 0,
-        classRepDiscount: Number.isFinite(data.classRepDiscount as number)
-          ? Math.round((data.classRepDiscount as number) * 100)
-          : 0,
+        classRepDiscount: discountRole?.discountAmount ?? 0,
         earlyBirdDiscount: Number.isFinite(data.earlyBirdDiscount as number)
           ? Math.round((data.earlyBirdDiscount as number) * 100)
           : 0,
-        classRepLimit: Number.isFinite(data.classRepLimit as number)
-          ? (data.classRepLimit as number)
-          : 0,
+        classRepLimit: discountRole?.limit ?? 0,
       };
 
       // Add unified mentors for all program types
@@ -632,7 +705,12 @@ export default function EditProgram() {
           />
 
           {/* Tuition (Phase 3) */}
-          <PricingSection register={register} watch={watch} errors={errors} />
+          <PricingSection
+            register={register}
+            watch={watch}
+            setValue={setValue}
+            errors={errors}
+          />
 
           {/* Overall Validation Status */}
           <div className="mb-4">
@@ -671,9 +749,16 @@ export default function EditProgram() {
         originalPricing={originalPricing}
         currentIsFree={isFreeProgram === "true"}
         currentFullPrice={fullPrice}
-        currentClassRepDiscount={watch("classRepDiscount")}
+        currentClassRepDiscount={
+          watch("studentRoles")?.find((role) => role.discountEligible)
+            ?.discountAmount
+        }
         currentEarlyBirdDiscount={earlyBirdDiscountValue}
         currentEarlyBirdDeadline={earlyBirdDeadline}
+        currentProgramRoles={buildProgramRolesPayload({
+          teacherRoleName: watch("teacherRoleName"),
+          studentRoles: watch("studentRoles"),
+        })}
         onNext={handleConfirmationNext}
         onCancel={handleConfirmationCancel}
       />

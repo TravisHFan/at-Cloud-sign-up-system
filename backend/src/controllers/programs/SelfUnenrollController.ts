@@ -36,12 +36,18 @@ export default class SelfUnenrollController {
       const enrollmentType = purchase?.isClassRep
         ? "classRep"
         : adminEnrollmentType || "mentee";
+      const studentRoleId = purchase?.studentRoleId;
+      const studentRoleName =
+        purchase?.studentRoleName ||
+        (enrollmentType === "classRep" ? "Class Representative" : "Mentee");
 
       if (!purchase) {
         res.status(200).json({
           success: true,
           data: {
             enrollmentType,
+            studentRoleId,
+            studentRoleName,
             isPaid: false,
             refundEligible: false,
             requiresApproval: false,
@@ -65,6 +71,8 @@ export default class SelfUnenrollController {
             eligibility.isEligible || eligibility.requiresApproval
               ? purchase.finalPrice
               : 0,
+          studentRoleId,
+          studentRoleName,
           daysRemaining: eligibility.daysRemaining,
           purchaseDate: eligibility.purchaseDate,
           refundDeadline: eligibility.refundDeadline,
@@ -108,12 +116,20 @@ export default class SelfUnenrollController {
           data: {
             refundStatus: "not_applicable",
             enrollmentType: adminEnrollmentType || "mentee",
+            studentRoleName:
+              adminEnrollmentType === "classRep"
+                ? "Class Representative"
+                : "Mentee",
           },
         });
         return;
       }
 
       const enrollmentType = purchase.isClassRep ? "classRep" : "mentee";
+      const studentRoleId = purchase.studentRoleId;
+      const studentRoleName =
+        purchase.studentRoleName ||
+        (enrollmentType === "classRep" ? "Class Representative" : "Mentee");
       const eligibility = calculateRefundEligibility(purchase);
       const { itemTitle } = getPurchaseItemDetails(purchase);
 
@@ -142,6 +158,8 @@ export default class SelfUnenrollController {
             refundRequestId: request._id,
             existingRequest: !created,
             enrollmentType,
+            studentRoleId,
+            studentRoleName,
           },
         });
         return;
@@ -173,6 +191,8 @@ export default class SelfUnenrollController {
           data: {
             refundStatus: "not_eligible",
             enrollmentType,
+            studentRoleId,
+            studentRoleName,
             reason: eligibility.reason,
           },
         });
@@ -246,6 +266,8 @@ export default class SelfUnenrollController {
             refundStatus: "processing",
             refundId: refund.id,
             enrollmentType,
+            studentRoleId,
+            studentRoleName,
           },
         });
       } catch (stripeError) {
@@ -283,6 +305,8 @@ export default class SelfUnenrollController {
           data: {
             refundStatus: "failed",
             enrollmentType,
+            studentRoleId,
+            studentRoleName,
             reason: purchase.refundFailureReason,
           },
         });

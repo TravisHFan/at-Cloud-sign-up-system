@@ -109,6 +109,77 @@ describe("EnrollProgram Component", () => {
     expect(screen.getByText(/\$19\.00/)).toBeInTheDocument();
   });
 
+  it("enrolls free programs through the selected student role", async () => {
+    mockProgramService.getById.mockResolvedValueOnce({
+      ...mockProgram,
+      isFree: true,
+      fullPriceTicket: 0,
+      programRoles: {
+        teacherRoleName: "Coach",
+        studentRoles: [
+          {
+            id: "learner",
+            name: "Learner",
+            discountEligible: false,
+            discountAmount: 0,
+            limit: 0,
+            count: 0,
+          },
+          {
+            id: "ambassador",
+            name: "Ambassador",
+            discountEligible: true,
+            discountAmount: 0,
+            limit: 0,
+            count: 0,
+          },
+        ],
+      },
+    });
+    mockPurchaseService.createCheckoutSession.mockResolvedValueOnce({
+      sessionId: null,
+      sessionUrl: null,
+      orderId: "ORD-FREE-1",
+      isFree: true,
+    });
+
+    const { default: EnrollProgram } = await import(
+      "../../pages/EnrollProgram"
+    );
+    const { NotificationProvider } = await import(
+      "../../contexts/NotificationModalContext"
+    );
+
+    const user = userEvent.setup();
+
+    render(
+      <NotificationProvider>
+        <MemoryRouter initialEntries={["/dashboard/programs/prog1/enroll"]}>
+          <Routes>
+            <Route
+              path="/dashboard/programs/:id/enroll"
+              element={<EnrollProgram />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </NotificationProvider>
+    );
+
+    await screen.findByText(/Enroll as Learner/i);
+    await user.click(screen.getByLabelText(/ambassador/i));
+    await user.click(screen.getByRole("button", { name: /^enroll$/i }));
+
+    await waitFor(() => {
+      expect(mockPurchaseService.createCheckoutSession).toHaveBeenCalledWith({
+        programId: "prog1",
+        studentRoleId: "ambassador",
+        isClassRep: true,
+        promoCode: undefined,
+      });
+      expect(screen.getByText("Enrollment Complete!")).toBeInTheDocument();
+    });
+  });
+
   it("blocks direct enrollment page checkout when program enrollment is closed", async () => {
     mockProgramService.getById.mockResolvedValueOnce({
       ...mockProgram,
@@ -264,9 +335,11 @@ describe("EnrollProgram Component", () => {
       expect(pricingSummary?.textContent).toMatch(/Early Bird Discount/);
     });
 
-    // Click Class Rep checkbox
-    const checkbox = screen.getByLabelText(/class representative/i);
-    await user.click(checkbox);
+    // Select the discounted student role
+    const classRepresentativeOption = screen.getByLabelText(
+      /class representative/i,
+    );
+    await user.click(classRepresentativeOption);
 
     // Now should show ONLY Class Rep discount, NOT Early Bird in pricing summary
     await waitFor(() => {
@@ -274,9 +347,11 @@ describe("EnrollProgram Component", () => {
       const prices = screen.getAllByText(/\$14\.00/);
       expect(prices.length).toBeGreaterThan(0);
 
-      // Should see Class Rep in pricing summary
+      // Should see discounted student role in pricing summary
       const pricingSummary = screen.getByText(/Pricing Summary/i).parentElement;
-      expect(pricingSummary?.textContent).toMatch(/Class Rep Discount/);
+      expect(pricingSummary?.textContent).toMatch(
+        /Class Representative Discount/,
+      );
 
       // Should NOT see Early Bird discount line in pricing summary
       // (Note: Early Bird notice may still appear above, but not in the pricing breakdown)

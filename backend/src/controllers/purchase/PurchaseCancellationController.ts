@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 import { Purchase, Program } from "../../models";
+import { buildDiscountRoleCountIncrement } from "../../utils/programRoles";
 
 /**
  * PurchaseCancellationController
@@ -65,9 +66,15 @@ class PurchaseCancellationController {
 
       // If this was a Class Rep purchase, decrement the counter
       if (purchase.isClassRep) {
+        const program = await Program.findById(purchase.programId);
         await Program.findByIdAndUpdate(
           purchase.programId,
-          { $inc: { classRepCount: -1 } },
+          {
+            $inc: buildDiscountRoleCountIncrement(
+              program || { classRepCount: 0 },
+              -1,
+            ),
+          },
           { runValidators: false } // Allow going below limit on decrement
         );
         console.log(

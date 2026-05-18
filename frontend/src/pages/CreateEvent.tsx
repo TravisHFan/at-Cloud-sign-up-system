@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useEventForm } from "../hooks/useEventForm";
 import { useEventValidation } from "../hooks/useEventValidation";
@@ -48,6 +48,12 @@ export default function NewEvent() {
     Array<{ id: string; title: string; programType: string }>
   >([]);
   const [programLoading, setProgramLoading] = useState(false);
+  const [programZoomInfo, setProgramZoomInfo] = useState<{
+    zoomLink?: string;
+    meetingId?: string;
+    passcode?: string;
+  } | null>(null);
+  const appliedProgramZoomIdRef = useRef<string | null>(null);
 
   // Recurrence state (managed locally in the form)
   const [repeatFrequency, setRepeatFrequency] = useState("never");
@@ -206,6 +212,9 @@ export default function NewEvent() {
 
     registerHidden("__startOverlapValidation");
     registerHidden("__endOverlapValidation");
+    register("zoomLink");
+    register("meetingId");
+    register("passcode");
     // Initialize defaults
     setHidden("__startOverlapValidation", {
       isValid: true,
@@ -339,13 +348,51 @@ export default function NewEvent() {
 
   // Pre-select program from URL parameter (convert to array for programLabels)
   useEffect(() => {
-    if (programIdFromUrl && programs.length > 0) {
-      // Check if the programId exists in the loaded programs
-      const programExists = programs.some((p) => p.id === programIdFromUrl);
-      if (programExists) {
-        setValue("programLabels", [programIdFromUrl]);
-      }
+    if (!programIdFromUrl || programs.length === 0) return;
+
+    let cancelled = false;
+    // Check if the programId exists in the loaded programs
+    const programExists = programs.some((p) => p.id === programIdFromUrl);
+    if (programExists) {
+      setValue("programLabels", [programIdFromUrl]);
+      (async () => {
+        try {
+          const program = (await programService.getById(programIdFromUrl)) as {
+            zoomLink?: string;
+            meetingId?: string;
+            passcode?: string;
+          };
+          if (
+            cancelled ||
+            appliedProgramZoomIdRef.current === programIdFromUrl
+          ) {
+            return;
+          }
+          const nextZoomInfo = {
+            zoomLink: program.zoomLink || "",
+            meetingId: program.meetingId || "",
+            passcode: program.passcode || "",
+          };
+          const hasZoomInfo = Object.values(nextZoomInfo).some(Boolean);
+          setProgramZoomInfo((previousZoomInfo) => {
+            const hasPreviousZoomInfo =
+              previousZoomInfo && Object.values(previousZoomInfo).some(Boolean);
+            if (hasPreviousZoomInfo && !hasZoomInfo) {
+              return previousZoomInfo;
+            }
+            return nextZoomInfo;
+          });
+          if (hasZoomInfo) {
+            appliedProgramZoomIdRef.current = programIdFromUrl;
+          }
+        } catch (error) {
+          console.error("Failed to load program Zoom information", error);
+        }
+      })();
     }
+    return () => {
+      cancelled = true;
+    };
   }, [programIdFromUrl, programs, setValue]);
 
   // Update form's organizer field whenever organizers change
@@ -481,6 +528,23 @@ export default function NewEvent() {
   }, [overallStatus.firstInvalidField]);
 
   const selectedEventType = watch("type");
+  const selectedFormat = watch("format");
+
+  useEffect(() => {
+    if (!programIdFromUrl || !programZoomInfo) return;
+    setValue("zoomLink", programZoomInfo.zoomLink || "", {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    setValue("meetingId", programZoomInfo.meetingId || "", {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    setValue("passcode", programZoomInfo.passcode || "", {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  }, [programIdFromUrl, programZoomInfo, selectedFormat, setValue]);
 
   // Watch the form's roles field for validation
   const formRoles = watch("roles") || [];
@@ -733,9 +797,11 @@ export default function NewEvent() {
             register={register}
             errors={errors}
             watch={watch}
+            setValue={setValue}
             validations={validations}
             eventData={null}
             formatWarningMissing={[]}
+            zoomDefaults={programIdFromUrl ? programZoomInfo : null}
           />
 
           {/* Pricing Section - Free vs Paid event selection (Phase 5) */}

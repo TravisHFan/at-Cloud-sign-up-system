@@ -70,14 +70,8 @@ export default class UpdateController {
         return;
       }
 
-      const updated = await Program.findByIdAndUpdate(id, req.body, {
-        new: true,
-        runValidators: true,
-      });
-      if (!updated) {
-        res.status(404).json({ success: false, message: "Program not found." });
-        return;
-      }
+      program.set(req.body);
+      const updated = await program.save();
       res.status(200).json({ success: true, data: updated });
     } catch (error) {
       res

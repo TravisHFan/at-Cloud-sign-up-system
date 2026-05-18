@@ -13,6 +13,11 @@ import {
   PROGRAM_ENROLLMENT_CLOSED_MESSAGE,
   type ProgramPeriodLike,
 } from "../utils/programEnrollmentWindow";
+import type { ProgramRoles, ProgramStudentRole } from "../types/program";
+import {
+  getDefaultStudentRole,
+  normalizeProgramRoles,
+} from "../utils/programRoles";
 
 interface Program {
   id: string;
@@ -28,6 +33,7 @@ interface Program {
   classRepCount?: number; // Current number of Class Rep purchases
   earlyBirdDeadline?: string;
   period?: ProgramPeriodLike;
+  programRoles?: ProgramRoles;
 }
 
 export default function EnrollProgram() {
@@ -36,10 +42,9 @@ export default function EnrollProgram() {
 
   const [program, setProgram] = useState<Program | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isClassRep, setIsClassRep] = useState(false);
+  const [selectedStudentRoleId, setSelectedStudentRoleId] =
+    useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [classRepSlotsAvailable, setClassRepSlotsAvailable] = useState(true);
-  const [classRepCountInfo, setClassRepCountInfo] = useState<string>("");
 
   // Promo code state
   const [availablePromoCodes, setAvailablePromoCodes] = useState<PromoCode[]>(
@@ -74,19 +79,36 @@ export default function EnrollProgram() {
   })();
   const enrollmentWindow = getProgramEnrollmentWindow(program?.period);
   const enrollmentClosed = enrollmentWindow.isEnrollmentClosed;
+  const programRoles = program ? normalizeProgramRoles(program) : undefined;
+  const defaultStudentRole = getDefaultStudentRole(programRoles);
+  const selectedStudentRole: ProgramStudentRole | undefined =
+    programRoles?.studentRoles.find(
+      (role) => role.id === selectedStudentRoleId,
+    ) ||
+    defaultStudentRole ||
+    programRoles?.studentRoles[0];
+  const selectedRoleSlotsAvailable =
+    !selectedStudentRole?.discountEligible ||
+    !selectedStudentRole.limit ||
+    selectedStudentRole.limit <= 0 ||
+    (selectedStudentRole.count || 0) < selectedStudentRole.limit;
 
   // Calculate final price
   const calculatePrice = () => {
     if (!program) return 0;
+    if (program.isFree) return 0;
 
     // Work in cents throughout - formatCurrency expects cents
     let priceInCents = program.fullPriceTicket;
 
-    // Step 1: Apply fixed discounts (Class Rep and Early Bird are mutually exclusive)
-    if (isClassRep && program.classRepDiscount) {
-      priceInCents -= program.classRepDiscount;
+    // Step 1: Apply fixed discounts (student role and Early Bird are mutually exclusive)
+    if (
+      selectedStudentRole?.discountEligible &&
+      selectedStudentRole.discountAmount
+    ) {
+      priceInCents -= selectedStudentRole.discountAmount;
     } else if (isEarlyBird && program.earlyBirdDiscount) {
-      // Only apply Early Bird if NOT enrolling as Class Rep
+      // Only apply Early Bird if NOT enrolling in the discounted student role
       priceInCents -= program.earlyBirdDiscount;
     }
 
@@ -100,7 +122,7 @@ export default function EnrollProgram() {
     }
 
     // Step 3: Apply percentage discount (staff_access or reward) AFTER fixed discounts
-    // This matches backend logic: percentage applies to price after Class Rep/Early Bird
+    // This matches backend logic: percentage applies to price after role/Early Bird
     if (
       validatedPromoCode &&
       (validatedPromoCode.type === "staff_access" ||
@@ -119,11 +141,15 @@ export default function EnrollProgram() {
   // Calculate promo discount amount for display (shows the actual discount applied)
   const calculatePromoDiscountAmount = () => {
     if (!program || !validatedPromoCode) return 0;
+    if (program.isFree) return 0;
 
-    // Calculate base price after Class Rep/Early Bird (same as Step 1 in calculatePrice)
+    // Calculate base price after role/Early Bird (same as Step 1 in calculatePrice)
     let basePriceInCents = program.fullPriceTicket;
-    if (isClassRep && program.classRepDiscount) {
-      basePriceInCents -= program.classRepDiscount;
+    if (
+      selectedStudentRole?.discountEligible &&
+      selectedStudentRole.discountAmount
+    ) {
+      basePriceInCents -= selectedStudentRole.discountAmount;
     } else if (isEarlyBird && program.earlyBirdDiscount) {
       basePriceInCents -= program.earlyBirdDiscount;
     }
@@ -158,48 +184,21 @@ export default function EnrollProgram() {
         setLoading(true);
         const data = (await programService.getById(id)) as Program;
         setProgram(data);
-
-        // Check if program is free
-        if (data.isFree) {
-          setAlertModal({
-            isOpen: true,
-            title: "Free Program",
-            message: "This program is free and does not require enrollment.",
-            type: "info",
-            onClose: () => {
-              setAlertModal((prev) => ({ ...prev, isOpen: false }));
-              navigate(`/dashboard/programs/${id}`);
-            },
-          });
-          return;
-        }
-
-        // Check Class Rep slots
-        if (data.classRepLimit && data.classRepLimit > 0) {
-          const currentCount = data.classRepCount || 0;
-          const remainingSlots = data.classRepLimit - currentCount;
-          if (remainingSlots > 0) {
-            setClassRepSlotsAvailable(true);
-            setClassRepCountInfo(
-              `${remainingSlots} slot${
-                remainingSlots !== 1 ? "s" : ""
-              } available`
-            );
-          } else {
-            setClassRepSlotsAvailable(false);
-            setClassRepCountInfo("No slots available");
-          }
-        }
+        const roles = normalizeProgramRoles(data);
+        const defaultRole = getDefaultStudentRole(roles) || roles.studentRoles[0];
+        setSelectedStudentRoleId(defaultRole?.id || "");
 
         // Fetch available promo codes for this program
-        try {
-          const codes = await promoCodeService.getUserAvailableCodesForProgram(
-            id
-          );
-          setAvailablePromoCodes(codes);
-        } catch (error) {
-          console.error("Error fetching promo codes:", error);
-          // Non-critical error, continue without promo codes
+        if (!data.isFree) {
+          try {
+            const codes = await promoCodeService.getUserAvailableCodesForProgram(
+              id,
+            );
+            setAvailablePromoCodes(codes);
+          } catch (error) {
+            console.error("Error fetching promo codes:", error);
+            // Non-critical error, continue without promo codes
+          }
         }
       } catch (error) {
         console.error("Error loading program:", error);
@@ -242,6 +241,15 @@ export default function EnrollProgram() {
       });
       return;
     }
+    if (!selectedRoleSlotsAvailable) {
+      setAlertModal({
+        isOpen: true,
+        title: "Student Role Slots Full",
+        message: "Please choose another student role before enrolling.",
+        type: "warning",
+      });
+      return;
+    }
 
     try {
       setIsProcessing(true);
@@ -249,8 +257,9 @@ export default function EnrollProgram() {
       // Create checkout session with promo code if applied
       const response = await purchaseService.createCheckoutSession({
         programId: id,
-        isClassRep,
-        promoCode: appliedPromoCode || undefined,
+        studentRoleId: selectedStudentRole?.id,
+        isClassRep: !!selectedStudentRole?.discountEligible,
+        promoCode: program.isFree ? undefined : appliedPromoCode || undefined,
       });
 
       const { sessionUrl, isFree, orderId } = response;
@@ -259,12 +268,12 @@ export default function EnrollProgram() {
       if (isFree && orderId) {
         setAlertModal({
           isOpen: true,
-          title: "Enrollment Complete! 🎉",
-          message: `You've successfully enrolled in ${program.title} with 100% discount! Your order number is ${orderId}.`,
+          title: "Enrollment Complete!",
+          message: `You've successfully enrolled in ${program.title}. Your order number is ${orderId}.`,
           type: "success",
           onClose: () => {
             setAlertModal((prev) => ({ ...prev, isOpen: false }));
-            navigate("/dashboard/purchase-history");
+            navigate(`/dashboard/programs/${id}`);
           },
         });
         setIsProcessing(false);
@@ -290,21 +299,21 @@ export default function EnrollProgram() {
       );
 
       // Determine modal type based on error message
-      const isClassRepFull = message.includes("Class Rep slots are full");
+      const isDiscountRoleFull = message.includes("slots are full");
       const isEnrollmentClosed = message.includes("Enrollment is closed");
 
       setAlertModal({
         isOpen: true,
         title: isEarlyBirdExpired
           ? "Early Bird Period Expired"
-          : isClassRepFull
-          ? "Class Rep Slots Full"
+          : isDiscountRoleFull
+          ? "Student Role Slots Full"
           : isEnrollmentClosed
           ? "Enrollment Closed"
           : "Checkout Error",
         message: message,
         type:
-          isEarlyBirdExpired || isClassRepFull || isEnrollmentClosed
+          isEarlyBirdExpired || isDiscountRoleFull || isEnrollmentClosed
             ? "warning"
             : "error",
         onClose: () => {
@@ -377,7 +386,8 @@ export default function EnrollProgram() {
       {isEarlyBird &&
         program.earlyBirdDiscount &&
         program.earlyBirdDiscount > 0 &&
-        !isClassRep && (
+        !selectedStudentRole?.discountEligible &&
+        !program.isFree && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-4">
             <div className="flex items-center">
               <svg
@@ -392,7 +402,7 @@ export default function EnrollProgram() {
                 />
               </svg>
               <span className="text-green-800 font-medium">
-                🎉 Early Bird Discount Available! Save{" "}
+                Early Bird Discount Available! Save{" "}
                 {formatCurrency(program.earlyBirdDiscount)}
               </span>
             </div>
@@ -403,11 +413,12 @@ export default function EnrollProgram() {
           </div>
         )}
 
-      {/* Class Rep Mutually Exclusive Notice */}
-      {isClassRep &&
+      {/* Student role discount mutually exclusive notice */}
+      {selectedStudentRole?.discountEligible &&
         isEarlyBird &&
         program.earlyBirdDiscount &&
-        program.earlyBirdDiscount > 0 && (
+        program.earlyBirdDiscount > 0 &&
+        !program.isFree && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
             <div className="flex items-center">
               <svg
@@ -422,13 +433,13 @@ export default function EnrollProgram() {
                 />
               </svg>
               <span className="text-amber-800 font-medium">
-                Early Bird discount not applicable when enrolling as Class
-                Representative
+                Early Bird discount is not applied when enrolling as{" "}
+                {selectedStudentRole.name}
               </span>
             </div>
             <p className="text-sm text-amber-700 mt-1 ml-7">
-              You'll receive the Class Rep discount of{" "}
-              {formatCurrency(program.classRepDiscount || 0)} instead.
+              You'll receive the {selectedStudentRole.name} discount of{" "}
+              {formatCurrency(selectedStudentRole.discountAmount || 0)} instead.
             </p>
           </div>
         )}
@@ -448,55 +459,82 @@ export default function EnrollProgram() {
           </div>
         )}
 
-        {/* Class Rep Option */}
-        {program.classRepDiscount &&
-          program.classRepDiscount > 0 &&
-          classRepSlotsAvailable && (
-            <div className="mb-6">
-              <label className="flex items-start cursor-pointer group">
-                <div className="flex items-center h-6">
+        <div className="space-y-3 mb-6">
+          {programRoles?.studentRoles.map((role) => {
+            const roleSlotsAvailable =
+              !role.discountEligible ||
+              !role.limit ||
+              role.limit <= 0 ||
+              (role.count || 0) < role.limit;
+            const roleCountInfo =
+              role.discountEligible && role.limit > 0
+                ? roleSlotsAvailable
+                  ? `${role.limit - (role.count || 0)} slot${
+                      role.limit - (role.count || 0) === 1 ? "" : "s"
+                    } available`
+                  : "No slots available"
+                : "";
+            return (
+              <label
+                key={role.id}
+                className={`block border rounded-lg p-4 ${
+                  selectedStudentRoleId === role.id
+                    ? "border-purple-400 bg-purple-50"
+                    : "border-gray-200 bg-white"
+                } ${!roleSlotsAvailable ? "opacity-60" : "cursor-pointer"}`}
+              >
+                <div className="flex items-start gap-3">
                   <input
-                    type="checkbox"
-                    checked={isClassRep}
-                    disabled={enrollmentClosed}
-                    onChange={(e) => setIsClassRep(e.target.checked)}
-                    className="h-5 w-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                    type="radio"
+                    checked={selectedStudentRoleId === role.id}
+                    disabled={enrollmentClosed || !roleSlotsAvailable}
+                    onChange={() => setSelectedStudentRoleId(role.id)}
+                    className="mt-1 h-5 w-5 text-purple-600 border-gray-300 focus:ring-purple-500"
                   />
-                </div>
-                <div className="ml-3">
-                  <span className="text-lg font-medium text-gray-900 group-hover:text-purple-600">
-                    Enroll as Class Representative
-                  </span>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Save {formatCurrency(program.classRepDiscount)} as a Class
-                    Rep.
-                    {classRepCountInfo && (
-                      <span className="ml-2 text-purple-600 font-medium">
-                        ({classRepCountInfo})
-                      </span>
+                  <div>
+                    <div className="text-lg font-medium text-gray-900">
+                      Enroll as {role.name}
+                    </div>
+                    {role.discountEligible && role.discountAmount > 0 && (
+                      <p className="text-sm text-gray-600 mt-1">
+                        Save {formatCurrency(role.discountAmount)}.
+                        {roleCountInfo && (
+                          <span className="ml-2 text-purple-600 font-medium">
+                            ({roleCountInfo})
+                          </span>
+                        )}
+                      </p>
                     )}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Class Reps help coordinate and support their cohort
-                    throughout the program.
-                  </p>
+                    {role.discountEligible &&
+                      role.discountAmount <= 0 &&
+                      roleCountInfo && (
+                        <p className="text-sm text-gray-600 mt-1">
+                          <span className="text-purple-600 font-medium">
+                            {roleCountInfo}
+                          </span>
+                        </p>
+                      )}
+                  </div>
                 </div>
               </label>
-            </div>
-          )}
+            );
+          })}
+        </div>
 
         {/* Promo Code Section */}
-        <div className="mb-6">
-          <PromoCodeInput
-            programId={id || ""}
-            availableCodes={availablePromoCodes}
-            onApply={handlePromoApply}
-            onRemove={handlePromoRemove}
-            appliedCode={appliedPromoCode}
-            appliedDiscount={calculatePromoDiscountAmount()}
-            isLoading={isProcessing || enrollmentClosed}
-          />
-        </div>
+        {!program.isFree && (
+          <div className="mb-6">
+            <PromoCodeInput
+              programId={id || ""}
+              availableCodes={availablePromoCodes}
+              onApply={handlePromoApply}
+              onRemove={handlePromoRemove}
+              appliedCode={appliedPromoCode}
+              appliedDiscount={calculatePromoDiscountAmount()}
+              isLoading={isProcessing || enrollmentClosed}
+            />
+          </div>
+        )}
 
         {/* Pricing Breakdown */}
         <div className="border-t border-gray-200 pt-4">
@@ -505,21 +543,26 @@ export default function EnrollProgram() {
           </h3>
           <div className="space-y-2">
             <div className="flex justify-between text-gray-700">
-              <span>Full Price</span>
-              <span>{formatCurrency(program.fullPriceTicket)}</span>
+              <span>{program.isFree ? "Program Tuition" : "Full Price"}</span>
+              <span>
+                {program.isFree ? "Free" : formatCurrency(program.fullPriceTicket)}
+              </span>
             </div>
-            {isClassRep &&
-              program.classRepDiscount &&
-              program.classRepDiscount > 0 && (
+            {selectedStudentRole?.discountEligible &&
+              selectedStudentRole.discountAmount > 0 &&
+              !program.isFree && (
                 <div className="flex justify-between text-green-600">
-                  <span>Class Rep Discount</span>
-                  <span>- {formatCurrency(program.classRepDiscount)}</span>
+                  <span>{selectedStudentRole.name} Discount</span>
+                  <span>
+                    - {formatCurrency(selectedStudentRole.discountAmount)}
+                  </span>
                 </div>
               )}
-            {!isClassRep &&
+            {!selectedStudentRole?.discountEligible &&
               isEarlyBird &&
               program.earlyBirdDiscount &&
-              program.earlyBirdDiscount > 0 && (
+              program.earlyBirdDiscount > 0 &&
+              !program.isFree && (
                 <div className="flex justify-between text-green-600">
                   <span>Early Bird Discount</span>
                   <span>- {formatCurrency(program.earlyBirdDiscount)}</span>
@@ -559,7 +602,7 @@ export default function EnrollProgram() {
         </button>
         <button
           onClick={handleEnroll}
-          disabled={isProcessing || enrollmentClosed}
+          disabled={isProcessing || enrollmentClosed || !selectedRoleSlotsAvailable}
           className="px-6 py-3 text-sm font-medium text-white bg-purple-600 border border-transparent rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isProcessing ? (
@@ -587,6 +630,8 @@ export default function EnrollProgram() {
             </span>
           ) : enrollmentClosed ? (
             "Enrollment Closed"
+          ) : program.isFree || finalPrice === 0 ? (
+            "Enroll"
           ) : (
             `Proceed to Payment - ${formatCurrency(finalPrice)}`
           )}
@@ -594,12 +639,14 @@ export default function EnrollProgram() {
       </div>
 
       {/* Payment Info */}
-      <div className="bg-gray-50 rounded-lg p-4">
-        <p className="text-sm text-gray-600 text-center">
-          🔒 Secure payment powered by Stripe. Your payment information is
-          encrypted and secure.
-        </p>
-      </div>
+      {!program.isFree && finalPrice > 0 && (
+        <div className="bg-gray-50 rounded-lg p-4">
+          <p className="text-sm text-gray-600 text-center">
+            Secure payment powered by Stripe. Your payment information is
+            encrypted and secure.
+          </p>
+        </div>
+      )}
 
       {/* Alert Modal */}
       <AlertModal

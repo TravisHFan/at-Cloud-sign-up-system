@@ -38,6 +38,8 @@ describe("PurchaseAccessController", () => {
       json: jsonMock as any,
     };
 
+    vi.mocked(Purchase.findOne).mockResolvedValue(null);
+
     // Mock console methods to reduce noise
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
@@ -120,8 +122,6 @@ describe("PurchaseAccessController", () => {
         success: true,
         data: { hasAccess: true, reason: "admin" },
       });
-      // Should not check for purchase since admin has access
-      expect(Purchase.findOne).not.toHaveBeenCalled();
     });
 
     it("should grant access to Administrator", async () => {
@@ -146,7 +146,6 @@ describe("PurchaseAccessController", () => {
         success: true,
         data: { hasAccess: true, reason: "admin" },
       });
-      expect(Purchase.findOne).not.toHaveBeenCalled();
     });
 
     it("should grant access to program mentor", async () => {
@@ -175,7 +174,6 @@ describe("PurchaseAccessController", () => {
         success: true,
         data: { hasAccess: true, reason: "mentor" },
       });
-      expect(Purchase.findOne).not.toHaveBeenCalled();
     });
 
     it("should not grant access if user is not a mentor of the program", async () => {
@@ -204,7 +202,7 @@ describe("PurchaseAccessController", () => {
       });
     });
 
-    it("should grant access if program is free", async () => {
+    it("should require enrollment before granting access to a free program", async () => {
       mockReq.user = { _id: userId, role: "Member" };
       mockReq.params = { programId };
 
@@ -225,9 +223,8 @@ describe("PurchaseAccessController", () => {
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith({
         success: true,
-        data: { hasAccess: true, reason: "free" },
+        data: { hasAccess: false, reason: "not_purchased" },
       });
-      expect(Purchase.findOne).not.toHaveBeenCalled();
     });
 
     it("should grant access if user has completed purchase", async () => {
@@ -260,7 +257,9 @@ describe("PurchaseAccessController", () => {
       expect(Purchase.findOne).toHaveBeenCalledWith({
         userId,
         programId: mockProgram._id,
+        purchaseType: "program",
         status: "completed",
+        unenrolledAt: { $exists: false },
       });
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith({
@@ -291,7 +290,6 @@ describe("PurchaseAccessController", () => {
         mockRes as Response,
       );
 
-      expect(Purchase.findOne).not.toHaveBeenCalled();
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith({
         success: true,

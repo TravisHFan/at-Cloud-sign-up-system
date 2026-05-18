@@ -1,5 +1,6 @@
 import Program from "../models/Program";
 import type { IPurchase } from "../models/Purchase";
+import { getDiscountRoleIndex, normalizeProgramRoles } from "../utils/programRoles";
 
 export const REFUND_WINDOW_DAYS = 30;
 
@@ -146,12 +147,23 @@ export async function markProgramPurchaseUnenrolled(
   purchase.unenrollReason = reason;
 
   if (purchase.purchaseType === "program" && programId && purchase.isClassRep) {
+    const program = await Program.findById(programId);
+    const decrement: Record<string, number> = { classRepCount: -1 };
+    if (program) {
+      const discountRoleIndex = getDiscountRoleIndex(
+        normalizeProgramRoles(program),
+      );
+      if (discountRoleIndex >= 0) {
+        decrement[`programRoles.studentRoles.${discountRoleIndex}.count`] = -1;
+      }
+    }
+
     await Program.findOneAndUpdate(
       {
         _id: programId,
         classRepCount: { $gt: 0 },
       },
-      { $inc: { classRepCount: -1 } },
+      { $inc: decrement },
       { runValidators: false },
     );
   }

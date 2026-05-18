@@ -21,6 +21,11 @@ import ValidationIndicator from "../components/events/ValidationIndicator";
 import RestrictedAccessOverlay from "../components/common/RestrictedAccessOverlay";
 import ProgramFormFields from "../components/EditProgram/ProgramFormFields";
 import PricingSection from "../components/EditProgram/PricingSection";
+import type { ProgramStudentRoleForm } from "../types/program";
+import {
+  DEFAULT_STUDENT_ROLES,
+  DEFAULT_TEACHER_ROLE_NAME,
+} from "../utils/programRoles";
 
 /**
  * Mentor interface - represents a program mentor/instructor
@@ -51,6 +56,11 @@ interface ProgramFormData {
   introduction: string;
   flyerUrl?: string;
   flyer?: FileList;
+  zoomLink?: string;
+  meetingId?: string;
+  passcode?: string;
+  teacherRoleName?: string;
+  studentRoles?: ProgramStudentRoleForm[];
   // Early Bird deadline (optional)
   earlyBirdDeadline?: string; // YYYY-MM-DD
   // Free program toggle
@@ -100,6 +110,11 @@ export default function CreateNewProgram() {
     defaultValues: {
       programType: "", // Start with placeholder (no selection)
       hostedBy: "@Cloud Marketplace Ministry",
+      teacherRoleName: DEFAULT_TEACHER_ROLE_NAME,
+      studentRoles: DEFAULT_STUDENT_ROLES,
+      zoomLink: "",
+      meetingId: "",
+      passcode: "",
       startYear: currentYear.toString(),
       endYear: currentYear.toString(),
       fullPriceTicket: 0,
@@ -227,7 +242,12 @@ export default function CreateNewProgram() {
           />
 
           {/* Tuition (formerly Pricing Phase 3) */}
-          <PricingSection register={register} watch={watch} errors={errors} />
+          <PricingSection
+            register={register}
+            watch={watch}
+            setValue={setValue}
+            errors={errors}
+          />
 
           {/* Overall Validation Status */}
           <div className="mb-4 border-b pb-4">

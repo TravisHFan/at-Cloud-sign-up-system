@@ -3,6 +3,7 @@ import type {
   UseFormRegister,
   FieldErrors,
   UseFormWatch,
+  UseFormSetValue,
 } from "react-hook-form";
 import ValidationIndicator from "../events/ValidationIndicator";
 import type { EventValidationState } from "../../utils/eventValidationUtils";
@@ -15,12 +16,19 @@ interface FormatSettingsProps {
   errors: FieldErrors<any>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   watch: UseFormWatch<any>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  setValue?: UseFormSetValue<any>;
   validations: EventValidationState;
   eventData: {
     publish?: boolean;
     format?: string;
   } | null;
   formatWarningMissing: string[];
+  zoomDefaults?: {
+    zoomLink?: string;
+    meetingId?: string;
+    passcode?: string;
+  } | null;
 }
 
 /**
@@ -38,11 +46,31 @@ const FormatSettings: React.FC<FormatSettingsProps> = ({
   register,
   errors,
   watch,
+  setValue,
   validations,
   eventData,
   formatWarningMissing,
+  zoomDefaults,
 }) => {
   const selectedFormat = watch("format");
+  const isZoomFormat =
+    selectedFormat === "Hybrid Participation" || selectedFormat === "Online";
+
+  React.useEffect(() => {
+    if (!setValue || !zoomDefaults || !isZoomFormat) return;
+
+    const applyDefault = (
+      field: "zoomLink" | "meetingId" | "passcode",
+      value?: string,
+    ) => {
+      if (!value || watch(field)) return;
+      setValue(field, value, { shouldDirty: true, shouldValidate: true });
+    };
+
+    applyDefault("zoomLink", zoomDefaults.zoomLink);
+    applyDefault("meetingId", zoomDefaults.meetingId);
+    applyDefault("passcode", zoomDefaults.passcode);
+  }, [isZoomFormat, setValue, watch, zoomDefaults]);
 
   return (
     <>
@@ -124,8 +152,7 @@ const FormatSettings: React.FC<FormatSettingsProps> = ({
       )}
 
       {/* Conditional Zoom Information Fields */}
-      {(selectedFormat === "Hybrid Participation" ||
-        selectedFormat === "Online") && (
+      {isZoomFormat && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-gray-900">
             Zoom Information
@@ -139,6 +166,7 @@ const FormatSettings: React.FC<FormatSettingsProps> = ({
             <input
               {...register("zoomLink")}
               type="url"
+              defaultValue={zoomDefaults?.zoomLink || watch("zoomLink") || ""}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Enter Zoom meeting link (optional - can be added later)"
             />
@@ -158,6 +186,7 @@ const FormatSettings: React.FC<FormatSettingsProps> = ({
             <input
               {...register("meetingId")}
               type="text"
+              defaultValue={zoomDefaults?.meetingId || watch("meetingId") || ""}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Enter Meeting ID (optional)"
             />
@@ -171,6 +200,7 @@ const FormatSettings: React.FC<FormatSettingsProps> = ({
             <input
               {...register("passcode")}
               type="text"
+              defaultValue={zoomDefaults?.passcode || watch("passcode") || ""}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Enter passcode (optional)"
             />

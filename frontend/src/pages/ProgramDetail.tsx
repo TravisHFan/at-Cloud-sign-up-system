@@ -17,6 +17,8 @@ import LoadingSpinner from "../components/common/LoadingSpinner";
 import { EmailParticipantsModal } from "../components/common";
 import { useProgramEmailModal } from "../hooks/useProgramEmailModal";
 import type { ProgramType } from "../constants/programTypes";
+import type { ProgramRoles } from "../types/program";
+import { normalizeProgramRoles } from "../utils/programRoles";
 
 type Program = {
   id: string;
@@ -31,6 +33,10 @@ type Program = {
   };
   introduction?: string;
   flyerUrl?: string;
+  zoomLink?: string;
+  meetingId?: string;
+  passcode?: string;
+  programRoles?: ProgramRoles;
   earlyBirdDeadline?: string;
   mentors?: Array<{
     userId: string;
@@ -483,6 +489,13 @@ export default function ProgramDetail({
 
   if (!program) return <div className="text-center">Program not found.</div>;
 
+  const programRoles = normalizeProgramRoles(program);
+  const hasZoomInfo = !!(
+    program.zoomLink?.trim() ||
+    program.meetingId?.trim() ||
+    program.passcode?.trim()
+  );
+
   return (
     <>
       <div className="max-w-5xl mx-auto space-y-6 min-h-full">
@@ -553,24 +566,63 @@ export default function ProgramDetail({
           programId={id!}
           introduction={program.introduction}
           flyerUrl={program.flyerUrl}
-          isFree={program.isFree}
           hasAccess={hasAccess}
           accessReason={accessReason}
         />
 
+        {hasZoomInfo && (
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              Zoom Information
+            </h2>
+            <div className="space-y-3 text-sm">
+              {program.zoomLink && (
+                <div>
+                  <div className="font-medium text-gray-700">Link</div>
+                  <a
+                    href={program.zoomLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 break-all"
+                  >
+                    {program.zoomLink}
+                  </a>
+                </div>
+              )}
+              {program.meetingId && (
+                <div>
+                  <div className="font-medium text-gray-700">Meeting ID</div>
+                  <div className="font-mono text-gray-900">
+                    {program.meetingId}
+                  </div>
+                </div>
+              )}
+              {program.passcode && (
+                <div>
+                  <div className="font-medium text-gray-700">Passcode</div>
+                  <div className="font-mono text-gray-900">
+                    {program.passcode}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Mentors section */}
         <ProgramMentors
           mentors={program.mentors || []}
+          teacherRoleName={programRoles.teacherRoleName}
           currentUserId={currentUser?.id || null}
           currentUserRole={currentUser?.role || null}
           accessReason={accessReason}
         />
 
-        {/* Program Participants (Mentees & Class Representatives) - Only shown for paid programs */}
-        {program && !program.isFree && (
+        {/* Program Participants */}
+        {program && (
           <ProgramParticipants
             programId={program.id}
-            program={program}
+            program={{ ...program, programRoles }}
             onEnrollmentChanged={() =>
               setEnrollmentRefreshKey((key) => key + 1)
             }
@@ -585,6 +637,7 @@ export default function ProgramDetail({
           earlyBirdDiscount={program.earlyBirdDiscount}
           classRepLimit={program.classRepLimit}
           classRepCount={program.classRepCount}
+          programRoles={programRoles}
           earlyBirdDeadline={program.earlyBirdDeadline}
           hasAccess={hasAccess}
           accessReason={accessReason}

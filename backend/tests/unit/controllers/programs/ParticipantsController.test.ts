@@ -126,6 +126,20 @@ describe("ParticipantsController", () => {
           data: {
             mentees: [],
             classReps: [],
+            studentRoles: [
+              {
+                roleId: "mentee",
+                name: "Mentee",
+                discountEligible: false,
+                participants: [],
+              },
+              {
+                roleId: "classRep",
+                name: "Class Representative",
+                discountEligible: true,
+                participants: [],
+              },
+            ],
           },
         });
       });
@@ -166,8 +180,10 @@ describe("ParticipantsController", () => {
         );
 
         expect(Purchase.find).toHaveBeenCalledWith({
+          purchaseType: "program",
           programId: programId.toString(),
           status: "completed",
+          unenrolledAt: { $exists: false },
         });
 
         const response = jsonMock.mock.calls[0][0];
@@ -176,6 +192,8 @@ describe("ParticipantsController", () => {
           user: mockPurchases[0].userId,
           isPaid: true,
           enrollmentDate: mockPurchases[0].purchaseDate,
+          studentRoleId: "mentee",
+          studentRoleName: "Mentee",
         });
       });
 
@@ -220,6 +238,8 @@ describe("ParticipantsController", () => {
           user: mockPurchases[0].userId,
           isPaid: true,
           enrollmentDate: mockPurchases[0].purchaseDate,
+          studentRoleId: "classRep",
+          studentRoleName: "Class Representative",
         });
       });
 
@@ -268,6 +288,8 @@ describe("ParticipantsController", () => {
           user: mockAdminMentees[0],
           isPaid: false,
           enrollmentDate: mockProgram.updatedAt,
+          studentRoleId: "mentee",
+          studentRoleName: "Mentee",
         });
       });
 
@@ -315,6 +337,8 @@ describe("ParticipantsController", () => {
           user: mockAdminClassReps[0],
           isPaid: false,
           enrollmentDate: mockProgram.updatedAt,
+          studentRoleId: "classRep",
+          studentRoleName: "Class Representative",
         });
       });
 

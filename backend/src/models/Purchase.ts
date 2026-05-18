@@ -31,6 +31,10 @@ export interface IPurchase extends Document {
   earlyBirdDiscount: number; // Early Bird discount in cents (0 if not applicable)
   finalPrice: number; // Actual amount charged in cents (fullPrice - discounts)
 
+  // Program student role selected at enrollment time
+  studentRoleId?: string;
+  studentRoleName?: string;
+
   // Flags
   isClassRep: boolean; // Whether user selected Class Rep option
   isEarlyBird: boolean; // Whether Early Bird discount was applied
@@ -177,6 +181,17 @@ const purchaseSchema = new Schema<IPurchase>(
       required: true,
       min: 0,
       max: 100000, // 0-100000 cents ($0-$1000)
+    },
+    studentRoleId: {
+      type: String,
+      trim: true,
+      maxlength: 80,
+      index: true,
+    },
+    studentRoleName: {
+      type: String,
+      trim: true,
+      maxlength: 100,
     },
     isClassRep: {
       type: Boolean,

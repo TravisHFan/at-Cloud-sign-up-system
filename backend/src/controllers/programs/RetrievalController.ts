@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import mongoose from "mongoose";
 import { Program, Purchase } from "../../models";
 import { sanitizeMentors } from "../../utils/privacy";
+import { normalizeProgramRoles } from "../../utils/programRoles";
 
 type PopulatedMentorUser = {
   _id?: unknown;
@@ -84,7 +85,7 @@ export default class RetrievalController {
       // Determine if user can view mentor contact information:
       // - Super Admin and Administrator can always see contacts
       // - Program mentors can see contacts
-      // - Enrolled users (purchased or free program) can see contacts
+      // - Enrolled users can see contacts
       // - Everyone else cannot see mentor contact info
       const user = req.user;
       const isAdmin =
@@ -97,35 +98,28 @@ export default class RetrievalController {
       // Check enrollment status
       let isEnrolled = false;
       if (user && !isAdmin && !isMentor) {
-        // Check if program is free (all logged-in users have access)
-        if (program.isFree) {
-          isEnrolled = true;
-        } else {
-          // Check if user has purchased or is admin-enrolled
-          const purchase = await Purchase.findOne({
-            userId: user._id,
-            programId: program._id,
-            purchaseType: "program",
-            status: "completed",
-            unenrolledAt: { $exists: false },
-          });
-          const isAdminEnrolled =
-            program.adminEnrollments?.mentees?.some(
-              (id: mongoose.Types.ObjectId) =>
-                id.toString() === String(user._id),
-            ) ||
-            program.adminEnrollments?.classReps?.some(
-              (id: mongoose.Types.ObjectId) =>
-                id.toString() === String(user._id),
-            );
-          isEnrolled = !!purchase || !!isAdminEnrolled;
-        }
+        const purchase = await Purchase.findOne({
+          userId: user._id,
+          programId: program._id,
+          purchaseType: "program",
+          status: "completed",
+          unenrolledAt: { $exists: false },
+        });
+        const isAdminEnrolled =
+          program.adminEnrollments?.mentees?.some(
+            (id: mongoose.Types.ObjectId) => id.toString() === String(user._id),
+          ) ||
+          program.adminEnrollments?.classReps?.some(
+            (id: mongoose.Types.ObjectId) => id.toString() === String(user._id),
+          );
+        isEnrolled = !!purchase || !!isAdminEnrolled;
       }
 
       const canViewMentorContact = isAdmin || isMentor || isEnrolled;
 
       // Convert to plain object for sanitization (include virtuals for 'id' field)
       const programObj = program.toObject({ virtuals: true });
+      programObj.programRoles = normalizeProgramRoles(programObj);
 
       if (programObj.mentors) {
         programObj.mentors = (programObj.mentors as ProgramMentor[]).map(

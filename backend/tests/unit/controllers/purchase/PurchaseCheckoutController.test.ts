@@ -191,7 +191,7 @@ describe("PurchaseCheckoutController", () => {
       }
     });
 
-    it("should return 400 if program is free", async () => {
+    it("should complete enrollment if program is free", async () => {
       mockReq.user = {
         _id: userId,
         email: "test@test.com",
@@ -208,16 +208,39 @@ describe("PurchaseCheckoutController", () => {
       };
 
       vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
+      vi.mocked(Purchase.findOne).mockResolvedValue(null);
+      vi.mocked(lockService.withLock).mockImplementation(async (_key, fn) =>
+        fn(),
+      );
+      (Purchase as any).generateOrderNumber = vi
+        .fn()
+        .mockResolvedValue("ORD-FREE-001");
+      vi.mocked(Purchase.create).mockResolvedValue({
+        orderNumber: "ORD-FREE-001",
+      } as any);
 
       await PurchaseCheckoutController.createCheckoutSession(
         mockReq as Request,
         mockRes as Response,
       );
 
-      expect(statusMock).toHaveBeenCalledWith(400);
+      expect(Purchase.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          programId,
+          finalPrice: 0,
+          status: "completed",
+          paymentMethod: { type: "other" },
+        }),
+      );
+      expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        message: "This program is free and does not require purchase.",
+        success: true,
+        data: {
+          sessionId: null,
+          sessionUrl: null,
+          orderId: "ORD-FREE-001",
+          isFree: true,
+        },
       });
     });
 
@@ -515,7 +538,7 @@ describe("PurchaseCheckoutController", () => {
       expect(jsonMock).toHaveBeenCalledWith({
         success: false,
         message:
-          "Class Rep slots are full. Please proceed with standard pricing.",
+          "Class Representative slots are full. Please choose another student role.",
       });
     });
 
@@ -1064,7 +1087,12 @@ describe("PurchaseCheckoutController", () => {
         // Verify classRepCount was decremented
         expect(Program.findByIdAndUpdate).toHaveBeenCalledWith(
           programId,
-          { $inc: { classRepCount: -1 } },
+          {
+            $inc: {
+              classRepCount: -1,
+              "programRoles.studentRoles.1.count": -1,
+            },
+          },
           { runValidators: false },
         );
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -1141,7 +1169,12 @@ describe("PurchaseCheckoutController", () => {
               { classRepCount: null },
             ],
           },
-          { $inc: { classRepCount: 1 } },
+          {
+            $inc: {
+              classRepCount: 1,
+              "programRoles.studentRoles.1.count": 1,
+            },
+          },
           { new: true, runValidators: true },
         );
         expect(statusMock).toHaveBeenCalledWith(200);

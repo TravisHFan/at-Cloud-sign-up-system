@@ -5,7 +5,6 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 import { Purchase, Program, PromoCode, User } from "../../models";
-import type { IProgram } from "../../models/Program";
 import type { IPromoCode } from "../../models/PromoCode";
 import { createCheckoutSession as stripeCreateCheckoutSession } from "../../services/stripeService";
 import { lockService } from "../../services/LockService";
@@ -14,6 +13,11 @@ import {
   getProgramEnrollmentWindow,
   PROGRAM_ENROLLMENT_CLOSED_MESSAGE,
 } from "../../services/ProgramEnrollmentWindowService";
+import {
+  getDiscountRoleIndex,
+  getStudentRoleByRequest,
+  normalizeProgramRoles,
+} from "../../utils/programRoles";
 
 /**
  * Controller for handling purchase checkout operations
@@ -35,7 +39,7 @@ class PurchaseCheckoutController {
         return;
       }
 
-      const { programId, isClassRep, promoCode } = req.body;
+      const { programId, isClassRep, promoCode, studentRoleId } = req.body;
 
       // Extract user info early (needed for promo validation)
       const userId = req.user._id;
@@ -74,9 +78,33 @@ class PurchaseCheckoutController {
         return;
       }
 
+      const programRoles = normalizeProgramRoles(program);
+      const explicitStudentRoleId =
+        typeof studentRoleId === "string" ? studentRoleId.trim() : "";
+      if (
+        explicitStudentRoleId &&
+        !programRoles.studentRoles.some(
+          (role) => role.id === explicitStudentRoleId
+        )
+      ) {
+        res.status(400).json({
+          success: false,
+          message: "Selected student role is not available for this program.",
+        });
+        return;
+      }
+
+      const selectedStudentRole = getStudentRoleByRequest(
+        programRoles,
+        explicitStudentRoleId,
+        isClassRep
+      );
+      const selectedIsDiscountRole = selectedStudentRole.discountEligible;
+      const discountRoleIndex = getDiscountRoleIndex(programRoles);
+
       // Validate and fetch promo code if provided
       let validatedPromoCode: IPromoCode | null = null;
-      if (promoCode) {
+      if (!program.isFree && promoCode) {
         validatedPromoCode = await PromoCode.findOne({ code: promoCode });
 
         if (!validatedPromoCode) {
@@ -131,15 +159,6 @@ class PurchaseCheckoutController {
             return;
           }
         }
-      }
-
-      // Check if program is free
-      if (program.isFree) {
-        res.status(400).json({
-          success: false,
-          message: "This program is free and does not require purchase.",
-        });
-        return;
       }
 
       // Check if user already purchased this program (outside lock - read-only)
@@ -210,9 +229,15 @@ class PurchaseCheckoutController {
             // CRITICAL FIX: If old pending purchase was Class Rep, decrement count before deleting
             // This prevents double-counting when user clicks "Proceed to Payment" multiple times
             if (pendingPurchase.isClassRep) {
+              const decrement: Record<string, number> = { classRepCount: -1 };
+              if (discountRoleIndex >= 0) {
+                decrement[
+                  `programRoles.studentRoles.${discountRoleIndex}.count`
+                ] = -1;
+              }
               await Program.findByIdAndUpdate(
                 pendingPurchase.programId,
-                { $inc: { classRepCount: -1 } },
+                { $inc: decrement },
                 { runValidators: false } // Allow going below limit on decrement
               );
               console.log(
@@ -229,23 +254,28 @@ class PurchaseCheckoutController {
 
           // 2. Check and RESERVE Class Rep spot atomically (using atomic counter)
           if (
-            isClassRep &&
-            program.classRepLimit &&
-            program.classRepLimit > 0
+            selectedIsDiscountRole &&
+            selectedStudentRole.limit &&
+            selectedStudentRole.limit > 0
           ) {
+            const increment: Record<string, number> = { classRepCount: 1 };
+            if (discountRoleIndex >= 0) {
+              increment[`programRoles.studentRoles.${discountRoleIndex}.count`] =
+                1;
+            }
             // Atomic increment: only succeeds if under limit
             // Note: Use $or to handle both existing count < limit AND missing count (null/undefined)
             const updatedProgram = await Program.findOneAndUpdate(
               {
                 _id: program._id,
                 $or: [
-                  { classRepCount: { $lt: program.classRepLimit } }, // Existing count < limit
+                  { classRepCount: { $lt: selectedStudentRole.limit } }, // Existing count < limit
                   { classRepCount: { $exists: false } }, // Field doesn't exist yet (legacy programs)
                   { classRepCount: null }, // Field is null
                 ],
               },
               {
-                $inc: { classRepCount: 1 }, // Atomically increment (0 if field missing)
+                $inc: increment, // Atomically increment (0 if field missing)
               },
               {
                 new: true, // Return updated document
@@ -256,17 +286,17 @@ class PurchaseCheckoutController {
             if (!updatedProgram) {
               // Failed to increment = limit reached
               throw new Error(
-                "Class Rep slots are full. Please proceed with standard pricing."
+                `${selectedStudentRole.name} slots are full. Please choose another student role.`
               );
             }
 
             console.log(
-              `Class Rep spot reserved: ${updatedProgram.classRepCount}/${program.classRepLimit}`
+              `${selectedStudentRole.name} spot reserved: ${updatedProgram.classRepCount}/${selectedStudentRole.limit}`
             );
           }
 
           // 3. Calculate pricing
-          const fullPrice = program.fullPriceTicket;
+          const fullPrice = program.isFree ? 0 : program.fullPriceTicket;
           let classRepDiscount = 0;
           let earlyBirdDiscount = 0;
           let isEarlyBird = false;
@@ -283,11 +313,15 @@ class PurchaseCheckoutController {
           }
 
           // Apply Class Rep discount if selected
-          if (isClassRep && program.classRepDiscount) {
-            classRepDiscount = program.classRepDiscount;
+          if (
+            !program.isFree &&
+            selectedIsDiscountRole &&
+            selectedStudentRole.discountAmount
+          ) {
+            classRepDiscount = selectedStudentRole.discountAmount;
           }
           // Apply Early Bird discount ONLY if NOT enrolling as Class Rep (mutually exclusive)
-          else if (earlyBirdActive) {
+          else if (!program.isFree && earlyBirdActive) {
             earlyBirdDiscount = program.earlyBirdDiscount!;
             isEarlyBird = true;
           }
@@ -346,7 +380,9 @@ class PurchaseCheckoutController {
               classRepDiscount,
               earlyBirdDiscount,
               finalPrice: 0,
-              isClassRep: !!isClassRep,
+              studentRoleId: selectedStudentRole.id,
+              studentRoleName: selectedStudentRole.name,
+              isClassRep: selectedIsDiscountRole,
               isEarlyBird,
               // Promo code fields
               promoCode: validatedPromoCode?.code,
@@ -448,7 +484,7 @@ class PurchaseCheckoutController {
             }
 
             console.log(
-              `Free purchase completed (100% off) for user ${userId}, program ${programId}, order ${orderNumber}`
+              `Free enrollment completed for user ${userId}, program ${programId}, order ${orderNumber}`
             );
 
             // Return success without Stripe redirect
@@ -486,7 +522,9 @@ class PurchaseCheckoutController {
             classRepDiscount,
             earlyBirdDiscount,
             finalPrice,
-            isClassRep: !!isClassRep,
+            studentRoleId: selectedStudentRole.id,
+            studentRoleName: selectedStudentRole.name,
+            isClassRep: selectedIsDiscountRole,
             isEarlyBird,
             // Promo code fields
             promoCode: validatedPromoCode?.code,
@@ -527,7 +565,7 @@ class PurchaseCheckoutController {
               promoDiscountPercent:
                 promoDiscountPercent > 0 ? promoDiscountPercent : undefined,
               finalPrice,
-              isClassRep: !!isClassRep,
+              isClassRep: selectedIsDiscountRole,
               isEarlyBird,
               purchaseId: purchaseId.toString(), // Pass for unified lock mechanism
             });
@@ -543,6 +581,23 @@ class PurchaseCheckoutController {
             // If Stripe fails, clean up the purchase record
             console.error("Stripe session creation failed:", stripeError);
             await Purchase.deleteOne({ _id: purchase._id });
+            if (
+              selectedIsDiscountRole &&
+              selectedStudentRole.limit &&
+              selectedStudentRole.limit > 0
+            ) {
+              const decrement: Record<string, number> = { classRepCount: -1 };
+              if (discountRoleIndex >= 0) {
+                decrement[
+                  `programRoles.studentRoles.${discountRoleIndex}.count`
+                ] = -1;
+              }
+              await Program.findByIdAndUpdate(
+                program._id,
+                { $inc: decrement },
+                { runValidators: false }
+              );
+            }
             throw stripeError; // Re-throw to return error to user
           }
 
@@ -575,10 +630,10 @@ class PurchaseCheckoutController {
         return;
       }
 
-      // Check if it's a Class Rep limit error
+      // Check if it's a discounted student role limit error
       if (
         error instanceof Error &&
-        error.message.includes("Class Rep slots are full")
+        error.message.includes("slots are full")
       ) {
         res.status(400).json({
           success: false,

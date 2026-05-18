@@ -2,6 +2,10 @@ import { Request, Response } from "express";
 import mongoose from "mongoose";
 import { Program, Purchase, User } from "../../models";
 import { sanitizeParticipants } from "../../utils/privacy";
+import {
+  getDiscountStudentRole,
+  normalizeProgramRoles,
+} from "../../utils/programRoles";
 
 export default class ParticipantsController {
   /**
@@ -28,6 +32,31 @@ export default class ParticipantsController {
         return;
       }
 
+      const programRoles = normalizeProgramRoles(program);
+      const defaultStudentRole =
+        programRoles.studentRoles.find((role) => !role.discountEligible) ||
+        programRoles.studentRoles[0];
+      const discountStudentRole = getDiscountStudentRole(programRoles);
+      const studentRoleGroups = programRoles.studentRoles.map((role) => ({
+        roleId: role.id,
+        name: role.name,
+        discountEligible: role.discountEligible,
+        participants: [] as Array<{
+          user: Record<string, unknown>;
+          isPaid: boolean;
+          enrollmentDate: Date;
+          studentRoleId: string;
+          studentRoleName: string;
+        }>,
+      }));
+      const roleGroupById = new Map(
+        studentRoleGroups.map((group) => [group.roleId, group]),
+      );
+      const getRoleGroup = (roleId?: string) =>
+        roleGroupById.get(roleId || "") ||
+        roleGroupById.get(defaultStudentRole.id) ||
+        studentRoleGroups[0];
+
       // Get all completed purchases for this program
       const purchases = await Purchase.find({
         purchaseType: "program",
@@ -51,23 +80,6 @@ export default class ParticipantsController {
           "firstName lastName email phone avatar gender roleInAtCloud",
         )
         .sort({ purchaseDate: 1 }); // Sort by enrollment date
-
-      // Separate mentees and class reps from purchases
-      const paidMentees = purchases
-        .filter((p) => !p.isClassRep)
-        .map((p) => ({
-          user: p.userId,
-          isPaid: true,
-          enrollmentDate: p.purchaseDate,
-        }));
-
-      const paidClassReps = purchases
-        .filter((p) => p.isClassRep)
-        .map((p) => ({
-          user: p.userId,
-          isPaid: true,
-          enrollmentDate: p.purchaseDate,
-        }));
 
       // Get admin enrollments
       const adminMenteeIds = program.adminEnrollments?.mentees || [];
@@ -95,33 +107,48 @@ export default class ParticipantsController {
         return doc;
       };
 
-      // Combine paid and admin enrollments (admins sorted to end for now, can adjust later)
-      // Convert Mongoose documents to plain objects for proper serialization
-      const allMentees = [
-        ...paidMentees.map((p) => ({
-          user: toPlainUser(p.user),
-          isPaid: p.isPaid,
-          enrollmentDate: p.enrollmentDate,
-        })),
-        ...adminMentees.map((user) => ({
-          user: toPlainUser(user),
-          isPaid: false,
-          enrollmentDate: program.updatedAt, // Use program updated date as proxy
-        })),
-      ];
+      purchases.forEach((purchase) => {
+        const roleId =
+          purchase.studentRoleId ||
+          (purchase.isClassRep
+            ? discountStudentRole?.id
+            : defaultStudentRole.id);
+        const group = getRoleGroup(roleId);
+        group.participants.push({
+          user: toPlainUser(purchase.userId) as Record<string, unknown>,
+          isPaid: true,
+          enrollmentDate: purchase.purchaseDate,
+          studentRoleId: group.roleId,
+          studentRoleName: purchase.studentRoleName || group.name,
+        });
+      });
 
-      const allClassReps = [
-        ...paidClassReps.map((p) => ({
-          user: toPlainUser(p.user),
-          isPaid: p.isPaid,
-          enrollmentDate: p.enrollmentDate,
-        })),
-        ...adminClassReps.map((user) => ({
-          user: toPlainUser(user),
+      const menteeGroup = getRoleGroup(defaultStudentRole.id);
+      adminMentees.forEach((user) => {
+        menteeGroup.participants.push({
+          user: toPlainUser(user) as Record<string, unknown>,
           isPaid: false,
           enrollmentDate: program.updatedAt,
-        })),
-      ];
+          studentRoleId: menteeGroup.roleId,
+          studentRoleName: menteeGroup.name,
+        });
+      });
+
+      const classRepGroup = discountStudentRole
+        ? getRoleGroup(discountStudentRole.id)
+        : getRoleGroup(defaultStudentRole.id);
+      adminClassReps.forEach((user) => {
+        classRepGroup.participants.push({
+          user: toPlainUser(user) as Record<string, unknown>,
+          isPaid: false,
+          enrollmentDate: program.updatedAt,
+          studentRoleId: classRepGroup.roleId,
+          studentRoleName: classRepGroup.name,
+        });
+      });
+
+      const allMentees = menteeGroup.participants;
+      const allClassReps = discountStudentRole ? classRepGroup.participants : [];
 
       // Determine if user can view contact information:
       // - Super Admin and Administrator can always see contacts
@@ -151,6 +178,15 @@ export default class ParticipantsController {
         data: {
           mentees: sanitizeParticipants(allMentees, canViewContact),
           classReps: sanitizeParticipants(allClassReps, canViewContact),
+          studentRoles: studentRoleGroups.map((group) => ({
+            roleId: group.roleId,
+            name: group.name,
+            discountEligible: group.discountEligible,
+            participants: sanitizeParticipants(
+              group.participants,
+              canViewContact,
+            ),
+          })),
         },
       });
     } catch (error) {

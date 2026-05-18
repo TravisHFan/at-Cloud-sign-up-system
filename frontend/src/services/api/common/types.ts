@@ -73,15 +73,25 @@ export type ProgramParticipant = {
   };
   isPaid: boolean;
   enrollmentDate: string;
+  studentRoleId?: string;
+  studentRoleName?: string;
 };
 
 export type ProgramParticipantsResponse = {
   mentees: ProgramParticipant[];
   classReps: ProgramParticipant[];
+  studentRoles?: Array<{
+    roleId: string;
+    name: string;
+    discountEligible?: boolean;
+    participants: ProgramParticipant[];
+  }>;
 };
 
 export type ProgramUnenrollPreview = {
   enrollmentType: "mentee" | "classRep";
+  studentRoleId?: string;
+  studentRoleName?: string;
   isPaid: boolean;
   refundEligible: boolean;
   requiresApproval: boolean;
@@ -104,6 +114,8 @@ export type ProgramUnenrollResult = {
   refundRequestId?: string;
   existingRequest?: boolean;
   enrollmentType: "mentee" | "classRep";
+  studentRoleId?: string;
+  studentRoleName?: string;
   reason?: string;
 };
 

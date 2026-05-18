@@ -5,6 +5,7 @@ import {
   type ProgramUnenrollResult,
 } from "./common";
 import type { ProgramType } from "../../constants/programTypes";
+import type { ProgramRoles } from "../../types/program";
 
 /**
  * Programs API Service
@@ -25,8 +26,12 @@ class ProgramsApiClient extends BaseApiClient {
       };
       introduction?: string;
       flyerUrl?: string;
+      zoomLink?: string;
+      meetingId?: string;
+      passcode?: string;
       earlyBirdDeadline?: string;
       isFree?: boolean;
+      programRoles?: ProgramRoles;
       mentors?: Array<{
         userId: string;
         firstName?: string;
@@ -83,8 +88,12 @@ class ProgramsApiClient extends BaseApiClient {
       };
       introduction?: string;
       flyerUrl?: string;
+      zoomLink?: string;
+      meetingId?: string;
+      passcode?: string;
       earlyBirdDeadline?: string;
       isFree?: boolean;
+      programRoles?: ProgramRoles;
       mentors?: MentorLite[];
       adminEnrollments?: {
         mentees?: string[];

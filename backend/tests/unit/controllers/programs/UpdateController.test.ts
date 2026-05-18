@@ -32,6 +32,26 @@ describe("UpdateController", () => {
   const userId = new mongoose.Types.ObjectId();
   const mentorId = new mongoose.Types.ObjectId();
 
+  const createMockProgram = (overrides: Record<string, unknown> = {}) => {
+    const program: Record<string, unknown> & {
+      set: ReturnType<typeof vi.fn>;
+      save: ReturnType<typeof vi.fn>;
+    } = {
+      _id: programId,
+      title: "Original Title",
+      mentors: [],
+      ...overrides,
+      set: vi.fn(),
+      save: vi.fn(),
+    };
+    program.set.mockImplementation((update: Record<string, unknown>) => {
+      Object.assign(program, update);
+      return program;
+    });
+    program.save.mockResolvedValue(program);
+    return program;
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
 
@@ -96,59 +116,30 @@ describe("UpdateController", () => {
 
     describe("authorization", () => {
       it("should allow Super Admin to update any program", async () => {
-        const mockProgram = {
-          _id: programId,
-          title: "Original Title",
-          mentors: [],
-        };
+        const mockProgram = createMockProgram();
 
         vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
         vi.mocked(RoleUtils.isAdmin).mockReturnValue(true);
 
-        const updatedProgram = {
-          ...mockProgram,
-          title: "Updated Title",
-        };
-
-        vi.mocked(Program.findByIdAndUpdate).mockResolvedValue(
-          updatedProgram as any,
-        );
-
         await UpdateController.update(mockReq as Request, mockRes as Response);
 
         expect(RoleUtils.isAdmin).toHaveBeenCalledWith("Super Admin");
-        expect(Program.findByIdAndUpdate).toHaveBeenCalledWith(
-          programId.toString(),
-          mockReq.body,
-          { new: true, runValidators: true },
-        );
+        expect(mockProgram.set).toHaveBeenCalledWith(mockReq.body);
+        expect(mockProgram.save).toHaveBeenCalled();
         expect(statusMock).toHaveBeenCalledWith(200);
         expect(jsonMock).toHaveBeenCalledWith({
           success: true,
-          data: updatedProgram,
+          data: mockProgram,
         });
       });
 
       it("should allow Administrator to update any program", async () => {
         mockReq.user.role = "Administrator";
 
-        const mockProgram = {
-          _id: programId,
-          title: "Original Title",
-          mentors: [],
-        };
+        const mockProgram = createMockProgram();
 
         vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
         vi.mocked(RoleUtils.isAdmin).mockReturnValue(true);
-
-        const updatedProgram = {
-          ...mockProgram,
-          title: "Updated Title",
-        };
-
-        vi.mocked(Program.findByIdAndUpdate).mockResolvedValue(
-          updatedProgram as any,
-        );
 
         await UpdateController.update(mockReq as Request, mockRes as Response);
 
@@ -162,23 +153,12 @@ describe("UpdateController", () => {
           role: "Member",
         };
 
-        const mockProgram = {
-          _id: programId,
-          title: "Original Title",
+        const mockProgram = createMockProgram({
           mentors: [{ userId: mentorId }],
-        };
+        });
 
         vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
         vi.mocked(RoleUtils.isAdmin).mockReturnValue(false);
-
-        const updatedProgram = {
-          ...mockProgram,
-          title: "Updated Title",
-        };
-
-        vi.mocked(Program.findByIdAndUpdate).mockResolvedValue(
-          updatedProgram as any,
-        );
 
         await UpdateController.update(mockReq as Request, mockRes as Response);
 
@@ -221,26 +201,14 @@ describe("UpdateController", () => {
           role: "Participant",
         };
 
-        const mockProgram = {
-          _id: programId,
-          title: "Original Title",
-          mentors: [],
+        const mockProgram = createMockProgram({
           adminEnrollments: {
             classReps: [classRepId],
           },
-        };
+        });
 
         vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
         vi.mocked(RoleUtils.isAdmin).mockReturnValue(false);
-
-        const updatedProgram = {
-          ...mockProgram,
-          title: "Updated Title",
-        };
-
-        vi.mocked(Program.findByIdAndUpdate).mockResolvedValue(
-          updatedProgram as any,
-        );
 
         await UpdateController.update(mockReq as Request, mockRes as Response);
 
@@ -248,7 +216,7 @@ describe("UpdateController", () => {
         expect(statusMock).toHaveBeenCalledWith(200);
         expect(jsonMock).toHaveBeenCalledWith({
           success: true,
-          data: updatedProgram,
+          data: mockProgram,
         });
       });
 
@@ -259,26 +227,13 @@ describe("UpdateController", () => {
           role: "Participant",
         };
 
-        const mockProgram = {
-          _id: programId,
-          title: "Original Title",
-          mentors: [],
-        };
+        const mockProgram = createMockProgram();
 
         vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
         vi.mocked(RoleUtils.isAdmin).mockReturnValue(false);
         vi.mocked(Purchase.findOne).mockReturnValue({
           select: vi.fn().mockResolvedValue({ _id: "purchase-1" }),
         } as any);
-
-        const updatedProgram = {
-          ...mockProgram,
-          title: "Updated Title",
-        };
-
-        vi.mocked(Program.findByIdAndUpdate).mockResolvedValue(
-          updatedProgram as any,
-        );
 
         await UpdateController.update(mockReq as Request, mockRes as Response);
 
@@ -288,6 +243,7 @@ describe("UpdateController", () => {
           userId: classRepId,
           status: "completed",
           isClassRep: true,
+          unenrolledAt: { $exists: false },
         });
         expect(statusMock).toHaveBeenCalledWith(200);
       });
@@ -363,12 +319,10 @@ describe("UpdateController", () => {
     });
 
     describe("update execution", () => {
+      let mockProgram: ReturnType<typeof createMockProgram>;
+
       beforeEach(() => {
-        const mockProgram = {
-          _id: programId,
-          title: "Original Title",
-          mentors: [],
-        };
+        mockProgram = createMockProgram();
 
         vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
         vi.mocked(RoleUtils.isAdmin).mockReturnValue(true);
@@ -380,80 +334,29 @@ describe("UpdateController", () => {
           description: "New Description",
         };
 
-        const updatedProgram = {
-          _id: programId,
-          title: "New Title",
-          description: "New Description",
-        };
-
-        vi.mocked(Program.findByIdAndUpdate).mockResolvedValue(
-          updatedProgram as any,
-        );
-
         await UpdateController.update(mockReq as Request, mockRes as Response);
 
-        expect(Program.findByIdAndUpdate).toHaveBeenCalledWith(
-          programId.toString(),
-          mockReq.body,
-          { new: true, runValidators: true },
-        );
+        expect(mockProgram.set).toHaveBeenCalledWith(mockReq.body);
+        expect(mockProgram.save).toHaveBeenCalled();
         expect(statusMock).toHaveBeenCalledWith(200);
         expect(jsonMock).toHaveBeenCalledWith({
           success: true,
-          data: updatedProgram,
+          data: mockProgram,
         });
       });
 
-      it("should return new: true for updated document", async () => {
-        const updatedProgram = {
-          _id: programId,
-          title: "Updated Title",
-        };
-
-        vi.mocked(Program.findByIdAndUpdate).mockResolvedValue(
-          updatedProgram as any,
-        );
-
+      it("should save the document so model validation hooks run", async () => {
         await UpdateController.update(mockReq as Request, mockRes as Response);
 
-        const updateCall = vi.mocked(Program.findByIdAndUpdate).mock
-          .calls[0] as any;
-        expect(updateCall[2]).toEqual({ new: true, runValidators: true });
-      });
-
-      it("should run validators on update", async () => {
-        vi.mocked(Program.findByIdAndUpdate).mockResolvedValue({
-          _id: programId,
-          title: "Updated",
-        } as any);
-
-        await UpdateController.update(mockReq as Request, mockRes as Response);
-
-        const updateCall = vi.mocked(Program.findByIdAndUpdate).mock
-          .calls[0] as any;
-        expect(updateCall[2]?.runValidators).toBe(true);
-      });
-
-      it("should return 404 if program not found after update", async () => {
-        vi.mocked(Program.findByIdAndUpdate).mockResolvedValue(null);
-
-        await UpdateController.update(mockReq as Request, mockRes as Response);
-
-        expect(statusMock).toHaveBeenCalledWith(404);
-        expect(jsonMock).toHaveBeenCalledWith({
-          success: false,
-          message: "Program not found.",
-        });
+        expect(mockProgram.save).toHaveBeenCalledTimes(1);
       });
     });
 
     describe("error handling", () => {
+      let mockProgram: ReturnType<typeof createMockProgram>;
+
       beforeEach(() => {
-        const mockProgram = {
-          _id: programId,
-          title: "Original Title",
-          mentors: [],
-        };
+        mockProgram = createMockProgram();
 
         vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
         vi.mocked(RoleUtils.isAdmin).mockReturnValue(true);
@@ -462,7 +365,7 @@ describe("UpdateController", () => {
       it("should handle validation errors", async () => {
         const validationError = new Error("Validation failed");
 
-        vi.mocked(Program.findByIdAndUpdate).mockRejectedValue(validationError);
+        mockProgram.save.mockRejectedValue(validationError);
 
         await UpdateController.update(mockReq as Request, mockRes as Response);
 
@@ -474,9 +377,7 @@ describe("UpdateController", () => {
       });
 
       it("should handle database errors", async () => {
-        vi.mocked(Program.findByIdAndUpdate).mockRejectedValue(
-          new Error("Database error"),
-        );
+        mockProgram.save.mockRejectedValue(new Error("Database error"));
 
         await UpdateController.update(mockReq as Request, mockRes as Response);
 

@@ -9,6 +9,7 @@ class PurchasesApiClient extends BaseApiClient {
 
   async createCheckoutSession(params: {
     programId: string;
+    studentRoleId?: string;
     isClassRep?: boolean;
     promoCode?: string;
   }): Promise<{

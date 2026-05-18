@@ -8,6 +8,8 @@ import OrganizerSelection from "../events/OrganizerSelection";
 import ValidationIndicator from "../events/ValidationIndicator";
 import { fileService } from "../../services/api";
 import { getProgramTypes } from "../../constants/programTypes";
+import type { ProgramStudentRoleForm } from "../../types/program";
+import { DEFAULT_TEACHER_ROLE_NAME } from "../../utils/programRoles";
 
 interface Mentor {
   id: string;
@@ -44,6 +46,11 @@ interface ProgramFormData {
   introduction: string;
   flyerUrl?: string;
   flyer?: FileList;
+  zoomLink?: string;
+  meetingId?: string;
+  passcode?: string;
+  teacherRoleName?: string;
+  studentRoles?: ProgramStudentRoleForm[];
   isFree?: string;
   earlyBirdDeadline?: string;
   fullPriceTicket: number | undefined;
@@ -95,6 +102,9 @@ export default function ProgramFormFields({
   YEARS,
   MONTHS,
 }: ProgramFormFieldsProps) {
+  const teacherRoleName =
+    watch("teacherRoleName")?.trim() || DEFAULT_TEACHER_ROLE_NAME;
+
   return (
     <>
       {/* Program Type */}
@@ -285,6 +295,84 @@ export default function ProgramFormFields({
         </p>
       </div>
 
+      {/* Program Zoom Information */}
+      <div className="space-y-4 border border-gray-200 rounded-lg p-4 bg-gray-50">
+        <h2 className="text-lg font-semibold text-gray-900">
+          Zoom Information
+        </h2>
+        <div>
+          <label
+            htmlFor="zoomLink"
+            className="block text-sm font-medium text-gray-700 mb-2"
+          >
+            Link
+          </label>
+          <input
+            id="zoomLink"
+            {...register("zoomLink")}
+            type="url"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Enter Zoom meeting link"
+          />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label
+              htmlFor="meetingId"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Meeting ID
+            </label>
+            <input
+              id="meetingId"
+              {...register("meetingId")}
+              type="text"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter meeting ID"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="passcode"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Passcode
+            </label>
+            <input
+              id="passcode"
+              {...register("passcode")}
+              type="text"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter passcode"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Program Role Names */}
+      <div>
+        <label
+          htmlFor="teacherRoleName"
+          className="block text-sm font-medium text-gray-700 mb-2"
+        >
+          Teacher Role Name <span className="text-red-500">*</span>
+        </label>
+        <input
+          id="teacherRoleName"
+          {...register("teacherRoleName", {
+            required: "Teacher role name is required",
+          })}
+          type="text"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Mentor"
+        />
+        {errors.teacherRoleName && (
+          <p className="mt-1 text-sm text-red-600">
+            {errors.teacherRoleName.message}
+          </p>
+        )}
+      </div>
+
       {/* Mentors Field - Shown for ALL program types */}
       {currentUser && (
         <div className="space-y-4">
@@ -305,8 +393,8 @@ export default function ProgramFormFields({
             onOrganizersChange={onMentorsChange}
             hideMainOrganizer={true}
             excludeMainOrganizer={false}
-            organizersLabel="Mentors"
-            buttonText="Add Mentors"
+            organizersLabel={`${teacherRoleName}s`}
+            buttonText={`Add ${teacherRoleName}`}
           />
         </div>
       )}

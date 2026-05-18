@@ -11,6 +11,8 @@ import { getAvatarAlt } from "../../utils/avatarUtils";
 import { useAvatarUpdates } from "../../hooks/useAvatarUpdates";
 import { useAuth } from "../../contexts/AuthContext";
 import { useToastReplacement } from "../../contexts/NotificationModalContext";
+import type { ProgramRoles } from "../../types/program";
+import { getDefaultStudentRole, getDiscountStudentRole } from "../../utils/programRoles";
 
 // Helper function to get user ID (handles both _id and id)
 function getUserId(user: ProgramParticipant["user"] | undefined): string {
@@ -21,11 +23,15 @@ function getUserId(user: ProgramParticipant["user"] | undefined): string {
 interface AdminEnrollmentPromptProps {
   onEnroll: (enrollAs: "mentee" | "classRep") => void;
   isLoading: boolean;
+  defaultRoleName: string;
+  discountRoleName: string;
 }
 
 function AdminEnrollmentPrompt({
   onEnroll,
   isLoading,
+  defaultRoleName,
+  discountRoleName,
 }: AdminEnrollmentPromptProps) {
   return (
     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
@@ -38,14 +44,14 @@ function AdminEnrollmentPrompt({
           disabled={isLoading}
           className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-400"
         >
-          {isLoading ? "Enrolling..." : "Enroll as Mentee"}
+          {isLoading ? "Enrolling..." : `Enroll as ${defaultRoleName}`}
         </button>
         <button
           onClick={() => onEnroll("classRep")}
           disabled={isLoading}
           className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors disabled:bg-purple-400"
         >
-          {isLoading ? "Enrolling..." : "Enroll as Class Rep"}
+          {isLoading ? "Enrolling..." : `Enroll as ${discountRoleName}`}
         </button>
       </div>
     </div>
@@ -175,6 +181,7 @@ interface ParticipantsSectionProps {
   program: {
     id: string;
     mentors?: Array<{ userId: string }>;
+    programRoles?: ProgramRoles;
   };
   onEnrollmentChanged?: () => void;
 }
@@ -190,6 +197,14 @@ export function ProgramParticipants({
 
   const [mentees, setMentees] = useState<ProgramParticipant[]>([]);
   const [classReps, setClassReps] = useState<ProgramParticipant[]>([]);
+  const [studentRoleGroups, setStudentRoleGroups] = useState<
+    Array<{
+      roleId: string;
+      name: string;
+      discountEligible?: boolean;
+      participants: ProgramParticipant[];
+    }>
+  >([]);
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState(false);
   const [unenrolling, setUnenrolling] = useState(false);
@@ -216,6 +231,10 @@ export function ProgramParticipants({
   const isMentor = program.mentors?.some((m) => m.userId === user?.id);
   const canViewContact = !!(isAdmin || isMentor || currentUserClassRep);
   const canSelfUnenroll = !!user && !isAdmin;
+  const defaultRole = getDefaultStudentRole(program.programRoles);
+  const discountRole = getDiscountStudentRole(program.programRoles);
+  const defaultRoleName = defaultRole?.name || "Mentee";
+  const discountRoleName = discountRole?.name || "Class Representative";
 
   // Fetch participants
   const fetchParticipants = async () => {
@@ -224,6 +243,23 @@ export function ProgramParticipants({
       const data = await programService.getParticipants(programId);
       setMentees(data.mentees);
       setClassReps(data.classReps);
+      setStudentRoleGroups(
+        data.studentRoles && data.studentRoles.length > 0
+          ? data.studentRoles
+          : [
+              {
+                roleId: "classRep",
+                name: discountRoleName,
+                discountEligible: true,
+                participants: data.classReps,
+              },
+              {
+                roleId: "mentee",
+                name: defaultRoleName,
+                participants: data.mentees,
+              },
+            ],
+      );
     } catch (error) {
       console.error("Error fetching participants:", error);
       notification.error("Failed to load participants. Please try again.");
@@ -271,7 +307,7 @@ export function ProgramParticipants({
   };
 
   const getEnrollmentLabel = (type: "mentee" | "classRep") =>
-    type === "classRep" ? "class representative" : "mentee";
+    type === "classRep" ? discountRoleName.toLowerCase() : defaultRoleName.toLowerCase();
 
   const handleSelfUnenrollClick = async () => {
     try {
@@ -353,6 +389,8 @@ export function ProgramParticipants({
             <AdminEnrollmentPrompt
               onEnroll={handleEnroll}
               isLoading={enrolling}
+              defaultRoleName={defaultRoleName}
+              discountRoleName={discountRoleName}
             />
           )}
 
@@ -368,7 +406,7 @@ export function ProgramParticipants({
                   >
                     {unenrolling
                       ? "Unenrolling..."
-                      : "Unenroll from Mentees"}
+                      : `Unenroll from ${defaultRoleName}s`}
                   </button>
                 </div>
               )}
@@ -381,7 +419,7 @@ export function ProgramParticipants({
                   >
                     {unenrolling
                       ? "Unenrolling..."
-                      : "Unenroll from Class Representatives"}
+                      : `Unenroll from ${discountRoleName}s`}
                   </button>
                 </div>
               )}
@@ -390,90 +428,50 @@ export function ProgramParticipants({
         </div>
       )}
 
-      {/* Class Representatives Section */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">
-          Class Representatives
-        </h2>
-        <p className="text-gray-600 text-sm mb-4 italic">
-          Class representatives, are peer leaders chosen within each mentorship
-          cohort to support coordination, communication, and community building.
-        </p>
+      {studentRoleGroups.map((group) => (
+        <div key={group.roleId} className="bg-white rounded-lg shadow-sm p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            {group.name}s
+          </h2>
+          {group.discountEligible && (
+            <p className="text-gray-600 text-sm mb-4 italic">
+              Students in this role receive the program's configured tuition
+              discount when they enroll.
+            </p>
+          )}
 
-        {classReps.length === 0 ? (
-          <p className="text-gray-600 text-center py-4">
-            No class representatives enrolled yet.
-          </p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {classReps.map((classRep) => (
-              <UserCard
-                key={getUserId(classRep.user)}
-                participant={classRep}
-                showContact={canViewContact}
-                currentUserId={user?.id}
-                currentUserRole={user?.role}
-                onUnenroll={
-                  getUserId(classRep.user) === String(user?.id) &&
-                  ((isAdmin && !classRep.isPaid) || canSelfUnenroll)
-                    ? isAdmin
-                      ? handleUnenroll
-                      : handleSelfUnenrollClick
-                    : undefined
-                }
-                isUnenrolling={unenrolling || loadingUnenrollPreview}
-                canUnenroll={
-                  getUserId(classRep.user) === String(user?.id) &&
-                  ((isAdmin && !classRep.isPaid) || canSelfUnenroll)
-                }
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Mentees Section */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">Mentees</h2>
-        <p className="text-gray-600 text-sm mb-4 italic">
-          — Emerging Leaders in Growth and Service
-          <br />
-          Mentees are participants who commit to a season of intentional
-          learning, reflection, and transformation under the guidance of
-          mentors.
-        </p>
-
-        {mentees.length === 0 ? (
-          <p className="text-gray-600 text-center py-4">
-            No mentees enrolled yet.
-          </p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {mentees.map((mentee) => (
-              <UserCard
-                key={getUserId(mentee.user)}
-                participant={mentee}
-                showContact={canViewContact}
-                currentUserId={user?.id}
-                currentUserRole={user?.role}
-                onUnenroll={
-                  getUserId(mentee.user) === String(user?.id) &&
-                  ((isAdmin && !mentee.isPaid) || canSelfUnenroll)
-                    ? isAdmin
-                      ? handleUnenroll
-                      : handleSelfUnenrollClick
-                    : undefined
-                }
-                isUnenrolling={unenrolling || loadingUnenrollPreview}
-                canUnenroll={
-                  getUserId(mentee.user) === String(user?.id) &&
-                  ((isAdmin && !mentee.isPaid) || canSelfUnenroll)
-                }
-              />
-            ))}
-          </div>
-        )}
-      </div>
+          {group.participants.length === 0 ? (
+            <p className="text-gray-600 text-center py-4">
+              No {group.name.toLowerCase()}s enrolled yet.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {group.participants.map((participant) => (
+                <UserCard
+                  key={getUserId(participant.user)}
+                  participant={participant}
+                  showContact={canViewContact}
+                  currentUserId={user?.id}
+                  currentUserRole={user?.role}
+                  onUnenroll={
+                    getUserId(participant.user) === String(user?.id) &&
+                    ((isAdmin && !participant.isPaid) || canSelfUnenroll)
+                      ? isAdmin
+                        ? handleUnenroll
+                        : handleSelfUnenrollClick
+                      : undefined
+                  }
+                  isUnenrolling={unenrolling || loadingUnenrollPreview}
+                  canUnenroll={
+                    getUserId(participant.user) === String(user?.id) &&
+                    ((isAdmin && !participant.isPaid) || canSelfUnenroll)
+                  }
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
 
       {selfUnenrollConfirm && !showSelfUnenrollFinalConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -489,7 +487,8 @@ export function ProgramParticipants({
             <p className="text-gray-700 mb-4">
               You are currently enrolled as a{" "}
               <strong>
-                {getEnrollmentLabel(selfUnenrollConfirm.enrollmentType)}
+                {selfUnenrollConfirm.studentRoleName ||
+                  getEnrollmentLabel(selfUnenrollConfirm.enrollmentType)}
               </strong>
               {". "}
               {selfUnenrollConfirm.requiresApproval
@@ -557,7 +556,8 @@ export function ProgramParticipants({
             <p className="text-gray-700 mb-4">
               Please confirm you want to unenroll as a{" "}
               <strong>
-                {getEnrollmentLabel(selfUnenrollConfirm.enrollmentType)}
+                {selfUnenrollConfirm.studentRoleName ||
+                  getEnrollmentLabel(selfUnenrollConfirm.enrollmentType)}
               </strong>
               .
             </p>

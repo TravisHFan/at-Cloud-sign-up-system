@@ -22,6 +22,7 @@ import {
   getPurchaseItemDetails,
   markProgramPurchaseUnenrolled,
 } from "../services/PurchaseRefundService";
+import { buildDiscountRoleCountIncrement } from "../utils/programRoles";
 
 export class WebhookController {
   /**
@@ -577,9 +578,15 @@ export class WebhookController {
     // If this was a Class Rep purchase that's now failed, decrement the counter
     if (purchase.isClassRep && purchase.status === "pending") {
       const { Program } = await import("../models");
+      const program = await Program.findById(purchase.programId);
       await Program.findByIdAndUpdate(
         purchase.programId,
-        { $inc: { classRepCount: -1 } },
+        {
+          $inc: buildDiscountRoleCountIncrement(
+            program || { classRepCount: 0 },
+            -1,
+          ),
+        },
         { runValidators: false } // Allow going below limit on decrement
       );
       console.log(

@@ -1,5 +1,6 @@
 import { createPortal } from "react-dom";
 import { formatCurrency } from "../../utils/currency";
+import type { ProgramRoles } from "../../types/program";
 
 interface PricingChange {
   isFree?: boolean;
@@ -7,6 +8,7 @@ interface PricingChange {
   classRepDiscount?: number;
   earlyBirdDiscount?: number;
   earlyBirdDeadline?: string;
+  programRoles?: ProgramRoles;
 }
 
 interface PricingConfirmationModalProps {
@@ -19,6 +21,7 @@ interface PricingConfirmationModalProps {
   currentClassRepDiscount: number | undefined;
   currentEarlyBirdDiscount: number | undefined;
   currentEarlyBirdDeadline?: string;
+  currentProgramRoles?: ProgramRoles;
   onNext: () => void;
   onCancel: () => void;
 }
@@ -33,6 +36,7 @@ export default function PricingConfirmationModal({
   currentClassRepDiscount,
   currentEarlyBirdDiscount,
   currentEarlyBirdDeadline,
+  currentProgramRoles,
   onNext,
   onCancel,
 }: PricingConfirmationModalProps) {
@@ -112,7 +116,7 @@ export default function PricingConfirmationModal({
                         {originalPricing.classRepDiscount !==
                           Math.round((currentClassRepDiscount ?? 0) * 100) && (
                           <li>
-                            • Class rep discount:{" "}
+                            • Student role discount:{" "}
                             {formatCurrency(
                               originalPricing.classRepDiscount || 0
                             )}{" "}
@@ -142,6 +146,10 @@ export default function PricingConfirmationModal({
                             {originalPricing.earlyBirdDeadline || "None"} →{" "}
                             {currentEarlyBirdDeadline || "None"}
                           </li>
+                        )}
+                        {JSON.stringify(originalPricing.programRoles) !==
+                          JSON.stringify(currentProgramRoles) && (
+                          <li>• Student role settings changed</li>
                         )}
                       </ul>
                     </div>

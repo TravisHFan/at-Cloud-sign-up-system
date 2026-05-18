@@ -35,6 +35,25 @@ class PurchaseAccessController {
         return;
       }
 
+      const purchase = await Purchase.findOne({
+        userId: req.user._id,
+        programId: program._id,
+        purchaseType: "program",
+        status: "completed",
+        unenrolledAt: { $exists: false },
+      });
+
+      if (purchase) {
+        res.status(200).json({
+          success: true,
+          data: {
+            hasAccess: true,
+            reason: purchase.isClassRep ? "class_rep" : "purchased",
+          },
+        });
+        return;
+      }
+
       // Super Admin and Administrator have access to all programs
       if (
         req.user.role === "Super Admin" ||
@@ -90,35 +109,6 @@ class PurchaseAccessController {
             )
               ? "class_rep"
               : "purchased",
-          },
-        });
-        return;
-      }
-
-      // Check if program is free
-      if (program.isFree) {
-        res.status(200).json({
-          success: true,
-          data: { hasAccess: true, reason: "free" },
-        });
-        return;
-      }
-
-      // Check if user has purchased the program
-      const purchase = await Purchase.findOne({
-        userId: req.user._id,
-        programId: program._id,
-        purchaseType: "program",
-        status: "completed",
-        unenrolledAt: { $exists: false },
-      });
-
-      if (purchase) {
-        res.status(200).json({
-          success: true,
-          data: {
-            hasAccess: true,
-            reason: purchase.isClassRep ? "class_rep" : "purchased",
           },
         });
         return;

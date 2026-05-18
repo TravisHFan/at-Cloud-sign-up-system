@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from "mongoose";
+import { syncLegacyProgramPricingFields } from "../utils/programRoles";
 
 // A lightweight user snapshot stored in program mentors arrays
 interface IUserRefLite {
@@ -9,6 +10,20 @@ interface IUserRefLite {
   gender?: "male" | "female";
   avatar?: string;
   roleInAtCloud?: string;
+}
+
+export interface IProgramStudentRole {
+  id: string;
+  name: string;
+  discountEligible?: boolean;
+  discountAmount?: number;
+  limit?: number;
+  count?: number;
+}
+
+export interface IProgramRoles {
+  teacherRoleName: string;
+  studentRoles: IProgramStudentRole[];
 }
 
 export interface IProgram extends Document {
@@ -28,6 +43,9 @@ export interface IProgram extends Document {
   };
   introduction?: string;
   flyerUrl?: string;
+  zoomLink?: string;
+  meetingId?: string;
+  passcode?: string;
   // Early Bird deadline (optional)
   earlyBirdDeadline?: Date;
 
@@ -36,6 +54,9 @@ export interface IProgram extends Document {
 
   // Mentors (unified for all program types)
   mentors?: IUserRefLite[];
+
+  // Role labels configured per program
+  programRoles?: IProgramRoles;
 
   // Admin enrollments (Super Admin & Administrator free enrollments)
   adminEnrollments?: {
@@ -67,6 +88,79 @@ const userRefLiteSchema = new Schema<IUserRefLite>(
     gender: { type: String, enum: ["male", "female"] },
     avatar: { type: String, trim: true },
     roleInAtCloud: { type: String, trim: true, maxlength: 100 },
+  },
+  { _id: false },
+);
+
+const programStudentRoleSchema = new Schema<IProgramStudentRole>(
+  {
+    id: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: [80, "Student role ID cannot exceed 80 characters"],
+    },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: [100, "Student role name cannot exceed 100 characters"],
+    },
+    discountEligible: {
+      type: Boolean,
+      default: false,
+    },
+    discountAmount: {
+      type: Number,
+      default: 0,
+      min: [0, "Student role discount must be >= 0"],
+      max: [100000, "Student role discount must be <= 100000"],
+      validate: {
+        validator: Number.isInteger,
+        message: "Student role discount must be an integer",
+      },
+    },
+    limit: {
+      type: Number,
+      default: 0,
+      min: [0, "Student role limit must be >= 0"],
+      max: [5, "Student role limit must be <= 5"],
+      validate: {
+        validator: Number.isInteger,
+        message: "Student role limit must be an integer",
+      },
+    },
+    count: {
+      type: Number,
+      default: 0,
+      min: [0, "Student role count must be >= 0"],
+      validate: {
+        validator: Number.isInteger,
+        message: "Student role count must be an integer",
+      },
+    },
+  },
+  { _id: false },
+);
+
+const programRolesSchema = new Schema<IProgramRoles>(
+  {
+    teacherRoleName: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: [100, "Teacher role name cannot exceed 100 characters"],
+      default: "Mentor",
+    },
+    studentRoles: {
+      type: [programStudentRoleSchema],
+      validate: {
+        validator: function (roles: IProgramStudentRole[] | undefined) {
+          return Array.isArray(roles) && roles.length > 0;
+        },
+        message: "At least one student role is required",
+      },
+    },
   },
   { _id: false },
 );
@@ -130,6 +224,24 @@ const programSchema = new Schema<IProgram>(
       },
       default: undefined,
     },
+    zoomLink: {
+      type: String,
+      trim: true,
+      maxlength: [500, "Zoom link cannot exceed 500 characters"],
+      default: undefined,
+    },
+    meetingId: {
+      type: String,
+      trim: true,
+      maxlength: [100, "Meeting ID cannot exceed 100 characters"],
+      default: undefined,
+    },
+    passcode: {
+      type: String,
+      trim: true,
+      maxlength: [100, "Passcode cannot exceed 100 characters"],
+      default: undefined,
+    },
     // Early Bird deadline (optional)
     earlyBirdDeadline: {
       type: Date,
@@ -150,6 +262,11 @@ const programSchema = new Schema<IProgram>(
 
     // Mentors (unified for all program types)
     mentors: { type: [userRefLiteSchema], default: undefined },
+
+    programRoles: {
+      type: programRolesSchema,
+      default: undefined,
+    },
 
     // Admin enrollments (Super Admin & Administrator free enrollments)
     adminEnrollments: {
@@ -249,6 +366,7 @@ const programSchema = new Schema<IProgram>(
 // Composite validator: individual discounts cannot exceed full price
 programSchema.pre("validate", function (next) {
   const p = this as unknown as IProgram;
+  syncLegacyProgramPricingFields(p);
   const classRep = p.classRepDiscount ?? 0;
   const early = p.earlyBirdDiscount ?? 0;
 

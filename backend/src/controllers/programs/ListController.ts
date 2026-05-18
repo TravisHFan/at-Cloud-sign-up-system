@@ -1,5 +1,9 @@
 import { Request, Response } from "express";
 import { Program } from "../../models";
+import {
+  normalizeProgramRoles,
+  type ProgramRoleSource,
+} from "../../utils/programRoles";
 
 export default class ListController {
   static async list(req: Request, res: Response): Promise<void> {
@@ -20,6 +24,9 @@ export default class ListController {
         return {
           ...rest,
           id: _id?.toString(),
+          programRoles: normalizeProgramRoles(
+            program as unknown as ProgramRoleSource,
+          ),
         };
       });
 
