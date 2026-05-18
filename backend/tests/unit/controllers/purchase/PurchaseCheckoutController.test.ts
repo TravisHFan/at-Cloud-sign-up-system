@@ -145,9 +145,9 @@ describe("PurchaseCheckoutController", () => {
       });
     });
 
-    it("should return 400 if program enrollment closed more than 45 days after program start", async () => {
+    it("should return 400 if program enrollment is closed after program end month", async () => {
       vi.useFakeTimers();
-      vi.setSystemTime(new Date("2025-03-05T12:00:00.000Z"));
+      vi.setSystemTime(new Date(2025, 1, 1, 0, 0, 0, 0));
 
       try {
         mockReq.user = {
@@ -166,6 +166,8 @@ describe("PurchaseCheckoutController", () => {
           period: {
             startYear: "2025",
             startMonth: "01",
+            endYear: "2025",
+            endMonth: "01",
           },
         };
 
@@ -179,11 +181,11 @@ describe("PurchaseCheckoutController", () => {
         expect(statusMock).toHaveBeenCalledWith(400);
         expect(jsonMock).toHaveBeenCalledWith({
           success: false,
-          message:
-            "Enrollment is closed. Program enrollment is only available for 45 days after the program start date.",
+          message: "Enrollment is closed because this program has finished.",
           data: {
             enrollmentClosed: true,
             programStartDate: expect.any(String),
+            programEndDate: expect.any(String),
             enrollmentClosesAt: expect.any(String),
           },
         });

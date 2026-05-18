@@ -7,9 +7,9 @@ describe("ProgramPricing enrollment window", () => {
     vi.useRealTimers();
   });
 
-  it("disables enrollment when the program started more than 45 days ago", () => {
+  it("disables enrollment after the program end month has finished", () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date("2025-03-05T12:00:00.000Z"));
+    vi.setSystemTime(new Date(2025, 1, 1, 0, 0, 0, 0));
 
     render(
       <ProgramPricing
@@ -17,7 +17,12 @@ describe("ProgramPricing enrollment window", () => {
         hasAccess={false}
         accessReason="not_purchased"
         onEnrollClick={vi.fn()}
-        period={{ startYear: "2025", startMonth: "01" }}
+        period={{
+          startYear: "2025",
+          startMonth: "01",
+          endYear: "2025",
+          endMonth: "01",
+        }}
       />
     );
 
@@ -26,14 +31,14 @@ describe("ProgramPricing enrollment window", () => {
     ).toBeDisabled();
     expect(
       screen.getByText(
-        /enrollment is closed because this program started more than 45 days ago/i
+        /enrollment is closed because this program has finished/i
       )
     ).toBeInTheDocument();
   });
 
-  it("keeps Enroll Now enabled during the 45-day window", () => {
+  it("keeps Enroll Now enabled through the last day of the program end month", () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date("2025-02-10T12:00:00.000Z"));
+    vi.setSystemTime(new Date(2025, 0, 31, 12, 0, 0, 0));
 
     render(
       <ProgramPricing
@@ -41,7 +46,12 @@ describe("ProgramPricing enrollment window", () => {
         hasAccess={false}
         accessReason="not_purchased"
         onEnrollClick={vi.fn()}
-        period={{ startYear: "2025", startMonth: "Jan" }}
+        period={{
+          startYear: "2025",
+          startMonth: "Jan",
+          endYear: "2025",
+          endMonth: "Jan",
+        }}
       />
     );
 

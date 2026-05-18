@@ -1,8 +1,8 @@
-export const PROGRAM_ENROLLMENT_GRACE_DAYS = 45;
-
 type ProgramPeriodLike = {
   startYear?: string | number | null;
   startMonth?: string | number | null;
+  endYear?: string | number | null;
+  endMonth?: string | number | null;
 };
 
 type ProgramLike = {
@@ -12,7 +12,9 @@ type ProgramLike = {
 export type ProgramEnrollmentWindow = {
   isEnrollmentClosed: boolean;
   hasStartDate: boolean;
+  hasEndDate: boolean;
   startDate?: Date;
+  endDate?: Date;
   enrollmentClosesAt?: Date;
 };
 
@@ -36,7 +38,9 @@ const MONTH_NAME_TO_INDEX = new Map(
   ])
 );
 
-const parseStartMonth = (value: ProgramPeriodLike["startMonth"]) => {
+const parseMonth = (
+  value: ProgramPeriodLike["startMonth"] | ProgramPeriodLike["endMonth"]
+) => {
   if (value == null) return null;
 
   const raw = String(value).trim();
@@ -50,7 +54,9 @@ const parseStartMonth = (value: ProgramPeriodLike["startMonth"]) => {
   return MONTH_NAME_TO_INDEX.get(raw.toLowerCase()) ?? null;
 };
 
-const parseStartYear = (value: ProgramPeriodLike["startYear"]) => {
+const parseYear = (
+  value: ProgramPeriodLike["startYear"] | ProgramPeriodLike["endYear"]
+) => {
   if (value == null) return null;
 
   const year = Number(String(value).trim());
@@ -65,30 +71,44 @@ export const getProgramEnrollmentWindow = (
   program: ProgramLike,
   now = new Date()
 ): ProgramEnrollmentWindow => {
-  const year = parseStartYear(program.period?.startYear);
-  const monthIndex = parseStartMonth(program.period?.startMonth);
+  const startYear = parseYear(program.period?.startYear);
+  const startMonthIndex = parseMonth(program.period?.startMonth);
+  const endYear = parseYear(program.period?.endYear);
+  const endMonthIndex = parseMonth(program.period?.endMonth);
+  const hasStartDate = startYear != null && startMonthIndex != null;
 
-  if (year == null || monthIndex == null) {
+  if (endYear == null || endMonthIndex == null) {
     return {
-      hasStartDate: false,
+      hasStartDate,
+      hasEndDate: false,
       isEnrollmentClosed: false,
     };
   }
 
-  const startDate = new Date(year, monthIndex, 1, 0, 0, 0, 0);
-  const enrollmentClosesAt = new Date(startDate);
-  enrollmentClosesAt.setDate(
-    enrollmentClosesAt.getDate() + PROGRAM_ENROLLMENT_GRACE_DAYS
+  const startDate =
+    startYear != null && startMonthIndex != null
+      ? new Date(startYear, startMonthIndex, 1, 0, 0, 0, 0)
+      : undefined;
+  const endDate = new Date(endYear, endMonthIndex, 1, 0, 0, 0, 0);
+  const enrollmentClosesAt = new Date(
+    endYear,
+    endMonthIndex + 1,
+    0,
+    23,
+    59,
+    59,
+    999
   );
-  enrollmentClosesAt.setHours(23, 59, 59, 999);
 
   return {
-    hasStartDate: true,
+    hasStartDate,
+    hasEndDate: true,
     startDate,
+    endDate,
     enrollmentClosesAt,
     isEnrollmentClosed: now.getTime() > enrollmentClosesAt.getTime(),
   };
 };
 
 export const PROGRAM_ENROLLMENT_CLOSED_MESSAGE =
-  "Enrollment is closed. Program enrollment is only available for 45 days after the program start date.";
+  "Enrollment is closed because this program has finished.";

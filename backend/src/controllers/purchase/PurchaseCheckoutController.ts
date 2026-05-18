@@ -73,6 +73,7 @@ class PurchaseCheckoutController {
           data: {
             enrollmentClosed: true,
             programStartDate: enrollmentWindow.startDate?.toISOString(),
+            programEndDate: enrollmentWindow.endDate?.toISOString(),
             enrollmentClosesAt:
               enrollmentWindow.enrollmentClosesAt?.toISOString(),
           },

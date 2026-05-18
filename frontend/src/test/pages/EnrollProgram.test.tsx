@@ -319,6 +319,8 @@ describe("EnrollProgram Component", () => {
       period: {
         startYear: "2020",
         startMonth: "01",
+        endYear: "2020",
+        endMonth: "01",
       },
     });
 
