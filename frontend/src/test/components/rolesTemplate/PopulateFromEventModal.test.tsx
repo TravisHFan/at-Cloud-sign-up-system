@@ -3,11 +3,11 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import PopulateFromEventModal from "../../../../src/components/rolesTemplate/PopulateFromEventModal";
 import type { EventData } from "../../../../src/types/event";
-import { searchService } from "../../../../src/services/api";
+import { eventService } from "../../../../src/services/api";
 
 vi.mock("../../../../src/services/api", () => ({
-  searchService: {
-    searchEvents: vi.fn(),
+  eventService: {
+    getEvents: vi.fn(),
   },
 }));
 
@@ -118,8 +118,8 @@ describe("PopulateFromEventModal", () => {
   });
 
   it("renders modal when isOpen is true", async () => {
-    vi.mocked(searchService.searchEvents).mockResolvedValue({
-      results: mockEvents.filter((e) => e.roles.length > 0),
+    vi.mocked(eventService.getEvents).mockResolvedValue({
+      events: mockEvents.filter((e) => e.roles.length > 0),
       pagination: {
         currentPage: 1,
         totalPages: 1,
@@ -145,8 +145,8 @@ describe("PopulateFromEventModal", () => {
 
   it("loads and displays events with roles on mount", async () => {
     const eventsWithRoles = mockEvents.filter((e) => e.roles.length > 0);
-    vi.mocked(searchService.searchEvents).mockResolvedValue({
-      results: eventsWithRoles,
+    vi.mocked(eventService.getEvents).mockResolvedValue({
+      events: eventsWithRoles,
       pagination: {
         currentPage: 1,
         totalPages: 1,
@@ -175,10 +175,10 @@ describe("PopulateFromEventModal", () => {
     expect(screen.getByText("1 role")).toBeInTheDocument();
   });
 
-  it("filters events by eventType", async () => {
+  it("loads all events for the eventType without status filtering", async () => {
     const eventsWithRoles = mockEvents.filter((e) => e.roles.length > 0);
-    vi.mocked(searchService.searchEvents).mockResolvedValue({
-      results: eventsWithRoles,
+    vi.mocked(eventService.getEvents).mockResolvedValue({
+      events: eventsWithRoles,
       pagination: {
         currentPage: 1,
         totalPages: 1,
@@ -198,15 +198,67 @@ describe("PopulateFromEventModal", () => {
     );
 
     await waitFor(() => {
-      expect(searchService.searchEvents).toHaveBeenCalledWith("..", {
+      expect(eventService.getEvents).toHaveBeenCalledWith({
+        page: 1,
+        limit: 100,
         type: "Conference",
+        sortBy: "date",
+        sortOrder: "desc",
       });
     });
+    expect(
+      vi.mocked(eventService.getEvents).mock.calls[0][0],
+    ).not.toHaveProperty("status");
+  });
+
+  it("fetches every backend page before paginating locally", async () => {
+    const firstPageEvents = mockEvents.slice(0, 1);
+    const secondPageEvents = mockEvents.slice(1, 2);
+    vi.mocked(eventService.getEvents)
+      .mockResolvedValueOnce({
+        events: firstPageEvents,
+        pagination: {
+          currentPage: 1,
+          totalPages: 2,
+          totalEvents: 2,
+          hasNext: true,
+          hasPrev: false,
+        },
+      })
+      .mockResolvedValueOnce({
+        events: secondPageEvents,
+        pagination: {
+          currentPage: 2,
+          totalPages: 2,
+          totalEvents: 2,
+          hasNext: false,
+          hasPrev: true,
+        },
+      });
+
+    render(
+      <PopulateFromEventModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSelect={mockOnSelect}
+        eventType="Conference"
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Tech Conference 2025")).toBeInTheDocument();
+      expect(screen.getByText("Leadership Summit")).toBeInTheDocument();
+    });
+    expect(eventService.getEvents).toHaveBeenCalledTimes(2);
+    expect(eventService.getEvents).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ page: 2, type: "Conference" }),
+    );
   });
 
   it("excludes events without roles", async () => {
-    vi.mocked(searchService.searchEvents).mockResolvedValue({
-      results: mockEvents, // Includes event without roles
+    vi.mocked(eventService.getEvents).mockResolvedValue({
+      events: mockEvents, // Includes event without roles
       pagination: {
         currentPage: 1,
         totalPages: 1,
@@ -236,8 +288,8 @@ describe("PopulateFromEventModal", () => {
 
   it("handles search functionality", async () => {
     const eventsWithRoles = mockEvents.filter((e) => e.roles.length > 0);
-    vi.mocked(searchService.searchEvents).mockResolvedValue({
-      results: eventsWithRoles,
+    vi.mocked(eventService.getEvents).mockResolvedValue({
+      events: eventsWithRoles,
       pagination: {
         currentPage: 1,
         totalPages: 1,
@@ -273,8 +325,8 @@ describe("PopulateFromEventModal", () => {
   });
 
   it("displays empty state when no events with roles found", async () => {
-    vi.mocked(searchService.searchEvents).mockResolvedValue({
-      results: [],
+    vi.mocked(eventService.getEvents).mockResolvedValue({
+      events: [],
       pagination: {
         currentPage: 1,
         totalPages: 0,
@@ -301,7 +353,7 @@ describe("PopulateFromEventModal", () => {
   });
 
   it("displays error state when loading fails", async () => {
-    vi.mocked(searchService.searchEvents).mockRejectedValue(
+    vi.mocked(eventService.getEvents).mockRejectedValue(
       new Error("Network error")
     );
 
@@ -321,8 +373,8 @@ describe("PopulateFromEventModal", () => {
 
   it("calls onSelect with event data when event is clicked", async () => {
     const eventsWithRoles = mockEvents.filter((e) => e.roles.length > 0);
-    vi.mocked(searchService.searchEvents).mockResolvedValue({
-      results: eventsWithRoles,
+    vi.mocked(eventService.getEvents).mockResolvedValue({
+      events: eventsWithRoles,
       pagination: {
         currentPage: 1,
         totalPages: 1,
@@ -355,8 +407,8 @@ describe("PopulateFromEventModal", () => {
   });
 
   it("calls onClose when Cancel button is clicked", async () => {
-    vi.mocked(searchService.searchEvents).mockResolvedValue({
-      results: [],
+    vi.mocked(eventService.getEvents).mockResolvedValue({
+      events: [],
       pagination: {
         currentPage: 1,
         totalPages: 0,
@@ -384,8 +436,8 @@ describe("PopulateFromEventModal", () => {
   });
 
   it("calls onClose when close button (X) is clicked", async () => {
-    vi.mocked(searchService.searchEvents).mockResolvedValue({
-      results: [],
+    vi.mocked(eventService.getEvents).mockResolvedValue({
+      events: [],
       pagination: {
         currentPage: 1,
         totalPages: 0,
@@ -420,8 +472,8 @@ describe("PopulateFromEventModal", () => {
   });
 
   it("handles pagination correctly", async () => {
-    // Create more than 10 events to trigger pagination
-    const manyEvents: EventData[] = Array.from({ length: 15 }, (_, i) => ({
+    // Create more than 20 events to trigger modal pagination
+    const manyEvents: EventData[] = Array.from({ length: 25 }, (_, i) => ({
       ...mockEvents[0],
       id: `event${i}`,
       title: `Event ${i + 1}`,
@@ -437,13 +489,13 @@ describe("PopulateFromEventModal", () => {
       ],
     }));
 
-    vi.mocked(searchService.searchEvents).mockResolvedValue({
-      results: manyEvents,
+    vi.mocked(eventService.getEvents).mockResolvedValue({
+      events: manyEvents,
       pagination: {
         currentPage: 1,
-        totalPages: 2,
-        totalEvents: 15,
-        hasNext: true,
+        totalPages: 1,
+        totalEvents: 25,
+        hasNext: false,
         hasPrev: false,
       },
     });
@@ -461,10 +513,10 @@ describe("PopulateFromEventModal", () => {
       expect(screen.getByText("Event 1")).toBeInTheDocument();
     });
 
-    // Should show first 10 events
+    // Should show first 20 events
     expect(screen.getByText("Event 1")).toBeInTheDocument();
-    expect(screen.getByText("Event 10")).toBeInTheDocument();
-    expect(screen.queryByText("Event 11")).toBeNull();
+    expect(screen.getByText("Event 20")).toBeInTheDocument();
+    expect(screen.queryByText("Event 21")).toBeNull();
 
     // Should show pagination info
     expect(screen.getByText(/Page 1 of 2/i)).toBeInTheDocument();
@@ -474,22 +526,22 @@ describe("PopulateFromEventModal", () => {
     fireEvent.click(nextButton);
 
     await waitFor(() => {
-      expect(screen.getByText("Event 11")).toBeInTheDocument();
+      expect(screen.getByText("Event 21")).toBeInTheDocument();
     });
 
     // Should show remaining events
-    expect(screen.getByText("Event 15")).toBeInTheDocument();
+    expect(screen.getByText("Event 25")).toBeInTheDocument();
     expect(screen.queryByText("Event 1")).toBeNull();
   });
 
   it("displays loading state while fetching events", async () => {
-    vi.mocked(searchService.searchEvents).mockImplementation(
+    vi.mocked(eventService.getEvents).mockImplementation(
       () =>
         new Promise((resolve) =>
           setTimeout(
             () =>
               resolve({
-                results: [],
+                events: [],
                 pagination: {
                   currentPage: 1,
                   totalPages: 0,
@@ -521,8 +573,8 @@ describe("PopulateFromEventModal", () => {
 
   it("reloads events when modal is reopened", async () => {
     const eventsWithRoles = mockEvents.filter((e) => e.roles.length > 0);
-    vi.mocked(searchService.searchEvents).mockResolvedValue({
-      results: eventsWithRoles,
+    vi.mocked(eventService.getEvents).mockResolvedValue({
+      events: eventsWithRoles,
       pagination: {
         currentPage: 1,
         totalPages: 1,
@@ -542,7 +594,7 @@ describe("PopulateFromEventModal", () => {
     );
 
     await waitFor(() => {
-      expect(searchService.searchEvents).toHaveBeenCalledTimes(1);
+      expect(eventService.getEvents).toHaveBeenCalledTimes(1);
     });
 
     // Close modal
@@ -566,14 +618,14 @@ describe("PopulateFromEventModal", () => {
     );
 
     await waitFor(() => {
-      expect(searchService.searchEvents).toHaveBeenCalledTimes(2);
+      expect(eventService.getEvents).toHaveBeenCalledTimes(2);
     });
   });
 
   it("displays event information with proper formatting", async () => {
     const eventsWithRoles = [mockEvents[0]];
-    vi.mocked(searchService.searchEvents).mockResolvedValue({
-      results: eventsWithRoles,
+    vi.mocked(eventService.getEvents).mockResolvedValue({
+      events: eventsWithRoles,
       pagination: {
         currentPage: 1,
         totalPages: 1,

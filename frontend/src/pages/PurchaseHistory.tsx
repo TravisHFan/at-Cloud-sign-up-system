@@ -75,6 +75,7 @@ export default function PurchaseHistory() {
     purchase: Purchase;
     eligibility: RefundEligibility;
   } | null>(null);
+  const [showRefundFinalConfirm, setShowRefundFinalConfirm] = useState(false);
   const [refundingId, setRefundingId] = useState<string | null>(null);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [purchaseTypeFilter, setPurchaseTypeFilter] = useState<
@@ -201,6 +202,7 @@ export default function PurchaseHistory() {
 
       // Show confirmation modal
       setRefundConfirm({ purchase, eligibility });
+      setShowRefundFinalConfirm(false);
     } catch (err) {
       console.error("Error checking refund eligibility:", err);
       setErrorModal({
@@ -222,6 +224,7 @@ export default function PurchaseHistory() {
       // Reload purchases to show updated status
       await loadPurchases();
       setRefundConfirm(null);
+      setShowRefundFinalConfirm(false);
 
       // Show success message
       if (result.approvalRequired) {
@@ -249,9 +252,16 @@ export default function PurchaseHistory() {
         message: errorMessage,
       });
       setRefundConfirm(null);
+      setShowRefundFinalConfirm(false);
     } finally {
       setRefundingId(null);
     }
+  };
+
+  const handleCloseRefundConfirm = () => {
+    if (refundingId) return;
+    setRefundConfirm(null);
+    setShowRefundFinalConfirm(false);
   };
 
   const getStatusBadge = (purchase: Purchase) => {
@@ -906,7 +916,7 @@ export default function PurchaseHistory() {
         )}
 
         {/* Refund Confirmation Modal */}
-        {refundConfirm && (
+        {refundConfirm && !showRefundFinalConfirm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg max-w-lg w-full p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
@@ -1029,11 +1039,56 @@ export default function PurchaseHistory() {
 
               <div className="flex justify-end gap-3">
                 <button
-                  onClick={() => setRefundConfirm(null)}
+                  onClick={handleCloseRefundConfirm}
                   disabled={refundingId === refundConfirm.purchase.id}
                   className="px-4 py-2 text-sm border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                 >
                   Cancel
+                </button>
+                <button
+                  onClick={() => setShowRefundFinalConfirm(true)}
+                  disabled={refundingId === refundConfirm.purchase.id}
+                  className="px-4 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
+                >
+                  Continue
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Refund Final Confirmation Modal */}
+        {refundConfirm && showRefundFinalConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-md w-full p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Final Confirmation
+              </h3>
+              <p className="text-gray-700 mb-4">
+                Please confirm you want to{" "}
+                {refundConfirm.eligibility.requiresApproval
+                  ? "submit this refund request for administrator review"
+                  : "request this refund"}
+                .
+              </p>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <p className="text-sm text-red-900">
+                  This will affect order{" "}
+                  <strong>{refundConfirm.purchase.orderNumber}</strong> for{" "}
+                  <strong>{getPurchaseItemTitle(refundConfirm.purchase)}</strong>
+                  .{" "}
+                  {refundConfirm.eligibility.requiresApproval
+                    ? "Administrators will review the request before any refund or unenrollment is completed."
+                    : `Your access to this ${refundConfirm.purchase.purchaseType} will be removed immediately after confirmation.`}
+                </p>
+              </div>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setShowRefundFinalConfirm(false)}
+                  disabled={refundingId === refundConfirm.purchase.id}
+                  className="px-4 py-2 text-sm border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Back
                 </button>
                 <button
                   onClick={handleConfirmRefund}

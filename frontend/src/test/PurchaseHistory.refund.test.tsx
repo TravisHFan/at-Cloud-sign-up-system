@@ -39,6 +39,13 @@ const renderWithRouter = (component: React.ReactElement) => {
   return render(<BrowserRouter>{component}</BrowserRouter>);
 };
 
+const continueToRefundFinalConfirm = async () => {
+  fireEvent.click(screen.getByRole("button", { name: /continue/i }));
+  await waitFor(() => {
+    expect(screen.getByText("Final Confirmation")).toBeInTheDocument();
+  });
+};
+
 // Mock data
 const mockCompletedPurchase = {
   id: "purchase-1",
@@ -401,7 +408,7 @@ describe("PurchaseHistory - Refund UI", () => {
         screen.getByText(/outside the 30-day refund window/i)
       ).toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: /submit request/i })
+        screen.getByRole("button", { name: /continue/i })
       ).toBeInTheDocument();
     });
 
@@ -472,9 +479,9 @@ describe("PurchaseHistory - Refund UI", () => {
       // Should show refund amount (appears multiple times on page, so just check it exists)
       expect(screen.getAllByText("$100.00").length).toBeGreaterThan(0);
 
-      // Should have Confirm and Cancel buttons
+      // Should have Continue and Cancel buttons before final confirmation
       expect(
-        screen.getByRole("button", { name: /confirm refund/i })
+        screen.getByRole("button", { name: /continue/i })
       ).toBeInTheDocument();
       expect(
         screen.getByRole("button", { name: /cancel/i })
@@ -516,10 +523,41 @@ describe("PurchaseHistory - Refund UI", () => {
         expect(screen.queryByText("Request Refund")).not.toBeInTheDocument();
       });
     });
+
+    it("should show final confirmation before submitting refund", async () => {
+      (purchaseService.getMyPurchases as any).mockResolvedValue([
+        mockCompletedPurchase,
+      ]);
+      (purchaseService.getMyPendingPurchases as any).mockResolvedValue([]);
+      (purchaseService.checkRefundEligibility as any).mockResolvedValue(
+        mockEligibleResponse
+      );
+
+      renderWithRouter(<PurchaseHistory />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Test Program")).toBeInTheDocument();
+      });
+
+      const actionsButton = screen.getByRole("button", { name: /actions/i });
+      fireEvent.click(actionsButton);
+      const requestRefundButton = await screen.findByText("Request Refund");
+      fireEvent.click(requestRefundButton);
+
+      await waitFor(() => {
+        expect(screen.getByText("Request Refund")).toBeInTheDocument();
+      });
+
+      await continueToRefundFinalConfirm();
+      expect(purchaseService.initiateRefund).not.toHaveBeenCalled();
+      expect(
+        screen.getByRole("button", { name: /confirm refund/i })
+      ).toBeInTheDocument();
+    });
   });
 
   describe("Refund Initiation", () => {
-    it("should call initiateRefund when Confirm Refund is clicked", async () => {
+    it("should call initiateRefund when final Confirm Refund is clicked", async () => {
       (purchaseService.getMyPurchases as any).mockResolvedValue([
         mockCompletedPurchase,
       ]);
@@ -551,7 +589,8 @@ describe("PurchaseHistory - Refund UI", () => {
         expect(screen.getByText("Request Refund")).toBeInTheDocument();
       });
 
-      // Click Confirm Refund
+      // Continue to final confirmation, then click Confirm Refund
+      await continueToRefundFinalConfirm();
       const confirmButton = screen.getByRole("button", {
         name: /confirm refund/i,
       });
@@ -597,7 +636,8 @@ describe("PurchaseHistory - Refund UI", () => {
         expect(screen.getByText("Request Refund")).toBeInTheDocument();
       });
 
-      // Click Confirm Refund
+      // Continue to final confirmation, then click Confirm Refund
+      await continueToRefundFinalConfirm();
       const confirmButton = screen.getByRole("button", {
         name: /confirm refund/i,
       });
@@ -644,6 +684,7 @@ describe("PurchaseHistory - Refund UI", () => {
         expect(screen.getByText("Request Admin Approval")).toBeInTheDocument();
       });
 
+      await continueToRefundFinalConfirm();
       fireEvent.click(screen.getByRole("button", { name: /submit request/i }));
 
       await waitFor(() => {
@@ -689,7 +730,8 @@ describe("PurchaseHistory - Refund UI", () => {
         expect(screen.getByText("Request Refund")).toBeInTheDocument();
       });
 
-      // Click Confirm Refund
+      // Continue to final confirmation, then click Confirm Refund
+      await continueToRefundFinalConfirm();
       const confirmButton = screen.getByRole("button", {
         name: /confirm refund/i,
       });
@@ -730,7 +772,8 @@ describe("PurchaseHistory - Refund UI", () => {
         expect(screen.getByText("Request Refund")).toBeInTheDocument();
       });
 
-      // Click Confirm Refund
+      // Continue to final confirmation, then click Confirm Refund
+      await continueToRefundFinalConfirm();
       const confirmButton = screen.getByRole("button", {
         name: /confirm refund/i,
       });
@@ -778,7 +821,8 @@ describe("PurchaseHistory - Refund UI", () => {
         expect(screen.getByText("Request Refund")).toBeInTheDocument();
       });
 
-      // Click Confirm Refund
+      // Continue to final confirmation, then click Confirm Refund
+      await continueToRefundFinalConfirm();
       const confirmButton = screen.getByRole("button", {
         name: /confirm refund/i,
       });

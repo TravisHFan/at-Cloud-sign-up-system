@@ -196,6 +196,8 @@ export function ProgramParticipants({
   const [loadingUnenrollPreview, setLoadingUnenrollPreview] = useState(false);
   const [selfUnenrollConfirm, setSelfUnenrollConfirm] =
     useState<ProgramUnenrollPreview | null>(null);
+  const [showSelfUnenrollFinalConfirm, setShowSelfUnenrollFinalConfirm] =
+    useState(false);
 
   const user = currentUser;
 
@@ -276,6 +278,7 @@ export function ProgramParticipants({
       setLoadingUnenrollPreview(true);
       const preview = await programService.getUnenrollPreview(programId);
       setSelfUnenrollConfirm(preview);
+      setShowSelfUnenrollFinalConfirm(false);
     } catch (error) {
       console.error("Error loading unenroll preview:", error);
       notification.error(
@@ -297,6 +300,7 @@ export function ProgramParticipants({
         onEnrollmentChanged?.();
       }
       setSelfUnenrollConfirm(null);
+      setShowSelfUnenrollFinalConfirm(false);
 
       if (result.refundStatus === "processing") {
         notification.success(
@@ -321,6 +325,12 @@ export function ProgramParticipants({
     } finally {
       setUnenrolling(false);
     }
+  };
+
+  const closeSelfUnenrollConfirm = () => {
+    if (unenrolling) return;
+    setSelfUnenrollConfirm(null);
+    setShowSelfUnenrollFinalConfirm(false);
   };
 
   if (loading) {
@@ -465,7 +475,7 @@ export function ProgramParticipants({
         )}
       </div>
 
-      {selfUnenrollConfirm && (
+      {selfUnenrollConfirm && !showSelfUnenrollFinalConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-lg w-full p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
@@ -519,11 +529,58 @@ export function ProgramParticipants({
 
             <div className="flex justify-end gap-3">
               <button
-                onClick={() => setSelfUnenrollConfirm(null)}
+                onClick={closeSelfUnenrollConfirm}
                 disabled={unenrolling}
                 className="px-4 py-2 text-sm border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50"
               >
                 Cancel
+              </button>
+              <button
+                onClick={() => setShowSelfUnenrollFinalConfirm(true)}
+                disabled={unenrolling}
+                className="px-4 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selfUnenrollConfirm && showSelfUnenrollFinalConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Final Confirmation
+            </h3>
+
+            <p className="text-gray-700 mb-4">
+              Please confirm you want to unenroll as a{" "}
+              <strong>
+                {getEnrollmentLabel(selfUnenrollConfirm.enrollmentType)}
+              </strong>
+              .
+            </p>
+
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+              <p className="text-sm text-red-900">
+                {selfUnenrollConfirm.requiresApproval
+                  ? "This will send your request to administrators for review. You will remain enrolled until an administrator makes a decision."
+                  : selfUnenrollConfirm.refundEligible
+                    ? `This will remove you from the program immediately and request a refund of ${formatCurrency(
+                        selfUnenrollConfirm.refundAmount,
+                      )}.`
+                    : "This will remove you from the program immediately without a refund."}
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowSelfUnenrollFinalConfirm(false)}
+                disabled={unenrolling}
+                className="px-4 py-2 text-sm border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Back
               </button>
               <button
                 onClick={handleConfirmSelfUnenroll}
@@ -538,7 +595,7 @@ export function ProgramParticipants({
                     ? "Yes, Unenroll and Refund"
                     : selfUnenrollConfirm.requiresApproval
                       ? "Send Request"
-                    : "Yes, Unenroll"}
+                      : "Yes, Unenroll"}
               </button>
             </div>
           </div>

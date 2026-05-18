@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { searchService } from "../../services/api";
+import { eventService } from "../../services/api";
 import type { EventData } from "../../types/event";
 import Icon from "../common/Icon";
 import { formatEventDateTimeRangeInViewerTZ } from "../../utils/eventStatsUtils";
@@ -11,6 +11,9 @@ interface PopulateFromEventModalProps {
   onSelect: (event: EventData) => void;
   eventType: string;
 }
+
+const MODAL_ITEMS_PER_PAGE = 20;
+const EVENTS_FETCH_PAGE_SIZE = 100;
 
 export default function PopulateFromEventModal({
   isOpen,
@@ -24,30 +27,31 @@ export default function PopulateFromEventModal({
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
 
   const loadEvents = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      // Search events with type filter
-      // Using ".." which in regex matches any 2 characters - effectively returns all events
-      // Combined with type filter, this gets all events of the specified type
-      const response = await searchService.searchEvents("..", {
-        type: eventType, // Backend expects 'type', not 'eventType'
-      });
+      const allEvents: EventData[] = [];
+      let page = 1;
+      let hasNext = true;
 
-      // Check if response has results
-      if (!response || !response.results) {
-        console.error("Invalid response structure:", response);
-        setError("Failed to load events: Invalid response from server");
-        setEvents([]);
-        setFilteredEvents([]);
-        return;
+      while (hasNext) {
+        const response = await eventService.getEvents({
+          page,
+          limit: EVENTS_FETCH_PAGE_SIZE,
+          type: eventType,
+          sortBy: "date",
+          sortOrder: "desc",
+        });
+
+        allEvents.push(...response.events);
+        hasNext = response.pagination.hasNext;
+        page += 1;
       }
 
       // Filter events that have roles defined
-      const eventsWithRoles = response.results.filter(
+      const eventsWithRoles = allEvents.filter(
         (event) => event.roles && event.roles.length > 0
       );
 
@@ -93,9 +97,9 @@ export default function PopulateFromEventModal({
   };
 
   // Pagination
-  const totalPages = Math.ceil(filteredEvents.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
+  const totalPages = Math.ceil(filteredEvents.length / MODAL_ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * MODAL_ITEMS_PER_PAGE;
+  const endIndex = startIndex + MODAL_ITEMS_PER_PAGE;
   const currentEvents = filteredEvents.slice(startIndex, endIndex);
 
   if (!isOpen) return null;
@@ -209,7 +213,7 @@ export default function PopulateFromEventModal({
         </div>
 
         {/* Footer with Pagination */}
-        {filteredEvents.length > itemsPerPage && (
+        {filteredEvents.length > MODAL_ITEMS_PER_PAGE && (
           <div className="p-4 border-t border-gray-200">
             <div className="flex items-center justify-between">
               <div className="text-sm text-gray-600">
