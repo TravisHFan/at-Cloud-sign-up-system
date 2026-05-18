@@ -85,6 +85,8 @@ class EventPurchaseService {
         purchaseType: "event",
         eventId: eventIdObj,
         orderNumber,
+        itemTitle: event.title,
+        itemLabel: "Event",
         fullPrice: params.priceInCents,
         classRepDiscount: 0, // Not applicable for events
         earlyBirdDiscount: 0, // Not applicable for events

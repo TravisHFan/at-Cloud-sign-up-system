@@ -37,6 +37,8 @@ export function getPurchaseItemDetails(purchase: {
   programId?: unknown;
   eventId?: unknown;
   membershipId?: unknown;
+  itemTitle?: unknown;
+  itemLabel?: unknown;
 }): PurchaseItemDetails {
   const itemType =
     purchase.purchaseType === "event"
@@ -50,23 +52,57 @@ export function getPurchaseItemDetails(purchase: {
       : itemType === "membership"
         ? "Annual Membership"
         : "Program";
+  const snapshotLabel =
+    purchase.itemLabel === "Program" ||
+    purchase.itemLabel === "Event" ||
+    purchase.itemLabel === "Annual Membership"
+      ? purchase.itemLabel
+      : itemLabel;
   const linkedItem =
     itemType === "event"
       ? purchase.eventId
       : itemType === "membership"
         ? purchase.membershipId
         : purchase.programId;
-
-  const itemTitle =
+  const linkedTitle =
     linkedItem &&
     typeof linkedItem === "object" &&
     "title" in linkedItem &&
     typeof linkedItem.title === "string" &&
     linkedItem.title.trim()
-      ? linkedItem.title
-      : itemLabel;
+      ? linkedItem.title.trim()
+      : undefined;
 
-  return { itemTitle, itemLabel, itemType };
+  const itemTitle =
+    typeof purchase.itemTitle === "string" && purchase.itemTitle.trim()
+      ? purchase.itemTitle.trim()
+      : linkedTitle || snapshotLabel;
+
+  return { itemTitle, itemLabel: snapshotLabel, itemType };
+}
+
+export function applyPurchaseItemSnapshot(purchase: {
+  purchaseType?: "program" | "event" | "membership";
+  programId?: unknown;
+  eventId?: unknown;
+  membershipId?: unknown;
+  itemTitle?: string;
+  itemLabel?: unknown;
+}): boolean {
+  const { itemTitle, itemLabel } = getPurchaseItemDetails(purchase);
+  let changed = false;
+
+  if (!purchase.itemTitle?.trim()) {
+    purchase.itemTitle = itemTitle;
+    changed = true;
+  }
+
+  if (purchase.itemLabel !== itemLabel) {
+    purchase.itemLabel = itemLabel;
+    changed = true;
+  }
+
+  return changed;
 }
 
 export function calculateRefundEligibility(purchase: {
@@ -152,6 +188,7 @@ export async function markProgramPurchaseUnenrolled(
   reason: ProgramUnenrollReason,
   unenrolledAt = new Date(),
 ): Promise<boolean> {
+  applyPurchaseItemSnapshot(purchase);
   const programId = getReferenceId(purchase.programId);
 
   if (purchase.unenrolledAt) {

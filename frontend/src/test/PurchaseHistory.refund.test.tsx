@@ -104,6 +104,19 @@ const mockMembershipPurchase = {
   finalPrice: 10000,
 };
 
+const mockEventPurchaseMissingTitle = {
+  ...mockCompletedPurchase,
+  id: "purchase-event-missing-title",
+  orderNumber: "ORD-20260515-00001",
+  purchaseType: "event" as const,
+  itemTitle: "Spring Retreat",
+  itemLabel: "Event" as const,
+  programId: undefined,
+  eventId: undefined,
+  finalPrice: 100,
+  status: "refunded" as const,
+};
+
 const mockEligibleResponse = {
   isEligible: true,
   requiresApproval: false,
@@ -253,6 +266,24 @@ describe("PurchaseHistory - Refund UI", () => {
         );
       });
       expect(screen.getByText("Refund Eligibility")).toBeInTheDocument();
+    });
+
+    it("should show the stored item title after a refunded event is unbound", async () => {
+      (purchaseService.getMyPurchases as any).mockResolvedValue([
+        mockEventPurchaseMissingTitle,
+      ]);
+      (purchaseService.getMyPendingPurchases as any).mockResolvedValue([]);
+
+      renderWithRouter(<PurchaseHistory />);
+
+      await waitFor(() => {
+        expect(screen.getByText("ORD-20260515-00001")).toBeInTheDocument();
+      });
+
+      expect(screen.getByText("Item")).toBeInTheDocument();
+      expect(screen.getByText("Spring Retreat")).toBeInTheDocument();
+      expect(screen.getByText("Event")).toBeInTheDocument();
+      expect(screen.queryByText("Program / Event")).not.toBeInTheDocument();
     });
 
     it("should open dropdown menu when Actions button is clicked", async () => {

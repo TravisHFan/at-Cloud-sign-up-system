@@ -11,6 +11,7 @@ import { UnifiedMessageController } from "../controllers/unifiedMessageControlle
 import { lockService } from "./LockService";
 import { processRefund } from "./stripeService";
 import {
+  applyPurchaseItemSnapshot,
   calculateRefundEligibility,
   getPurchaseItemDetails,
   markPurchaseUnenrolled,
@@ -281,6 +282,11 @@ export class RefundRequestService {
       return { request: existing, created: false };
     }
 
+    const snapshotChanged = applyPurchaseItemSnapshot(params.purchase);
+    if (snapshotChanged) {
+      await params.purchase.save();
+    }
+
     const { itemTitle } = getPurchaseItemDetails(params.purchase);
     const request = await RefundRequest.create({
       userId: params.requester._id,
@@ -478,7 +484,10 @@ export class RefundRequestService {
       }
 
       if (decision === "unenroll_without_refund") {
-        const purchase = await Purchase.findById(request.purchaseId);
+        const purchase = await Purchase.findById(request.purchaseId)
+          .populate("programId", "title")
+          .populate("eventId", "title")
+          .populate("membershipId", "title");
         if (purchase) {
           await markPurchaseUnenrolled(purchase, "self_unenroll_no_refund");
           await purchase.save();

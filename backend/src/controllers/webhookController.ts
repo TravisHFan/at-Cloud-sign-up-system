@@ -20,6 +20,7 @@ import { EmailService } from "../services/infrastructure/EmailServiceFacade";
 import { lockService } from "../services/LockService";
 import { TrioNotificationService } from "../services/notifications/TrioNotificationService";
 import {
+  applyPurchaseItemSnapshot,
   getPurchaseItemDetails,
   markProgramPurchaseUnenrolled,
 } from "../services/PurchaseRefundService";
@@ -272,6 +273,18 @@ export class WebhookController {
         // 6. Mark purchase as completed (ATOMIC UPDATE)
         purchase.status = "completed";
         purchase.purchaseDate = new Date();
+        if (!purchase.itemTitle?.trim()) {
+          const metadataTitle =
+            purchase.purchaseType === "event"
+              ? session.metadata?.eventTitle
+              : purchase.purchaseType === "membership"
+                ? session.metadata?.membershipTitle
+                : session.metadata?.programTitle;
+          if (metadataTitle?.trim()) {
+            purchase.itemTitle = metadataTitle.trim();
+          }
+        }
+        applyPurchaseItemSnapshot(purchase);
 
         // 7. Save all changes atomically
         await purchase.save();

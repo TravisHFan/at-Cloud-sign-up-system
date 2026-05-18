@@ -25,6 +25,8 @@ export interface IPurchase extends Document {
   eventId?: mongoose.Types.ObjectId; // Required if purchaseType = 'event'
   membershipId?: mongoose.Types.ObjectId; // Required if purchaseType = 'membership'
   orderNumber: string; // Unique order number (e.g., "ORD-20250114-XXXXX")
+  itemTitle?: string; // Snapshot of the purchased item title for history/refunds
+  itemLabel?: "Program" | "Event" | "Annual Membership"; // Snapshot of display label
 
   // Pricing breakdown (all values in cents)
   fullPrice: number; // Original full price in cents (e.g., 9999 = $99.99)
@@ -164,6 +166,15 @@ const purchaseSchema = new Schema<IPurchase>(
       unique: true,
       trim: true,
       maxlength: 50,
+    },
+    itemTitle: {
+      type: String,
+      trim: true,
+      maxlength: 300,
+    },
+    itemLabel: {
+      type: String,
+      enum: ["Program", "Event", "Annual Membership"],
     },
     fullPrice: {
       type: Number,

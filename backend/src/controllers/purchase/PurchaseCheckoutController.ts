@@ -425,8 +425,11 @@ class PurchaseCheckoutController {
             // Create completed purchase immediately (no Stripe needed)
             const purchase = await Purchase.create({
               userId: userId,
+              purchaseType: "program",
               programId: program._id,
               orderNumber,
+              itemTitle: program.title,
+              itemLabel: "Program",
               fullPrice,
               classRepDiscount,
               earlyBirdDiscount,
@@ -567,8 +570,11 @@ class PurchaseCheckoutController {
           const purchase = await Purchase.create({
             _id: purchaseId, // Use pre-generated ID for unified lock
             userId: userId,
+            purchaseType: "program",
             programId: program._id,
             orderNumber,
+            itemTitle: program.title,
+            itemLabel: "Program",
             fullPrice,
             classRepDiscount,
             earlyBirdDiscount,

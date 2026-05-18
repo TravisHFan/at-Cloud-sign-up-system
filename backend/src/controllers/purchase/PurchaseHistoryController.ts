@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import Purchase from "../../models/Purchase";
+import { applyPurchaseItemSnapshot } from "../../services/PurchaseRefundService";
 
 /**
  * PurchaseHistoryController
@@ -29,6 +30,12 @@ class PurchaseHistoryController {
         .populate("eventId", "title")
         .populate("membershipId", "title price programs")
         .sort({ purchaseDate: -1 });
+
+      await Promise.all(
+        purchases
+          .filter((purchase) => applyPurchaseItemSnapshot(purchase))
+          .map((purchase) => purchase.save()),
+      );
 
       res.status(200).json({
         success: true,

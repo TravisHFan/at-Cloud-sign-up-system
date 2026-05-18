@@ -417,6 +417,8 @@ export class AnnualMembershipController {
             purchaseType: "membership",
             membershipId,
             orderNumber,
+            itemTitle: membership.title,
+            itemLabel: "Annual Membership",
             fullPrice: membership.price,
             classRepDiscount: 0,
             earlyBirdDiscount: 0,

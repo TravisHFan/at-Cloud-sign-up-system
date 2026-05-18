@@ -54,6 +54,8 @@ export interface Purchase {
 
   // Purchase Type Discriminator (Paid Events Feature - Phase 1)
   purchaseType: PurchaseType; // 'program' or 'event'
+  itemTitle?: string;
+  itemLabel?: "Program" | "Event" | "Annual Membership";
 
   // Program Purchase Fields (legacy, purchaseType = 'program')
   programId?:

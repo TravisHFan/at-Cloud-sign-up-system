@@ -7,23 +7,25 @@ interface Purchase {
   id: string;
   orderNumber: string;
   purchaseType: "program" | "event" | "membership"; // Type of purchase
+  itemTitle?: string;
+  itemLabel?: "Program" | "Event" | "Annual Membership";
   programId?:
     | {
         id: string; // Backend toJSON converts _id to id
-        title: string;
+        title?: string;
         programType?: string;
       }
     | string; // Can be ObjectId string if not populated
   eventId?:
     | {
         id: string;
-        title: string;
+        title?: string;
       }
     | string; // Event details if purchaseType = 'event'
   membershipId?:
     | {
         id: string;
-        title: string;
+        title?: string;
         price?: number;
       }
     | string;
@@ -117,27 +119,45 @@ export default function PurchaseHistory() {
     return p.purchaseType === purchaseTypeFilter;
   });
 
-  const getPurchaseItemLabel = (purchase: Purchase) =>
-    purchase.purchaseType === "event"
+  const getPurchaseItemLabel = (purchase: Purchase) => {
+    if (
+      purchase.itemLabel === "Program" ||
+      purchase.itemLabel === "Event" ||
+      purchase.itemLabel === "Annual Membership"
+    ) {
+      return purchase.itemLabel;
+    }
+
+    return purchase.purchaseType === "event"
       ? "Event"
       : purchase.purchaseType === "membership"
         ? "Annual Membership"
         : "Program";
+  };
+
+  const cleanTitle = (title: unknown, fallback: string) =>
+    typeof title === "string" && title.trim() ? title.trim() : fallback;
 
   const getPurchaseItemTitle = (purchase: Purchase) => {
+    const fallback = getPurchaseItemLabel(purchase);
+    const snapshotTitle = cleanTitle(purchase.itemTitle, "");
+    if (snapshotTitle) {
+      return snapshotTitle;
+    }
+
     if (purchase.purchaseType === "event") {
       return typeof purchase.eventId === "object"
-        ? purchase.eventId.title
-        : "Event";
+        ? cleanTitle(purchase.eventId?.title, fallback)
+        : fallback;
     }
     if (purchase.purchaseType === "membership") {
       return typeof purchase.membershipId === "object"
-        ? purchase.membershipId.title
-        : "Annual Membership";
+        ? cleanTitle(purchase.membershipId?.title, fallback)
+        : fallback;
     }
     return typeof purchase.programId === "object"
-      ? purchase.programId.title
-      : "Program";
+      ? cleanTitle(purchase.programId?.title, fallback)
+      : fallback;
   };
 
   const getItemPath = (purchase: Purchase) => {
@@ -712,7 +732,7 @@ export default function PurchaseHistory() {
                         scope="col"
                         className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                       >
-                        Program / Event
+                        Item
                       </th>
                       <th
                         scope="col"
@@ -784,9 +804,7 @@ export default function PurchaseHistory() {
                                 }}
                                 className="text-sm font-medium text-purple-600 hover:text-purple-800 hover:underline text-left"
                               >
-                                {typeof purchase.programId === "object"
-                                  ? purchase.programId?.title
-                                  : "Program"}
+                                {getPurchaseItemTitle(purchase)}
                               </button>
                               {typeof purchase.programId === "object" &&
                                 purchase.programId?.programType && (
@@ -808,9 +826,7 @@ export default function PurchaseHistory() {
                               }}
                               className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline text-left"
                             >
-                              {typeof purchase.eventId === "object"
-                                ? purchase.eventId?.title
-                                : "Event"}
+                              {getPurchaseItemTitle(purchase)}
                             </button>
                           ) : (
                             <button
@@ -820,9 +836,7 @@ export default function PurchaseHistory() {
                               }}
                               className="text-sm font-medium text-cyan-700 hover:text-cyan-900 hover:underline text-left"
                             >
-                              {typeof purchase.membershipId === "object"
-                                ? purchase.membershipId?.title
-                                : "Annual Membership"}
+                              {getPurchaseItemTitle(purchase)}
                             </button>
                           )}
                         </td>

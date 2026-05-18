@@ -251,6 +251,8 @@ class EventPurchaseController {
             eventId: event._id,
             purchaseType: "event",
             orderNumber,
+            itemTitle: event.title,
+            itemLabel: "Event",
             fullPrice: fullPrice,
             finalPrice: finalPrice,
             classRepDiscount: 0,
