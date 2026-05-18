@@ -38,7 +38,8 @@ class PurchaseRetryController {
       // Find the pending purchase
       const pendingPurchase = await Purchase.findById(id)
         .populate("programId")
-        .populate("eventId");
+        .populate("eventId")
+        .populate("membershipId");
 
       if (!pendingPurchase) {
         res
@@ -82,6 +83,15 @@ class PurchaseRetryController {
         existingCompletedPurchase = await Purchase.findOne({
           userId: req.user._id,
           eventId: pendingPurchase.eventId,
+          purchaseType: "event",
+          status: "completed",
+          unenrolledAt: { $exists: false },
+        });
+      } else if (pendingPurchase.purchaseType === "membership") {
+        existingCompletedPurchase = await Purchase.findOne({
+          userId: req.user._id,
+          membershipId: pendingPurchase.membershipId,
+          purchaseType: "membership",
           status: "completed",
           unenrolledAt: { $exists: false },
         });
@@ -89,7 +99,11 @@ class PurchaseRetryController {
 
       if (existingCompletedPurchase) {
         const itemType =
-          pendingPurchase.purchaseType === "event" ? "event" : "program";
+          pendingPurchase.purchaseType === "event"
+            ? "event"
+            : pendingPurchase.purchaseType === "membership"
+              ? "annual membership"
+              : "program";
         res.status(400).json({
           success: false,
           message: `You have already purchased this ${itemType}. Check your purchase history.`,
@@ -115,7 +129,7 @@ class PurchaseRetryController {
           isClassRep: pendingPurchase.isClassRep,
           isEarlyBird: pendingPurchase.isEarlyBird,
         });
-      } else {
+      } else if (pendingPurchase.purchaseType === "event") {
         // Event purchase retry
         const { default: Event } = await import("../../models/Event");
         const event = await Event.findById(pendingPurchase.eventId);
@@ -156,6 +170,24 @@ class PurchaseRetryController {
             eventId: (event._id as mongoose.Types.ObjectId).toString(),
             purchaseId: pendingPurchase._id.toString(),
           },
+        });
+      } else {
+        const membership = pendingPurchase.membershipId as unknown as {
+          _id: mongoose.Types.ObjectId;
+          title: string;
+          price: number;
+        };
+        const { createMembershipCheckoutSession } = await import(
+          "../../services/stripeService"
+        );
+
+        session = await createMembershipCheckoutSession({
+          userId: (req.user._id as mongoose.Types.ObjectId).toString(),
+          userEmail: req.user.email,
+          membershipId: membership._id.toString(),
+          membershipTitle: membership.title,
+          price: pendingPurchase.finalPrice,
+          purchaseId: pendingPurchase._id.toString(),
         });
       }
 

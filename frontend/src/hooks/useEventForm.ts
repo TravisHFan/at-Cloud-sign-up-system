@@ -175,7 +175,10 @@ export const useEventForm = (
       }
 
       // Create event using backend API
-      await eventService.createEvent(eventPayload);
+      const createdEvent = await eventService.createEvent(eventPayload);
+      const createdEventId =
+        (createdEvent as { id?: string; _id?: string } | undefined)?.id ||
+        (createdEvent as { id?: string; _id?: string } | undefined)?._id;
 
       // REMOVED: Frontend event reminder scheduling
       // This was a remnant that caused duplicate bell notifications.
@@ -199,13 +202,17 @@ export const useEventForm = (
         title: "Event Created",
         autoCloseDelay: 4000,
         actionButton: {
-          text: "View Events",
+          text: "View Event",
           onClick: () => {
-            const userRole = currentUser?.role;
-            if (userRole === "Guest Expert" || userRole === "Participant") {
-              window.location.href = "/dashboard";
+            if (createdEventId) {
+              window.location.href = `/dashboard/event/${createdEventId}`;
             } else {
-              window.location.href = "/dashboard/upcoming";
+              const userRole = currentUser?.role;
+              if (userRole === "Guest Expert" || userRole === "Participant") {
+                window.location.href = "/dashboard";
+              } else {
+                window.location.href = "/dashboard/upcoming";
+              }
             }
           },
           variant: "primary",

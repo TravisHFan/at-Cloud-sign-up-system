@@ -19,6 +19,7 @@ import shortLinkRoutes from "./shortLinks"; // Short link creation & lookup
 import auditLogRoutes from "./auditLogs"; // Audit log admin endpoints
 import rolesTemplatesRoutes from "./rolesTemplates"; // Role templates CRUD
 import purchaseRoutes from "./purchases"; // Program purchases and checkout
+import annualMembershipRoutes from "./annualMemberships"; // Annual membership suites
 import webhookRoutes from "./webhooks"; // Stripe webhooks
 import promoCodeRoutes from "./promoCodes"; // Promo code system
 import adminPurchaseRoutes from "./admin/purchases"; // Admin payment records
@@ -49,6 +50,7 @@ router.use("/public", publicEventsRoutes);
 router.use("/public/short-links", shortLinkRoutes);
 router.use("/roles-templates", rolesTemplatesRoutes);
 router.use("/purchases", purchaseRoutes);
+router.use("/annual-memberships", annualMembershipRoutes);
 router.use("/webhooks", webhookRoutes);
 router.use("/promo-codes", promoCodeRoutes);
 router.use("/admin/purchases", adminPurchaseRoutes);

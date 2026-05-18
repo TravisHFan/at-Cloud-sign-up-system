@@ -4,7 +4,7 @@ import { format } from "date-fns";
 export interface PurchaseTableRow {
   id: string;
   orderNumber: string;
-  purchaseType: "program" | "event"; // Type of purchase
+  purchaseType: "program" | "event" | "membership"; // Type of purchase
   user?: {
     id: string;
     name: string;
@@ -15,6 +15,10 @@ export interface PurchaseTableRow {
     name: string;
   };
   event?: {
+    id?: string;
+    name: string;
+  };
+  membership?: {
     id?: string;
     name: string;
   };
@@ -48,8 +52,10 @@ interface PurchaseTableProps {
   purchases: PurchaseTableRow[];
   showUser?: boolean; // Show user column for admin view
   onRowClick?: (purchase: PurchaseTableRow) => void;
-  purchaseTypeFilter?: "all" | "program" | "event";
-  onPurchaseTypeFilterChange?: (filter: "all" | "program" | "event") => void;
+  purchaseTypeFilter?: "all" | "program" | "event" | "membership";
+  onPurchaseTypeFilterChange?: (
+    filter: "all" | "program" | "event" | "membership",
+  ) => void;
 }
 
 export default function PurchaseTable({
@@ -201,18 +207,25 @@ export default function PurchaseTable({
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         purchase.purchaseType === "program"
                           ? "bg-purple-100 text-purple-800"
+                          : purchase.purchaseType === "membership"
+                            ? "bg-cyan-100 text-cyan-800"
                           : "bg-blue-100 text-blue-800"
                       }`}
                     >
                       {purchase.purchaseType === "program"
                         ? "Program"
-                        : "Event"}
+                        : purchase.purchaseType === "membership"
+                          ? "Annual Membership"
+                          : "Event"}
                     </span>
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm text-gray-900">
                       {purchase.purchaseType === "program"
                         ? purchase.program?.name || "Unknown Program"
+                        : purchase.purchaseType === "membership"
+                          ? purchase.membership?.name ||
+                            "Unknown Annual Membership"
                         : purchase.event?.name || "Unknown Event"}
                     </div>
                   </td>

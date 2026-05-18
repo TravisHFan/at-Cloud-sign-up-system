@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { Program, Purchase } from "../../models";
 import { EventController } from "../../controllers/eventController";
+import { hasAnnualMembershipAccessToProgram } from "../AnnualMembershipAccessService";
 
 /**
  * ProgramLinkageService
@@ -167,6 +168,15 @@ export class ProgramLinkageService {
       });
 
       if (!purchase) {
+        if (!options.managementOnly) {
+          const hasMembershipAccess = await hasAnnualMembershipAccessToProgram({
+            userId,
+            programId: prog._id,
+          });
+          if (hasMembershipAccess) {
+            continue;
+          }
+        }
         // User is Leader but has no access to this program
         return {
           success: false,

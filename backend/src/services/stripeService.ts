@@ -185,6 +185,65 @@ export async function createCheckoutSession(params: {
 }
 
 /**
+ * Create a Stripe Checkout Session for annual membership purchase
+ */
+export async function createMembershipCheckoutSession(params: {
+  userId: string;
+  userEmail: string;
+  membershipId: string;
+  membershipTitle: string;
+  price: number;
+  purchaseId?: string;
+}): Promise<Stripe.Checkout.Session> {
+  const { userId, userEmail, membershipId, membershipTitle, price, purchaseId } =
+    params;
+
+  if (price < 50) {
+    throw new Error(
+      `Cannot create payment for $${(price / 100).toFixed(
+        2,
+      )}. Stripe requires a minimum of $0.50 for checkout sessions.`,
+    );
+  }
+
+  const metadata: Record<string, string> = {
+    userId,
+    membershipId,
+    membershipTitle,
+    fullPrice: price.toString(),
+    finalPrice: price.toString(),
+    purchaseType: "membership",
+  };
+
+  if (purchaseId) {
+    metadata.purchaseId = purchaseId;
+  }
+
+  return stripe.checkout.sessions.create({
+    customer_email: userEmail,
+    payment_method_types: ["card"],
+    line_items: [
+      {
+        price_data: {
+          currency: "usd",
+          product_data: {
+            name: membershipTitle,
+            description: "Annual membership",
+          },
+          unit_amount: Math.round(price),
+        },
+        quantity: 1,
+      },
+    ],
+    mode: "payment",
+    success_url: STRIPE_CONFIG.successUrl,
+    cancel_url: `${STRIPE_CONFIG.cancelUrl}?membership_id=${membershipId}`,
+    metadata,
+    billing_address_collection: "required",
+  });
+}
+
+/**
  * Retrieve a Stripe Checkout Session
  */
 export async function getCheckoutSession(

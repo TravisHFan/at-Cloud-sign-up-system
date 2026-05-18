@@ -36,7 +36,7 @@ export default function ProgramPurchasesTab() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [purchaseTypeFilter, setPurchaseTypeFilter] = useState<
-    "all" | "program" | "event"
+    "all" | "program" | "event" | "membership"
   >("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -64,6 +64,7 @@ export default function ProgramPurchasesTab() {
         limit: ITEMS_PER_PAGE,
         search: searchQuery,
         status: statusFilter,
+        purchaseType: purchaseTypeFilter,
       });
 
       setPurchases(response.purchases as PurchaseTableRow[]);
@@ -81,7 +82,7 @@ export default function ProgramPurchasesTab() {
     loadStats();
     loadPurchases();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, searchQuery, statusFilter]);
+  }, [currentPage, searchQuery, statusFilter, purchaseTypeFilter]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -380,7 +381,11 @@ export default function ProgramPurchasesTab() {
               value={purchaseTypeFilter}
               onChange={(e) => {
                 setPurchaseTypeFilter(
-                  e.target.value as "all" | "program" | "event"
+                  e.target.value as
+                    | "all"
+                    | "program"
+                    | "event"
+                    | "membership"
                 );
                 setCurrentPage(1);
               }}
@@ -389,6 +394,7 @@ export default function ProgramPurchasesTab() {
               <option value="all">All Types</option>
               <option value="program">Programs Only</option>
               <option value="event">Events Only</option>
+              <option value="membership">Annual Memberships Only</option>
             </select>
           </div>
 

@@ -21,6 +21,9 @@ import PurchaseSuccess from "./pages/PurchaseSuccess";
 import PurchaseCancel from "./pages/PurchaseCancel";
 import PurchaseHistory from "./pages/PurchaseHistory";
 import PurchaseReceipt from "./pages/PurchaseReceipt";
+import AnnualMemberships from "./pages/AnnualMemberships";
+import AnnualMembershipDetail from "./pages/AnnualMembershipDetail";
+import AnnualMembershipForm from "./pages/AnnualMembershipForm";
 import IncomeHistory from "./pages/IncomeHistory";
 import CreateNewProgram from "./pages/CreateNewProgram";
 import EditProgram from "./pages/EditProgram";
@@ -122,6 +125,34 @@ function App() {
               <Route path="programs" element={<Programs />} />
               <Route path="programs/:id" element={<ProgramDetail />} />
               <Route path="programs/:id/enroll" element={<EnrollProgram />} />
+              <Route
+                path="annual-memberships"
+                element={<AnnualMemberships />}
+              />
+              <Route
+                path="annual-memberships/new"
+                element={
+                  <ProtectedRoute
+                    allowedRoles={["Super Admin", "Administrator"]}
+                  >
+                    <AnnualMembershipForm />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="annual-memberships/:id"
+                element={<AnnualMembershipDetail />}
+              />
+              <Route
+                path="annual-memberships/:id/edit"
+                element={
+                  <ProtectedRoute
+                    allowedRoles={["Super Admin", "Administrator"]}
+                  >
+                    <AnnualMembershipForm />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="purchase-history" element={<PurchaseHistory />} />
               <Route
                 path="purchase-receipt/:id"

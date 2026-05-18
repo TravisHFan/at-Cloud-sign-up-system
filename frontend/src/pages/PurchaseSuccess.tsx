@@ -7,13 +7,22 @@ import BundlePromoCodeCard from "../components/promo/BundlePromoCodeCard";
 interface Purchase {
   id: string;
   orderNumber: string;
-  programId:
+  purchaseType?: "program" | "event" | "membership";
+  programId?:
     | {
-        id: string; // Backend toJSON converts _id to id
+        id?: string; // Backend toJSON converts _id to id
+        _id?: string;
         title: string;
         programType?: string;
       }
     | string; // Can be ObjectId string if not populated
+  membershipId?:
+    | {
+        id?: string;
+        _id?: string;
+        title: string;
+      }
+    | string;
   fullPrice: number;
   classRepDiscount: number;
   earlyBirdDiscount: number;
@@ -33,6 +42,17 @@ export default function PurchaseSuccess() {
   const [purchase, setPurchase] = useState<Purchase | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const itemLabel =
+    purchase?.purchaseType === "membership" ? "Annual Membership" : "Program";
+  const itemTitle =
+    purchase?.purchaseType === "membership"
+      ? typeof purchase.membershipId === "object"
+        ? purchase.membershipId.title
+        : "Annual Membership"
+      : typeof purchase?.programId === "object"
+        ? purchase.programId.title
+        : "Program";
 
   useEffect(() => {
     const sessionId = searchParams.get("session_id");
@@ -158,7 +178,9 @@ export default function PurchaseSuccess() {
               Payment Successful!
             </h1>
             <p className="mt-2 text-gray-600">
-              Thank you for enrolling in the program
+              {purchase?.purchaseType === "membership"
+                ? "Thank you for purchasing your annual membership"
+                : "Thank you for enrolling in the program"}
             </p>
           </div>
 
@@ -191,11 +213,11 @@ export default function PurchaseSuccess() {
                 </div>
 
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Program</dt>
+                  <dt className="text-sm font-medium text-gray-500">
+                    {itemLabel}
+                  </dt>
                   <dd className="mt-1 text-lg text-gray-900">
-                    {typeof purchase.programId === "object"
-                      ? purchase.programId.title
-                      : "Program"}
+                    {itemTitle}
                   </dd>
                 </div>
 
@@ -241,8 +263,10 @@ export default function PurchaseSuccess() {
                 <div className="mt-6 p-4 bg-blue-50 rounded-lg">
                   <p className="text-sm text-blue-800">
                     <strong>What's Next?</strong> A confirmation email with your
-                    receipt has been sent to your email address. You now have
-                    full access to all events in this program.
+                    receipt has been sent to your email address.{" "}
+                    {purchase.purchaseType === "membership"
+                      ? "You now have full access to every program included in this annual membership."
+                      : "You now have full access to all events in this program."}
                   </p>
                 </div>
               )}
@@ -253,6 +277,23 @@ export default function PurchaseSuccess() {
           <div className="mt-8 flex flex-col sm:flex-row gap-4">
             <button
               onClick={() => {
+                if (purchase?.purchaseType === "membership") {
+                  const membership =
+                    typeof purchase.membershipId === "object"
+                      ? purchase.membershipId
+                      : undefined;
+                  const membershipId =
+                    typeof purchase.membershipId === "string"
+                      ? purchase.membershipId
+                      : membership?.id || membership?._id;
+                  if (membershipId) {
+                    navigate(`/dashboard/annual-memberships/${membershipId}`);
+                    return;
+                  }
+                  navigate("/dashboard/annual-memberships");
+                  return;
+                }
+
                 // Extract program ID - handle multiple formats
                 let programId: string | undefined;
 
@@ -285,13 +326,21 @@ export default function PurchaseSuccess() {
               }}
               className="flex-1 bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition-colors"
             >
-              View Program
+              View {itemLabel}
             </button>
             <button
-              onClick={() => navigate("/dashboard/programs")}
+              onClick={() =>
+                navigate(
+                  purchase?.purchaseType === "membership"
+                    ? "/dashboard/annual-memberships"
+                    : "/dashboard/programs",
+                )
+              }
               className="flex-1 bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors"
             >
-              Browse Programs
+              {purchase?.purchaseType === "membership"
+                ? "Browse Memberships"
+                : "Browse Programs"}
             </button>
             <button
               onClick={() => navigate("/dashboard/purchase-history")}

@@ -5,11 +5,13 @@ import PurchaseCheckoutController from "../../../../src/controllers/purchase/Pur
 import { Purchase, Program, PromoCode, User } from "../../../../src/models";
 import { createCheckoutSession as stripeCreateCheckoutSession } from "../../../../src/services/stripeService";
 import { lockService } from "../../../../src/services/LockService";
+import { hasAnnualMembershipAccessToProgram } from "../../../../src/services/AnnualMembershipAccessService";
 import { TrioNotificationService } from "../../../../src/services/notifications/TrioNotificationService";
 
 vi.mock("../../../../src/models");
 vi.mock("../../../../src/services/stripeService");
 vi.mock("../../../../src/services/LockService");
+vi.mock("../../../../src/services/AnnualMembershipAccessService");
 vi.mock("../../../../src/services/notifications/TrioNotificationService");
 
 /**
@@ -52,6 +54,7 @@ describe("PurchaseCheckoutController", () => {
       user: undefined,
     };
     vi.clearAllMocks();
+    vi.mocked(hasAnnualMembershipAccessToProgram).mockResolvedValue(false);
   });
 
   describe("createCheckoutSession", () => {
@@ -458,6 +461,44 @@ describe("PurchaseCheckoutController", () => {
         success: false,
         message: "You have already purchased this program.",
       });
+    });
+
+    it("should return 400 if annual membership already grants program access", async () => {
+      mockReq.user = {
+        _id: userId,
+        email: "test@test.com",
+        firstName: "Test",
+        lastName: "User",
+      };
+      mockReq.body = { programId: programId.toString() };
+
+      const mockProgram = {
+        _id: programId,
+        title: "Test Program",
+        isFree: false,
+        fullPriceTicket: 10000,
+      };
+
+      vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
+      vi.mocked(Purchase.findOne).mockResolvedValue(null);
+      vi.mocked(hasAnnualMembershipAccessToProgram).mockResolvedValue(true);
+
+      await PurchaseCheckoutController.createCheckoutSession(
+        mockReq as Request,
+        mockRes as Response,
+      );
+
+      expect(hasAnnualMembershipAccessToProgram).toHaveBeenCalledWith({
+        userId,
+        programId,
+      });
+      expect(statusMock).toHaveBeenCalledWith(400);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: false,
+        message:
+          "Your annual membership already gives you access to this program.",
+      });
+      expect(lockService.withLock).not.toHaveBeenCalled();
     });
 
     // ===================
@@ -1164,9 +1205,9 @@ describe("PurchaseCheckoutController", () => {
           {
             _id: programId,
             $or: [
-              { classRepCount: { $lt: 5 } },
-              { classRepCount: { $exists: false } },
-              { classRepCount: null },
+              { "programRoles.studentRoles.1.count": { $lt: 5 } },
+              { "programRoles.studentRoles.1.count": { $exists: false } },
+              { "programRoles.studentRoles.1.count": null },
             ],
           },
           {
@@ -1176,6 +1217,126 @@ describe("PurchaseCheckoutController", () => {
             },
           },
           { new: true, runValidators: true },
+        );
+        expect(statusMock).toHaveBeenCalledWith(200);
+      });
+
+      it("should reserve the selected non-legacy discount role without changing classRepCount", async () => {
+        mockReq.user = {
+          _id: userId,
+          email: "test@test.com",
+          firstName: "Test",
+          lastName: "User",
+        };
+        mockReq.body = {
+          programId: programId.toString(),
+          studentRoleId: "scholar",
+        };
+
+        const mockProgram = {
+          _id: programId,
+          title: "Test Program",
+          isFree: false,
+          fullPriceTicket: 10000,
+          classRepLimit: 5,
+          classRepCount: 2,
+          classRepDiscount: 2000,
+          programRoles: {
+            teacherRoleName: "Mentor",
+            studentRoles: [
+              {
+                id: "mentee",
+                name: "Mentee",
+                discountEligible: false,
+                discountAmount: 0,
+                limit: 0,
+                count: 0,
+              },
+              {
+                id: "class-rep",
+                name: "Class Rep",
+                discountEligible: true,
+                discountAmount: 2000,
+                limit: 5,
+                count: 2,
+              },
+              {
+                id: "scholar",
+                name: "Scholar",
+                discountEligible: true,
+                discountAmount: 3000,
+                limit: 4,
+                count: 1,
+              },
+            ],
+          },
+        };
+
+        const mockPurchase = {
+          _id: new mongoose.Types.ObjectId(),
+          orderNumber: "ORD-SCHOLAR-001",
+          status: "pending",
+          save: vi.fn().mockResolvedValue(undefined),
+        };
+
+        vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
+        vi.mocked(Purchase.findOne).mockResolvedValue(null);
+        vi.mocked(lockService.withLock).mockImplementation(async (key, fn) => {
+          return fn();
+        });
+        vi.mocked(Program.findOneAndUpdate).mockResolvedValue({
+          ...mockProgram,
+          programRoles: {
+            ...mockProgram.programRoles,
+            studentRoles: mockProgram.programRoles.studentRoles.map((role) =>
+              role.id === "scholar" ? { ...role, count: 2 } : role,
+            ),
+          },
+        } as any);
+        (Purchase as any).generateOrderNumber = vi
+          .fn()
+          .mockResolvedValue("ORD-SCHOLAR-001");
+        vi.mocked(Purchase.create).mockResolvedValue(mockPurchase as any);
+        vi.mocked(stripeCreateCheckoutSession).mockResolvedValue({
+          id: "cs_scholar",
+          url: "https://checkout.stripe.com/scholar",
+        } as any);
+
+        await PurchaseCheckoutController.createCheckoutSession(
+          mockReq as Request,
+          mockRes as Response,
+        );
+
+        expect(Program.findOneAndUpdate).toHaveBeenCalledWith(
+          {
+            _id: programId,
+            $or: [
+              { "programRoles.studentRoles.2.count": { $lt: 4 } },
+              { "programRoles.studentRoles.2.count": { $exists: false } },
+              { "programRoles.studentRoles.2.count": null },
+            ],
+          },
+          {
+            $inc: {
+              "programRoles.studentRoles.2.count": 1,
+            },
+          },
+          { new: true, runValidators: true },
+        );
+        expect(Purchase.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            studentRoleId: "scholar",
+            studentRoleName: "Scholar",
+            classRepDiscount: 3000,
+            isClassRep: true,
+          }),
+        );
+        expect(stripeCreateCheckoutSession).toHaveBeenCalledWith(
+          expect.objectContaining({
+            classRepDiscount: 3000,
+            finalPrice: 7000,
+            isClassRep: true,
+          }),
         );
         expect(statusMock).toHaveBeenCalledWith(200);
       });

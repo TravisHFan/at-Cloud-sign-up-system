@@ -5,10 +5,16 @@ import {
 } from "@heroicons/react/24/outline";
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { programService, purchaseService } from "../services/api";
+import {
+  annualMembershipService,
+  programService,
+  purchaseService,
+} from "../services/api";
 import { useAuth } from "../hooks/useAuth";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import type { ProgramType } from "../constants/programTypes";
+import type { AnnualMembership } from "../types/annualMembership";
+import { formatCurrency } from "../utils/currency";
 
 interface ProgramCard {
   id: string;
@@ -23,6 +29,7 @@ interface ProgramCard {
     | "class_rep"
     | "creator"
     | "free"
+    | "membership"
     | "purchased"
     | "not_purchased";
 }
@@ -90,6 +97,13 @@ export default function EMBAProgram() {
   const { currentUser } = useAuth();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [programs, setPrograms] = useState<ProgramCard[]>([]);
+  const [membershipOptionsByProgram, setMembershipOptionsByProgram] = useState<
+    Record<string, AnnualMembership[]>
+  >({});
+  const [membershipPrompt, setMembershipPrompt] = useState<{
+    programId: string;
+    options: AnnualMembership[];
+  } | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -97,12 +111,17 @@ export default function EMBAProgram() {
     (e: React.MouseEvent, programId: string) => {
       e.stopPropagation();
       if (currentUser) {
+        const options = membershipOptionsByProgram[programId] || [];
+        if (options.length > 0) {
+          setMembershipPrompt({ programId, options });
+          return;
+        }
         navigate(`/dashboard/programs/${programId}/enroll`);
       } else {
         setShowLoginModal(true);
       }
     },
-    [currentUser, navigate],
+    [currentUser, membershipOptionsByProgram, navigate],
   );
 
   const [showController, setShowController] = useState<boolean>(false);
@@ -198,6 +217,36 @@ export default function EMBAProgram() {
 
     setPrograms(programCards);
   }, [rawPrograms, sortOrder, filterYear]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const memberships = await annualMembershipService.list();
+        if (cancelled) return;
+        const map: Record<string, AnnualMembership[]> = {};
+        memberships
+          .filter(
+            (membership) =>
+              !membership.purchased && !membership.adminAccess && membership.isActive,
+          )
+          .forEach((membership) => {
+            membership.programs.forEach((program) => {
+              const programId = program.id || program._id;
+              if (!programId) return;
+              map[programId] = [...(map[programId] || []), membership];
+            });
+          });
+        setMembershipOptionsByProgram(map);
+      } catch (error) {
+        console.error("Failed to load annual membership options", error);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser]);
 
   useEffect(() => {
     if (programs.length === 0 || !currentUser) {
@@ -477,6 +526,7 @@ export default function EMBAProgram() {
                         (program.accessReason === "purchased" ||
                           program.accessReason === "admin" ||
                           program.accessReason === "class_rep" ||
+                          program.accessReason === "membership" ||
                           program.accessReason === "mentor") && (
                           <img
                             src="/check.svg"
@@ -567,6 +617,53 @@ export default function EMBAProgram() {
                 className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-md transition-colors"
               >
                 Login
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {membershipPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
+            <h3 className="text-lg font-semibold text-gray-900">
+              Annual Membership Option
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-gray-700">
+              This program is included in{" "}
+              <strong>{membershipPrompt.options[0].title}</strong>. You can
+              unlock it together with{" "}
+              {membershipPrompt.options[0].programs
+                .map((program) => program.title)
+                .join(", ")}{" "}
+              for {formatCurrency(membershipPrompt.options[0].price)}.
+            </p>
+            {membershipPrompt.options.length > 1 && (
+              <p className="mt-2 text-sm text-gray-600">
+                There are {membershipPrompt.options.length} annual membership
+                options for this program.
+              </p>
+            )}
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+              <button
+                onClick={() => {
+                  const programId = membershipPrompt.programId;
+                  setMembershipPrompt(null);
+                  navigate(`/dashboard/programs/${programId}/enroll`);
+                }}
+                className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Continue Enrollment
+              </button>
+              <button
+                onClick={() =>
+                  navigate(
+                    `/dashboard/annual-memberships/${membershipPrompt.options[0].id}`,
+                  )
+                }
+                className="rounded-md bg-cyan-700 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-800"
+              >
+                View Membership
               </button>
             </div>
           </div>

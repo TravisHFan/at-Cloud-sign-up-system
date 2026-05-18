@@ -8,6 +8,7 @@ import { Purchase, Program, PromoCode, User } from "../../models";
 import type { IPromoCode } from "../../models/PromoCode";
 import { createCheckoutSession as stripeCreateCheckoutSession } from "../../services/stripeService";
 import { lockService } from "../../services/LockService";
+import { hasAnnualMembershipAccessToProgram } from "../../services/AnnualMembershipAccessService";
 import { TrioNotificationService } from "../../services/notifications/TrioNotificationService";
 import {
   getProgramEnrollmentWindow,
@@ -15,6 +16,7 @@ import {
 } from "../../services/ProgramEnrollmentWindowService";
 import {
   getDiscountRoleIndex,
+  getStudentRoleIndexById,
   getStudentRoleByRequest,
   normalizeProgramRoles,
 } from "../../utils/programRoles";
@@ -101,6 +103,10 @@ class PurchaseCheckoutController {
       );
       const selectedIsDiscountRole = selectedStudentRole.discountEligible;
       const discountRoleIndex = getDiscountRoleIndex(programRoles);
+      const selectedDiscountRoleIndex = getStudentRoleIndexById(
+        programRoles,
+        selectedStudentRole.id
+      );
 
       // Validate and fetch promo code if provided
       let validatedPromoCode: IPromoCode | null = null;
@@ -178,6 +184,20 @@ class PurchaseCheckoutController {
         return;
       }
 
+      const hasMembershipAccess = await hasAnnualMembershipAccessToProgram({
+        userId: req.user._id,
+        programId: program._id,
+      });
+
+      if (hasMembershipAccess) {
+        res.status(400).json({
+          success: false,
+          message:
+            "Your annual membership already gives you access to this program.",
+        });
+        return;
+      }
+
       // === CRITICAL SECTION: Lock prevents race conditions ===
       // Pre-generate purchase ID for unified lock mechanism
       const purchaseId = new mongoose.Types.ObjectId();
@@ -229,10 +249,19 @@ class PurchaseCheckoutController {
             // CRITICAL FIX: If old pending purchase was Class Rep, decrement count before deleting
             // This prevents double-counting when user clicks "Proceed to Payment" multiple times
             if (pendingPurchase.isClassRep) {
-              const decrement: Record<string, number> = { classRepCount: -1 };
-              if (discountRoleIndex >= 0) {
+              const pendingRoleIndex = getStudentRoleIndexById(
+                programRoles,
+                pendingPurchase.studentRoleId
+              );
+              const decrement: Record<string, number> = {};
+              const countIndex =
+                pendingRoleIndex >= 0 ? pendingRoleIndex : discountRoleIndex;
+              if (countIndex < 0 || countIndex === discountRoleIndex) {
+                decrement.classRepCount = -1;
+              }
+              if (countIndex >= 0) {
                 decrement[
-                  `programRoles.studentRoles.${discountRoleIndex}.count`
+                  `programRoles.studentRoles.${countIndex}.count`
                 ] = -1;
               }
               await Program.findByIdAndUpdate(
@@ -258,10 +287,17 @@ class PurchaseCheckoutController {
             selectedStudentRole.limit &&
             selectedStudentRole.limit > 0
           ) {
-            const increment: Record<string, number> = { classRepCount: 1 };
-            if (discountRoleIndex >= 0) {
-              increment[`programRoles.studentRoles.${discountRoleIndex}.count`] =
-                1;
+            const increment: Record<string, number> = {};
+            if (
+              selectedDiscountRoleIndex < 0 ||
+              selectedDiscountRoleIndex === discountRoleIndex
+            ) {
+              increment.classRepCount = 1;
+            }
+            if (selectedDiscountRoleIndex >= 0) {
+              increment[
+                `programRoles.studentRoles.${selectedDiscountRoleIndex}.count`
+              ] = 1;
             }
             // Atomic increment: only succeeds if under limit
             // Note: Use $or to handle both existing count < limit AND missing count (null/undefined)
@@ -269,9 +305,24 @@ class PurchaseCheckoutController {
               {
                 _id: program._id,
                 $or: [
-                  { classRepCount: { $lt: selectedStudentRole.limit } }, // Existing count < limit
-                  { classRepCount: { $exists: false } }, // Field doesn't exist yet (legacy programs)
-                  { classRepCount: null }, // Field is null
+                  selectedDiscountRoleIndex >= 0
+                    ? {
+                        [`programRoles.studentRoles.${selectedDiscountRoleIndex}.count`]:
+                          { $lt: selectedStudentRole.limit },
+                      }
+                    : { classRepCount: { $lt: selectedStudentRole.limit } },
+                  selectedDiscountRoleIndex >= 0
+                    ? {
+                        [`programRoles.studentRoles.${selectedDiscountRoleIndex}.count`]:
+                          { $exists: false },
+                      }
+                    : { classRepCount: { $exists: false } },
+                  selectedDiscountRoleIndex >= 0
+                    ? {
+                        [`programRoles.studentRoles.${selectedDiscountRoleIndex}.count`]:
+                          null,
+                      }
+                    : { classRepCount: null },
                 ],
               },
               {
@@ -586,10 +637,16 @@ class PurchaseCheckoutController {
               selectedStudentRole.limit &&
               selectedStudentRole.limit > 0
             ) {
-              const decrement: Record<string, number> = { classRepCount: -1 };
-              if (discountRoleIndex >= 0) {
+              const decrement: Record<string, number> = {};
+              if (
+                selectedDiscountRoleIndex < 0 ||
+                selectedDiscountRoleIndex === discountRoleIndex
+              ) {
+                decrement.classRepCount = -1;
+              }
+              if (selectedDiscountRoleIndex >= 0) {
                 decrement[
-                  `programRoles.studentRoles.${discountRoleIndex}.count`
+                  `programRoles.studentRoles.${selectedDiscountRoleIndex}.count`
                 ] = -1;
               }
               await Program.findByIdAndUpdate(

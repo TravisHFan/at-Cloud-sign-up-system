@@ -43,6 +43,7 @@ class PurchasePendingController {
       })
         .populate("programId", "title programType")
         .populate("eventId", "title date")
+        .populate("membershipId", "title price")
         .sort({ createdAt: -1 });
 
       // Auto-cleanup 2: Remove pending purchases that are already completed
@@ -64,6 +65,19 @@ class PurchasePendingController {
           existingCompletedPurchase = await Purchase.findOne({
             userId: req.user._id,
             eventId: eventId,
+            purchaseType: "event",
+            status: "completed",
+            unenrolledAt: { $exists: false },
+          });
+        } else if (
+          pending.purchaseType === "membership" &&
+          pending.membershipId
+        ) {
+          const membershipId = (pending.membershipId as { _id: unknown })._id;
+          existingCompletedPurchase = await Purchase.findOne({
+            userId: req.user._id,
+            membershipId,
+            purchaseType: "membership",
             status: "completed",
             unenrolledAt: { $exists: false },
           });
@@ -89,6 +103,7 @@ class PurchasePendingController {
         })
           .populate("programId", "title programType")
           .populate("eventId", "title date")
+          .populate("membershipId", "title price")
           .sort({ createdAt: -1 });
 
         res.status(200).json({

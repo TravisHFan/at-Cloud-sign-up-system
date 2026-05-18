@@ -3,6 +3,7 @@ import Event, { IEvent, IOrganizerDetail } from "../../models/Event";
 import Purchase from "../../models/Purchase";
 import User from "../../models/User";
 import { Logger } from "../LoggerService";
+import { hasAnnualMembershipAccessToPrograms } from "../AnnualMembershipAccessService";
 
 const log = Logger.getInstance().child("EventAccessControlService");
 
@@ -12,6 +13,7 @@ export type AccessReason =
   | "co_organizer"
   | "free_event"
   | "program_purchase"
+  | "membership_purchase"
   | "event_purchase";
 
 export interface EventAccessResult {
@@ -123,6 +125,20 @@ class EventAccessControlService {
             accessReason: "program_purchase",
           };
         }
+
+        const hasMembershipPurchase =
+          await hasAnnualMembershipAccessToPrograms({
+            userId: userIdObj,
+            programIds: event.programLabels,
+          });
+
+        if (hasMembershipPurchase) {
+          return {
+            hasAccess: true,
+            requiresPurchase: false,
+            accessReason: "membership_purchase",
+          };
+        }
       }
 
       // Check 6: Event Purchase - user purchased this specific event
@@ -166,6 +182,7 @@ class EventAccessControlService {
       co_organizer: "Co-organizer",
       free_event: "Free Event",
       program_purchase: "Program Enrollee",
+      membership_purchase: "Annual Member",
       event_purchase: "Event Ticket Holder",
     };
 

@@ -90,6 +90,20 @@ const mockRefundFailedPurchase = {
   refundFailureReason: "Insufficient funds in merchant account",
 };
 
+const mockMembershipPurchase = {
+  ...mockCompletedPurchase,
+  id: "purchase-membership-1",
+  orderNumber: "ORD-20260101-00001",
+  purchaseType: "membership" as const,
+  programId: undefined,
+  membershipId: {
+    id: "membership-1",
+    title: "2026-2027 NextGen Annual Membership",
+  },
+  fullPrice: 10000,
+  finalPrice: 10000,
+};
+
 const mockEligibleResponse = {
   isEligible: true,
   requiresApproval: false,
@@ -206,6 +220,39 @@ describe("PurchaseHistory - Refund UI", () => {
       // Should have an Actions button
       const actionsButton = screen.getByRole("button", { name: /actions/i });
       expect(actionsButton).toBeInTheDocument();
+    });
+
+    it("should display annual membership purchases with refund actions", async () => {
+      (purchaseService.getMyPurchases as any).mockResolvedValue([
+        mockMembershipPurchase,
+      ]);
+      (purchaseService.getMyPendingPurchases as any).mockResolvedValue([]);
+      (purchaseService.checkRefundEligibility as any).mockResolvedValue(
+        mockEligibleResponse,
+      );
+
+      renderWithRouter(<PurchaseHistory />);
+
+      await waitFor(() => {
+        expect(
+          screen.getByText("2026-2027 NextGen Annual Membership"),
+        ).toBeInTheDocument();
+      });
+
+      expect(screen.getByText("Annual Membership")).toBeInTheDocument();
+      const filter = screen.getByRole("combobox");
+      fireEvent.change(filter, { target: { value: "membership" } });
+      expect(screen.getByText("Showing 1 of 1 purchases")).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: /actions/i }));
+      fireEvent.click(await screen.findByText("Request Refund"));
+
+      await waitFor(() => {
+        expect(purchaseService.checkRefundEligibility).toHaveBeenCalledWith(
+          "purchase-membership-1",
+        );
+      });
+      expect(screen.getByText("Refund Eligibility")).toBeInTheDocument();
     });
 
     it("should open dropdown menu when Actions button is clicked", async () => {

@@ -6,7 +6,9 @@ export default function PurchaseCancel() {
 
   const programId = searchParams.get("program_id");
   const eventId = searchParams.get("event_id");
+  const membershipId = searchParams.get("membership_id");
   const isEvent = !!eventId;
+  const isMembership = !!membershipId;
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
@@ -45,8 +47,12 @@ export default function PurchaseCancel() {
               </h3>
               <p className="text-sm text-gray-600">
                 You cancelled the payment process before completing your{" "}
-                {isEvent ? "event ticket purchase" : "enrollment"}. No charges
-                have been made to your payment method.
+                {isMembership
+                  ? "annual membership purchase"
+                  : isEvent
+                    ? "event ticket purchase"
+                    : "enrollment"}
+                . No charges have been made to your payment method.
               </p>
             </div>
 
@@ -57,7 +63,9 @@ export default function PurchaseCancel() {
               <p className="text-sm text-gray-600">
                 {isEvent
                   ? "You can return to the event page anytime to purchase your ticket. Event tickets may have limited availability, so purchase soon to secure your spot!"
-                  : "You can return to the program page anytime to complete your enrollment. Early bird discounts and class representative slots may be limited, so enroll soon to secure the best pricing!"}
+                  : isMembership
+                    ? "You can return to the annual membership page anytime to complete your purchase."
+                    : "You can return to the program page anytime to complete your enrollment. Early bird discounts and class representative slots may be limited, so enroll soon to secure the best pricing!"}
               </p>
             </div>
           </div>
@@ -82,12 +90,24 @@ export default function PurchaseCancel() {
                 Try Again
               </button>
             )}
+            {membershipId && (
+              <button
+                onClick={() =>
+                  navigate(`/dashboard/annual-memberships/${membershipId}`)
+                }
+                className="flex-1 bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition-colors"
+              >
+                Try Again
+              </button>
+            )}
             <button
               onClick={() => {
                 if (programId) {
                   navigate(`/dashboard/programs/${programId}`);
                 } else if (eventId) {
                   navigate(`/dashboard/event/${eventId}`);
+                } else if (membershipId) {
+                  navigate(`/dashboard/annual-memberships/${membershipId}`);
                 } else {
                   navigate("/dashboard/programs");
                 }
@@ -97,8 +117,10 @@ export default function PurchaseCancel() {
               {programId
                 ? "Back to Program"
                 : eventId
-                ? "Back to Event"
-                : "Browse Programs"}
+                  ? "Back to Event"
+                  : membershipId
+                    ? "Back to Membership"
+                    : "Browse Programs"}
             </button>
           </div>
 

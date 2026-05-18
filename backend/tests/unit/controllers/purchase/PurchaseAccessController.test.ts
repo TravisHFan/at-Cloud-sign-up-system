@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { Request, Response } from "express";
 import PurchaseAccessController from "../../../../src/controllers/purchase/PurchaseAccessController";
 import { Purchase, Program } from "../../../../src/models";
+import { hasAnnualMembershipAccessToProgram } from "../../../../src/services/AnnualMembershipAccessService";
 import mongoose from "mongoose";
 
 // Mock models
@@ -12,6 +13,10 @@ vi.mock("../../../../src/models", () => ({
   Program: {
     findById: vi.fn(),
   },
+}));
+
+vi.mock("../../../../src/services/AnnualMembershipAccessService", () => ({
+  hasAnnualMembershipAccessToProgram: vi.fn(),
 }));
 
 describe("PurchaseAccessController", () => {
@@ -39,6 +44,7 @@ describe("PurchaseAccessController", () => {
     };
 
     vi.mocked(Purchase.findOne).mockResolvedValue(null);
+    vi.mocked(hasAnnualMembershipAccessToProgram).mockResolvedValue(false);
 
     // Mock console methods to reduce noise
     vi.spyOn(console, "error").mockImplementation(() => {});
@@ -265,6 +271,37 @@ describe("PurchaseAccessController", () => {
       expect(jsonMock).toHaveBeenCalledWith({
         success: true,
         data: { hasAccess: true, reason: "purchased" },
+      });
+    });
+
+    it("should grant access through an annual membership purchase", async () => {
+      mockReq.user = { _id: userId, role: "Member" };
+      mockReq.params = { programId };
+
+      const mockProgram = {
+        _id: programId,
+        title: "Paid Program",
+        isFree: false,
+        mentors: [],
+      };
+
+      vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
+      vi.mocked(Purchase.findOne).mockResolvedValue(null);
+      vi.mocked(hasAnnualMembershipAccessToProgram).mockResolvedValue(true);
+
+      await PurchaseAccessController.checkProgramAccess(
+        mockReq as Request,
+        mockRes as Response,
+      );
+
+      expect(hasAnnualMembershipAccessToProgram).toHaveBeenCalledWith({
+        userId,
+        programId: mockProgram._id,
+      });
+      expect(statusMock).toHaveBeenCalledWith(200);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: true,
+        data: { hasAccess: true, reason: "membership" },
       });
     });
 

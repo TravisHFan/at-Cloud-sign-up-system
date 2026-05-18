@@ -77,13 +77,11 @@ export function normalizeProgramRoles(source: ProgramRoleSource): ProgramRoles {
     };
   }
 
-  let discountSeen = false;
   return {
     teacherRoleName:
       source.programRoles?.teacherRoleName?.trim() || DEFAULT_TEACHER_ROLE_NAME,
     studentRoles: rawRoles.map((role, index) => {
-      const discountEligible = !!role.discountEligible && !discountSeen;
-      if (discountEligible) discountSeen = true;
+      const discountEligible = !!role.discountEligible;
       return {
         id: role.id || `student-role-${index + 1}`,
         name: role.name?.trim() || `Student Role ${index + 1}`,
@@ -114,7 +112,6 @@ export function buildProgramRolesPayload(params: {
       ? params.studentRoles
       : DEFAULT_STUDENT_ROLES;
   const usedIds = new Set<string>();
-  let discountSeen = false;
 
   return {
     teacherRoleName:
@@ -130,8 +127,7 @@ export function buildProgramRolesPayload(params: {
       }
       usedIds.add(id);
 
-      const discountEligible = !!role.discountEligible && !discountSeen;
-      if (discountEligible) discountSeen = true;
+      const discountEligible = !!role.discountEligible;
 
       return {
         id,

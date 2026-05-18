@@ -65,7 +65,7 @@ class PurchaseCancellationController {
       }
 
       // If this was a Class Rep purchase, decrement the counter
-      if (purchase.isClassRep) {
+      if (purchase.purchaseType === "program" && purchase.isClassRep) {
         const program = await Program.findById(purchase.programId);
         await Program.findByIdAndUpdate(
           purchase.programId,
@@ -73,6 +73,7 @@ class PurchaseCancellationController {
             $inc: buildDiscountRoleCountIncrement(
               program || { classRepCount: 0 },
               -1,
+              purchase.studentRoleId,
             ),
           },
           { runValidators: false } // Allow going below limit on decrement

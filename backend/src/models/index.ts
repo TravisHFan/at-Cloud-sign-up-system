@@ -18,6 +18,10 @@ export {
   IGuestRegistrationModel,
 } from "./GuestRegistration";
 export { default as Program, IProgram } from "./Program";
+export {
+  default as AnnualMembership,
+  IAnnualMembership,
+} from "./AnnualMembership";
 export { default as ShortLink, IShortLink, IShortLinkModel } from "./ShortLink";
 export { default as Purchase, IPurchase } from "./Purchase";
 export {

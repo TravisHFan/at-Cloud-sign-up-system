@@ -14,7 +14,7 @@ export type RefundRequestDetail = {
   id: string;
   status: RefundRequestStatus;
   source: "purchase_history" | "program_unenroll";
-  purchaseType: "program" | "event";
+  purchaseType: "program" | "event" | "membership";
   itemTitle: string;
   refundAmount: number;
   reason?: string;

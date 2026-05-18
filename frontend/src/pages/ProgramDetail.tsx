@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { programService, purchaseService } from "../services/api";
+import {
+  annualMembershipService,
+  programService,
+  purchaseService,
+} from "../services/api";
 import type { EventData } from "../types/event";
 import { useAvatarUpdates } from "../hooks/useAvatarUpdates";
 import { socketService } from "../services/socketService";
@@ -19,6 +23,8 @@ import { useProgramEmailModal } from "../hooks/useProgramEmailModal";
 import type { ProgramType } from "../constants/programTypes";
 import type { ProgramRoles } from "../types/program";
 import { normalizeProgramRoles } from "../utils/programRoles";
+import type { AnnualMembership } from "../types/annualMembership";
+import { formatCurrency } from "../utils/currency";
 
 type Program = {
   id: string;
@@ -72,14 +78,6 @@ export default function ProgramDetail({
   const notification = useToastReplacement();
   const [showLoginModal, setShowLoginModal] = useState(false);
 
-  const handleEnrollClick = useCallback(() => {
-    if (currentUser) {
-      navigate(`/dashboard/programs/${id}/enroll`);
-    } else {
-      setShowLoginModal(true);
-    }
-  }, [currentUser, navigate, id]);
-
   // Listen for real-time avatar updates to refresh mentor avatars
   const avatarUpdateCounter = useAvatarUpdates();
 
@@ -125,6 +123,7 @@ export default function ProgramDetail({
     | "mentor"
     | "creator"
     | "free"
+    | "membership"
     | "purchased"
     | "class_rep"
     | "not_purchased"
@@ -132,6 +131,27 @@ export default function ProgramDetail({
   >(null);
   const [isCurrentUserClassRep, setIsCurrentUserClassRep] = useState(false);
   const [enrollmentRefreshKey, setEnrollmentRefreshKey] = useState(0);
+  const [membershipOptions, setMembershipOptions] = useState<
+    AnnualMembership[]
+  >([]);
+  const [showMembershipPrompt, setShowMembershipPrompt] = useState(false);
+
+  const handleEnrollClick = useCallback(() => {
+    if (!currentUser) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    const options = membershipOptions.filter(
+      (membership) => !membership.purchased && !membership.adminAccess,
+    );
+    if (options.length > 0) {
+      setShowMembershipPrompt(true);
+      return;
+    }
+
+    navigate(`/dashboard/programs/${id}/enroll`);
+  }, [currentUser, id, membershipOptions, navigate]);
 
   useEffect(() => {
     if (!id) return;
@@ -216,6 +236,25 @@ export default function ProgramDetail({
       cancelled = true;
     };
   }, [id, currentUser, enrollmentRefreshKey]);
+
+  useEffect(() => {
+    if (!id || !currentUser) {
+      setMembershipOptions([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const options = await annualMembershipService.list({ programId: id });
+        if (!cancelled) setMembershipOptions(options);
+      } catch (error) {
+        console.error("Failed to load annual membership options:", error);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id, currentUser]);
 
   // Check if current user is a class rep of this program (for email permission)
   useEffect(() => {
@@ -568,6 +607,7 @@ export default function ProgramDetail({
           flyerUrl={program.flyerUrl}
           hasAccess={hasAccess}
           accessReason={accessReason}
+          onEnrollClick={handleEnrollClick}
         />
 
         {hasZoomInfo && (
@@ -630,6 +670,33 @@ export default function ProgramDetail({
         )}
 
         {/* Pricing panel (UI label changed to Tuition; internal naming unchanged) */}
+        {membershipOptions.length > 0 && (
+          <div className="bg-white rounded-lg shadow-sm p-6 border border-cyan-100">
+            <h2 className="text-xl font-semibold text-gray-900">
+              Annual Membership Option
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-gray-700">
+              This program is included in{" "}
+              <strong>{membershipOptions[0].title}</strong>. You can enroll in
+              this program together with{" "}
+              {membershipOptions[0].programs
+                .map((membershipProgram) => membershipProgram.title)
+                .join(", ")}{" "}
+              for {formatCurrency(membershipOptions[0].price)}.
+            </p>
+            <button
+              onClick={() =>
+                navigate(
+                  `/dashboard/annual-memberships/${membershipOptions[0].id}`,
+                )
+              }
+              className="mt-4 rounded-md bg-cyan-700 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-800"
+            >
+              View Annual Membership
+            </button>
+          </div>
+        )}
+
         <ProgramPricing
           isFree={program.isFree}
           fullPriceTicket={program.fullPriceTicket}
@@ -860,6 +927,46 @@ export default function ProgramDetail({
                 className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-md transition-colors"
               >
                 Login
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showMembershipPrompt && membershipOptions.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
+            <h3 className="text-lg font-semibold text-gray-900">
+              Annual Membership Option
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-gray-700">
+              This program is included in{" "}
+              <strong>{membershipOptions[0].title}</strong>. You can unlock it
+              together with{" "}
+              {membershipOptions[0].programs
+                .map((membershipProgram) => membershipProgram.title)
+                .join(", ")}{" "}
+              for {formatCurrency(membershipOptions[0].price)}.
+            </p>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+              <button
+                onClick={() => {
+                  setShowMembershipPrompt(false);
+                  navigate(`/dashboard/programs/${id}/enroll`);
+                }}
+                className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Continue Enrollment
+              </button>
+              <button
+                onClick={() =>
+                  navigate(
+                    `/dashboard/annual-memberships/${membershipOptions[0].id}`,
+                  )
+                }
+                className="rounded-md bg-cyan-700 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-800"
+              >
+                View Membership
               </button>
             </div>
           </div>

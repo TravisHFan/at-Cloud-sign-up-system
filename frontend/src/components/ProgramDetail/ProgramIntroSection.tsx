@@ -13,9 +13,11 @@ interface ProgramIntroSectionProps {
     | "class_rep"
     | "creator"
     | "free"
+    | "membership"
     | "purchased"
     | "not_purchased"
     | null;
+  onEnrollClick?: () => void;
 }
 
 /**
@@ -40,6 +42,7 @@ export default function ProgramIntroSection({
   flyerUrl,
   hasAccess,
   accessReason,
+  onEnrollClick,
 }: ProgramIntroSectionProps) {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
@@ -87,6 +90,8 @@ export default function ProgramIntroSection({
                                 ? "As a mentor of this program, you have full access."
                                 : accessReason === "class_rep"
                                   ? "As a class rep of this program, you have full access."
+                                  : accessReason === "membership"
+                                    ? "Your annual membership gives you access to this program."
                                 : "Thank you for enrolling. You now have access to all events in this program."}
                         </p>
                       </div>
@@ -96,7 +101,9 @@ export default function ProgramIntroSection({
                   <div className="mt-6">
                     <button
                       onClick={() => {
-                        if (currentUser) {
+                        if (onEnrollClick) {
+                          onEnrollClick();
+                        } else if (currentUser) {
                           navigate(`/dashboard/programs/${programId}/enroll`);
                         } else {
                           setShowLoginModal(true);

@@ -170,7 +170,6 @@ describe("PopulateFromEventModal", () => {
       expect(screen.getByText("Leadership Summit")).toBeInTheDocument();
     });
 
-    // Should show role counts
     expect(screen.getByText("2 roles")).toBeInTheDocument();
     expect(screen.getByText("1 role")).toBeInTheDocument();
   });
@@ -258,7 +257,7 @@ describe("PopulateFromEventModal", () => {
 
   it("excludes events without roles", async () => {
     vi.mocked(eventService.getEvents).mockResolvedValue({
-      events: mockEvents, // Includes event without roles
+      events: mockEvents,
       pagination: {
         currentPage: 1,
         totalPages: 1,
@@ -282,7 +281,6 @@ describe("PopulateFromEventModal", () => {
       expect(screen.getByText("Leadership Summit")).toBeInTheDocument();
     });
 
-    // Should not show the event without roles
     expect(screen.queryByText("Conference Without Roles")).toBeNull();
   });
 
@@ -312,7 +310,6 @@ describe("PopulateFromEventModal", () => {
       expect(screen.getByText("Tech Conference 2025")).toBeInTheDocument();
     });
 
-    // Search for "Leadership"
     const searchInput = screen.getByPlaceholderText(
       "Search events by title..."
     );
@@ -462,7 +459,6 @@ describe("PopulateFromEventModal", () => {
       ).toBeInTheDocument();
     });
 
-    // Find and click the close button (X icon)
     const closeButtons = screen.getAllByRole("button");
     const closeButton = closeButtons.find((btn) => btn.querySelector("svg"));
     if (closeButton) {
@@ -472,7 +468,6 @@ describe("PopulateFromEventModal", () => {
   });
 
   it("handles pagination correctly", async () => {
-    // Create more than 20 events to trigger modal pagination
     const manyEvents: EventData[] = Array.from({ length: 25 }, (_, i) => ({
       ...mockEvents[0],
       id: `event${i}`,
@@ -513,15 +508,12 @@ describe("PopulateFromEventModal", () => {
       expect(screen.getByText("Event 1")).toBeInTheDocument();
     });
 
-    // Should show first 20 events
     expect(screen.getByText("Event 1")).toBeInTheDocument();
     expect(screen.getByText("Event 20")).toBeInTheDocument();
     expect(screen.queryByText("Event 21")).toBeNull();
-
-    // Should show pagination info
+    expect(screen.getByText("Showing 1-20 of 25 events")).toBeInTheDocument();
     expect(screen.getByText(/Page 1 of 2/i)).toBeInTheDocument();
 
-    // Click next page
     const nextButton = screen.getByText("Next");
     fireEvent.click(nextButton);
 
@@ -529,9 +521,9 @@ describe("PopulateFromEventModal", () => {
       expect(screen.getByText("Event 21")).toBeInTheDocument();
     });
 
-    // Should show remaining events
     expect(screen.getByText("Event 25")).toBeInTheDocument();
     expect(screen.queryByText("Event 1")).toBeNull();
+    expect(screen.getByText("Showing 21-25 of 25 events")).toBeInTheDocument();
   });
 
   it("displays loading state while fetching events", async () => {
@@ -597,7 +589,6 @@ describe("PopulateFromEventModal", () => {
       expect(eventService.getEvents).toHaveBeenCalledTimes(1);
     });
 
-    // Close modal
     rerender(
       <PopulateFromEventModal
         isOpen={false}
@@ -607,7 +598,6 @@ describe("PopulateFromEventModal", () => {
       />
     );
 
-    // Reopen modal
     rerender(
       <PopulateFromEventModal
         isOpen={true}
@@ -648,11 +638,8 @@ describe("PopulateFromEventModal", () => {
       expect(screen.getByText("Tech Conference 2025")).toBeInTheDocument();
     });
 
-    // Check that calendar icon is present
     const calendarIcons = document.querySelectorAll("svg");
     expect(calendarIcons.length).toBeGreaterThan(0);
-
-    // Check role count display
     expect(screen.getByText("2 roles")).toBeInTheDocument();
   });
 });

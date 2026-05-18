@@ -49,18 +49,23 @@ describe("EnrollProgram Component", () => {
   const mockProgramService = {
     getById: vi.fn().mockResolvedValue(mockProgram),
   };
+  const mockAnnualMembershipService = {
+    list: vi.fn().mockResolvedValue([]),
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockNavigate.mockClear();
     mockProgramService.getById.mockResolvedValue(mockProgram);
+    mockAnnualMembershipService.list.mockResolvedValue([]);
     mockPurchaseService.createCheckoutSession.mockResolvedValue({
-      url: "https://checkout.stripe.com/test",
+      sessionUrl: "#checkout",
     });
 
     vi.doMock("../../services/api", () => ({
       programService: mockProgramService,
       purchaseService: mockPurchaseService,
+      annualMembershipService: mockAnnualMembershipService,
       apiClient: {
         getMyPromoCodes: vi.fn().mockResolvedValue({ codes: [] }),
       },
@@ -107,6 +112,78 @@ describe("EnrollProgram Component", () => {
 
     expect(screen.getByText("Leadership Training")).toBeInTheDocument();
     expect(screen.getByText(/\$19\.00/)).toBeInTheDocument();
+  });
+
+  it("shows the annual membership option before starting direct paid checkout", async () => {
+    mockAnnualMembershipService.list.mockResolvedValueOnce([
+      {
+        id: "mem1",
+        title: "2026-2027 NextGen Annual Membership",
+        price: 10000,
+        isActive: true,
+        purchased: false,
+        adminAccess: false,
+        programs: [
+          { id: "prog1", title: "Advanced Leadership Training" },
+          { id: "prog2", title: "Team Coaching" },
+        ],
+      },
+    ]);
+
+    const { default: EnrollProgram } = await import(
+      "../../pages/EnrollProgram"
+    );
+    const { NotificationProvider } = await import(
+      "../../contexts/NotificationModalContext"
+    );
+
+    const user = userEvent.setup();
+
+    render(
+      <NotificationProvider>
+        <MemoryRouter initialEntries={["/dashboard/programs/prog1/enroll"]}>
+          <Routes>
+            <Route
+              path="/dashboard/programs/:id/enroll"
+              element={<EnrollProgram />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </NotificationProvider>
+    );
+
+    await screen.findByText(/Advanced Leadership Training/i);
+    await waitFor(() =>
+      expect(mockAnnualMembershipService.list).toHaveBeenCalledWith({
+        programId: "prog1",
+      }),
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: /proceed to payment/i }),
+    );
+
+    expect(screen.getByText("Annual Membership Option")).toBeInTheDocument();
+    expect(
+      screen.getByText(/2026-2027 NextGen Annual Membership/i),
+    ).toBeInTheDocument();
+    expect(mockPurchaseService.createCheckoutSession).not.toHaveBeenCalled();
+
+    await user.click(
+      screen.getByRole("button", { name: /continue enrollment/i }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: /proceed to payment/i }),
+    );
+
+    await waitFor(() =>
+      expect(mockPurchaseService.createCheckoutSession).toHaveBeenCalledWith({
+        programId: "prog1",
+        studentRoleId: "mentee",
+        isClassRep: false,
+        promoCode: undefined,
+      }),
+    );
   });
 
   it("enrolls free programs through the selected student role", async () => {
@@ -178,6 +255,62 @@ describe("EnrollProgram Component", () => {
       });
       expect(screen.getByText("Enrollment Complete!")).toBeInTheDocument();
     });
+  });
+
+  it("shows customized student role names in enrollment options for paid programs", async () => {
+    mockProgramService.getById.mockResolvedValueOnce({
+      ...mockProgram,
+      programRoles: {
+        teacherRoleName: "Advisor",
+        studentRoles: [
+          {
+            id: "apprentice",
+            name: "Apprentice",
+            discountEligible: false,
+            discountAmount: 0,
+            limit: 0,
+            count: 0,
+          },
+          {
+            id: "scholarship-lead",
+            name: "Scholarship Lead",
+            discountEligible: true,
+            discountAmount: 700,
+            limit: 3,
+            count: 1,
+          },
+        ],
+      },
+    });
+
+    const { default: EnrollProgram } = await import(
+      "../../pages/EnrollProgram"
+    );
+    const { NotificationProvider } = await import(
+      "../../contexts/NotificationModalContext"
+    );
+
+    render(
+      <NotificationProvider>
+        <MemoryRouter initialEntries={["/dashboard/programs/prog1/enroll"]}>
+          <Routes>
+            <Route
+              path="/dashboard/programs/:id/enroll"
+              element={<EnrollProgram />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </NotificationProvider>
+    );
+
+    await screen.findByText("Enrollment Options");
+
+    expect(screen.getByText("Enroll as Apprentice")).toBeInTheDocument();
+    expect(screen.getByText("Enroll as Scholarship Lead")).toBeInTheDocument();
+    expect(screen.queryByText("Enroll as Mentee")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Enroll as Class Representative"),
+    ).not.toBeInTheDocument();
   });
 
   it("blocks direct enrollment page checkout when program enrollment is closed", async () => {

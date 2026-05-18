@@ -13,6 +13,7 @@ import { vi } from "vitest";
 export const createMockProgramService = (
   overrides?: Record<string, unknown>
 ) => ({
+  list: vi.fn(async () => []),
   getById: vi.fn(async () => null),
   listPrograms: vi.fn(async () => []),
   listEvents: vi.fn(async () => []),
@@ -75,6 +76,25 @@ export const createMockPromoCodeService = (
   getMyPromoCodes: vi.fn(async () => []),
   getUserAvailableCodesForProgram: vi.fn(async () => []),
   validateCode: vi.fn(async () => ({ valid: false })),
+  ...overrides,
+});
+
+/**
+ * Creates a complete mock for annualMembershipService with all required methods
+ */
+export const createMockAnnualMembershipService = (
+  overrides?: Record<string, unknown>
+) => ({
+  list: vi.fn(async () => []),
+  getById: vi.fn(async () => null),
+  create: vi.fn(async () => ({})),
+  update: vi.fn(async () => ({})),
+  createCheckoutSession: vi.fn(async () => ({
+    sessionId: "cs_test_membership",
+    sessionUrl: "https://checkout.stripe.com/membership",
+    purchaseId: "purchase-membership",
+    orderNumber: "ORD-MEMBERSHIP",
+  })),
   ...overrides,
 });
 
@@ -143,6 +163,7 @@ export const createMockApiServices = (overrides?: {
   purchaseService?: Record<string, unknown>;
   eventService?: Record<string, unknown>;
   promoCodeService?: Record<string, unknown>;
+  annualMembershipService?: Record<string, unknown>;
   roleTemplateService?: Record<string, unknown>;
   userService?: Record<string, unknown>;
   authService?: Record<string, unknown>;
@@ -152,6 +173,9 @@ export const createMockApiServices = (overrides?: {
   purchaseService: createMockPurchaseService(overrides?.purchaseService),
   eventService: createMockEventService(overrides?.eventService),
   promoCodeService: createMockPromoCodeService(overrides?.promoCodeService),
+  annualMembershipService: createMockAnnualMembershipService(
+    overrides?.annualMembershipService
+  ),
   roleTemplateService: createMockRoleTemplateService(
     overrides?.roleTemplateService
   ),

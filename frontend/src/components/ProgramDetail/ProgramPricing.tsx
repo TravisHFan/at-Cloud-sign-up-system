@@ -5,7 +5,10 @@ import {
   type ProgramPeriodLike,
 } from "../../utils/programEnrollmentWindow";
 import type { ProgramRoles } from "../../types/program";
-import { getDiscountStudentRole } from "../../utils/programRoles";
+import {
+  getDiscountStudentRole,
+  normalizeProgramRoles,
+} from "../../utils/programRoles";
 
 interface ProgramPricingProps {
   isFree?: boolean;
@@ -23,6 +26,7 @@ interface ProgramPricingProps {
     | "class_rep"
     | "creator"
     | "free"
+    | "membership"
     | "purchased"
     | "not_purchased"
     | null;
@@ -53,10 +57,19 @@ export default function ProgramPricing({
 }: ProgramPricingProps) {
   const enrollmentWindow = getProgramEnrollmentWindow(period);
   const enrollmentClosed = enrollmentWindow.isEnrollmentClosed;
-  const discountRole = getDiscountStudentRole(programRoles);
+  const legacyClassRepDiscount = classRepDiscount ?? pricing?.classRepDiscount;
+  const resolvedProgramRoles = normalizeProgramRoles({
+    programRoles,
+    classRepDiscount: legacyClassRepDiscount,
+    classRepLimit,
+    classRepCount,
+  });
+  const discountRole = getDiscountStudentRole(resolvedProgramRoles);
   const discountRoleLabel = discountRole?.name || "Discount Role";
   const discountAmount =
-    discountRole?.discountAmount ?? classRepDiscount ?? pricing?.classRepDiscount;
+    (discountRole?.discountAmount || 0) > 0
+      ? discountRole?.discountAmount
+      : legacyClassRepDiscount ?? discountRole?.discountAmount;
   const discountLimit = discountRole?.limit ?? classRepLimit;
   const discountCount = discountRole?.count ?? classRepCount;
   const isStudentEnrolled =
@@ -257,6 +270,7 @@ export default function ProgramPricing({
                           {accessReason === "admin" ||
                           accessReason === "mentor" ||
                           accessReason === "class_rep" ||
+                          accessReason === "membership" ||
                           accessReason === "creator"
                             ? "Congratulations!"
                             : "You're enrolled!"}
@@ -270,6 +284,8 @@ export default function ProgramPricing({
                                 ? "As a mentor of this program, you have full access."
                                 : accessReason === "class_rep"
                                   ? `As a ${discountRoleLabel.toLowerCase()} of this program, you have full access.`
+                                  : accessReason === "membership"
+                                    ? "Your annual membership gives you access to this program."
                                 : "Thank you for enrolling. You now have access to all events in this program."}
                         </p>
                       </div>

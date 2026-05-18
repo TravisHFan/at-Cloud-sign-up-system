@@ -42,7 +42,8 @@ class PurchaseRefundController {
 
       const purchase = await Purchase.findById(purchaseId)
         .populate("programId", "title")
-        .populate("eventId", "title");
+        .populate("eventId", "title")
+        .populate("membershipId", "title");
 
       if (!purchase) {
         res
@@ -104,7 +105,8 @@ class PurchaseRefundController {
 
       const purchase = await Purchase.findById(purchaseId)
         .populate("programId", "title programType")
-        .populate("eventId", "title");
+        .populate("eventId", "title")
+        .populate("membershipId", "title");
 
       if (!purchase) {
         res

@@ -32,6 +32,7 @@ class PurchaseReceiptController {
       const purchase = await Purchase.findById(id)
         .populate("programId", "title programType hostedBy")
         .populate("eventId", "title")
+        .populate("membershipId", "title price")
         .populate("userId", "firstName lastName email");
 
       if (!purchase) {

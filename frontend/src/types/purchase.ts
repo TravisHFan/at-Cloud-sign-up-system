@@ -5,7 +5,7 @@
  * Phase 4 - Paid Events Feature
  */
 
-export type PurchaseType = "program" | "event";
+export type PurchaseType = "program" | "event" | "membership";
 
 export type PurchaseStatus = "pending" | "completed" | "failed" | "refunded";
 
@@ -79,6 +79,15 @@ export interface Purchase {
       }
     | string;
 
+  // Annual Membership Purchase Fields
+  membershipId?:
+    | {
+        id: string;
+        title: string;
+        price?: number;
+      }
+    | string;
+
   // Common Fields
   amount: number; // Final price paid in cents (alias for finalPrice)
   finalPrice?: number; // in cents (legacy field for programs)
@@ -138,6 +147,17 @@ export interface EventPurchase extends Purchase {
     | string;
 }
 
+export interface MembershipPurchase extends Purchase {
+  purchaseType: "membership";
+  membershipId:
+    | {
+        id: string;
+        title: string;
+        price?: number;
+      }
+    | string;
+}
+
 /**
  * Type guard to check if purchase is a program purchase
  */
@@ -152,6 +172,12 @@ export function isProgramPurchase(
  */
 export function isEventPurchase(purchase: Purchase): purchase is EventPurchase {
   return purchase.purchaseType === "event";
+}
+
+export function isMembershipPurchase(
+  purchase: Purchase,
+): purchase is MembershipPurchase {
+  return purchase.purchaseType === "membership";
 }
 
 /**
@@ -180,6 +206,9 @@ export interface CreatePurchaseRequest {
 
   // For event purchases
   eventId?: string;
+
+  // For annual membership purchases
+  membershipId?: string;
 
   // Common
   promoCode?: string;

@@ -21,6 +21,7 @@ interface ProgramMentorsProps {
     | "mentor"
     | "creator"
     | "free"
+    | "membership"
     | "purchased"
     | "class_rep"
     | "not_purchased"
@@ -84,6 +85,7 @@ export default function ProgramMentors({
           const isEnrolled =
             accessReason === "purchased" ||
             accessReason === "class_rep" ||
+            accessReason === "membership" ||
             accessReason === "free";
           const canViewContact = isAdmin || isEnrolled;
 

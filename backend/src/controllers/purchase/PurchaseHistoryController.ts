@@ -27,6 +27,7 @@ class PurchaseHistoryController {
       })
         .populate("programId", "title programType")
         .populate("eventId", "title")
+        .populate("membershipId", "title price programs")
         .sort({ purchaseDate: -1 });
 
       res.status(200).json({

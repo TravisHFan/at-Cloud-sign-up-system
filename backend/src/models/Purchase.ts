@@ -20,9 +20,10 @@ export interface IPaymentMethod {
 export interface IPurchase extends Document {
   // Core purchase info
   userId: mongoose.Types.ObjectId;
-  purchaseType: "program" | "event"; // Type of purchase: program enrollment or event ticket
+  purchaseType: "program" | "event" | "membership"; // Type of purchase
   programId?: mongoose.Types.ObjectId; // Required if purchaseType = 'program'
   eventId?: mongoose.Types.ObjectId; // Required if purchaseType = 'event'
+  membershipId?: mongoose.Types.ObjectId; // Required if purchaseType = 'membership'
   orderNumber: string; // Unique order number (e.g., "ORD-20250114-XXXXX")
 
   // Pricing breakdown (all values in cents)
@@ -129,7 +130,7 @@ const purchaseSchema = new Schema<IPurchase>(
     purchaseType: {
       type: String,
       required: true,
-      enum: ["program", "event"],
+      enum: ["program", "event", "membership"],
       default: "program", // Default for backward compatibility with existing purchases
       index: true,
     },
@@ -146,6 +147,14 @@ const purchaseSchema = new Schema<IPurchase>(
       ref: "Event",
       required: function (this: IPurchase) {
         return this.purchaseType === "event";
+      },
+      index: true,
+    },
+    membershipId: {
+      type: Schema.Types.ObjectId,
+      ref: "AnnualMembership",
+      required: function (this: IPurchase) {
+        return this.purchaseType === "membership";
       },
       index: true,
     },
@@ -321,6 +330,7 @@ const purchaseSchema = new Schema<IPurchase>(
 
 // Compound index for efficient queries
 purchaseSchema.index({ userId: 1, programId: 1 });
+purchaseSchema.index({ userId: 1, membershipId: 1 });
 purchaseSchema.index({ status: 1, purchaseDate: -1 });
 
 // Static method to generate unique order number

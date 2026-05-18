@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { Program, Purchase } from "../../models";
 import { sanitizeMentors } from "../../utils/privacy";
 import { normalizeProgramRoles } from "../../utils/programRoles";
+import { hasAnnualMembershipAccessToProgram } from "../../services/AnnualMembershipAccessService";
 
 type PopulatedMentorUser = {
   _id?: unknown;
@@ -112,7 +113,11 @@ export default class RetrievalController {
           program.adminEnrollments?.classReps?.some(
             (id: mongoose.Types.ObjectId) => id.toString() === String(user._id),
           );
-        isEnrolled = !!purchase || !!isAdminEnrolled;
+        const hasMembershipAccess = await hasAnnualMembershipAccessToProgram({
+          userId: user._id,
+          programId: program._id,
+        });
+        isEnrolled = !!purchase || !!isAdminEnrolled || hasMembershipAccess;
       }
 
       const canViewMentorContact = isAdmin || isMentor || isEnrolled;

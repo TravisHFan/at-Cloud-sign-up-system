@@ -33,7 +33,7 @@ class PurchaseRetrievalController {
       const purchase = await Purchase.findById(id).populate(
         "programId",
         "title programType hostedBy mentors"
-      );
+      ).populate("membershipId", "title price programs");
 
       if (!purchase) {
         res
@@ -47,8 +47,8 @@ class PurchaseRetrievalController {
         req.user.role === "Super Admin" || req.user.role === "Administrator";
 
       // Check if user is a mentor of this program
-      const program = purchase.programId as unknown as IProgram;
-      const isMentor = program.mentors?.some(
+      const program = purchase.programId as unknown as IProgram | undefined;
+      const isMentor = program?.mentors?.some(
         (mentor: { userId: mongoose.Types.ObjectId }) =>
           mentor.userId.toString() ===
           (req.user!._id as mongoose.Types.ObjectId).toString()

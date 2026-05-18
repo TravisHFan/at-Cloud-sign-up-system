@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { programService, purchaseService } from "../services/api";
+import {
+  annualMembershipService,
+  programService,
+  purchaseService,
+} from "../services/api";
 import { formatCurrency } from "../utils/currency";
 import PromoCodeInput, {
   type PromoCode,
@@ -18,6 +22,7 @@ import {
   getDefaultStudentRole,
   normalizeProgramRoles,
 } from "../utils/programRoles";
+import type { AnnualMembership } from "../types/annualMembership";
 
 interface Program {
   id: string;
@@ -45,6 +50,11 @@ export default function EnrollProgram() {
   const [selectedStudentRoleId, setSelectedStudentRoleId] =
     useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [membershipOptions, setMembershipOptions] = useState<
+    AnnualMembership[]
+  >([]);
+  const [showMembershipPrompt, setShowMembershipPrompt] = useState(false);
+  const [membershipPromptSeen, setMembershipPromptSeen] = useState(false);
 
   // Promo code state
   const [availablePromoCodes, setAvailablePromoCodes] = useState<PromoCode[]>(
@@ -200,6 +210,20 @@ export default function EnrollProgram() {
             // Non-critical error, continue without promo codes
           }
         }
+
+        try {
+          const memberships = await annualMembershipService.list({
+            programId: id,
+          });
+          setMembershipOptions(
+            memberships.filter(
+              (membership) =>
+                !membership.purchased && !membership.adminAccess,
+            ),
+          );
+        } catch (error) {
+          console.error("Error fetching annual membership options:", error);
+        }
       } catch (error) {
         console.error("Error loading program:", error);
         setAlertModal({
@@ -248,6 +272,11 @@ export default function EnrollProgram() {
         message: "Please choose another student role before enrolling.",
         type: "warning",
       });
+      return;
+    }
+
+    if (membershipOptions.length > 0 && !membershipPromptSeen) {
+      setShowMembershipPrompt(true);
       return;
     }
 
@@ -645,6 +674,46 @@ export default function EnrollProgram() {
             Secure payment powered by Stripe. Your payment information is
             encrypted and secure.
           </p>
+        </div>
+      )}
+
+      {showMembershipPrompt && membershipOptions.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
+            <h3 className="text-lg font-semibold text-gray-900">
+              Annual Membership Option
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-gray-700">
+              This program is included in{" "}
+              <strong>{membershipOptions[0].title}</strong>. You can unlock it
+              together with{" "}
+              {membershipOptions[0].programs
+                .map((membershipProgram) => membershipProgram.title)
+                .join(", ")}{" "}
+              for {formatCurrency(membershipOptions[0].price)}.
+            </p>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+              <button
+                onClick={() => {
+                  setMembershipPromptSeen(true);
+                  setShowMembershipPrompt(false);
+                }}
+                className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Continue Enrollment
+              </button>
+              <button
+                onClick={() =>
+                  navigate(
+                    `/dashboard/annual-memberships/${membershipOptions[0].id}`,
+                  )
+                }
+                className="rounded-md bg-cyan-700 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-800"
+              >
+                View Membership
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

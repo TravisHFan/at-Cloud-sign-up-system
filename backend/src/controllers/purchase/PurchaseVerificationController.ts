@@ -34,7 +34,10 @@ class PurchaseVerificationController {
       const purchase = await Purchase.findOne({
         stripeSessionId: sessionId,
         userId: req.user._id,
-      }).populate("programId", "title programType");
+      })
+        .populate("programId", "title programType")
+        .populate("eventId", "title")
+        .populate("membershipId", "title price");
 
       if (!purchase) {
         res.status(404).json({

@@ -6,7 +6,7 @@ import { formatCurrency } from "../utils/currency";
 interface PurchaseReceipt {
   id: string;
   orderNumber: string;
-  purchaseType: "program" | "event";
+  purchaseType: "program" | "event" | "membership";
   programId?: {
     _id: string;
     title: string;
@@ -14,7 +14,14 @@ interface PurchaseReceipt {
   };
   eventId?: {
     _id: string;
+    id?: string;
     title: string;
+  };
+  membershipId?: {
+    _id?: string;
+    id?: string;
+    title: string;
+    price?: number;
   };
   userId: {
     _id: string;
@@ -323,17 +330,24 @@ export default function PurchaseReceipt() {
             </div>
           </div>
 
-          {/* Program/Event Information */}
+          {/* Purchased Item Information */}
           <div className="mb-8">
             <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
               {receipt.purchaseType === "event"
                 ? "Event Details"
-                : "Program Details"}
+                : receipt.purchaseType === "membership"
+                  ? "Annual Membership Details"
+                  : "Program Details"}
             </h3>
             <div className="bg-gray-50 rounded-lg p-4">
               {receipt.purchaseType === "event" && receipt.eventId ? (
                 <h4 className="text-lg font-semibold text-gray-900">
                   {receipt.eventId.title}
+                </h4>
+              ) : receipt.purchaseType === "membership" &&
+                receipt.membershipId ? (
+                <h4 className="text-lg font-semibold text-gray-900">
+                  {receipt.membershipId.title}
                 </h4>
               ) : receipt.programId ? (
                 <>
@@ -359,7 +373,9 @@ export default function PurchaseReceipt() {
                   <td className="py-3 text-gray-900">
                     {receipt.purchaseType === "event"
                       ? "Event Ticket"
-                      : "Program Enrollment"}
+                      : receipt.purchaseType === "membership"
+                        ? "Annual Membership"
+                        : "Program Enrollment"}
                   </td>
                   <td className="py-3 text-right text-gray-900 font-medium">
                     {formatCurrency(receipt.fullPrice || 0)}
@@ -448,6 +464,8 @@ export default function PurchaseReceipt() {
               <p className="text-sm text-gray-600 mb-2">
                 {receipt.purchaseType === "event"
                   ? "Thank you for purchasing your event ticket!"
+                  : receipt.purchaseType === "membership"
+                    ? "Thank you for purchasing your annual membership!"
                   : "Thank you for enrolling in our program!"}
               </p>
               <p className="text-xs text-gray-500">

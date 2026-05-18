@@ -13,9 +13,10 @@ export type RefundRequestUserDecision =
 export interface IRefundRequest extends Document {
   userId: mongoose.Types.ObjectId;
   purchaseId: mongoose.Types.ObjectId;
-  purchaseType: "program" | "event";
+  purchaseType: "program" | "event" | "membership";
   programId?: mongoose.Types.ObjectId;
   eventId?: mongoose.Types.ObjectId;
+  membershipId?: mongoose.Types.ObjectId;
   source: RefundRequestSource;
   status: RefundRequestStatus;
   reason?: string;
@@ -50,7 +51,7 @@ const refundRequestSchema = new Schema<IRefundRequest>(
     },
     purchaseType: {
       type: String,
-      enum: ["program", "event"],
+      enum: ["program", "event", "membership"],
       required: true,
       index: true,
     },
@@ -62,6 +63,11 @@ const refundRequestSchema = new Schema<IRefundRequest>(
     eventId: {
       type: Schema.Types.ObjectId,
       ref: "Event",
+      index: true,
+    },
+    membershipId: {
+      type: Schema.Types.ObjectId,
+      ref: "AnnualMembership",
       index: true,
     },
     source: {

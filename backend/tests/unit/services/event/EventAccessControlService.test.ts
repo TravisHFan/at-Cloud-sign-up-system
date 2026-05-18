@@ -46,10 +46,15 @@ vi.mock("../../../../src/services/LoggerService", () => ({
   },
 }));
 
+vi.mock("../../../../src/services/AnnualMembershipAccessService", () => ({
+  hasAnnualMembershipAccessToPrograms: vi.fn(),
+}));
+
 import eventAccessControlService from "../../../../src/services/event/EventAccessControlService";
 import Event from "../../../../src/models/Event";
 import Purchase from "../../../../src/models/Purchase";
 import User from "../../../../src/models/User";
+import { hasAnnualMembershipAccessToPrograms } from "../../../../src/services/AnnualMembershipAccessService";
 
 describe("EventAccessControlService - Unit Tests", () => {
   const validUserId = new mongoose.Types.ObjectId().toString();
@@ -57,6 +62,7 @@ describe("EventAccessControlService - Unit Tests", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(hasAnnualMembershipAccessToPrograms).mockResolvedValue(false);
   });
 
   describe("checkUserAccess", () => {
@@ -312,6 +318,43 @@ describe("EventAccessControlService - Unit Tests", () => {
           purchaseType: "program",
           programId: { $in: [programId] },
           status: "completed",
+          unenrolledAt: { $exists: false },
+        });
+      });
+
+      it("should return membership_purchase access when a linked program is covered by an annual membership", async () => {
+        const userIdObj = new mongoose.Types.ObjectId(validUserId);
+        const creatorId = new mongoose.Types.ObjectId();
+        const programId = new mongoose.Types.ObjectId();
+        vi.mocked(Event.findById).mockResolvedValueOnce({
+          _id: validEventId,
+          pricing: { isFree: false },
+          createdBy: creatorId,
+          organizerDetails: [],
+          programLabels: [programId],
+        });
+        vi.mocked(User.findById).mockResolvedValueOnce({
+          _id: userIdObj,
+          role: "Member",
+        });
+        vi.mocked(Purchase.findOne).mockResolvedValueOnce(null);
+        vi.mocked(hasAnnualMembershipAccessToPrograms).mockResolvedValueOnce(
+          true,
+        );
+
+        const result = await eventAccessControlService.checkUserAccess(
+          validUserId,
+          validEventId,
+        );
+
+        expect(result).toEqual({
+          hasAccess: true,
+          requiresPurchase: false,
+          accessReason: "membership_purchase",
+        });
+        expect(hasAnnualMembershipAccessToPrograms).toHaveBeenCalledWith({
+          userId: expect.any(mongoose.Types.ObjectId),
+          programIds: [programId],
         });
       });
     });
@@ -464,6 +507,12 @@ describe("EventAccessControlService - Unit Tests", () => {
       expect(
         eventAccessControlService.formatAccessReason("event_purchase")
       ).toBe("Event Ticket Holder");
+    });
+
+    it("should format membership_purchase correctly", () => {
+      expect(
+        eventAccessControlService.formatAccessReason("membership_purchase")
+      ).toBe("Annual Member");
     });
   });
 

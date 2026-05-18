@@ -79,7 +79,9 @@ describe("ProgramDetail Pricing (top-level fields)", () => {
       await screen.findByRole("heading", { name: /tuition/i })
     ).toBeInTheDocument();
     expect(screen.getByText(/Full Price Ticket/i)).toBeInTheDocument();
-    expect(screen.getByText(/Class Rep Discount/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Class Representative Discount/i)
+    ).toBeInTheDocument();
     // "Early Bird Discount" appears in multiple places (label + disclaimer), use getAllByText
     expect(screen.getAllByText(/Early Bird Discount/i).length).toBeGreaterThan(
       0
@@ -91,7 +93,7 @@ describe("ProgramDetail Pricing (top-level fields)", () => {
       within(examplesContainer).getByText(/Standard/i)
     ).toBeInTheDocument();
     expect(
-      within(examplesContainer).getByText(/^Class Rep$/i)
+      within(examplesContainer).getByText(/^Class Representative$/i)
     ).toBeInTheDocument();
     expect(
       within(examplesContainer).getByText(/^Early Bird$/i)

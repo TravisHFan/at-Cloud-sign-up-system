@@ -19,6 +19,9 @@ vi.mock("../../services/api", async () => {
         title: "EMBA 2025",
         programType: "EMBA Mentor Circles",
         introduction: "Mentor circles for EMBA cohort.",
+        zoomLink: "https://zoom.us/j/123456789",
+        meetingId: "123 456 789",
+        passcode: "cloud",
         period: {
           startMonth: "Jan",
           startYear: "2025",
@@ -116,6 +119,13 @@ describe("ProgramDetail page", () => {
     expect(
       screen.getByText(/Mentor circles for EMBA cohort\./i)
     ).toBeInTheDocument();
+    expect(screen.getByText("Zoom Information")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /https:\/\/zoom.us\/j\/123456789/i })).toHaveAttribute(
+      "href",
+      "https://zoom.us/j/123456789",
+    );
+    expect(screen.getByText("123 456 789")).toBeInTheDocument();
+    expect(screen.getByText("cloud")).toBeInTheDocument();
     // Events list includes titles
     expect(await screen.findByText("Kickoff")).toBeInTheDocument();
     expect(await screen.findByText("Orientation (Past)")).toBeInTheDocument();

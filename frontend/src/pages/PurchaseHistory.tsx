@@ -6,7 +6,7 @@ import { formatCurrency } from "../utils/currency";
 interface Purchase {
   id: string;
   orderNumber: string;
-  purchaseType: "program" | "event"; // Type of purchase
+  purchaseType: "program" | "event" | "membership"; // Type of purchase
   programId?:
     | {
         id: string; // Backend toJSON converts _id to id
@@ -20,6 +20,13 @@ interface Purchase {
         title: string;
       }
     | string; // Event details if purchaseType = 'event'
+  membershipId?:
+    | {
+        id: string;
+        title: string;
+        price?: number;
+      }
+    | string;
   fullPrice: number;
   classRepDiscount: number;
   earlyBirdDiscount: number;
@@ -79,7 +86,7 @@ export default function PurchaseHistory() {
   const [refundingId, setRefundingId] = useState<string | null>(null);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [purchaseTypeFilter, setPurchaseTypeFilter] = useState<
-    "all" | "program" | "event"
+    "all" | "program" | "event" | "membership"
   >("all");
 
   const loadPurchases = async () => {
@@ -111,7 +118,11 @@ export default function PurchaseHistory() {
   });
 
   const getPurchaseItemLabel = (purchase: Purchase) =>
-    purchase.purchaseType === "event" ? "Event" : "Program";
+    purchase.purchaseType === "event"
+      ? "Event"
+      : purchase.purchaseType === "membership"
+        ? "Annual Membership"
+        : "Program";
 
   const getPurchaseItemTitle = (purchase: Purchase) => {
     if (purchase.purchaseType === "event") {
@@ -119,9 +130,38 @@ export default function PurchaseHistory() {
         ? purchase.eventId.title
         : "Event";
     }
+    if (purchase.purchaseType === "membership") {
+      return typeof purchase.membershipId === "object"
+        ? purchase.membershipId.title
+        : "Annual Membership";
+    }
     return typeof purchase.programId === "object"
       ? purchase.programId.title
       : "Program";
+  };
+
+  const getItemPath = (purchase: Purchase) => {
+    if (purchase.purchaseType === "program") {
+      const programId =
+        typeof purchase.programId === "object"
+          ? purchase.programId?.id
+          : purchase.programId;
+      return programId ? `/dashboard/programs/${programId}` : null;
+    }
+    if (purchase.purchaseType === "event") {
+      const eventId =
+        typeof purchase.eventId === "object"
+          ? purchase.eventId?.id
+          : purchase.eventId;
+      return eventId ? `/dashboard/event/${eventId}` : null;
+    }
+    const membershipId =
+      typeof purchase.membershipId === "object"
+        ? purchase.membershipId?.id
+        : purchase.membershipId;
+    return membershipId
+      ? `/dashboard/annual-memberships/${membershipId}`
+      : null;
   };
 
   // Close dropdown when clicking outside
@@ -336,7 +376,7 @@ export default function PurchaseHistory() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Purchase History</h1>
           <p className="mt-2 text-gray-600">
-            View all your program enrollments and receipts
+            View all your program, event, and annual membership purchases
           </p>
         </div>
 
@@ -369,13 +409,7 @@ export default function PurchaseHistory() {
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="text-lg font-semibold text-gray-900">
-                          {purchase.purchaseType === "event"
-                            ? typeof purchase.eventId === "object"
-                              ? purchase.eventId.title
-                              : "Event"
-                            : typeof purchase.programId === "object"
-                            ? purchase.programId.title
-                            : "Program"}
+                          {getPurchaseItemTitle(purchase)}
                         </h3>
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                           Pending
@@ -444,13 +478,7 @@ export default function PurchaseHistory() {
                           setCancelConfirm({
                             purchaseId: purchase.id,
                             programTitle:
-                              purchase.purchaseType === "event"
-                                ? typeof purchase.eventId === "object"
-                                  ? purchase.eventId.title
-                                  : "Event"
-                                : typeof purchase.programId === "object"
-                                ? purchase.programId.title
-                                : "Program",
+                              getPurchaseItemTitle(purchase),
                           })
                         }
                         disabled={cancelingId === purchase.id}
@@ -497,7 +525,7 @@ export default function PurchaseHistory() {
               No purchases yet
             </h3>
             <p className="mt-2 text-gray-600">
-              Your program enrollments will appear here.
+              Your program, event, and membership purchases will appear here.
             </p>
             <button
               onClick={() => navigate("/dashboard/programs")}
@@ -629,7 +657,11 @@ export default function PurchaseHistory() {
                   value={purchaseTypeFilter}
                   onChange={(e) =>
                     setPurchaseTypeFilter(
-                      e.target.value as "all" | "program" | "event"
+                      e.target.value as
+                        | "all"
+                        | "program"
+                        | "event"
+                        | "membership"
                     )
                   }
                   className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -637,6 +669,7 @@ export default function PurchaseHistory() {
                   <option value="all">All Purchases</option>
                   <option value="program">Programs Only</option>
                   <option value="event">Events Only</option>
+                  <option value="membership">Annual Memberships Only</option>
                 </select>
                 <span className="text-sm text-gray-500">
                   Showing {filteredPurchases.length} of {purchases.length}{" "}
@@ -725,12 +758,12 @@ export default function PurchaseHistory() {
                             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                               purchase.purchaseType === "program"
                                 ? "bg-purple-100 text-purple-800"
-                                : "bg-blue-100 text-blue-800"
+                                : purchase.purchaseType === "membership"
+                                  ? "bg-cyan-100 text-cyan-800"
+                                  : "bg-blue-100 text-blue-800"
                             }`}
                           >
-                            {purchase.purchaseType === "program"
-                              ? "Program"
-                              : "Event"}
+                            {getPurchaseItemLabel(purchase)}
                           </span>
                         </td>
                         <td className="px-6 py-4">
@@ -762,7 +795,7 @@ export default function PurchaseHistory() {
                                   </p>
                                 )}
                             </>
-                          ) : (
+                          ) : purchase.purchaseType === "event" ? (
                             <button
                               onClick={() => {
                                 const eventId =
@@ -778,6 +811,18 @@ export default function PurchaseHistory() {
                               {typeof purchase.eventId === "object"
                                 ? purchase.eventId?.title
                                 : "Event"}
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                const path = getItemPath(purchase);
+                                if (path) navigate(path);
+                              }}
+                              className="text-sm font-medium text-cyan-700 hover:text-cyan-900 hover:underline text-left"
+                            >
+                              {typeof purchase.membershipId === "object"
+                                ? purchase.membershipId?.title
+                                : "Annual Membership"}
                             </button>
                           )}
                         </td>

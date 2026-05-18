@@ -92,6 +92,7 @@ class PurchasesApiClient extends BaseApiClient {
       | "mentor"
       | "class_rep"
       | "free"
+      | "membership"
       | "purchased"
       | "not_purchased";
   }> {
@@ -103,6 +104,7 @@ class PurchasesApiClient extends BaseApiClient {
         | "mentor"
         | "class_rep"
         | "free"
+        | "membership"
         | "purchased"
         | "not_purchased";
     }>(`/purchases/check-access/${programId}`);
@@ -181,6 +183,7 @@ class PurchasesApiClient extends BaseApiClient {
     limit?: number;
     search?: string;
     status?: string;
+    purchaseType?: string;
   }): Promise<{
     purchases: unknown[];
     pagination: {
@@ -195,6 +198,8 @@ class PurchasesApiClient extends BaseApiClient {
     if (params.limit) queryParams.append("limit", params.limit.toString());
     if (params.search) queryParams.append("search", params.search);
     if (params.status) queryParams.append("status", params.status);
+    if (params.purchaseType)
+      queryParams.append("purchaseType", params.purchaseType);
 
     const res = await this.request<{
       purchases: unknown[];
@@ -329,6 +334,7 @@ export const adminPurchaseService = {
     limit?: number;
     search?: string;
     status?: string;
+    purchaseType?: string;
   }) => purchasesApiClient.getAllPurchasesAdmin(params),
   getPaymentStats: () => purchasesApiClient.getPaymentStats(),
 };

@@ -106,8 +106,6 @@ export function normalizeProgramRoles(
     DEFAULT_TEACHER_ROLE_NAME,
   );
   const usedIds = new Set<string>();
-  let discountRoleSeen = false;
-
   const studentRoles = rawStudentRoles.map((rawRole, index) => {
     const rawName =
       typeof rawRole.name === "string" && rawRole.name.trim()
@@ -127,9 +125,7 @@ export function normalizeProgramRoles(
     }
     usedIds.add(id);
 
-    const requestedDiscount = rawRole.discountEligible === true;
-    const discountEligible = requestedDiscount && !discountRoleSeen;
-    if (discountEligible) discountRoleSeen = true;
+    const discountEligible = rawRole.discountEligible === true;
 
     return {
       id,
@@ -189,12 +185,16 @@ export function syncLegacyProgramPricingFields(target: {
   const existingCount = toSafeInteger(
     target.classRepCount ?? discountRole?.count ?? 0,
   );
+  const firstDiscountRoleId = discountRole?.id;
 
   target.programRoles = {
     teacherRoleName: roles.teacherRoleName,
     studentRoles: roles.studentRoles.map((role) => ({
       ...role,
-      count: role.discountEligible ? existingCount : 0,
+      count:
+        role.discountEligible && role.id === firstDiscountRoleId
+          ? existingCount
+          : role.count,
     })),
   };
   target.classRepDiscount = discountRole?.discountAmount ?? 0;
@@ -206,12 +206,32 @@ export function getDiscountRoleIndex(roles: NormalizedProgramRoles): number {
   return roles.studentRoles.findIndex((role) => role.discountEligible);
 }
 
+export function getStudentRoleIndexById(
+  roles: NormalizedProgramRoles,
+  roleId?: unknown,
+): number {
+  if (typeof roleId !== "string" || !roleId.trim()) {
+    return -1;
+  }
+  return roles.studentRoles.findIndex((role) => role.id === roleId.trim());
+}
+
 export function buildDiscountRoleCountIncrement(
   source: ProgramRoleSource,
   amount: number,
+  roleId?: unknown,
 ): Record<string, number> {
-  const increment: Record<string, number> = { classRepCount: amount };
-  const index = getDiscountRoleIndex(normalizeProgramRoles(source));
+  const increment: Record<string, number> = {};
+  const roles = normalizeProgramRoles(source);
+  const requestedIndex = getStudentRoleIndexById(roles, roleId);
+  const firstDiscountIndex = getDiscountRoleIndex(roles);
+  const index =
+    requestedIndex >= 0 && roles.studentRoles[requestedIndex].discountEligible
+      ? requestedIndex
+      : firstDiscountIndex;
+  if (index < 0 || index === firstDiscountIndex) {
+    increment.classRepCount = amount;
+  }
   if (index >= 0) {
     increment[`programRoles.studentRoles.${index}.count`] = amount;
   }

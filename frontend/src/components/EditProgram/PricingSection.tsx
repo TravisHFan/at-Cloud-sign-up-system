@@ -56,33 +56,25 @@ export default function PricingSection({
     watch("studentRoles") && watch("studentRoles")!.length > 0
       ? watch("studentRoles")!
       : DEFAULT_STUDENT_ROLES;
-  const discountRoleIndex = Math.max(
-    0,
-    studentRoles.findIndex((role) => role.discountEligible),
-  );
-  const discountRole = studentRoles[discountRoleIndex] || studentRoles[0];
+  const discountRoles = studentRoles
+    .map((role, index) => ({ role, index }))
+    .filter(({ role }) => role.discountEligible);
 
   const updateStudentRoles = (nextRoles: ProgramStudentRoleForm[]) => {
-    const hasDiscountRole = nextRoles.some((role) => role.discountEligible);
-    const normalizedRoles = hasDiscountRole
-      ? nextRoles
-      : nextRoles.map((role, index) => ({
-          ...role,
-          discountEligible: index === 0,
-        }));
-    setValue("studentRoles", normalizedRoles, {
+    setValue("studentRoles", nextRoles, {
       shouldDirty: true,
       shouldValidate: true,
     });
   };
 
-  const selectDiscountRole = (index: number) => {
+  const toggleDiscountRole = (index: number, checked: boolean) => {
     updateStudentRoles(
       studentRoles.map((role, roleIndex) => ({
         ...role,
-        discountEligible: roleIndex === index,
-        discountAmount: roleIndex === index ? role.discountAmount : 0,
-        limit: roleIndex === index ? role.limit : 0,
+        discountEligible: roleIndex === index ? checked : role.discountEligible,
+        discountAmount:
+          roleIndex === index && !checked ? 0 : role.discountAmount,
+        limit: roleIndex === index && !checked ? 0 : role.limit,
       })),
     );
   };
@@ -166,10 +158,11 @@ export default function PricingSection({
                 </div>
                 <label className="flex items-center gap-2 text-sm text-gray-700 pb-2">
                   <input
-                    type="radio"
-                    name="discountRole"
+                    type="checkbox"
                     checked={!!role.discountEligible}
-                    onChange={() => selectDiscountRole(index)}
+                    onChange={(event) =>
+                      toggleDiscountRole(index, event.currentTarget.checked)
+                    }
                     className="h-4 w-4 text-blue-600 border-gray-300"
                   />
                   Tuition discount role
@@ -270,67 +263,77 @@ export default function PricingSection({
           </div>
 
           {/* Row 2: Discount Role Amount + Limit */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label
-                htmlFor={`studentRoles.${discountRoleIndex}.discountAmount`}
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                {discountRole?.name || "Student Role"} Discount
-              </label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 pointer-events-none">
-                  $
-                </span>
-                <input
-                  id={`studentRoles.${discountRoleIndex}.discountAmount`}
-                  type="number"
-                  inputMode="decimal"
-                  min={0}
-                  max={100000}
-                  step={0.01}
-                  {...register(
-                    `studentRoles.${discountRoleIndex}.discountAmount`,
-                    {
-                    valueAsNumber: true,
-                    min: { value: 0, message: "Must be ≥ $0" },
-                    max: { value: 100000, message: "Must be ≤ $100,000" },
-                    },
-                  )}
-                  className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
+          {discountRoles.length > 0 && (
+            <div className="space-y-4 mb-4">
+              {discountRoles.map(({ role, index }) => (
+                <div
+                  key={role.id || index}
+                  className="grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-md border border-gray-200 bg-white p-3"
+                >
+                  <div>
+                    <label
+                      htmlFor={`studentRoles.${index}.discountAmount`}
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      {role.name || "Student Role"} Discount
+                    </label>
+                    <div className="relative">
+                      <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 pointer-events-none">
+                        $
+                      </span>
+                      <input
+                        id={`studentRoles.${index}.discountAmount`}
+                        type="number"
+                        inputMode="decimal"
+                        min={0}
+                        max={100000}
+                        step={0.01}
+                        {...register(`studentRoles.${index}.discountAmount`, {
+                          valueAsNumber: true,
+                          min: { value: 0, message: "Must be ≥ $0" },
+                          max: {
+                            value: 100000,
+                            message: "Must be ≤ $100,000",
+                          },
+                        })}
+                        className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label
+                      htmlFor={`studentRoles.${index}.limit`}
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      {role.name || "Student Role"} Limit
+                    </label>
+                    <input
+                      id={`studentRoles.${index}.limit`}
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      max={5}
+                      step={1}
+                      {...register(`studentRoles.${index}.limit`, {
+                        valueAsNumber: true,
+                        min: { value: 0, message: "Must be ≥ 0" },
+                        max: { value: 5, message: "Must be ≤ 5" },
+                        validate: (v) =>
+                          v == null || Number.isInteger(v as number)
+                            ? true
+                            : "Must be an integer",
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Maximum number of discounted slots. Set to 0 for
+                      unlimited.
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
-            <div>
-              <label
-                htmlFor={`studentRoles.${discountRoleIndex}.limit`}
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                {discountRole?.name || "Student Role"} Limit
-              </label>
-              <input
-                id={`studentRoles.${discountRoleIndex}.limit`}
-                type="number"
-                inputMode="numeric"
-                min={0}
-                max={5}
-                step={1}
-                {...register(`studentRoles.${discountRoleIndex}.limit`, {
-                  valueAsNumber: true,
-                  min: { value: 0, message: "Must be ≥ 0" },
-                  max: { value: 5, message: "Must be ≤ 5" },
-                  validate: (v) =>
-                    v == null || Number.isInteger(v as number)
-                      ? true
-                      : "Must be an integer",
-                })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Maximum number of discounted slots. Set to 0 for unlimited.
-              </p>
-            </div>
-          </div>
+          )}
 
           {/* Row 3: Early Bird Discount + Early Bird Deadline */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -412,9 +415,15 @@ export default function PricingSection({
           </div>
           {(() => {
             const full = Number(fullPrice || 0) * 100;
-            const rep = Number(discountRole?.discountAmount || 0) * 100;
+            const largestRoleDiscount = Math.max(
+              0,
+              ...discountRoles.map(
+                ({ role }) => Number(role.discountAmount || 0) * 100,
+              ),
+            );
             const early = Number(earlyBirdDiscountValue || 0) * 100;
-            const singleDiscountTooLarge = rep > full || early > full;
+            const singleDiscountTooLarge =
+              largestRoleDiscount > full || early > full;
             return singleDiscountTooLarge ? (
               <p className="mt-2 text-sm text-red-500">
                 Individual discounts cannot exceed the full price. The student
@@ -427,15 +436,14 @@ export default function PricingSection({
             {(() => {
               // Convert dollar values to cents for display
               const full = Number(fullPrice || 0) * 100;
-              const rep = Number(discountRole?.discountAmount || 0) * 100;
               const early = Number(earlyBirdDiscountValue || 0) * 100;
               const clamp = (n: number) => Math.max(0, n);
               const examples = [
                 { label: "Standard", value: clamp(full) },
-                {
-                  label: discountRole?.name || "Discount Role",
-                  value: clamp(full - rep),
-                },
+                ...discountRoles.map(({ role }) => ({
+                  label: role.name || "Discount Role",
+                  value: clamp(full - Number(role.discountAmount || 0) * 100),
+                })),
                 { label: "Early Bird", value: clamp(full - early) },
               ];
               return (

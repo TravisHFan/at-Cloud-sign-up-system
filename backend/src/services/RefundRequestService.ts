@@ -89,6 +89,21 @@ function getReferenceIdText(value: unknown): string | undefined {
   return id ? String(id) : undefined;
 }
 
+function itemDetailPath(purchase: IPurchase): string | undefined {
+  if (purchase.purchaseType === "event" && purchase.eventId) {
+    return `/dashboard/event/${getReferenceIdText(purchase.eventId)}`;
+  }
+  if (purchase.purchaseType === "membership" && purchase.membershipId) {
+    return `/dashboard/annual-memberships/${getReferenceIdText(
+      purchase.membershipId,
+    )}`;
+  }
+  if (purchase.programId) {
+    return `/dashboard/programs/${getReferenceIdText(purchase.programId)}`;
+  }
+  return undefined;
+}
+
 function actorDisplay(user: {
   firstName?: string;
   lastName?: string;
@@ -202,7 +217,9 @@ export class RefundRequestService {
       ? "class representative"
       : params.purchase.purchaseType === "event"
         ? "event participant"
-        : "mentee";
+        : params.purchase.purchaseType === "membership"
+          ? "annual member"
+          : "mentee";
     const sourceText =
       params.source === "program_unenroll"
         ? `Program detail unenrollment as ${roleText}`
@@ -269,8 +286,18 @@ export class RefundRequestService {
       userId: params.requester._id,
       purchaseId: params.purchase._id,
       purchaseType: params.purchase.purchaseType,
-      programId: getReferenceId(params.purchase.programId),
-      eventId: getReferenceId(params.purchase.eventId),
+      programId:
+        params.purchase.purchaseType === "program"
+          ? getReferenceId(params.purchase.programId)
+          : undefined,
+      eventId:
+        params.purchase.purchaseType === "event"
+          ? getReferenceId(params.purchase.eventId)
+          : undefined,
+      membershipId:
+        params.purchase.purchaseType === "membership"
+          ? getReferenceId(params.purchase.membershipId)
+          : undefined,
       source: params.source,
       status: "pending",
       reason: params.reason,
@@ -334,7 +361,8 @@ export class RefundRequestService {
 
       const purchase = await Purchase.findById(request.purchaseId)
         .populate("programId", "title programType")
-        .populate("eventId", "title");
+        .populate("eventId", "title")
+        .populate("membershipId", "title");
       if (!purchase) {
         return { ok: false as const, reason: "purchase_missing" as const };
       }
@@ -523,7 +551,13 @@ export class RefundRequestService {
 
     const url = frontendUrl(`/dashboard/refund-requests/${request._id}/approval`);
     const requesterName = fullName(requester);
-    const roleText = purchase.isClassRep ? "class representative" : "mentee";
+    const roleText = purchase.isClassRep
+      ? "class representative"
+      : purchase.purchaseType === "event"
+        ? "event participant"
+        : purchase.purchaseType === "membership"
+          ? "annual member"
+          : "mentee";
     const body =
       `${requesterName} (${requester.email}) requested a refund after the 30-day refund window.\n\n` +
       `Purchase: ${request.itemTitle}\n` +
@@ -583,14 +617,9 @@ export class RefundRequestService {
       subject: `Refund Approved - ${request.itemTitle}`,
       heading: "Refund Approved",
       body,
-      ctaUrl:
-        purchase.purchaseType === "event" && purchase.eventId
-          ? frontendUrl(`/dashboard/event/${getReferenceIdText(purchase.eventId)}`)
-          : purchase.programId
-            ? frontendUrl(
-                `/dashboard/programs/${getReferenceIdText(purchase.programId)}`,
-              )
-            : undefined,
+      ctaUrl: itemDetailPath(purchase)
+        ? frontendUrl(itemDetailPath(purchase)!)
+        : undefined,
       ctaLabel: "View Details",
     });
 

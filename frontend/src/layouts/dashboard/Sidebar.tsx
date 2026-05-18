@@ -75,6 +75,11 @@ export default function Sidebar({
           icon: RectangleStackIcon,
         },
         {
+          name: "Annual Membership",
+          href: "/dashboard/annual-memberships",
+          icon: CreditCardIcon,
+        },
+        {
           name: "Event Calendar",
           href: "/dashboard/upcoming",
           icon: CalendarDaysIcon,
@@ -109,6 +114,11 @@ export default function Sidebar({
         name: "Other Programs",
         href: "/dashboard/programs",
         icon: RectangleStackIcon,
+      },
+      {
+        name: "Annual Membership",
+        href: "/dashboard/annual-memberships",
+        icon: CreditCardIcon,
       },
       {
         name: "Event Calendar",

@@ -11,6 +11,7 @@ import {
 } from "../models";
 import type { IUser } from "../models/User";
 import type { IProgram } from "../models/Program";
+import type { IAnnualMembership } from "../models/AnnualMembership";
 import {
   constructWebhookEvent,
   getPaymentIntent,
@@ -279,112 +280,114 @@ export class WebhookController {
 
         // 8. Mark promo code as used if one was applied
         try {
-          let promoCode: IPromoCode | null = null;
+          if (purchase.purchaseType !== "membership") {
+            let promoCode: IPromoCode | null = null;
 
-          if (purchase.promoCodeId) {
-            promoCode = await PromoCode.findById(purchase.promoCodeId);
-          } else if (purchase.promoCode) {
-            promoCode = await PromoCode.findOne({
-              code: purchase.promoCode,
-            });
-          }
+            if (purchase.promoCodeId) {
+              promoCode = await PromoCode.findById(purchase.promoCodeId);
+            } else if (purchase.promoCode) {
+              promoCode = await PromoCode.findOne({
+                code: purchase.promoCode,
+              });
+            }
 
-          if (promoCode) {
-            // Skip if already used (for personal codes)
-            if (!promoCode.isGeneral && promoCode.isUsed) {
-              console.log(
-                `Promo code ${promoCode.code} already marked as used`
-              );
-            } else {
-              // Get user info for general code tracking
-              const user = await User.findById(purchase.userId).select(
-                "firstName lastName email"
-              );
-
-              // Get program or event title based on purchase type
-              let itemTitle = "Unknown Item";
-              if (purchase.purchaseType === "program") {
-                const program = await Program.findById(
-                  purchase.programId
-                ).select("title");
-                itemTitle = program?.title || "Unknown Program";
-              } else {
-                const { default: Event } = await import("../models/Event");
-                const event = await Event.findById(purchase.eventId).select(
-                  "title"
-                );
-                itemTitle = event?.title || "Unknown Event";
-              }
-
-              const userName = user
-                ? `${user.firstName} ${user.lastName}`
-                : "Unknown User";
-              const userEmail = user?.email || "unknown@example.com";
-
-              if (purchase.purchaseType === "program") {
-                await promoCode.markAsUsed(
-                  purchase.programId!,
-                  purchase.userId as mongoose.Types.ObjectId,
-                  userName,
-                  userEmail,
-                  itemTitle
+            if (promoCode) {
+              // Skip if already used (for personal codes)
+              if (!promoCode.isGeneral && promoCode.isUsed) {
+                console.log(
+                  `Promo code ${promoCode.code} already marked as used`
                 );
               } else {
-                await promoCode.markAsUsedForEvent(
-                  purchase.eventId!,
-                  purchase.userId as mongoose.Types.ObjectId,
-                  userName,
-                  userEmail,
-                  itemTitle
+                // Get user info for general code tracking
+                const user = await User.findById(purchase.userId).select(
+                  "firstName lastName email"
                 );
-              }
-              console.log(`Promo code ${purchase.promoCode} marked as used`);
 
-              // Send notification to admins if it's a general staff code
-              if (promoCode.isGeneral) {
-                try {
-                  // Find all administrators
-                  const admins = await User.find({
-                    role: { $in: ["Super Admin", "Administrator"] },
-                  }).select("_id");
-
-                  const adminIds = admins.map((admin) => admin._id.toString());
-
-                  if (adminIds.length > 0) {
-                    const itemType =
-                      purchase.purchaseType === "program" ? "program" : "event";
-                    const metadata: Record<string, string> = {
-                      promoCodeId: (
-                        promoCode._id as mongoose.Types.ObjectId
-                      ).toString(),
-                      userId: purchase.userId.toString(),
-                    };
-
-                    if (purchase.purchaseType === "program") {
-                      metadata.programId = purchase.programId!.toString();
-                    } else {
-                      metadata.eventId = purchase.eventId!.toString();
-                    }
-
-                    await TrioNotificationService.createTrio({
-                      systemMessage: {
-                        title: "General Staff Code Used",
-                        content: `${userName} (${userEmail}) used general staff code "${promoCode.code}" for ${itemType} "${itemTitle}".`,
-                        type: "announcement",
-                        priority: "medium",
-                        targetRoles: ["Super Admin", "Administrator"],
-                        hideCreator: true, // System-generated notification, no sender
-                        metadata,
-                      },
-                      recipients: adminIds,
-                    });
-                  }
-                } catch (notifyError) {
-                  console.error(
-                    "Failed to notify admins of general code usage:",
-                    notifyError
+                // Get program or event title based on purchase type
+                let itemTitle = "Unknown Item";
+                if (purchase.purchaseType === "program") {
+                  const program = await Program.findById(
+                    purchase.programId
+                  ).select("title");
+                  itemTitle = program?.title || "Unknown Program";
+                } else {
+                  const { default: Event } = await import("../models/Event");
+                  const event = await Event.findById(purchase.eventId).select(
+                    "title"
                   );
-                  // Don't fail the purchase
+                  itemTitle = event?.title || "Unknown Event";
+                }
+
+                const userName = user
+                  ? `${user.firstName} ${user.lastName}`
+                  : "Unknown User";
+                const userEmail = user?.email || "unknown@example.com";
+
+                if (purchase.purchaseType === "program") {
+                  await promoCode.markAsUsed(
+                    purchase.programId!,
+                    purchase.userId as mongoose.Types.ObjectId,
+                    userName,
+                    userEmail,
+                    itemTitle
+                  );
+                } else {
+                  await promoCode.markAsUsedForEvent(
+                    purchase.eventId!,
+                    purchase.userId as mongoose.Types.ObjectId,
+                    userName,
+                    userEmail,
+                    itemTitle
+                  );
+                }
+                console.log(`Promo code ${purchase.promoCode} marked as used`);
+
+                // Send notification to admins if it's a general staff code
+                if (promoCode.isGeneral) {
+                  try {
+                    // Find all administrators
+                    const admins = await User.find({
+                      role: { $in: ["Super Admin", "Administrator"] },
+                    }).select("_id");
+
+                    const adminIds = admins.map((admin) => admin._id.toString());
+
+                    if (adminIds.length > 0) {
+                      const itemType =
+                        purchase.purchaseType === "program" ? "program" : "event";
+                      const metadata: Record<string, string> = {
+                        promoCodeId: (
+                          promoCode._id as mongoose.Types.ObjectId
+                        ).toString(),
+                        userId: purchase.userId.toString(),
+                      };
+
+                      if (purchase.purchaseType === "program") {
+                        metadata.programId = purchase.programId!.toString();
+                      } else {
+                        metadata.eventId = purchase.eventId!.toString();
+                      }
+
+                      await TrioNotificationService.createTrio({
+                        systemMessage: {
+                          title: "General Staff Code Used",
+                          content: `${userName} (${userEmail}) used general staff code "${promoCode.code}" for ${itemType} "${itemTitle}".`,
+                          type: "announcement",
+                          priority: "medium",
+                          targetRoles: ["Super Admin", "Administrator"],
+                          hideCreator: true, // System-generated notification, no sender
+                          metadata,
+                        },
+                        recipients: adminIds,
+                      });
+                    }
+                  } catch (notifyError) {
+                    console.error(
+                      "Failed to notify admins of general code usage:",
+                      notifyError
+                    );
+                    // Don't fail the purchase
+                  }
                 }
               }
             }
@@ -443,8 +446,13 @@ export class WebhookController {
               { path: "userId" },
               { path: "programId" },
             ]);
-          } else {
+          } else if (purchase.purchaseType === "event") {
             await purchase.populate([{ path: "userId" }, { path: "eventId" }]);
+          } else {
+            await purchase.populate([
+              { path: "userId" },
+              { path: "membershipId" },
+            ]);
           }
 
           const user = purchase.userId as unknown as IUser;
@@ -486,7 +494,7 @@ export class WebhookController {
             console.log(
               `Program purchase confirmation email sent to ${user.email}`
             );
-          } else {
+          } else if (purchase.purchaseType === "event") {
             // Event purchase
             const { default: Event } = await import("../models/Event");
             const event = await Event.findById(purchase.eventId);
@@ -517,6 +525,35 @@ export class WebhookController {
 
             console.log(
               `Event purchase confirmation email sent to ${user.email}`
+            );
+          } else {
+            const membership =
+              purchase.membershipId as unknown as IAnnualMembership;
+            if (!membership) {
+              console.warn(
+                "Could not send confirmation email: annual membership not found"
+              );
+              return;
+            }
+
+            await EmailService.sendPurchaseConfirmationEmail({
+              email: user.email,
+              name: `${user.firstName} ${user.lastName}`,
+              orderNumber: purchase.orderNumber,
+              programTitle: membership.title,
+              programType: "Annual Membership",
+              purchaseDate: purchase.purchaseDate,
+              fullPrice: purchase.fullPrice,
+              finalPrice: purchase.finalPrice,
+              classRepDiscount: 0,
+              earlyBirdDiscount: 0,
+              isClassRep: false,
+              isEarlyBird: false,
+              receiptUrl,
+            });
+
+            console.log(
+              `Annual membership purchase confirmation email sent to ${user.email}`
             );
           }
         } catch (emailError) {
@@ -576,7 +613,11 @@ export class WebhookController {
     }
 
     // If this was a Class Rep purchase that's now failed, decrement the counter
-    if (purchase.isClassRep && purchase.status === "pending") {
+    if (
+      purchase.purchaseType === "program" &&
+      purchase.isClassRep &&
+      purchase.status === "pending"
+    ) {
       const { Program } = await import("../models");
       const program = await Program.findById(purchase.programId);
       await Program.findByIdAndUpdate(
@@ -585,6 +626,7 @@ export class WebhookController {
           $inc: buildDiscountRoleCountIncrement(
             program || { classRepCount: 0 },
             -1,
+            purchase.studentRoleId,
           ),
         },
         { runValidators: false } // Allow going below limit on decrement
@@ -627,7 +669,8 @@ export class WebhookController {
     // Find the purchase
     const purchase = await Purchase.findById(purchaseId)
       .populate("programId", "title")
-      .populate("eventId", "title");
+      .populate("eventId", "title")
+      .populate("membershipId", "title");
 
     if (!purchase) {
       console.log("No purchase found for refund:", refund.id);

@@ -1,6 +1,6 @@
 import Program from "../models/Program";
 import type { IPurchase } from "../models/Purchase";
-import { getDiscountRoleIndex, normalizeProgramRoles } from "../utils/programRoles";
+import { buildDiscountRoleCountIncrement } from "../utils/programRoles";
 
 export const REFUND_WINDOW_DAYS = 30;
 
@@ -16,8 +16,8 @@ export type RefundEligibility = {
 
 export type PurchaseItemDetails = {
   itemTitle: string;
-  itemLabel: "Program" | "Event";
-  itemType: "program" | "event";
+  itemLabel: "Program" | "Event" | "Annual Membership";
+  itemType: "program" | "event" | "membership";
 };
 
 export type ProgramUnenrollReason =
@@ -33,14 +33,29 @@ function getReferenceId(value: unknown): unknown {
 }
 
 export function getPurchaseItemDetails(purchase: {
-  purchaseType?: "program" | "event";
+  purchaseType?: "program" | "event" | "membership";
   programId?: unknown;
   eventId?: unknown;
+  membershipId?: unknown;
 }): PurchaseItemDetails {
-  const itemType = purchase.purchaseType === "event" ? "event" : "program";
-  const itemLabel = itemType === "event" ? "Event" : "Program";
+  const itemType =
+    purchase.purchaseType === "event"
+      ? "event"
+      : purchase.purchaseType === "membership"
+        ? "membership"
+        : "program";
+  const itemLabel =
+    itemType === "event"
+      ? "Event"
+      : itemType === "membership"
+        ? "Annual Membership"
+        : "Program";
   const linkedItem =
-    itemType === "event" ? purchase.eventId : purchase.programId;
+    itemType === "event"
+      ? purchase.eventId
+      : itemType === "membership"
+        ? purchase.membershipId
+        : purchase.programId;
 
   const itemTitle =
     linkedItem &&
@@ -148,22 +163,18 @@ export async function markProgramPurchaseUnenrolled(
 
   if (purchase.purchaseType === "program" && programId && purchase.isClassRep) {
     const program = await Program.findById(programId);
-    const decrement: Record<string, number> = { classRepCount: -1 };
-    if (program) {
-      const discountRoleIndex = getDiscountRoleIndex(
-        normalizeProgramRoles(program),
-      );
-      if (discountRoleIndex >= 0) {
-        decrement[`programRoles.studentRoles.${discountRoleIndex}.count`] = -1;
-      }
-    }
 
     await Program.findOneAndUpdate(
       {
         _id: programId,
-        classRepCount: { $gt: 0 },
       },
-      { $inc: decrement },
+      {
+        $inc: buildDiscountRoleCountIncrement(
+          program || { classRepCount: 0 },
+          -1,
+          purchase.studentRoleId,
+        ),
+      },
       { runValidators: false },
     );
   }

@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { Program, Purchase } from "../../models";
+import { hasAnnualMembershipAccessToProgram } from "../AnnualMembershipAccessService";
 
 /**
  * CoOrganizerProgramAccessService
@@ -158,6 +159,16 @@ export class CoOrganizerProgramAccessService {
         if (purchase) {
           hasAccessToAny = true;
           break; // Found access, no need to check other programs
+        }
+
+        const hasMembershipAccess = await hasAnnualMembershipAccessToProgram({
+          userId: userIdStr,
+          programId: program._id,
+        });
+
+        if (hasMembershipAccess) {
+          hasAccessToAny = true;
+          break;
         }
       }
 

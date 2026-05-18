@@ -30,6 +30,7 @@ export * from "./search.api";
 export * from "./assignments.api";
 export * from "./donations.api";
 export * from "./refundRequests.api";
+export * from "./annualMemberships.api";
 
 // Import services for backward compatibility exports
 import { authService } from "./auth.api";
@@ -47,6 +48,7 @@ import { systemMessagesService } from "./systemMessages.api";
 import { messagesService } from "./messages.api";
 import { analyticsService } from "./analytics.api";
 import { refundRequestsService } from "./refundRequests.api";
+import { annualMembershipsService } from "./annualMemberships.api";
 
 // Backward compatibility: export services with legacy singular names
 export { authService }; // Export authService directly since it has no singular alternative
@@ -64,6 +66,7 @@ export const systemMessageService = systemMessagesService;
 export const messageService = messagesService;
 export const analyticService = analyticsService;
 export const refundRequestService = refundRequestsService;
+export const annualMembershipService = annualMembershipsService;
 
 // Export full ApiClient for backward compatibility with code that uses apiClient instance
 export { apiClient, ApiClient } from "./apiClient";

@@ -41,11 +41,13 @@ class PurchaseAdminController {
         limit = 20,
         search = "",
         status,
+        purchaseType,
       } = req.query as {
         page?: string;
         limit?: string;
         search?: string;
         status?: string;
+        purchaseType?: string;
       };
 
       const pageNum = Math.max(1, parseInt(page as string, 10));
@@ -63,6 +65,14 @@ class PurchaseAdminController {
         query.status = status;
       }
 
+      if (
+        purchaseType &&
+        purchaseType !== "all" &&
+        ["program", "event", "membership"].includes(purchaseType)
+      ) {
+        query.purchaseType = purchaseType;
+      }
+
       // Fetch ALL purchases matching status filter (we'll filter by search client-side)
       // This is necessary because search includes populated fields (user name, program title)
       const allPurchases = await Purchase.find(query)
@@ -76,6 +86,10 @@ class PurchaseAdminController {
         })
         .populate({
           path: "eventId",
+          select: "title",
+        })
+        .populate({
+          path: "membershipId",
           select: "title",
         })
         .sort({ createdAt: -1 });
@@ -93,6 +107,7 @@ class PurchaseAdminController {
           };
           const program = purchase.programId as { title?: string };
           const event = purchase.eventId as { title?: string };
+          const membership = purchase.membershipId as { title?: string };
 
           const userFirstName = user?.firstName?.toLowerCase() || "";
           const userLastName = user?.lastName?.toLowerCase() || "";
@@ -100,6 +115,7 @@ class PurchaseAdminController {
           const userName = user?.username?.toLowerCase() || "";
           const programTitle = program?.title?.toLowerCase() || "";
           const eventTitle = event?.title?.toLowerCase() || "";
+          const membershipTitle = membership?.title?.toLowerCase() || "";
           const orderNumber = purchase.orderNumber?.toLowerCase() || "";
 
           return (
@@ -109,6 +125,7 @@ class PurchaseAdminController {
             userName.includes(searchLower) ||
             programTitle.includes(searchLower) ||
             eventTitle.includes(searchLower) ||
+            membershipTitle.includes(searchLower) ||
             orderNumber.includes(searchLower)
           );
         });
@@ -132,6 +149,10 @@ class PurchaseAdminController {
           title?: string;
         };
         const event = purchase.eventId as {
+          _id?: unknown;
+          title?: string;
+        };
+        const membership = purchase.membershipId as {
           _id?: unknown;
           title?: string;
         };
@@ -160,6 +181,13 @@ class PurchaseAdminController {
               ? {
                   id: event?._id,
                   name: event?.title || "Unknown Event",
+                }
+              : undefined,
+          membership:
+            purchase.purchaseType === "membership"
+              ? {
+                  id: membership?._id,
+                  name: membership?.title || "Unknown Annual Membership",
                 }
               : undefined,
           fullPrice: purchase.fullPrice,

@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 import { Purchase, Program } from "../../models";
+import { hasAnnualMembershipAccessToProgram } from "../../services/AnnualMembershipAccessService";
 
 /**
  * PurchaseAccessController
@@ -50,6 +51,19 @@ class PurchaseAccessController {
             hasAccess: true,
             reason: purchase.isClassRep ? "class_rep" : "purchased",
           },
+        });
+        return;
+      }
+
+      const hasMembershipAccess = await hasAnnualMembershipAccessToProgram({
+        userId: req.user._id,
+        programId: program._id,
+      });
+
+      if (hasMembershipAccess) {
+        res.status(200).json({
+          success: true,
+          data: { hasAccess: true, reason: "membership" },
         });
         return;
       }
