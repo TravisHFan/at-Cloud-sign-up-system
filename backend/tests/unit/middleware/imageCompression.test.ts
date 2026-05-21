@@ -13,11 +13,13 @@ vi.mock("../../../src/services/ImageCompressionService", () => ({
     getCompressionProfile: vi.fn(() => ({ quality: 80, maxWidth: 1024 })),
     compressImage: vi.fn(async (inputPath: string) => ({
       originalPath: inputPath,
-      compressedPath: inputPath.replace(/\.jpg$/, ".compressed.jpg"),
+      compressedPath: inputPath.replace(/\.jpg$/, ".compressed.webp"),
       originalSize: 1000,
       compressedSize: 400,
       compressionRatio: 60,
       dimensions: { width: 800, height: 600 },
+      format: "webp",
+      mimeType: "image/webp",
     })),
     formatFileSize: vi.fn((n: number) => `${n}B`),
   },
@@ -87,9 +89,10 @@ describe("imageCompression middleware", () => {
     expect(ImageCompressionService.compressImage).toHaveBeenCalled();
 
     // req.file mutated
-    expect(req.file?.path).toBe("/tmp/photo.compressed.jpg");
-    expect(req.file?.filename).toBe("photo.compressed.jpg");
+    expect(req.file?.path).toBe("/tmp/photo.compressed.webp");
+    expect(req.file?.filename).toBe("photo.compressed.webp");
     expect(req.file?.size).toBe(400);
+    expect(req.file?.mimetype).toBe("image/webp");
 
     // compressionResult assigned
     expect(req.compressionResult).toMatchObject({
@@ -97,6 +100,8 @@ describe("imageCompression middleware", () => {
       compressedSize: 400,
       compressionRatio: 60,
       dimensions: { width: 800, height: 600 },
+      format: "webp",
+      mimeType: "image/webp",
     });
 
     expect(next).toHaveBeenCalled();

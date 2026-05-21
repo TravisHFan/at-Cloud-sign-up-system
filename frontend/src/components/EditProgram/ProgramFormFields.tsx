@@ -433,7 +433,7 @@ export default function ProgramFormFields({
           <input
             type="url"
             {...register("flyerUrl")}
-            placeholder="Click 📎 to upload a JPG or PNG flyer"
+            placeholder="Click 📎 to upload an image flyer"
             className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <label

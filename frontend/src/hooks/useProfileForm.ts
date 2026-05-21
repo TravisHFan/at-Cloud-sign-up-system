@@ -135,13 +135,12 @@ export function useProfileForm() {
       return;
     }
 
-    // Skip frontend compression - let backend handle it for better quality
     setSelectedAvatarFile(file);
     setAvatarPreview(previewUrl);
 
     const originalSize = formatFileSize(file.size);
     notification.success(
-      `Avatar selected! Size: ${originalSize}. Backend will optimize during upload. Click "Save Changes" to upload.`,
+      `Avatar selected! Size: ${originalSize}. It will be optimized to WebP during upload. Click "Save Changes" to upload.`,
       {
         title: "Avatar Selected",
         autoCloseDelay: 4000,

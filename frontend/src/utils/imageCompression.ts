@@ -4,21 +4,49 @@ export interface CompressionConfig {
   maxHeight: number;
   quality: number;
   outputFormat: "image/jpeg" | "image/png" | "image/webp";
+  skipIfLarger?: boolean;
 }
 
 export const DEFAULT_AVATAR_COMPRESSION: CompressionConfig = {
-  maxWidth: 400,
-  maxHeight: 400,
-  quality: 0.8, // 80% quality for good balance
-  outputFormat: "image/jpeg",
+  maxWidth: 512,
+  maxHeight: 512,
+  quality: 0.82,
+  outputFormat: "image/webp",
+  skipIfLarger: true,
 };
 
 export const DEFAULT_EVENT_IMAGE_COMPRESSION: CompressionConfig = {
-  maxWidth: 800,
-  maxHeight: 600,
-  quality: 0.85, // Slightly higher quality for event images
-  outputFormat: "image/jpeg",
+  maxWidth: 1600,
+  maxHeight: 1600,
+  quality: 0.82,
+  outputFormat: "image/webp",
+  skipIfLarger: true,
 };
+
+const EXTENSION_BY_MIME: Record<CompressionConfig["outputFormat"], string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
+
+function filenameForMimeType(filename: string, mimeType: string): string {
+  const extension =
+    EXTENSION_BY_MIME[mimeType as CompressionConfig["outputFormat"]];
+  if (!extension) return filename;
+
+  const cleanName = filename.replace(/\.[^/.]+$/, "");
+  return `${cleanName || "image"}.${extension}`;
+}
+
+export function canCompressImagesInBrowser(): boolean {
+  return (
+    typeof document !== "undefined" &&
+    typeof window !== "undefined" &&
+    typeof Image !== "undefined" &&
+    typeof URL !== "undefined" &&
+    typeof File !== "undefined"
+  );
+}
 
 /**
  * Compresses an image file using HTML5 Canvas
@@ -31,6 +59,11 @@ export function compressImage(
   config: CompressionConfig = DEFAULT_AVATAR_COMPRESSION
 ): Promise<File> {
   return new Promise((resolve, reject) => {
+    if (!canCompressImagesInBrowser()) {
+      reject(new Error("Browser image compression is not available"));
+      return;
+    }
+
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
     const img = new Image();
@@ -72,11 +105,21 @@ export function compressImage(
             return;
           }
 
+          if (config.skipIfLarger && blob.size >= file.size) {
+            resolve(file);
+            return;
+          }
+
           // Create new file with compressed data
-          const compressedFile = new File([blob], file.name, {
-            type: config.outputFormat,
-            lastModified: Date.now(),
-          });
+          const outputType = blob.type || config.outputFormat;
+          const compressedFile = new File(
+            [blob],
+            filenameForMimeType(file.name, outputType),
+            {
+              type: outputType,
+              lastModified: Date.now(),
+            }
+          );
 
           resolve(compressedFile);
         },

@@ -4,6 +4,14 @@ import { createLogger } from "../services/LoggerService";
 
 const log = createLogger("AvatarCleanup");
 
+const getFilenameFromUploadUrl = (uploadUrl: string): string => {
+  try {
+    return path.basename(new URL(uploadUrl, "http://local").pathname);
+  } catch {
+    return path.basename(uploadUrl.split("?")[0].split("#")[0]);
+  }
+};
+
 /**
  * Check if an avatar URL represents an uploaded file (not a default avatar)
  */
@@ -32,7 +40,7 @@ export const deleteOldAvatarFile = async (
   }
 
   try {
-    const filename = path.basename(avatarUrl);
+    const filename = getFilenameFromUploadUrl(avatarUrl);
     // Use the correct uploads directory based on environment
     let uploadsDir: string;
     if (process.env.UPLOAD_DESTINATION) {

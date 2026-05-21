@@ -26,6 +26,8 @@ declare global {
           width: number;
           height: number;
         };
+        format?: string;
+        mimeType?: string;
       };
     }
   }
@@ -82,6 +84,7 @@ export const compressUploadedImage = async (
     req.file.path = compressionResult.compressedPath;
     req.file.filename = path.basename(compressionResult.compressedPath);
     req.file.size = compressionResult.compressedSize;
+    req.file.mimetype = compressionResult.mimeType;
 
     // Store compression details for logging/response
     req.compressionResult = {
@@ -89,6 +92,8 @@ export const compressUploadedImage = async (
       compressedSize: compressionResult.compressedSize,
       compressionRatio: compressionResult.compressionRatio,
       dimensions: compressionResult.dimensions,
+      format: compressionResult.format,
+      mimeType: compressionResult.mimeType,
     };
 
     const originalSizeFormatted = ImageCompressionService.formatFileSize(
@@ -183,6 +188,8 @@ export const includeCompressionInfo = (
         ),
         reduction: `${req.compressionResult.compressionRatio}%`,
         dimensions: req.compressionResult.dimensions,
+        format: req.compressionResult.format,
+        mimeType: req.compressionResult.mimeType,
       };
     }
     return originalJson.call(this, body as Parameters<typeof originalJson>[0]);

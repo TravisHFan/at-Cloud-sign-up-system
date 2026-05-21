@@ -9,8 +9,6 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import path from "path";
-
 // Mock external dependencies
 vi.mock("sharp");
 vi.mock("fs/promises");
@@ -21,7 +19,6 @@ import {
   ImageCompressionService,
   COMPRESSION_PROFILES,
   type CompressionConfig,
-  type CompressionResult,
 } from "../../../src/services/ImageCompressionService";
 
 describe("ImageCompressionService", () => {
@@ -43,8 +40,10 @@ describe("ImageCompressionService", () => {
 
         // Mock Sharp operations
         const mockSharpInstance = {
+          rotate: vi.fn().mockReturnThis(),
+          toColorspace: vi.fn().mockReturnThis(),
           resize: vi.fn().mockReturnThis(),
-          jpeg: vi.fn().mockReturnThis(),
+          webp: vi.fn().mockReturnThis(),
           withMetadata: vi.fn().mockReturnThis(),
           toFile: vi.fn().mockResolvedValueOnce({
             width: 400,
@@ -60,7 +59,7 @@ describe("ImageCompressionService", () => {
         );
 
         expect(result).toEqual({
-          compressedPath: "/test/image-compressed.jpeg",
+          compressedPath: "/test/image-compressed.webp",
           originalSize: 1000000,
           compressedSize: 500000,
           compressionRatio: 50,
@@ -68,10 +67,14 @@ describe("ImageCompressionService", () => {
             width: 400,
             height: 300,
           },
+          format: "webp",
+          mimeType: "image/webp",
         });
 
         expect(sharp).toHaveBeenCalledWith("/test/image.jpg");
-        expect(mockSharpInstance.resize).toHaveBeenCalledWith(400, 400, {
+        expect(mockSharpInstance.rotate).toHaveBeenCalled();
+        expect(mockSharpInstance.toColorspace).toHaveBeenCalledWith("srgb");
+        expect(mockSharpInstance.resize).toHaveBeenCalledWith(512, 512, {
           fit: "inside",
           withoutEnlargement: true,
           kernel: "lanczos3",
@@ -85,6 +88,8 @@ describe("ImageCompressionService", () => {
         vi.mocked(fs.unlink).mockResolvedValueOnce();
 
         const mockSharpInstance = {
+          rotate: vi.fn().mockReturnThis(),
+          toColorspace: vi.fn().mockReturnThis(),
           resize: vi.fn().mockReturnThis(),
           jpeg: vi.fn().mockReturnThis(),
           withMetadata: vi.fn().mockReturnThis(),
@@ -96,7 +101,14 @@ describe("ImageCompressionService", () => {
         };
         vi.mocked(sharp).mockReturnValueOnce(mockSharpInstance as any);
 
-        const config = COMPRESSION_PROFILES.eventImage;
+        const config: CompressionConfig = {
+          maxWidth: 800,
+          maxHeight: 600,
+          quality: 85,
+          format: "jpeg",
+          progressive: true,
+          stripMetadata: true,
+        };
         await ImageCompressionService.compressImage("/test/event.jpg", config);
 
         expect(mockSharpInstance.jpeg).toHaveBeenCalledWith({
@@ -112,6 +124,8 @@ describe("ImageCompressionService", () => {
         vi.mocked(fs.unlink).mockResolvedValueOnce();
 
         const mockSharpInstance = {
+          rotate: vi.fn().mockReturnThis(),
+          toColorspace: vi.fn().mockReturnThis(),
           resize: vi.fn().mockReturnThis(),
           png: vi.fn().mockReturnThis(),
           withMetadata: vi.fn().mockReturnThis(),
@@ -146,6 +160,8 @@ describe("ImageCompressionService", () => {
         vi.mocked(fs.unlink).mockResolvedValueOnce();
 
         const mockSharpInstance = {
+          rotate: vi.fn().mockReturnThis(),
+          toColorspace: vi.fn().mockReturnThis(),
           resize: vi.fn().mockReturnThis(),
           webp: vi.fn().mockReturnThis(),
           withMetadata: vi.fn().mockReturnThis(),
@@ -173,14 +189,16 @@ describe("ImageCompressionService", () => {
         });
       });
 
-      it("should handle metadata stripping correctly", async () => {
+      it("should strip metadata by default", async () => {
         vi.mocked(fs.stat).mockResolvedValueOnce({ size: 1000000 } as any);
         vi.mocked(fs.stat).mockResolvedValueOnce({ size: 500000 } as any);
         vi.mocked(fs.unlink).mockResolvedValueOnce();
 
         const mockSharpInstance = {
+          rotate: vi.fn().mockReturnThis(),
+          toColorspace: vi.fn().mockReturnThis(),
           resize: vi.fn().mockReturnThis(),
-          jpeg: vi.fn().mockReturnThis(),
+          webp: vi.fn().mockReturnThis(),
           withMetadata: vi.fn().mockReturnThis(),
           toFile: vi.fn().mockResolvedValueOnce({
             width: 400,
@@ -197,8 +215,34 @@ describe("ImageCompressionService", () => {
 
         await ImageCompressionService.compressImage("/test/image.jpg", config);
 
+        expect(mockSharpInstance.withMetadata).not.toHaveBeenCalled();
+      });
+
+      it("should preserve metadata only when explicitly requested", async () => {
+        vi.mocked(fs.stat).mockResolvedValueOnce({ size: 1000000 } as any);
+        vi.mocked(fs.stat).mockResolvedValueOnce({ size: 500000 } as any);
+        vi.mocked(fs.unlink).mockResolvedValueOnce();
+
+        const mockSharpInstance = {
+          rotate: vi.fn().mockReturnThis(),
+          toColorspace: vi.fn().mockReturnThis(),
+          resize: vi.fn().mockReturnThis(),
+          webp: vi.fn().mockReturnThis(),
+          withMetadata: vi.fn().mockReturnThis(),
+          toFile: vi.fn().mockResolvedValueOnce({
+            width: 400,
+            height: 300,
+            size: 500000,
+          }),
+        };
+        vi.mocked(sharp).mockReturnValueOnce(mockSharpInstance as any);
+
+        await ImageCompressionService.compressImage("/test/image.jpg", {
+          ...COMPRESSION_PROFILES.avatar,
+          stripMetadata: false,
+        });
+
         expect(mockSharpInstance.withMetadata).toHaveBeenCalledWith({
-          exif: {},
           icc: "srgb",
         });
       });
@@ -210,8 +254,10 @@ describe("ImageCompressionService", () => {
         vi.mocked(fs.unlink).mockResolvedValueOnce();
 
         const mockSharpInstance = {
+          rotate: vi.fn().mockReturnThis(),
+          toColorspace: vi.fn().mockReturnThis(),
           resize: vi.fn().mockReturnThis(),
-          jpeg: vi.fn().mockReturnThis(),
+          webp: vi.fn().mockReturnThis(),
           withMetadata: vi.fn().mockReturnThis(),
           toFile: vi
             .fn()
@@ -246,8 +292,10 @@ describe("ImageCompressionService", () => {
         vi.mocked(fs.unlink).mockRejectedValueOnce(new Error("Cleanup failed"));
 
         const mockSharpInstance = {
+          rotate: vi.fn().mockReturnThis(),
+          toColorspace: vi.fn().mockReturnThis(),
           resize: vi.fn().mockReturnThis(),
-          jpeg: vi.fn().mockReturnThis(),
+          webp: vi.fn().mockReturnThis(),
           withMetadata: vi.fn().mockReturnThis(),
           toFile: vi.fn().mockRejectedValueOnce(new Error("Processing failed")),
         };
@@ -312,7 +360,7 @@ describe("ImageCompressionService", () => {
       );
 
       expect(filename).toBe(
-        "test-image-1642694400000-123456789-compressed.jpeg"
+        "test-image-1642694400000-123456789-compressed.webp"
       );
     });
 
@@ -322,7 +370,7 @@ describe("ImageCompressionService", () => {
         COMPRESSION_PROFILES.eventImage
       );
 
-      expect(filename).toBe("my-photo-1642694400000-123456789-compressed.jpeg");
+      expect(filename).toBe("my-photo-1642694400000-123456789-compressed.webp");
     });
 
     it("should handle complex filenames", () => {
@@ -539,10 +587,10 @@ describe("ImageCompressionService", () => {
   describe("COMPRESSION_PROFILES", () => {
     it("should have valid avatar profile", () => {
       expect(COMPRESSION_PROFILES.avatar).toEqual({
-        maxWidth: 400,
-        maxHeight: 400,
-        quality: 90,
-        format: "jpeg",
+        maxWidth: 512,
+        maxHeight: 512,
+        quality: 82,
+        format: "webp",
         progressive: false,
         stripMetadata: true,
       });
@@ -550,10 +598,10 @@ describe("ImageCompressionService", () => {
 
     it("should have valid event image profile", () => {
       expect(COMPRESSION_PROFILES.eventImage).toEqual({
-        maxWidth: 800,
-        maxHeight: 600,
-        quality: 85,
-        format: "jpeg",
+        maxWidth: 1600,
+        maxHeight: 1600,
+        quality: 82,
+        format: "webp",
         progressive: true,
         stripMetadata: true,
       });
@@ -561,10 +609,10 @@ describe("ImageCompressionService", () => {
 
     it("should have valid thumbnail profile", () => {
       expect(COMPRESSION_PROFILES.thumbnail).toEqual({
-        maxWidth: 150,
-        maxHeight: 150,
-        quality: 85,
-        format: "jpeg",
+        maxWidth: 256,
+        maxHeight: 256,
+        quality: 78,
+        format: "webp",
         progressive: false,
         stripMetadata: true,
       });

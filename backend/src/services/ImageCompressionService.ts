@@ -35,35 +35,43 @@ export interface CompressionResult {
     width: number;
     height: number;
   };
+  format: CompressionConfig["format"];
+  mimeType: string;
 }
 
 // Compression profiles for different image types
 export const COMPRESSION_PROFILES = {
   avatar: {
-    maxWidth: 400,
-    maxHeight: 400,
-    quality: 90, // Higher quality for better detail at small sizes
-    format: "jpeg" as const,
-    progressive: false, // Progressive can hurt small images
+    maxWidth: 512,
+    maxHeight: 512,
+    quality: 82,
+    format: "webp" as const,
+    progressive: false,
     stripMetadata: true,
   },
   eventImage: {
-    maxWidth: 800,
-    maxHeight: 600,
-    quality: 85,
-    format: "jpeg" as const,
+    maxWidth: 1600,
+    maxHeight: 1600,
+    quality: 82,
+    format: "webp" as const,
     progressive: true,
     stripMetadata: true,
   },
   thumbnail: {
-    maxWidth: 150,
-    maxHeight: 150,
-    quality: 85, // Higher quality for thumbnails too
-    format: "jpeg" as const,
+    maxWidth: 256,
+    maxHeight: 256,
+    quality: 78,
+    format: "webp" as const,
     progressive: false,
     stripMetadata: true,
   },
 } as const;
+
+const MIME_BY_FORMAT: Record<CompressionConfig["format"], string> = {
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+};
 
 export class ImageCompressionService {
   /**
@@ -88,16 +96,16 @@ export class ImageCompressionService {
         `${parsedPath.name}-compressed.${config.format}`
       );
 
-      // Process image with Sharp - use better resampling for small images
-      let sharpInstance = sharp(originalPath).resize(
-        config.maxWidth,
-        config.maxHeight,
-        {
+      // Rotate according to EXIF orientation, normalize color, then resize.
+      // Sharp strips metadata by default when withMetadata() is not called.
+      let sharpInstance = sharp(originalPath)
+        .rotate()
+        .toColorspace("srgb")
+        .resize(config.maxWidth, config.maxHeight, {
           fit: "inside",
           withoutEnlargement: true,
-          kernel: "lanczos3", // Better quality for downscaling
-        }
-      );
+          kernel: "lanczos3",
+        });
 
       // Apply format-specific optimizations
       switch (config.format) {
@@ -123,10 +131,9 @@ export class ImageCompressionService {
           break;
       }
 
-      // Strip metadata if requested
-      if (config.stripMetadata) {
+      // Preserve metadata only when explicitly requested. Default output strips it.
+      if (config.stripMetadata === false) {
         sharpInstance = sharpInstance.withMetadata({
-          exif: {},
           icc: "srgb", // Keep color profile
         });
       }
@@ -155,6 +162,8 @@ export class ImageCompressionService {
           width: compressedInfo.width,
           height: compressedInfo.height,
         },
+        format: config.format,
+        mimeType: MIME_BY_FORMAT[config.format],
       };
     } catch (error) {
       // Clean up files on error
@@ -198,6 +207,10 @@ export class ImageCompressionService {
     const random = Math.round(Math.random() * 1e9);
 
     return `${parsedPath.name}-${timestamp}-${random}-compressed.${config.format}`;
+  }
+
+  static getMimeTypeForFormat(format: CompressionConfig["format"]): string {
+    return MIME_BY_FORMAT[format];
   }
 
   /**

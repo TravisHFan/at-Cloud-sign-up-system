@@ -349,7 +349,7 @@ describe("Uploads API - Integration Tests", () => {
           .set("Authorization", `Bearer ${memberToken}`)
           .attach("image", invalidFilePath);
 
-        expect(response.status).toBe(500);
+        expect(response.status).toBe(400);
         expect(response.body.success).toBe(false);
       });
     });
@@ -365,6 +365,7 @@ describe("Uploads API - Integration Tests", () => {
         expect(response.body.success).toBe(true);
         expect(response.body.data.url).toBeTruthy();
         expect(response.body.data.url).toMatch(/\/images\//);
+        expect(response.body.data.url).toMatch(/\.webp$/);
       });
 
       it("should return an absolute URL", async () => {
@@ -542,7 +543,7 @@ describe("Uploads API - Integration Tests", () => {
           .set("Authorization", `Bearer ${adminToken}`)
           .attach("avatar", invalidFilePath);
 
-        expect(response.status).toBe(500);
+        expect(response.status).toBe(400);
         expect(response.body.success).toBe(false);
       });
     });
@@ -558,6 +559,7 @@ describe("Uploads API - Integration Tests", () => {
         expect(response.body.success).toBe(true);
         expect(response.body.data.avatarUrl).toBeTruthy();
         expect(response.body.data.avatarUrl).toMatch(/\/avatars\//);
+        expect(response.body.data.avatarUrl).toMatch(/\.webp\?t=\d+$/);
       });
 
       it("should return an absolute URL", async () => {

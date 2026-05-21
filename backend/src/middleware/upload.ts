@@ -7,11 +7,27 @@ import {
   includeCompressionInfo,
 } from "./imageCompression";
 
+const ALLOWED_IMAGE_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/avif",
+  "image/heic",
+  "image/heif",
+]);
+
 // Get the base upload path based on environment
 const getUploadBasePath = (): string => {
   // Allow explicit override via environment variable
-  if (process.env.UPLOAD_DESTINATION) {
-    return process.env.UPLOAD_DESTINATION;
+  const uploadDestination = process.env.UPLOAD_DESTINATION?.trim();
+  if (
+    uploadDestination &&
+    uploadDestination !== "undefined" &&
+    uploadDestination !== "null"
+  ) {
+    return uploadDestination;
   }
 
   // In production on Render, use the mounted disk path
@@ -60,16 +76,21 @@ const storage = multer.diskStorage({
   },
 });
 
-// File filter for images only (avatars)
+// File filter for supported raster images only. SVG is intentionally excluded:
+// uploads are rendered to WebP, so accepting SVG adds risk without value here.
 const imageFilter = (
   req: Request,
   file: Express.Multer.File,
   cb: FileFilterCallback
 ) => {
-  if (file.mimetype.startsWith("image/")) {
+  if (ALLOWED_IMAGE_MIME_TYPES.has(file.mimetype.toLowerCase())) {
     cb(null, true);
   } else {
-    cb(new Error("Only image files are allowed"));
+    cb(
+      new Error(
+        "Only JPEG, PNG, WebP, GIF, AVIF, HEIC, or HEIF image files are allowed"
+      )
+    );
   }
 };
 
@@ -127,6 +148,17 @@ const makeHandleUploadErrors =
           return;
         }
 
+        if (
+          err instanceof Error &&
+          err.message.includes("image files are allowed")
+        ) {
+          res.status(400).json({
+            success: false,
+            message: err.message,
+          });
+          return;
+        }
+
         // Other errors (like directory creation)
         res.status(500).json({
           success: false,
@@ -157,7 +189,11 @@ export const uploadImage = [
 
 // Helper to compute an absolute base URL for the backend
 const getBackendBaseUrl = (req: Request): string => {
-  const configured = process.env.BACKEND_URL?.replace(/\/$/, "");
+  const backendUrl = process.env.BACKEND_URL?.trim();
+  const configured =
+    backendUrl && backendUrl !== "undefined" && backendUrl !== "null"
+      ? backendUrl.replace(/\/+$/, "")
+      : "";
   if (configured) return configured;
 
   // Be defensive: allow partially mocked Request objects in tests without loosening types

@@ -1,18 +1,44 @@
 import { BaseApiClient } from "./common";
+import {
+  compressImage,
+  DEFAULT_AVATAR_COMPRESSION,
+  DEFAULT_EVENT_IMAGE_COMPRESSION,
+  type CompressionConfig,
+} from "../../utils/imageCompression";
 
 /**
  * Files/Uploads API Service
  * Handles file upload operations for avatars and images
  */
 class FilesApiClient extends BaseApiClient {
+  private async optimizeImageForUpload(
+    file: File,
+    config: CompressionConfig
+  ): Promise<File> {
+    if (!file.type.startsWith("image/")) {
+      return file;
+    }
+
+    try {
+      return await compressImage(file, config);
+    } catch (error) {
+      console.warn("Frontend image optimization skipped:", error);
+      return file;
+    }
+  }
+
   /**
    * Upload avatar for current user
    * @param file - Avatar image file
    * @returns Avatar URL
    */
   async uploadAvatar(file: File): Promise<{ avatarUrl: string }> {
+    const optimizedFile = await this.optimizeImageForUpload(
+      file,
+      DEFAULT_AVATAR_COMPRESSION
+    );
     const formData = new FormData();
-    formData.append("avatar", file);
+    formData.append("avatar", optimizedFile);
 
     const response = await this.request<{ avatarUrl: string }>(
       "/users/avatar",
@@ -35,8 +61,12 @@ class FilesApiClient extends BaseApiClient {
    * @returns Avatar URL
    */
   async uploadAvatarForAdmin(file: File): Promise<{ avatarUrl: string }> {
+    const optimizedFile = await this.optimizeImageForUpload(
+      file,
+      DEFAULT_AVATAR_COMPRESSION
+    );
     const formData = new FormData();
-    formData.append("avatar", file);
+    formData.append("avatar", optimizedFile);
 
     const response = await this.request<{ avatarUrl: string }>(
       "/uploads/avatar",
@@ -59,8 +89,12 @@ class FilesApiClient extends BaseApiClient {
    * @returns Image URL
    */
   async uploadGenericImage(file: File): Promise<{ url: string }> {
+    const optimizedFile = await this.optimizeImageForUpload(
+      file,
+      DEFAULT_EVENT_IMAGE_COMPRESSION
+    );
     const formData = new FormData();
-    formData.append("image", file);
+    formData.append("image", optimizedFile);
 
     const response = await this.request<{ url: string }>("/uploads/image", {
       method: "POST",

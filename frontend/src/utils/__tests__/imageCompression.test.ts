@@ -22,35 +22,35 @@ import {
 describe("imageCompression", () => {
   describe("DEFAULT_AVATAR_COMPRESSION config", () => {
     it("should have correct avatar dimensions", () => {
-      expect(DEFAULT_AVATAR_COMPRESSION.maxWidth).toBe(400);
-      expect(DEFAULT_AVATAR_COMPRESSION.maxHeight).toBe(400);
+      expect(DEFAULT_AVATAR_COMPRESSION.maxWidth).toBe(512);
+      expect(DEFAULT_AVATAR_COMPRESSION.maxHeight).toBe(512);
     });
 
-    it("should have 80% quality for avatars", () => {
-      expect(DEFAULT_AVATAR_COMPRESSION.quality).toBe(0.8);
+    it("should use optimized avatar quality", () => {
+      expect(DEFAULT_AVATAR_COMPRESSION.quality).toBe(0.82);
     });
 
-    it("should use JPEG format for avatars", () => {
-      expect(DEFAULT_AVATAR_COMPRESSION.outputFormat).toBe("image/jpeg");
+    it("should use WebP format for avatars", () => {
+      expect(DEFAULT_AVATAR_COMPRESSION.outputFormat).toBe("image/webp");
     });
   });
 
   describe("DEFAULT_EVENT_IMAGE_COMPRESSION config", () => {
     it("should have correct event image dimensions", () => {
-      expect(DEFAULT_EVENT_IMAGE_COMPRESSION.maxWidth).toBe(800);
-      expect(DEFAULT_EVENT_IMAGE_COMPRESSION.maxHeight).toBe(600);
+      expect(DEFAULT_EVENT_IMAGE_COMPRESSION.maxWidth).toBe(1600);
+      expect(DEFAULT_EVENT_IMAGE_COMPRESSION.maxHeight).toBe(1600);
     });
 
-    it("should have 85% quality for event images", () => {
-      expect(DEFAULT_EVENT_IMAGE_COMPRESSION.quality).toBe(0.85);
+    it("should use optimized event image quality", () => {
+      expect(DEFAULT_EVENT_IMAGE_COMPRESSION.quality).toBe(0.82);
     });
 
-    it("should use JPEG format for event images", () => {
-      expect(DEFAULT_EVENT_IMAGE_COMPRESSION.outputFormat).toBe("image/jpeg");
+    it("should use WebP format for event images", () => {
+      expect(DEFAULT_EVENT_IMAGE_COMPRESSION.outputFormat).toBe("image/webp");
     });
 
-    it("should have higher quality than avatars", () => {
-      expect(DEFAULT_EVENT_IMAGE_COMPRESSION.quality).toBeGreaterThan(
+    it("should use matching quality for upload consistency", () => {
+      expect(DEFAULT_EVENT_IMAGE_COMPRESSION.quality).toBe(
         DEFAULT_AVATAR_COMPRESSION.quality
       );
     });
@@ -208,7 +208,7 @@ describe("imageCompression", () => {
         getContext: vi.fn(() => mockContext),
         toBlob: vi.fn((callback, format) => {
           // Simulate successful compression
-          const blob = new Blob(["fake image data"], { type: format });
+          const blob = new Blob(["x"], { type: format });
           callback(blob);
         }),
       };
@@ -269,7 +269,8 @@ describe("imageCompression", () => {
       const result = await compressImage(file);
 
       expect(result).toBeInstanceOf(File);
-      expect(result.name).toBe("test.jpg");
+      expect(result.name).toBe("test.webp");
+      expect(result.type).toBe("image/webp");
     });
 
     it("should use custom compression config", async () => {
@@ -418,14 +419,14 @@ describe("imageCompression", () => {
         DEFAULT_EVENT_IMAGE_COMPRESSION.maxWidth
       );
 
-      // Event images should have better quality
-      expect(DEFAULT_EVENT_IMAGE_COMPRESSION.quality).toBeGreaterThan(
+      // Event images keep the same quality with larger bounds for readability
+      expect(DEFAULT_EVENT_IMAGE_COMPRESSION.quality).toBe(
         DEFAULT_AVATAR_COMPRESSION.quality
       );
 
-      // Both should use JPEG for good compression
-      expect(DEFAULT_AVATAR_COMPRESSION.outputFormat).toBe("image/jpeg");
-      expect(DEFAULT_EVENT_IMAGE_COMPRESSION.outputFormat).toBe("image/jpeg");
+      // Both should use WebP for efficient browser upload payloads
+      expect(DEFAULT_AVATAR_COMPRESSION.outputFormat).toBe("image/webp");
+      expect(DEFAULT_EVENT_IMAGE_COMPRESSION.outputFormat).toBe("image/webp");
     });
 
     it("should calculate realistic compression ratios", () => {

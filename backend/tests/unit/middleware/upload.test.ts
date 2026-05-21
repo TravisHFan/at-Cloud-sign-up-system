@@ -183,7 +183,9 @@ describe("Upload Middleware", () => {
         "image/png",
         "image/gif",
         "image/webp",
-        "image/svg+xml",
+        "image/avif",
+        "image/heic",
+        "image/heif",
       ];
 
       void uploadAvatar;
@@ -213,7 +215,7 @@ describe("Upload Middleware", () => {
         fileFilter({} as any, { mimetype } as any, cb);
         const [err] = cb.mock.calls[0];
         expect(err).toBeInstanceOf(Error);
-        expect(String(err.message)).toContain("Only image files are allowed");
+        expect(String(err.message)).toContain("image files are allowed");
       });
     });
   });

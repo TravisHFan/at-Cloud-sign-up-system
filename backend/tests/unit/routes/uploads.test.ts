@@ -22,12 +22,12 @@ vi.mock("../../../src/middleware/rateLimiting", () => ({
 }));
 
 const mockUploadImage = vi.fn((req: any, res: any, next: any) => {
-  req.file = { filename: "test-image.jpg" };
+  req.file = { filename: "test-image.webp" };
   next();
 });
 
 const mockUploadAvatar = vi.fn((req: any, res: any, next: any) => {
-  req.file = { filename: "test-avatar.jpg" };
+  req.file = { filename: "test-avatar.webp" };
   next();
 });
 
@@ -73,14 +73,14 @@ describe("uploads routes", () => {
       expect(response.body).toEqual({
         success: true,
         data: {
-          url: "http://localhost:5001/api/uploads/images/test-image.jpg",
+          url: "http://localhost:5001/api/uploads/images/test-image.webp",
         },
       });
 
       expect(mockUploadImage).toHaveBeenCalled();
       expect(mockGetFileUrl).toHaveBeenCalledWith(
         expect.any(Object),
-        "images/test-image.jpg",
+        "images/test-image.webp",
         { absolute: true }
       );
     });
@@ -116,13 +116,13 @@ describe("uploads routes", () => {
 
       expect(response.body.success).toBe(true);
       expect(response.body.data.avatarUrl).toMatch(
-        /^http:\/\/localhost:5001\/api\/uploads\/avatars\/test-avatar\.jpg\?t=\d+$/
+        /^http:\/\/localhost:5001\/api\/uploads\/avatars\/test-avatar\.webp\?t=\d+$/
       );
 
       expect(mockUploadAvatar).toHaveBeenCalled();
       expect(mockGetFileUrl).toHaveBeenCalledWith(
         expect.any(Object),
-        "avatars/test-avatar.jpg",
+        "avatars/test-avatar.webp",
         { absolute: true }
       );
     });
