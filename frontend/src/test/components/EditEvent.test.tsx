@@ -11,6 +11,7 @@ vi.mock("../../services/api", () => ({
   eventService: {
     getEvent: vi.fn(),
     updateEvent: vi.fn(),
+    checkEventTimeConflict: vi.fn(),
   },
   authService: {
     getProfile: vi.fn(),
@@ -187,6 +188,10 @@ describe("EditEvent - Field Update Bug Fixes", () => {
       location: "",
       createdBy: "u-main",
       createdAt: new Date().toISOString(),
+    });
+    vi.mocked(eventService.checkEventTimeConflict).mockResolvedValue({
+      conflict: false,
+      conflicts: [],
     });
   });
 

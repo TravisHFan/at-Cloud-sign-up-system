@@ -3,6 +3,7 @@ import request from "supertest";
 import app from "../../../src/app";
 import User from "../../../src/models/User";
 import Event from "../../../src/models/Event";
+import Program from "../../../src/models/Program";
 import { ROLES } from "../../../src/utils/roleUtils";
 import { ensureIntegrationDB } from "../setup/connect";
 
@@ -13,6 +14,7 @@ describe("EventConflictController - GET /api/events/check-conflict", () => {
     await ensureIntegrationDB();
     await User.deleteMany({});
     await Event.deleteMany({});
+    await Program.deleteMany({});
   });
 
   const createTestEvent = async (options: any = {}) => {
@@ -372,15 +374,51 @@ describe("EventConflictController - GET /api/events/check-conflict", () => {
       expect(response.body.data.conflicts[0].id).toBe(event._id.toString());
       expect(response.body.data.conflicts[0].title).toBe("Conflicting Event");
     });
+
+    it("should include program affiliation details in conflicts", async () => {
+      const creator = await User.create({
+        name: "Program Creator",
+        username: `pc${Date.now().toString().slice(-10)}`,
+        email: `programcreator${Date.now()}@test.com`,
+        password: "Password123",
+        role: ROLES.PARTICIPANT,
+        isActive: true,
+        isVerified: true,
+      });
+      const program = await Program.create({
+        title: "Leadership Growth Program",
+        programType: "Webinar",
+        isFree: true,
+        fullPriceTicket: 0,
+        createdBy: creator._id,
+      });
+
+      await createTestEvent({
+        title: "Program Event",
+        date: "2025-06-01",
+        time: "10:00",
+        endTime: "12:00",
+        programLabels: [program._id],
+      });
+
+      const response = await request(app).get(
+        "/api/events/check-conflict?startDate=2025-06-01&startTime=11:00&endDate=2025-06-01&endTime=13:00",
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.body.data.conflicts[0].programs).toEqual([
+        { id: program._id.toString(), title: "Leadership Growth Program" },
+      ]);
+    });
   });
 
-  // ========== Program-Aware Conflict Detection ==========
-  describe("Program-Aware Conflict Detection", () => {
+  // ========== Global Conflict Detection with Program Metadata ==========
+  describe("Global Conflict Detection with Program Metadata", () => {
     const programA = new mongoose.Types.ObjectId();
     const programB = new mongoose.Types.ObjectId();
     const programC = new mongoose.Types.ObjectId();
 
-    it("should allow overlap when events belong to different programs", async () => {
+    it("should detect overlap when events belong to different programs", async () => {
       await createTestEvent({
         title: "Program A Event",
         date: "2025-06-01",
@@ -394,10 +432,11 @@ describe("EventConflictController - GET /api/events/check-conflict", () => {
       );
 
       expect(response.status).toBe(200);
-      expect(response.body.data.conflict).toBe(false);
+      expect(response.body.data.conflict).toBe(true);
+      expect(response.body.data.conflicts).toHaveLength(1);
     });
 
-    it("should block overlap when events share a program", async () => {
+    it("should detect overlap when events share a program", async () => {
       await createTestEvent({
         title: "Program A Event",
         date: "2025-06-01",
@@ -415,7 +454,7 @@ describe("EventConflictController - GET /api/events/check-conflict", () => {
       expect(response.body.data.conflicts).toHaveLength(1);
     });
 
-    it("should block overlap when events share at least one program among multiple", async () => {
+    it("should detect overlap when events share at least one program among multiple", async () => {
       await createTestEvent({
         title: "Multi-Program Event",
         date: "2025-06-01",
@@ -433,7 +472,7 @@ describe("EventConflictController - GET /api/events/check-conflict", () => {
       expect(response.body.data.conflict).toBe(true);
     });
 
-    it("should allow overlap when existing event has no programs", async () => {
+    it("should detect overlap when existing event has no programs", async () => {
       await createTestEvent({
         title: "No-Program Event",
         date: "2025-06-01",
@@ -447,10 +486,11 @@ describe("EventConflictController - GET /api/events/check-conflict", () => {
       );
 
       expect(response.status).toBe(200);
-      expect(response.body.data.conflict).toBe(false);
+      expect(response.body.data.conflict).toBe(true);
+      expect(response.body.data.conflicts[0].programs).toEqual([]);
     });
 
-    it("should allow overlap when new event has no programs", async () => {
+    it("should detect overlap when new event has no programs", async () => {
       await createTestEvent({
         title: "Program A Event",
         date: "2025-06-01",
@@ -465,10 +505,10 @@ describe("EventConflictController - GET /api/events/check-conflict", () => {
       );
 
       expect(response.status).toBe(200);
-      expect(response.body.data.conflict).toBe(false);
+      expect(response.body.data.conflict).toBe(true);
     });
 
-    it("should allow overlap when neither event has programs and programLabels param is sent", async () => {
+    it("should detect overlap when neither event has programs and programLabels param is sent", async () => {
       await createTestEvent({
         title: "No-Program Event",
         date: "2025-06-01",
@@ -482,7 +522,7 @@ describe("EventConflictController - GET /api/events/check-conflict", () => {
       );
 
       expect(response.status).toBe(200);
-      expect(response.body.data.conflict).toBe(false);
+      expect(response.body.data.conflict).toBe(true);
     });
 
     it("should fall back to global conflict when programLabels param is not sent", async () => {

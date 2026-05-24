@@ -22,6 +22,10 @@ import {
 import { EVENT_TYPES } from "../config/eventConstants";
 import { useAuth } from "../hooks/useAuth";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
+import {
+  buildTimeOverlapConfirmationMessage,
+  type TimeOverlapConflict,
+} from "../utils/timeOverlapConflicts";
 
 interface Organizer {
   id: string; // UUID to match User interface
@@ -92,6 +96,11 @@ export default function NewEvent() {
     useState(false);
   const [_templateApplied, setTemplateApplied] = useState(false);
   const [highlightRoleSection, setHighlightRoleSection] = useState(false);
+  const [timeOverlapConfirmation, setTimeOverlapConfirmation] = useState<{
+    isOpen: boolean;
+    conflicts: TimeOverlapConflict[];
+    resolve?: (confirmed: boolean) => void;
+  }>({ isOpen: false, conflicts: [] });
 
   // Modal states for template confirmation and selection
   const [confirmResetModal, setConfirmResetModal] = useState<{
@@ -101,6 +110,23 @@ export default function NewEvent() {
     onConfirm: () => void;
   }>({ isOpen: false, title: "", message: "", onConfirm: () => {} });
   const [templateSelectorModal, setTemplateSelectorModal] = useState(false);
+
+  const requestTimeOverlapConfirmation = useCallback(
+    (conflicts: TimeOverlapConflict[]) =>
+      new Promise<boolean>((resolve) => {
+        setTimeOverlapConfirmation({
+          isOpen: true,
+          conflicts,
+          resolve,
+        });
+      }),
+    [],
+  );
+
+  const closeTimeOverlapConfirmation = (confirmed: boolean) => {
+    timeOverlapConfirmation.resolve?.(confirmed);
+    setTimeOverlapConfirmation({ isOpen: false, conflicts: [] });
+  };
 
   // Convert selectedOrganizers to organizerDetails format (co-organizers only)
   const organizerDetails = useMemo(() => {
@@ -177,6 +203,7 @@ export default function NewEvent() {
     },
     {
       shouldSendNotifications: () => sendNotificationsPref,
+      confirmTimeOverlap: requestTimeOverlapConfirmation,
     },
   );
 
@@ -644,6 +671,21 @@ export default function NewEvent() {
     }
   }, [selectedEventType, dbTemplates, setValue, setCustomizeRoles]);
 
+  const timeOverlapModal = (
+    <ConfirmationModal
+      isOpen={timeOverlapConfirmation.isOpen}
+      onClose={() => closeTimeOverlapConfirmation(false)}
+      onConfirm={() => closeTimeOverlapConfirmation(true)}
+      title="Confirm Time Overlap"
+      message={buildTimeOverlapConfirmationMessage(
+        timeOverlapConfirmation.conflicts,
+      )}
+      confirmText="Yes, Save Event"
+      cancelText="Cancel"
+      type="warning"
+    />
+  );
+
   // Show preview if requested
   if (showPreview) {
     // Calculate total slots from roles
@@ -694,12 +736,15 @@ export default function NewEvent() {
     };
 
     return (
-      <EventPreview
-        eventData={previewData}
-        isSubmitting={isSubmitting}
-        onEdit={hidePreview}
-        onSubmit={onSubmit}
-      />
+      <>
+        <EventPreview
+          eventData={previewData}
+          isSubmitting={isSubmitting}
+          onEdit={hidePreview}
+          onSubmit={onSubmit}
+        />
+        {timeOverlapModal}
+      </>
     );
   }
 
@@ -928,6 +973,8 @@ export default function NewEvent() {
           </div>
         </form>
       </div>
+
+      {timeOverlapModal}
 
       {/* Confirmation Modal for template reset */}
       <ConfirmationModal

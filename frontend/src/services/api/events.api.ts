@@ -1,5 +1,6 @@
 import { BaseApiClient, type UpdateEventPayload } from "./common";
 import type { EventData, EventParticipant } from "../../types/event";
+import type { TimeOverlapConflict } from "../../utils/timeOverlapConflicts";
 import type {
   MyEventStats,
   MyEventRegistrationItem,
@@ -122,7 +123,7 @@ class EventsApiClient extends BaseApiClient {
     programLabels?: string[];
   }): Promise<{
     conflict: boolean;
-    conflicts: Array<{ id: string; title: string }>;
+    conflicts: TimeOverlapConflict[];
   }> {
     const qp = new URLSearchParams();
     qp.set("startDate", params.startDate);
@@ -139,7 +140,7 @@ class EventsApiClient extends BaseApiClient {
     }
     const response = await this.request<{
       conflict: boolean;
-      conflicts: Array<{ id: string; title: string }>;
+      conflicts: TimeOverlapConflict[];
     }>(`/events/check-conflict?${qp.toString()}`);
     if (response.data) return response.data;
     throw new Error(response.message || "Failed to check conflicts");

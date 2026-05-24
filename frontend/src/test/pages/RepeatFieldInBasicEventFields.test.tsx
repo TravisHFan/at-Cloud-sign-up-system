@@ -36,6 +36,9 @@ vi.mock("../../services/api", () => ({
   fileService: {
     uploadImage: vi.fn(),
   },
+  userService: {
+    getUsers: vi.fn().mockResolvedValue({ users: [], total: 0 }),
+  },
 }));
 
 // Wrapper component to provide react-hook-form context

@@ -7,14 +7,6 @@ vi.mock("../../../../src/utils/event/timezoneUtils", () => ({
     new Date(`${date}T${time}:00.000Z`),
 }));
 
-vi.mock("../../../../src/controllers/eventController", () => ({
-  EventController: {
-    findConflictingEvents: vi.fn(),
-  },
-}));
-
-import { EventController } from "../../../../src/controllers/eventController";
-
 const makeRes = () => {
   const res: any = {
     status: vi.fn().mockReturnThis(),
@@ -38,10 +30,9 @@ const baseEvent = {
 describe("FieldNormalizationService.normalizeAndValidate", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (EventController.findConflictingEvents as any).mockResolvedValue([]);
   });
 
-  it("returns undefined and 400 when end is before start (conflict block)", async () => {
+  it("returns undefined and 400 when end is before start", async () => {
     const res = makeRes();
     const updateData = {
       date: "2024-01-01",
@@ -66,32 +57,24 @@ describe("FieldNormalizationService.normalizeAndValidate", () => {
     );
   });
 
-  it("returns undefined and 409 when conflicts are detected", async () => {
+  it("keeps normalized update data when overlapping events exist", async () => {
     const res = makeRes();
-    (EventController.findConflictingEvents as any).mockResolvedValue([
-      { id: "conflict" },
-    ]);
+    const updateData = {
+      date: "2024-01-02",
+      time: "10:00",
+      endDate: "2024-01-02",
+      endTime: "11:00",
+    };
 
     const result = await FieldNormalizationService.normalizeAndValidate(
-      {
-        date: "2024-01-02",
-        time: "10:00",
-        endDate: "2024-01-02",
-        endTime: "11:00",
-      },
+      { ...updateData },
       baseEvent,
       "e1",
       res as any,
     );
 
-    expect(result).toBeUndefined();
-    expect(res.status).toHaveBeenCalledWith(409);
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({
-        success: false,
-        data: expect.objectContaining({ conflicts: expect.any(Array) }),
-      }),
-    );
+    expect(result).toEqual(expect.objectContaining(updateData));
+    expect(res.status).not.toHaveBeenCalledWith(409);
   });
 
   it("clears virtual fields when switching to In-person and normalizes location + flyer URLs", async () => {
@@ -214,7 +197,6 @@ describe("FieldNormalizationService.prepareUpdateData", () => {
 describe("FieldNormalizationService - edge cases", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (EventController.findConflictingEvents as any).mockResolvedValue([]);
   });
 
   it("normalizes endDate string by trimming whitespace", async () => {

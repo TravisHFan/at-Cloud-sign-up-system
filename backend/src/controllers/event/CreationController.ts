@@ -81,7 +81,6 @@ import { ResponseBuilderService } from "../../services/ResponseBuilderService";
 import { CorrelatedLogger } from "../../services/CorrelatedLogger";
 import { Logger } from "../../services/LoggerService";
 import { EventFieldNormalizationService } from "../../services/event/EventFieldNormalizationService";
-import { EventConflictDetectionService } from "../../services/event/EventConflictDetectionService";
 import { EventRolePreparationService } from "../../services/event/EventRolePreparationService";
 import { EventOrganizerDataService } from "../../services/event/EventOrganizerDataService";
 import { EventProgramLinkageService } from "../../services/event/EventProgramLinkageService";
@@ -259,29 +258,11 @@ export class CreationController {
       }
 
       // ========================================
-      // STEP 3: Conflict Detection
+      // STEP 3: Time Overlap Policy
       // ========================================
-      // Check for event time conflicts
-      const conflictResult = await EventConflictDetectionService.checkConflicts(
-        eventData.date,
-        eventData.time,
-        eventData.endDate!,
-        eventData.endTime,
-        undefined,
-        eventData.timeZone,
-        eventData.suppressNotifications,
-        eventData.programLabels?.map((id: unknown) => String(id)),
-      );
-
-      if (conflictResult.hasConflict) {
-        res.status(409).json({
-          success: false,
-          message:
-            "Event time overlaps with existing event(s). Please choose a different time.",
-          data: { conflicts: conflictResult.conflicts },
-        });
-        return;
-      }
+      // Event time overlaps are allowed. The client uses the read-only
+      // /events/check-conflict endpoint to show a confirmation modal before
+      // saving, but the server must not block creation because of overlaps.
 
       // ========================================
       // STEP 3.5: Pricing Validation (Paid Events Feature)

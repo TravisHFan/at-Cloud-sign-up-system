@@ -4,6 +4,9 @@ import { useEventForm } from "../../hooks/useEventForm";
 
 const mockedEventService = vi.hoisted(() => ({
   createEvent: vi.fn(),
+  checkEventTimeConflict: vi
+    .fn()
+    .mockResolvedValue({ conflict: false, conflicts: [] }),
 }));
 
 const toastSuccess = vi.hoisted(() => vi.fn());
@@ -129,5 +132,54 @@ describe("useEventForm create success navigation", () => {
     toastOptions.actionButton.onClick();
 
     expect(window.location.href).toBe("/dashboard/event/evt-recurring-first");
+  });
+
+  it("does not create when overlap confirmation is cancelled", async () => {
+    const confirmTimeOverlap = vi.fn().mockResolvedValue(false);
+    mockedEventService.checkEventTimeConflict.mockResolvedValueOnce({
+      conflict: true,
+      conflicts: [{ id: "event-1", title: "Existing Event" }],
+    });
+
+    const { result } = renderHook(() =>
+      useEventForm(undefined, undefined, { confirmTimeOverlap }),
+    );
+
+    act(() => {
+      result.current.form.reset(validEventData as any);
+    });
+
+    await act(async () => {
+      await result.current.onSubmit({ preventDefault: vi.fn() } as any);
+    });
+
+    expect(confirmTimeOverlap).toHaveBeenCalledWith([
+      { id: "event-1", title: "Existing Event" },
+    ]);
+    expect(mockedEventService.createEvent).not.toHaveBeenCalled();
+  });
+
+  it("creates when overlap confirmation is accepted", async () => {
+    const confirmTimeOverlap = vi.fn().mockResolvedValue(true);
+    mockedEventService.checkEventTimeConflict.mockResolvedValueOnce({
+      conflict: true,
+      conflicts: [{ id: "event-1", title: "Existing Event" }],
+    });
+    mockedEventService.createEvent.mockResolvedValueOnce({ id: "evt-created" });
+
+    const { result } = renderHook(() =>
+      useEventForm(undefined, undefined, { confirmTimeOverlap }),
+    );
+
+    act(() => {
+      result.current.form.reset(validEventData as any);
+    });
+
+    await act(async () => {
+      await result.current.onSubmit({ preventDefault: vi.fn() } as any);
+    });
+
+    expect(confirmTimeOverlap).toHaveBeenCalled();
+    expect(mockedEventService.createEvent).toHaveBeenCalled();
   });
 });

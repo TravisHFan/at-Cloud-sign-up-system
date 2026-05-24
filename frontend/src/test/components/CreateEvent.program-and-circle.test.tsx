@@ -8,6 +8,9 @@ import NewEvent from "../../pages/CreateEvent";
 // hoisted mocks
 const mockedEventService = vi.hoisted(() => ({
   createEvent: vi.fn().mockResolvedValue({ id: "evt1" }),
+  checkEventTimeConflict: vi
+    .fn()
+    .mockResolvedValue({ conflict: false, conflicts: [] }),
 }));
 
 const mockedRolesTemplateService = vi.hoisted(() => ({

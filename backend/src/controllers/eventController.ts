@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Event, User, IEvent } from "../models";
+import { Event, User, IEvent, Program } from "../models";
 import mongoose, { FilterQuery, Types } from "mongoose";
 import { CachePatterns } from "../services";
 import { toInstantFromWallClock } from "../utils/event/timezoneUtils";
@@ -17,6 +17,18 @@ import { toIdString } from "../utils/idUtils";
  * - Do not migrate EventController to include guest counts unless explicitly
  *   requested and the corresponding unit/integration tests are updated in lockstep.
  */
+
+export interface EventTimeConflict {
+  id: string;
+  title: string;
+  date: string;
+  endDate: string;
+  time: string;
+  endTime: string;
+  timeZone?: string;
+  programLabels: string[];
+  programs: Array<{ id: string; title: string }>;
+}
 
 export class EventController {
   // Narrow guard to check organizerDetails array
@@ -43,7 +55,9 @@ export class EventController {
     excludeEventId?: string,
     candidateTimeZone?: string,
     candidateProgramLabels?: string[],
-  ): Promise<Array<{ id: string; title: string }>> {
+  ): Promise<EventTimeConflict[]> {
+    void candidateProgramLabels;
+
     // Narrow candidates by date range first (string YYYY-MM-DD works lexicographically)
     const dateRangeFilter: FilterQuery<IEvent> = {
       status: { $ne: "cancelled" },
@@ -86,14 +100,17 @@ export class EventController {
         "_id title date endDate time endTime timeZone programLabels",
       ) as Chain;
     }
-    let candidates: CandidateEvent[];
+    let rawCandidates: unknown;
     if (chained && typeof (chained as { lean?: unknown }).lean === "function") {
-      candidates = (await (
+      rawCandidates = await (
         chained as { lean: () => Promise<unknown> }
-      ).lean()) as CandidateEvent[];
+      ).lean();
     } else {
-      candidates = (await (chained as Promise<unknown>)) as CandidateEvent[];
+      rawCandidates = await (chained as Promise<unknown>);
     }
+    const candidates = Array.isArray(rawCandidates)
+      ? (rawCandidates as CandidateEvent[])
+      : [];
 
     const newStart = toInstantFromWallClock(
       startDate,
@@ -102,7 +119,7 @@ export class EventController {
     );
     const newEnd = toInstantFromWallClock(endDate, endTime, candidateTimeZone);
 
-    const conflicts: Array<{ id: string; title: string }> = [];
+    const conflicts: CandidateEvent[] = [];
     for (const ev of candidates) {
       const evStart = toInstantFromWallClock(ev.date, ev.time, ev.timeZone);
       const evEnd = toInstantFromWallClock(
@@ -112,26 +129,50 @@ export class EventController {
       );
       // Overlap if newStart < evEnd AND newEnd > evStart (boundaries allowed to touch)
       if (newStart < evEnd && newEnd > evStart) {
-        // Program-aware filtering: allow overlap when events belong to different programs
-        if (candidateProgramLabels !== undefined) {
-          const candidateHasPrograms = candidateProgramLabels.length > 0;
-          const existingPrograms = (ev.programLabels || []).map((id) =>
-            id.toString(),
-          );
-          const existingHasPrograms = existingPrograms.length > 0;
-
-          // Allow overlap if either event has no programs or they share no programs
-          if (!candidateHasPrograms || !existingHasPrograms) continue;
-          const candidateSet = new Set(candidateProgramLabels);
-          const hasSharedProgram = existingPrograms.some((id) =>
-            candidateSet.has(id),
-          );
-          if (!hasSharedProgram) continue;
-        }
-        conflicts.push({ id: ev._id.toString(), title: ev.title });
+        conflicts.push(ev);
       }
     }
-    return conflicts;
+
+    const programIds = Array.from(
+      new Set(
+        conflicts.flatMap((ev) =>
+          (ev.programLabels || []).map((id) => id.toString()),
+        ),
+      ),
+    );
+    const programTitleById = new Map<string, string>();
+
+    if (programIds.length > 0) {
+      try {
+        const programs = (await Program.find({ _id: { $in: programIds } })
+          .select("_id title")
+          .lean()) as unknown as Array<{ _id: Types.ObjectId; title: string }>;
+        for (const program of programs) {
+          programTitleById.set(program._id.toString(), program.title);
+        }
+      } catch {
+        // Program titles are helpful for UI confirmation, but conflict detection
+        // should still work even if the program lookup is temporarily unavailable.
+      }
+    }
+
+    return conflicts.map((ev) => {
+      const labels = (ev.programLabels || []).map((id) => id.toString());
+      return {
+        id: ev._id.toString(),
+        title: ev.title,
+        date: ev.date,
+        endDate: ev.endDate || ev.date,
+        time: ev.time,
+        endTime: ev.endTime,
+        timeZone: ev.timeZone,
+        programLabels: labels,
+        programs: labels.map((programId) => ({
+          id: programId,
+          title: programTitleById.get(programId) || "Unknown program",
+        })),
+      };
+    });
   }
 
   // Public endpoint to check for time conflicts (supports point or span checks)

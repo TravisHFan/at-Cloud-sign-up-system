@@ -235,16 +235,7 @@ describe("CreationController", () => {
       });
     });
 
-    it("should return 409 when event time conflicts with existing event", async () => {
-      const { EventConflictDetectionService } =
-        await import("../../../../src/services/event/EventConflictDetectionService");
-      vi.mocked(EventConflictDetectionService.checkConflicts).mockResolvedValue(
-        {
-          hasConflict: true,
-          conflicts: [{ title: "Existing Event", date: "2025-01-01" }],
-        },
-      );
-
+    it("should not block creation when event time conflicts with existing event", async () => {
       req.body = {
         title: "New Event",
         date: "2025-01-01",
@@ -256,16 +247,10 @@ describe("CreationController", () => {
 
       await CreationController.createEvent(req as Request, res as Response);
 
-      expect(statusMock).toHaveBeenCalledWith(409);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        message:
-          "Event time overlaps with existing event(s). Please choose a different time.",
-        data: { conflicts: [{ title: "Existing Event", date: "2025-01-01" }] },
-      });
+      expect(statusMock).not.toHaveBeenCalledWith(409);
     });
 
-    it("should proceed without conflict when no overlapping events", async () => {
+    it("should create without running overlap validation", async () => {
       const { EventConflictDetectionService } =
         await import("../../../../src/services/event/EventConflictDetectionService");
       vi.mocked(EventConflictDetectionService.checkConflicts).mockResolvedValue(
@@ -286,7 +271,9 @@ describe("CreationController", () => {
 
       await CreationController.createEvent(req as Request, res as Response);
 
-      expect(EventConflictDetectionService.checkConflicts).toHaveBeenCalled();
+      expect(
+        EventConflictDetectionService.checkConflicts,
+      ).not.toHaveBeenCalled();
     });
   });
 

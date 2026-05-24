@@ -16,7 +16,7 @@ import {
   handleDateInputChange,
   getTodayDateString,
 } from "../../utils/eventStatsUtils";
-import { eventService, fileService } from "../../services/api";
+import { fileService } from "../../services/api";
 import { useToastReplacement } from "../../contexts/NotificationModalContext";
 
 // Re-define Organizer locally to match OrganizerSelection component (not exported)
@@ -132,6 +132,7 @@ export default function BasicEventFields({
   onWeekdayChange,
 }: BasicEventFieldsProps) {
   const notification = useToastReplacement();
+  void id;
 
   return (
     <>
@@ -269,83 +270,7 @@ export default function BasicEventFields({
           </label>
           <input
             id="time"
-            {...register("time", {
-              onBlur: async () => {
-                const sDate = watch("date");
-                const sTime = watch("time");
-                if (!sDate || !sTime) return;
-                try {
-                  const result = await eventService.checkEventTimeConflict({
-                    startDate: sDate,
-                    startTime: sTime,
-                    mode: "point",
-                    excludeId: id,
-                    timeZone: watch("timeZone"),
-                    programLabels:
-                      (watch("programLabels") as string[] | undefined) || [],
-                  });
-                  if (result.conflict) {
-                    (
-                      setValue as unknown as (
-                        name: string,
-                        value: FieldValidation,
-                        options?: {
-                          shouldDirty?: boolean;
-                          shouldValidate?: boolean;
-                        },
-                      ) => void
-                    )(
-                      "__startOverlapValidation",
-                      {
-                        isValid: false,
-                        message:
-                          "Time overlap: this start time falls within another event. Please choose another.",
-                        color: "text-red-500",
-                      },
-                      { shouldDirty: false, shouldValidate: false },
-                    );
-                  } else {
-                    (
-                      setValue as unknown as (
-                        name: string,
-                        value: FieldValidation,
-                        options?: {
-                          shouldDirty?: boolean;
-                          shouldValidate?: boolean;
-                        },
-                      ) => void
-                    )(
-                      "__startOverlapValidation",
-                      {
-                        isValid: true,
-                        message: "",
-                        color: "text-green-500",
-                      },
-                      { shouldDirty: false, shouldValidate: false },
-                    );
-                  }
-                } catch {
-                  (
-                    setValue as unknown as (
-                      name: string,
-                      value: FieldValidation,
-                      options?: {
-                        shouldDirty?: boolean;
-                        shouldValidate?: boolean;
-                      },
-                    ) => void
-                  )(
-                    "__startOverlapValidation",
-                    {
-                      isValid: true,
-                      message: "",
-                      color: "text-gray-500",
-                    },
-                    { shouldDirty: false, shouldValidate: false },
-                  );
-                }
-              },
-            })}
+            {...register("time")}
             type="time"
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
@@ -397,126 +322,7 @@ export default function BasicEventFields({
           </label>
           <input
             id="endTime"
-            {...register("endTime", {
-              onBlur: async () => {
-                const sDate = watch("date");
-                const sTime = watch("time");
-                const eDate = watch("endDate") || sDate;
-                const eTime = watch("endTime");
-                if (!sDate || !sTime || !eDate || !eTime) return;
-                try {
-                  // 1) Point check: is the END time inside any existing event?
-                  const pointResult = await eventService.checkEventTimeConflict(
-                    {
-                      startDate: eDate,
-                      startTime: eTime,
-                      mode: "point",
-                      excludeId: id,
-                      timeZone: watch("timeZone"),
-                      programLabels:
-                        (watch("programLabels") as string[] | undefined) || [],
-                    },
-                  );
-                  if (pointResult.conflict) {
-                    (
-                      setValue as unknown as (
-                        name: string,
-                        value: FieldValidation,
-                        options?: {
-                          shouldDirty?: boolean;
-                          shouldValidate?: boolean;
-                        },
-                      ) => void
-                    )(
-                      "__endOverlapValidation",
-                      {
-                        isValid: false,
-                        message:
-                          "Time overlap: this end time falls within another event. Please choose another.",
-                        color: "text-red-500",
-                      },
-                      { shouldDirty: false, shouldValidate: false },
-                    );
-                    return;
-                  }
-
-                  // 2) Range check: does [start, end] fully wrap or otherwise overlap an existing event?
-                  const rangeResult = await eventService.checkEventTimeConflict(
-                    {
-                      startDate: sDate,
-                      startTime: sTime,
-                      endDate: eDate,
-                      endTime: eTime,
-                      mode: "range",
-                      excludeId: id,
-                      timeZone: watch("timeZone"),
-                      programLabels:
-                        (watch("programLabels") as string[] | undefined) || [],
-                    },
-                  );
-
-                  if (rangeResult.conflict) {
-                    (
-                      setValue as unknown as (
-                        name: string,
-                        value: FieldValidation,
-                        options?: {
-                          shouldDirty?: boolean;
-                          shouldValidate?: boolean;
-                        },
-                      ) => void
-                    )(
-                      "__endOverlapValidation",
-                      {
-                        isValid: false,
-                        message:
-                          "Time overlap: this time range overlaps an existing event. Please adjust start or end time.",
-                        color: "text-red-500",
-                      },
-                      { shouldDirty: false, shouldValidate: false },
-                    );
-                  } else {
-                    (
-                      setValue as unknown as (
-                        name: string,
-                        value: FieldValidation,
-                        options?: {
-                          shouldDirty?: boolean;
-                          shouldValidate?: boolean;
-                        },
-                      ) => void
-                    )(
-                      "__endOverlapValidation",
-                      {
-                        isValid: true,
-                        message: "",
-                        color: "text-green-500",
-                      },
-                      { shouldDirty: false, shouldValidate: false },
-                    );
-                  }
-                } catch {
-                  (
-                    setValue as unknown as (
-                      name: string,
-                      value: FieldValidation,
-                      options?: {
-                        shouldDirty?: boolean;
-                        shouldValidate?: boolean;
-                      },
-                    ) => void
-                  )(
-                    "__endOverlapValidation",
-                    {
-                      isValid: true,
-                      message: "",
-                      color: "text-gray-500",
-                    },
-                    { shouldDirty: false, shouldValidate: false },
-                  );
-                }
-              },
-            })}
+            {...register("endTime")}
             type="time"
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />

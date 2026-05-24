@@ -1,7 +1,6 @@
 import { Response } from "express";
 import { IEvent } from "../../models";
 import { toInstantFromWallClock } from "../../utils/event/timezoneUtils";
-import { EventController } from "../../controllers/eventController";
 
 /**
  * Service for normalizing and validating event field updates
@@ -10,14 +9,14 @@ import { EventController } from "../../controllers/eventController";
  * - Date/time validation
  * - Format-specific field logic (Online/In-person/Hybrid)
  * - Timezone handling
- * - Conflict detection
+ * - Time range validation
  */
 export class FieldNormalizationService {
   /**
    * Normalizes and validates all event fields from update request
    * @param updateData The update data from request body
    * @param event The existing event being updated
-   * @param eventId The event ID (for conflict checking)
+   * @param eventId The event ID being updated
    * @param res Express response object (for early return on validation errors)
    * @returns Normalized updateData or undefined if validation failed (response already sent)
    */
@@ -27,12 +26,15 @@ export class FieldNormalizationService {
     eventId: string,
     res: Response
   ): Promise<Record<string, unknown> | undefined> {
+    void eventId;
+
     // Normalize endDate if provided; default will be handled by schema if absent
     if (typeof updateData.endDate === "string") {
       updateData.endDate = updateData.endDate.trim();
     }
 
-    // If time-related fields are being updated, ensure no overlap
+    // If time-related fields are being updated, validate the resulting range.
+    // Event overlaps are confirm-only in the UI and do not block updates.
     const willUpdateStart =
       typeof updateData.date === "string" ||
       typeof updateData.time === "string";
@@ -65,24 +67,6 @@ export class FieldNormalizationService {
         res.status(400).json({
           success: false,
           message: "Event end date/time must be after start date/time.",
-        });
-        return undefined;
-      }
-
-      const conflicts = await EventController.findConflictingEvents(
-        newStartDate,
-        newStartTime,
-        newEndDate,
-        newEndTime,
-        eventId,
-        effectiveTz
-      );
-      if (conflicts.length > 0) {
-        res.status(409).json({
-          success: false,
-          message:
-            "Event time overlaps with existing event(s). Please choose a different time.",
-          data: { conflicts },
         });
         return undefined;
       }

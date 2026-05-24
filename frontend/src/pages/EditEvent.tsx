@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { deriveFlyerUrlForUpdate } from "../utils/flyerUrl";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useForm, type Resolver } from "react-hook-form";
@@ -9,6 +9,7 @@ import RoleManagement from "../components/EditEvent/RoleManagement";
 import PricingSection from "../components/EditEvent/PricingSection";
 import NotificationPreference from "../components/EditEvent/NotificationPreference";
 import EditEventModals from "../components/EditEvent/EditEventModals";
+import ConfirmationModal from "../components/common/ConfirmationModal";
 import { useAuth } from "../hooks/useAuth";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import LoadingSpinner from "../components/common/LoadingSpinner";
@@ -19,6 +20,10 @@ import type { EventData, OrganizerDetail } from "../types/event";
 import { getMissingNecessaryFieldsForPublishFrontend } from "../types/event";
 import type { FieldValidation } from "../utils/eventValidationUtils";
 import { normalizeEventDate } from "../utils/eventStatsUtils";
+import {
+  buildTimeOverlapConfirmationMessage,
+  type TimeOverlapConflict,
+} from "../utils/timeOverlapConflicts";
 // Roles utilities
 import { useRoleValidation } from "../hooks/useRoleValidation";
 import { useEventDataLoader } from "../hooks/useEventDataLoader";
@@ -261,6 +266,11 @@ export default function EditEvent() {
     message: string;
     onConfirm: () => void;
   }>({ isOpen: false, title: "", message: "", onConfirm: () => {} });
+  const [timeOverlapConfirmation, setTimeOverlapConfirmation] = useState<{
+    isOpen: boolean;
+    conflicts: TimeOverlapConflict[];
+    resolve?: (confirmed: boolean) => void;
+  }>({ isOpen: false, conflicts: [] });
 
   // Registration deletion confirmation modal state
   const [registrationDeletionModal, setRegistrationDeletionModal] = useState<{
@@ -276,6 +286,23 @@ export default function EditEvent() {
     guestCount: 0,
     pendingFormData: null,
   });
+
+  const requestTimeOverlapConfirmation = useCallback(
+    (conflicts: TimeOverlapConflict[]) =>
+      new Promise<boolean>((resolve) => {
+        setTimeOverlapConfirmation({
+          isOpen: true,
+          conflicts,
+          resolve,
+        });
+      }),
+    [],
+  );
+
+  const closeTimeOverlapConfirmation = (confirmed: boolean) => {
+    timeOverlapConfirmation.resolve?.(confirmed);
+    setTimeOverlapConfirmation({ isOpen: false, conflicts: [] });
+  };
 
   // Track original published state & original format for predictive warning
   const originalPublishedRef = useRef<boolean | undefined>(undefined);
@@ -405,6 +432,36 @@ export default function EditEvent() {
         title: "Selection Required",
       });
       return;
+    }
+
+    try {
+      const normalizedDate = normalizeEventDate(data.date);
+      const checkEventTimeConflict = (
+        eventService as {
+          checkEventTimeConflict?: typeof eventService.checkEventTimeConflict;
+        }
+      ).checkEventTimeConflict;
+      const conflictResult = await checkEventTimeConflict?.({
+        startDate: normalizedDate,
+        startTime: data.time,
+        endDate: data.endDate || normalizedDate,
+        endTime: data.endTime,
+        excludeId: id,
+        timeZone: data.timeZone,
+        programLabels:
+          (data as { programLabels?: string[] }).programLabels || [],
+      });
+
+      if (conflictResult?.conflict && conflictResult.conflicts.length > 0) {
+        const shouldContinue = await requestTimeOverlapConfirmation(
+          conflictResult.conflicts,
+        );
+        if (!shouldContinue) {
+          return;
+        }
+      }
+    } catch (error) {
+      console.error("Unable to check event time overlaps:", error);
     }
 
     // Check if a template was applied (which replaces the entire role structure)
@@ -649,6 +706,19 @@ export default function EditEvent() {
           </div>
         </form>
       </div>
+
+      <ConfirmationModal
+        isOpen={timeOverlapConfirmation.isOpen}
+        onClose={() => closeTimeOverlapConfirmation(false)}
+        onConfirm={() => closeTimeOverlapConfirmation(true)}
+        title="Confirm Time Overlap"
+        message={buildTimeOverlapConfirmationMessage(
+          timeOverlapConfirmation.conflicts,
+        )}
+        confirmText="Yes, Save Event"
+        cancelText="Cancel"
+        type="warning"
+      />
 
       <EditEventModals
         eventId={id!}

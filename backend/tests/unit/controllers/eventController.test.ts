@@ -38,6 +38,11 @@ vi.mock("../../../src/models", () => ({
   }),
   Program: Object.assign(vi.fn(), {
     updateOne: vi.fn(),
+    find: vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        lean: vi.fn().mockResolvedValue([]),
+      }),
+    }),
     findById: vi.fn().mockReturnValue({
       select: vi.fn().mockResolvedValue(null),
     }),
@@ -557,7 +562,7 @@ describe("EventController", () => {
   });
 
   describe("createEvent overlap detection", () => {
-    it("should return 409 when new event overlaps existing", async () => {
+    it("should allow creation when new event overlaps existing", async () => {
       // Arrange permissions
       vi.mocked(hasPermission).mockReturnValue(true);
       // Existing event in DB
@@ -589,15 +594,29 @@ describe("EventController", () => {
       };
       mockRequest.body = body;
 
+      const mockEvent = {
+        _id: "event123",
+        ...body,
+        save: vi.fn().mockResolvedValue(undefined),
+      };
+      vi.mocked(Event).mockImplementation(() => mockEvent as any);
+      vi.mocked(User.find).mockReturnValue({
+        select: vi.fn().mockResolvedValue([]),
+      } as any);
+      vi.mocked(EmailRecipientUtils.getActiveVerifiedUsers).mockResolvedValue(
+        [],
+      );
+      vi.mocked(
+        ResponseBuilderService.buildEventWithRegistrations,
+      ).mockResolvedValue(mockEvent as any);
+
       await EventController.createEvent(
         mockRequest as unknown as Request,
         mockResponse as unknown as Response,
       );
 
-      expect(mockStatus).toHaveBeenCalledWith(409);
-      const payload = mockJson.mock.calls[0][0];
-      expect(payload.success).toBe(false);
-      expect(payload.message).toMatch(/overlaps/i);
+      expect(mockStatus).toHaveBeenCalledWith(201);
+      expect(mockStatus).not.toHaveBeenCalledWith(409);
     });
   });
 
@@ -7255,7 +7274,7 @@ describe("EventController", () => {
     });
   });
 
-  describe("findConflictingEvents - program-aware filtering", () => {
+  describe("findConflictingEvents - global overlap reporting", () => {
     const programA = new mongoose.Types.ObjectId();
     const programB = new mongoose.Types.ObjectId();
 
@@ -7279,7 +7298,7 @@ describe("EventController", () => {
       });
     };
 
-    it("should skip overlap when events belong to different programs", async () => {
+    it("should report overlap when events belong to different programs", async () => {
       mockFind([makeEvent({ programLabels: [programA] })]);
 
       const conflicts = await EventController.findConflictingEvents(
@@ -7292,7 +7311,7 @@ describe("EventController", () => {
         [programB.toString()],
       );
 
-      expect(conflicts).toHaveLength(0);
+      expect(conflicts).toHaveLength(1);
     });
 
     it("should report overlap when events share a program", async () => {
@@ -7311,7 +7330,7 @@ describe("EventController", () => {
       expect(conflicts).toHaveLength(1);
     });
 
-    it("should skip overlap when existing event has no programs", async () => {
+    it("should report overlap when existing event has no programs", async () => {
       mockFind([makeEvent({ programLabels: [] })]);
 
       const conflicts = await EventController.findConflictingEvents(
@@ -7324,10 +7343,11 @@ describe("EventController", () => {
         [programA.toString()],
       );
 
-      expect(conflicts).toHaveLength(0);
+      expect(conflicts).toHaveLength(1);
+      expect(conflicts[0].programs).toEqual([]);
     });
 
-    it("should skip overlap when candidate has no programs", async () => {
+    it("should report overlap when candidate has no programs", async () => {
       mockFind([makeEvent({ programLabels: [programA] })]);
 
       const conflicts = await EventController.findConflictingEvents(
@@ -7340,10 +7360,10 @@ describe("EventController", () => {
         [], // empty candidate programs
       );
 
-      expect(conflicts).toHaveLength(0);
+      expect(conflicts).toHaveLength(1);
     });
 
-    it("should skip overlap when neither event has programs and programLabels is provided", async () => {
+    it("should report overlap when neither event has programs and programLabels is provided", async () => {
       mockFind([makeEvent({ programLabels: [] })]);
 
       const conflicts = await EventController.findConflictingEvents(
@@ -7356,7 +7376,7 @@ describe("EventController", () => {
         [],
       );
 
-      expect(conflicts).toHaveLength(0);
+      expect(conflicts).toHaveLength(1);
     });
 
     it("should fall back to global conflict when candidateProgramLabels is undefined", async () => {

@@ -7,6 +7,7 @@ import { DEFAULT_EVENT_VALUES } from "../config/eventConstants";
 import { useAuth } from "./useAuth";
 import { eventService } from "../services/api";
 import { normalizeEventDate } from "../utils/eventStatsUtils";
+import type { TimeOverlapConflict } from "../utils/timeOverlapConflicts";
 
 export type RecurringConfig = {
   isRecurring?: boolean;
@@ -32,6 +33,9 @@ export const useEventForm = (
   options?: {
     // Returns true to send notifications now, false to suppress, null/undefined if not chosen yet
     shouldSendNotifications?: () => boolean | null | undefined;
+    confirmTimeOverlap?: (
+      conflicts: TimeOverlapConflict[],
+    ) => Promise<boolean>;
   },
 ) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -172,6 +176,39 @@ export const useEventForm = (
         (
           eventPayload as { suppressNotifications?: boolean }
         ).suppressNotifications = true;
+      }
+
+      try {
+        const checkEventTimeConflict = (
+          eventService as {
+            checkEventTimeConflict?: typeof eventService.checkEventTimeConflict;
+          }
+        ).checkEventTimeConflict;
+
+        const conflictResult = await checkEventTimeConflict?.({
+          startDate: formattedDate,
+          startTime: data.time,
+          endDate: data.endDate || formattedDate,
+          endTime: data.endTime,
+          timeZone: (data as unknown as { timeZone?: string }).timeZone,
+          programLabels:
+            (data as unknown as { programLabels?: string[] }).programLabels ||
+            [],
+        });
+
+        if (
+          conflictResult?.conflict &&
+          conflictResult.conflicts.length > 0
+        ) {
+          const shouldContinue =
+            (await options?.confirmTimeOverlap?.(conflictResult.conflicts)) ??
+            true;
+          if (!shouldContinue) {
+            return;
+          }
+        }
+      } catch (error) {
+        console.error("Unable to check event time overlaps:", error);
       }
 
       // Create event using backend API
