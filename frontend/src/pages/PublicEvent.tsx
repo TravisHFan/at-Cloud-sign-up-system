@@ -249,6 +249,10 @@ export default function PublicEvent() {
                   }
 
                   const blob = await response.blob();
+                  if (blob.size === 0) {
+                    throw new Error("Downloaded calendar file was empty");
+                  }
+
                   const url = window.URL.createObjectURL(blob);
                   const link = document.createElement("a");
                   link.href = url;
@@ -259,7 +263,10 @@ export default function PublicEvent() {
                   document.body.appendChild(link);
                   link.click();
                   document.body.removeChild(link);
-                  window.URL.revokeObjectURL(url);
+                  window.setTimeout(
+                    () => window.URL.revokeObjectURL(url),
+                    1000,
+                  );
                 } catch (error) {
                   console.error("Error downloading calendar file:", error);
                 }

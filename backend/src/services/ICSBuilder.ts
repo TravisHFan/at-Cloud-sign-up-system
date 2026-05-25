@@ -2,6 +2,8 @@ import { IEvent, IEventRole } from "../models/Event";
 import crypto from "crypto";
 import { findUtcInstantFromLocal } from "../shared/time/timezoneSearch";
 
+const MAX_ICS_LINE_BYTES = 75;
+
 type RegistrationICSEvent = Pick<
   IEvent,
   | "_id"
@@ -107,8 +109,36 @@ export function buildRegistrationICS(options: {
 
   return {
     filename: `${uid}.ics`,
-    content: lines.join("\r\n"),
+    content: lines.flatMap(foldICSLine).join("\r\n"),
   };
+}
+
+function foldICSLine(line: string): string[] {
+  if (Buffer.byteLength(line, "utf8") <= MAX_ICS_LINE_BYTES) return [line];
+
+  const foldedLines: string[] = [];
+  let currentLine = "";
+
+  for (const char of Array.from(line)) {
+    const nextLine = `${currentLine}${char}`;
+
+    if (Buffer.byteLength(nextLine, "utf8") <= MAX_ICS_LINE_BYTES) {
+      currentLine = nextLine;
+      continue;
+    }
+
+    if (currentLine) {
+      foldedLines.push(currentLine);
+    }
+
+    currentLine = ` ${char}`;
+  }
+
+  if (currentLine) {
+    foldedLines.push(currentLine);
+  }
+
+  return foldedLines;
 }
 
 function toICSDateTimeFromInstant(instant: Date): string {
