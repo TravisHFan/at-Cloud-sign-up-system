@@ -13,10 +13,10 @@
       href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
-    <!-- CSP policy - dynamically configured for development and production -->
+    <!-- CSP policy - injected by Vite from the configured API origin -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: http://localhost:5001 https://at-cloud-sign-up-system-backend.onrender.com https://i.ytimg.com https://*.ytimg.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ws: wss: http://localhost:5001 https://at-cloud-sign-up-system-backend.onrender.com; media-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'self' https://www.youtube.com https://youtube.com;"
+      content="__CONTENT_SECURITY_POLICY__"
     />
     <title>@Cloud Events</title>
   </head>

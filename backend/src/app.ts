@@ -24,6 +24,7 @@ import {
 import {
   securityHeaders,
   corsOptions,
+  getAllowedFrontendOrigins,
   xssProtection,
   requestSizeLimit,
   ipSecurity,
@@ -153,14 +154,7 @@ appLogger.info(`🔗 Serving static files from: ${staticUploadPath}`);
 app.use(
   "/uploads",
   (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    const allowedOrigins = [
-      process.env.FRONTEND_URL || "http://localhost:5173",
-      "http://localhost:3000",
-      "http://localhost:5174",
-      "http://localhost:5175",
-      "http://localhost:5176",
-      "https://at-cloud-sign-up-system.onrender.com",
-    ];
+    const allowedOrigins = getAllowedFrontendOrigins();
     const origin = req.headers.origin as string | undefined;
     if (origin && allowedOrigins.includes(origin)) {
       res.setHeader("Access-Control-Allow-Origin", origin);
