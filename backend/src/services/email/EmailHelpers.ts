@@ -31,6 +31,14 @@ export class EmailHelpers {
     return `${this.getFrontendBaseUrl(defaultUrl)}${normalizedPath}`;
   }
 
+  static buildFrontendHashUrl(
+    path: string,
+    defaultUrl = "http://localhost:5173"
+  ): string {
+    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+    return `${this.getFrontendBaseUrl(defaultUrl)}/#${normalizedPath}`;
+  }
+
   /**
    * Normalize time string from 12h to 24h format
    */

@@ -41,8 +41,8 @@ export class AuthEmailService {
     name: string,
     verificationToken: string
   ): Promise<boolean> {
-    const verificationUrl = EmailHelpers.buildFrontendUrl(
-      `/?verifyEmailToken=${encodeURIComponent(verificationToken)}`
+    const verificationUrl = EmailHelpers.buildFrontendHashUrl(
+      `/verify-email/${verificationToken}`
     );
 
     const html = generateVerificationEmail({ name, verificationUrl });
@@ -60,7 +60,7 @@ export class AuthEmailService {
     name: string,
     resetToken: string
   ): Promise<boolean> {
-    const resetUrl = EmailHelpers.buildFrontendUrl(
+    const resetUrl = EmailHelpers.buildFrontendHashUrl(
       `/reset-password/${resetToken}`
     );
 
@@ -79,7 +79,7 @@ export class AuthEmailService {
     name: string,
     confirmToken: string
   ): Promise<boolean> {
-    const confirmUrl = EmailHelpers.buildFrontendUrl(
+    const confirmUrl = EmailHelpers.buildFrontendHashUrl(
       `/change-password/confirm/${confirmToken}`
     );
 
@@ -115,7 +115,7 @@ export class AuthEmailService {
   }
 
   static async sendWelcomeEmail(email: string, name: string): Promise<boolean> {
-    const dashboardUrl = EmailHelpers.buildFrontendUrl("/dashboard");
+    const dashboardUrl = EmailHelpers.buildFrontendHashUrl("/dashboard");
 
     const html = generateWelcomeEmail({ name, dashboardUrl });
 
