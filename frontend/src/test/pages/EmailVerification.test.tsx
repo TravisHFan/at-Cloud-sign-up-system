@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import EmailVerification from "../../pages/EmailVerification";
+import { API_BASE_URL } from "../../services/api";
 
 const mockNavigate = vi.fn();
 const mockNotification = {
@@ -80,5 +81,27 @@ describe("EmailVerification page", () => {
     expect(
       screen.getByRole("link", { name: /contact support/i })
     ).toBeInTheDocument();
+  });
+
+  it("calls the normalized API base URL when verifying", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, alreadyVerified: true }),
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/verify-email/token123"]}>
+        <Routes>
+          <Route path="/verify-email/:token" element={<EmailVerification />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${API_BASE_URL}/auth/verify-email/token123`,
+        expect.objectContaining({ method: "GET" })
+      );
+    });
   });
 });
