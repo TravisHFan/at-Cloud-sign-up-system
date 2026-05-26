@@ -63,6 +63,17 @@ describe("EmailHelpers", () => {
         "https://app.example.com/?verifyEmailToken=token"
       );
     });
+
+    it("should build hash URLs for static hosting refresh resilience", () => {
+      process.env.FRONTEND_URL = "https://app.example.com/";
+
+      expect(EmailHelpers.buildFrontendHashUrl("/dashboard")).toBe(
+        "https://app.example.com/#/dashboard"
+      );
+      expect(EmailHelpers.buildFrontendHashUrl("verify-email/token")).toBe(
+        "https://app.example.com/#/verify-email/token"
+      );
+    });
   });
 
   describe("normalizeTimeTo24h", () => {
