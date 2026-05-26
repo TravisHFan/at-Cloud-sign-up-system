@@ -1,6 +1,7 @@
 import { Server as SocketIOServer, Socket } from "socket.io";
 import { Server as HTTPServer } from "http";
 import jwt, { JwtPayload } from "jsonwebtoken";
+import { getAllowedFrontendOrigins } from "../../middleware/security";
 import { Logger } from "../../services/LoggerService";
 import type {
   EventUpdate,
@@ -37,13 +38,7 @@ class SocketService {
   initialize(httpServer: HTTPServer): void {
     this.io = new SocketIOServer(httpServer, {
       cors: {
-        origin: [
-          process.env.FRONTEND_URL || "http://localhost:5173",
-          "http://localhost:3000",
-          "http://localhost:5174",
-          "http://localhost:5175",
-          "http://localhost:5176",
-        ],
+        origin: getAllowedFrontendOrigins(),
         methods: ["GET", "POST"],
         credentials: true,
       },
@@ -69,7 +64,7 @@ class SocketService {
         "Socket.IO engine connection error:",
         err.req,
         err.code,
-        err.message
+        err.message,
       );
       this.log.error(
         "Socket.IO engine connection error",
@@ -78,7 +73,7 @@ class SocketService {
         {
           code: err.code,
           message: err.message,
-        }
+        },
       );
     });
 
@@ -158,7 +153,7 @@ class SocketService {
    */
   private async authenticateSocket(
     socket: Socket,
-    next: (err?: Error) => void
+    next: (err?: Error) => void,
   ): Promise<void> {
     try {
       const token = (
@@ -171,13 +166,13 @@ class SocketService {
 
       const decoded = jwt.verify(
         token,
-        process.env.JWT_ACCESS_SECRET || "your-access-secret-key"
+        process.env.JWT_ACCESS_SECRET || "your-access-secret-key",
       ) as JwtPayload;
 
       // Import User model dynamically to avoid circular dependencies
       const { User } = await import("../../models");
       const user = await User.findById(
-        (decoded as JwtPayload).userId as string
+        (decoded as JwtPayload).userId as string,
       );
 
       if (!user || !user.isActive) {
@@ -220,7 +215,7 @@ class SocketService {
   emitSystemMessageUpdate<T = unknown>(
     userId: string,
     event: string,
-    data: T
+    data: T,
   ): void {
     if (!this.io) {
       return;
@@ -247,7 +242,7 @@ class SocketService {
   emitBellNotificationUpdate<T = unknown>(
     userId: string,
     event: string,
-    data: T
+    data: T,
   ): void {
     if (!this.io) return;
 
@@ -290,7 +285,7 @@ class SocketService {
    */
   emitUnreadCountUpdate(
     userId: string,
-    counts: UnreadCountUpdate["counts"]
+    counts: UnreadCountUpdate["counts"],
   ): void {
     if (!this.io) return;
 
@@ -302,7 +297,7 @@ class SocketService {
       userId,
       countsSummary: Object.keys(counts || {}).reduce(
         (acc, k) => ({ ...acc, [k]: counts[k as keyof typeof counts] }),
-        {}
+        {},
       ),
     });
     this.io.to(`user:${userId}`).emit("unread_count_update", payload);
@@ -314,7 +309,7 @@ class SocketService {
   emitEventUpdate(
     eventId: string,
     updateType: EventUpdateType,
-    data: unknown
+    data: unknown,
   ): void {
     if (!this.io) return;
 
@@ -350,7 +345,7 @@ class SocketService {
   emitEventRoomUpdate(
     eventId: string,
     updateType: EventUpdateType,
-    data: unknown
+    data: unknown,
   ): void {
     if (!this.io) return;
 
@@ -392,7 +387,7 @@ class SocketService {
       oldValue?: string;
       newValue?: string;
       changes?: Record<string, boolean>;
-    }
+    },
   ): void {
     if (!this.io) {
       this.log.warn("Socket.IO not initialized, cannot emit user update");

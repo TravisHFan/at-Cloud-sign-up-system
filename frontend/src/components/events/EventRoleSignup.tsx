@@ -10,7 +10,7 @@ import NameCardActionModal from "../common/NameCardActionModal";
 import NotificationPromptModal from "../common/NotificationPromptModal";
 import { canSeeGuestContactInSlot } from "../../utils/guestPrivacy";
 import { ChevronDownIcon } from "@heroicons/react/24/outline";
-import { eventService } from "../../services/api";
+import { API_BASE_URL, eventService } from "../../services/api";
 
 // Lightweight inline editor for per-role agenda (admins/organizers only)
 function RoleAgendaEditor({
@@ -152,7 +152,7 @@ interface EventRoleSignupProps {
   onAssignUser?: (
     roleId: string,
     userId: string,
-    sendNotifications?: boolean
+    sendNotifications?: boolean,
   ) => void;
   // Guests count for this role (admin-only visibility); used to include in capacity
   guestCount?: number;
@@ -275,7 +275,7 @@ export default function EventRoleSignup({
   const handleNameCardClick = (
     userId: string,
     userName?: string,
-    userRole?: string
+    userRole?: string,
   ) => {
     // If clicking on self, always allow navigation to own profile
     if (userId === currentUserId) {
@@ -317,16 +317,12 @@ export default function EventRoleSignup({
       params.set("page", page.toString());
       params.set("limit", "20"); // Use max allowed limit for better UX
       const token = localStorage.getItem("authToken");
-      const base = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
-      const resp = await fetch(
-        `${base.replace(/\/$/, "")}/users?${params.toString()}`,
-        {
-          headers: {
-            Authorization: token ? `Bearer ${token}` : "",
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const resp = await fetch(`${API_BASE_URL}/users?${params.toString()}`, {
+        headers: {
+          Authorization: token ? `Bearer ${token}` : "",
+          "Content-Type": "application/json",
+        },
+      });
       const json = (await resp.json()) as {
         message?: string;
         data?: {
@@ -580,7 +576,7 @@ export default function EventRoleSignup({
                                   if (isFull) return;
                                   if (eventId) {
                                     navigate(
-                                      `/guest-register/${eventId}?roleId=${role.id}`
+                                      `/guest-register/${eventId}?roleId=${role.id}`,
                                     );
                                   } else {
                                     // Guest dashboard deprecated; redirect to public events list
@@ -633,7 +629,7 @@ export default function EventRoleSignup({
               </div>
               {(() => {
                 const currentUserSignup = role.currentSignups.find(
-                  (signup) => signup.userId === currentUserId
+                  (signup) => signup.userId === currentUserId,
                 );
                 return (
                   currentUserSignup?.notes && (
@@ -747,7 +743,7 @@ export default function EventRoleSignup({
                     handleNameCardClick(
                       participant.userId,
                       `${participant.firstName} ${participant.lastName}`,
-                      participant.roleInAtCloud
+                      participant.roleInAtCloud,
                     )
                   }
                   title={
@@ -759,12 +755,12 @@ export default function EventRoleSignup({
                   <img
                     src={getAvatarUrlWithCacheBust(
                       participant.avatar || null,
-                      participant.gender || "male"
+                      participant.gender || "male",
                     )}
                     alt={getAvatarAlt(
                       participant.firstName || "",
                       participant.lastName || "",
-                      !!participant.avatar
+                      !!participant.avatar,
                     )}
                     className="w-8 h-8 rounded-full object-cover flex-shrink-0 mt-1"
                   />
@@ -981,7 +977,7 @@ export default function EventRoleSignup({
                   Showing{" "}
                   {Math.min(
                     (pagination.currentPage - 1) * 20 + 1,
-                    pagination.totalUsers
+                    pagination.totalUsers,
                   )}{" "}
                   -{" "}
                   {Math.min(pagination.currentPage * 20, pagination.totalUsers)}{" "}

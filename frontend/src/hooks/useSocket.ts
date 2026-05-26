@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { io, type Socket } from "socket.io-client";
+import { resolveSocketURL } from "../config/apiUrl";
 import type { EventUpdate } from "../types/realtime";
 
 interface UseSocketOptions {
@@ -24,10 +25,12 @@ export function useSocket({ baseUrl, authToken }: UseSocketOptions = {}) {
       : null);
 
   // Use backend URL for socket connection, not frontend origin
-  const backendUrl =
-    import.meta.env.VITE_API_URL?.replace("/api", "") ||
-    "http://localhost:5001";
-  const url = baseUrl ?? import.meta.env.VITE_SOCKET_URL ?? backendUrl;
+  const url =
+    baseUrl ??
+    resolveSocketURL(
+      import.meta.env.VITE_API_URL,
+      import.meta.env.VITE_SOCKET_URL,
+    );
 
   const connect = useCallback((): Socket | null => {
     // If socket already exists, reuse it
@@ -116,7 +119,7 @@ export function useSocket({ baseUrl, authToken }: UseSocketOptions = {}) {
       s.on("event_update", handler as (payload: unknown) => void);
       return () => s.off("event_update", handler as (payload: unknown) => void);
     },
-    [connect]
+    [connect],
   );
 
   useEffect(() => {
