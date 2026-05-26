@@ -55,6 +55,14 @@ describe("EmailHelpers", () => {
         "http://localhost:5173/verify-email/token"
       );
     });
+
+    it("should preserve root query links", () => {
+      process.env.FRONTEND_URL = "https://app.example.com";
+
+      expect(EmailHelpers.buildFrontendUrl("/?verifyEmailToken=token")).toBe(
+        "https://app.example.com/?verifyEmailToken=token"
+      );
+    });
   });
 
   describe("normalizeTimeTo24h", () => {

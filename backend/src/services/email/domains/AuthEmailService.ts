@@ -42,7 +42,7 @@ export class AuthEmailService {
     verificationToken: string
   ): Promise<boolean> {
     const verificationUrl = EmailHelpers.buildFrontendUrl(
-      `/verify-email/${verificationToken}`
+      `/?verifyEmailToken=${encodeURIComponent(verificationToken)}`
     );
 
     const html = generateVerificationEmail({ name, verificationUrl });

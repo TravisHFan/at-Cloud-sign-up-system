@@ -106,7 +106,7 @@ describe("AuthEmailService - Authentication Email Operations", () => {
       );
       expect(emailCall.html).toContain("Test User");
       expect(emailCall.html).toContain(
-        "/verify-email/test-verification-token-123"
+        "/?verifyEmailToken=test-verification-token-123"
       );
       expect(emailCall.text).toContain("Please verify your email by visiting:");
     });
@@ -125,10 +125,10 @@ describe("AuthEmailService - Authentication Email Operations", () => {
       // Assert
       const emailCall = mockTransporter.sendMail.mock.calls[0][0];
       expect(emailCall.html).toContain(
-        "https://custom-domain.com/verify-email/token456"
+        "https://custom-domain.com/?verifyEmailToken=token456"
       );
       expect(emailCall.text).toContain(
-        "https://custom-domain.com/verify-email/token456"
+        "https://custom-domain.com/?verifyEmailToken=token456"
       );
     });
 
@@ -146,10 +146,10 @@ describe("AuthEmailService - Authentication Email Operations", () => {
       // Assert
       const emailCall = mockTransporter.sendMail.mock.calls[0][0];
       expect(emailCall.html).toContain(
-        "https://atcloud-erp-frontend-staging.onrender.com/verify-email/token789"
+        "https://atcloud-erp-frontend-staging.onrender.com/?verifyEmailToken=token789"
       );
       expect(emailCall.text).toContain(
-        "https://atcloud-erp-frontend-staging.onrender.com/verify-email/token789"
+        "https://atcloud-erp-frontend-staging.onrender.com/?verifyEmailToken=token789"
       );
     });
 
@@ -564,7 +564,7 @@ describe("AuthEmailService - Authentication Email Operations", () => {
       const emailCall = mockTransporter.sendMail.mock.calls[0][0];
       // Should use fallback localhost URL
       expect(emailCall.html).toContain("http://localhost:5173");
-      expect(emailCall.html).toContain("/verify-email/test-token-123");
+      expect(emailCall.html).toContain("/?verifyEmailToken=test-token-123");
     });
   });
 });
