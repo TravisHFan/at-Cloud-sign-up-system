@@ -132,6 +132,27 @@ describe("AuthEmailService - Authentication Email Operations", () => {
       );
     });
 
+    it("should normalize bare FRONTEND_URL host for email clients", async () => {
+      // Arrange
+      process.env.FRONTEND_URL = "atcloud-erp-frontend-staging.onrender.com";
+
+      // Act
+      await AuthEmailService.sendVerificationEmail(
+        "user@example.com",
+        "User",
+        "token789"
+      );
+
+      // Assert
+      const emailCall = mockTransporter.sendMail.mock.calls[0][0];
+      expect(emailCall.html).toContain(
+        "https://atcloud-erp-frontend-staging.onrender.com/verify-email/token789"
+      );
+      expect(emailCall.text).toContain(
+        "https://atcloud-erp-frontend-staging.onrender.com/verify-email/token789"
+      );
+    });
+
     it("should handle email sending failure gracefully", async () => {
       // Arrange
       mockTransporter.sendMail.mockRejectedValue(

@@ -5,10 +5,58 @@
  * All methods are pure functions with no external dependencies.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { EmailHelpers } from "../../../../src/services/email/EmailHelpers";
 
 describe("EmailHelpers", () => {
+  let originalFrontendUrl: string | undefined;
+
+  beforeEach(() => {
+    originalFrontendUrl = process.env.FRONTEND_URL;
+  });
+
+  afterEach(() => {
+    if (originalFrontendUrl === undefined) {
+      delete process.env.FRONTEND_URL;
+    } else {
+      process.env.FRONTEND_URL = originalFrontendUrl;
+    }
+  });
+
+  describe("buildFrontendUrl", () => {
+    it("should preserve configured frontend URLs with protocol", () => {
+      process.env.FRONTEND_URL = "https://app.example.com";
+
+      expect(EmailHelpers.buildFrontendUrl("/verify-email/token")).toBe(
+        "https://app.example.com/verify-email/token"
+      );
+    });
+
+    it("should add https to bare production hosts", () => {
+      process.env.FRONTEND_URL = "atcloud-erp-frontend-staging.onrender.com";
+
+      expect(EmailHelpers.buildFrontendUrl("/verify-email/token")).toBe(
+        "https://atcloud-erp-frontend-staging.onrender.com/verify-email/token"
+      );
+    });
+
+    it("should add http to bare local hosts", () => {
+      process.env.FRONTEND_URL = "localhost:5173";
+
+      expect(EmailHelpers.buildFrontendUrl("verify-email/token")).toBe(
+        "http://localhost:5173/verify-email/token"
+      );
+    });
+
+    it("should fall back to localhost for blank frontend URLs", () => {
+      process.env.FRONTEND_URL = "   ";
+
+      expect(EmailHelpers.buildFrontendUrl("/verify-email/token")).toBe(
+        "http://localhost:5173/verify-email/token"
+      );
+    });
+  });
+
   describe("normalizeTimeTo24h", () => {
     it("should convert 12-hour AM times to 24-hour format", () => {
       expect(EmailHelpers.normalizeTimeTo24h("12:00 am")).toBe("00:00");
