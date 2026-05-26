@@ -104,4 +104,29 @@ describe("EmailVerification page", () => {
       );
     });
   });
+
+  it("accepts a token override for root query verification links", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, alreadyVerified: true }),
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <Routes>
+          <Route
+            path="/"
+            element={<EmailVerification tokenOverride="query-token" />}
+          />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${API_BASE_URL}/auth/verify-email/query-token`,
+        expect.objectContaining({ method: "GET" })
+      );
+    });
+  });
 });

@@ -14,8 +14,15 @@ type VerificationResponse = {
   };
 };
 
-export default function EmailVerification() {
-  const { token } = useParams<{ token: string }>();
+type EmailVerificationProps = {
+  tokenOverride?: string;
+};
+
+export default function EmailVerification({
+  tokenOverride,
+}: EmailVerificationProps = {}) {
+  const { token: routeToken } = useParams<{ token: string }>();
+  const token = tokenOverride || routeToken;
   const navigate = useNavigate();
   const notification = useToastReplacement();
   const [verificationStatus, setVerificationStatus] = useState<
