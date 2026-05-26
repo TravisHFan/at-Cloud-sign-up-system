@@ -15,7 +15,7 @@ import {
 } from "../avatarUtils";
 
 describe("avatarUtils", () => {
-  const originalEnv = import.meta.env;
+  const originalEnv = { ...import.meta.env };
 
   beforeEach(() => {
     // Reset Date.now for consistent cache busting tests
@@ -25,9 +25,10 @@ describe("avatarUtils", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.unstubAllEnvs();
     // Restore original env
     Object.defineProperty(import.meta, "env", {
-      value: originalEnv,
+      value: { ...originalEnv },
       writable: true,
     });
   });
@@ -61,16 +62,34 @@ describe("avatarUtils", () => {
     });
 
     it("should handle absolute URLs that include backend.onrender.com", () => {
-      // Note: In production, these would be preserved, but we can't easily test import.meta.env.PROD
-      // This test documents the expected behavior
       const backendUrl =
         "https://atcloud-backend.onrender.com/uploads/avatars/user.jpg";
       const result = getAvatarUrl(backendUrl, "male");
 
-      // In test environment (not production), pathname is extracted
-      // In real production with PROD=true, this would return the full backendUrl
+      // In test/development, pathname is extracted for proxy compatibility.
       expect(result).toBe("/uploads/avatars/user.jpg");
     });
+
+    it("should preserve staging backend avatar URLs in production builds", () => {
+      vi.stubEnv("PROD", true);
+
+      const stagingBackendUrl =
+        "https://atcloud-erp-backend-staging.onrender.com/uploads/avatars/user.jpg";
+      const result = getAvatarUrl(stagingBackendUrl, "male");
+
+      expect(result).toBe(stagingBackendUrl);
+    });
+
+    it("should preserve production backend avatar URLs in production builds", () => {
+      vi.stubEnv("PROD", true);
+
+      const productionBackendUrl =
+        "https://atcloud-erp-backend-prod.onrender.com/uploads/avatars/user.jpg";
+      const result = getAvatarUrl(productionBackendUrl, "female");
+
+      expect(result).toBe(productionBackendUrl);
+    });
+
     it("should extract pathname from absolute URL", () => {
       const fullUrl = "http://localhost:5001/uploads/avatars/user.jpg?t=123";
       const result = getAvatarUrl(fullUrl, "male");
