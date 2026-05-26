@@ -1,5 +1,6 @@
 // upload.test.ts - Comprehensive tests for upload middleware
-import { describe, test, beforeEach, expect, vi } from "vitest";
+import fs from "fs";
+import { describe, test, beforeEach, afterEach, expect, vi } from "vitest";
 import { getFileUrl, uploadAvatar } from "../../../src/middleware/upload";
 
 // Capture options passed to multer to test storage and fileFilter logic
@@ -134,6 +135,60 @@ describe("Upload Middleware", () => {
       expect(errArg).toBeInstanceOf(Error);
       expect(String(errArg.message)).toContain("Unsupported upload field");
       expect(destArg).toBe("");
+    });
+
+    test("storage.destination normalizes UPLOAD_DESTINATION without trailing slash", () => {
+      const originalUploadDestination = process.env.UPLOAD_DESTINATION;
+      process.env.UPLOAD_DESTINATION = "/uploads";
+      const existsSpy = vi.spyOn(fs, "existsSync").mockReturnValue(true);
+
+      try {
+        void uploadAvatar;
+        const storage = captured.opts.storage;
+        const cb = vi.fn();
+
+        storage.destination(
+          {} as any,
+          { fieldname: "avatar" } as any,
+          (err: any, dest: string) => cb(err, dest),
+        );
+
+        expect(cb).toHaveBeenCalledWith(null, "/uploads/avatars/");
+      } finally {
+        existsSpy.mockRestore();
+        if (originalUploadDestination === undefined) {
+          delete process.env.UPLOAD_DESTINATION;
+        } else {
+          process.env.UPLOAD_DESTINATION = originalUploadDestination;
+        }
+      }
+    });
+
+    test("storage.destination normalizes custom image upload destinations", () => {
+      const originalUploadDestination = process.env.UPLOAD_DESTINATION;
+      process.env.UPLOAD_DESTINATION = "/custom/upload/path";
+      const existsSpy = vi.spyOn(fs, "existsSync").mockReturnValue(true);
+
+      try {
+        void uploadAvatar;
+        const storage = captured.opts.storage;
+        const cb = vi.fn();
+
+        storage.destination(
+          {} as any,
+          { fieldname: "image" } as any,
+          (err: any, dest: string) => cb(err, dest),
+        );
+
+        expect(cb).toHaveBeenCalledWith(null, "/custom/upload/path/images/");
+      } finally {
+        existsSpy.mockRestore();
+        if (originalUploadDestination === undefined) {
+          delete process.env.UPLOAD_DESTINATION;
+        } else {
+          process.env.UPLOAD_DESTINATION = originalUploadDestination;
+        }
+      }
     });
 
     test("storage.filename generates unique filename with original extension", () => {

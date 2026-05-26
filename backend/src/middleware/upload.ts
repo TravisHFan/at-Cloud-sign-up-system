@@ -18,6 +18,11 @@ const ALLOWED_IMAGE_MIME_TYPES = new Set([
   "image/heif",
 ]);
 
+const normalizeUploadBasePath = (basePath: string): string => {
+  const normalized = basePath.trim().replace(/[\\/]+$/, "");
+  return normalized ? `${normalized}${path.sep}` : "";
+};
+
 // Get the base upload path based on environment
 const getUploadBasePath = (): string => {
   // Allow explicit override via environment variable
@@ -27,16 +32,19 @@ const getUploadBasePath = (): string => {
     uploadDestination !== "undefined" &&
     uploadDestination !== "null"
   ) {
-    return uploadDestination;
+    return normalizeUploadBasePath(uploadDestination);
   }
 
   // In production on Render, use the mounted disk path
   if (process.env.NODE_ENV === "production") {
-    return "/uploads/";
+    return normalizeUploadBasePath("/uploads");
   }
   // In development, use relative path
-  return "uploads/";
+  return normalizeUploadBasePath("uploads");
 };
+
+const getUploadDirectory = (subdirectory: "avatars" | "images"): string =>
+  normalizeUploadBasePath(path.join(getUploadBasePath(), subdirectory));
 
 // Ensure upload directories exist
 const ensureDirectoryExists = (dirPath: string): void => {
@@ -48,13 +56,13 @@ const ensureDirectoryExists = (dirPath: string): void => {
 // Configure storage
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    let uploadPath = getUploadBasePath();
+    let uploadPath: string;
 
     // Support avatar and generic image uploads
     if (file.fieldname === "avatar") {
-      uploadPath += "avatars/";
+      uploadPath = getUploadDirectory("avatars");
     } else if (file.fieldname === "image") {
-      uploadPath += "images/";
+      uploadPath = getUploadDirectory("images");
     } else {
       cb(new Error("Unsupported upload field"), "");
       return;

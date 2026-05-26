@@ -24,11 +24,9 @@ export const getAvatarUrl = (
       customAvatar.startsWith("https://")
     ) {
       try {
-        // In production, if it's a backend URL, keep it absolute
-        if (
-          import.meta.env.PROD &&
-          customAvatar.includes("backend.onrender.com")
-        ) {
+        // Deployed frontends live on a different origin from the backend/static uploads.
+        // Preserve absolute avatar URLs so staging and production load from the API host.
+        if (import.meta.env.PROD) {
           return customAvatar;
         }
         // In development, extract the path part from full URL (e.g., "/uploads/avatars/...")
