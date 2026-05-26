@@ -2,6 +2,17 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import { Icon } from "../components/common";
+import { API_BASE_URL } from "../services/api";
+
+type VerificationResponse = {
+  success?: boolean;
+  alreadyVerified?: boolean;
+  errorType?: string;
+  migration?: {
+    modified?: number;
+    remainingPending?: number;
+  };
+};
 
 export default function EmailVerification() {
   const { token } = useParams<{ token: string }>();
@@ -24,12 +35,8 @@ export default function EmailVerification() {
       }
 
       try {
-        // Simulate API call to verify email
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-
-        // Real backend email verification
         const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/auth/verify-email/${token}`,
+          `${API_BASE_URL}/auth/verify-email/${encodeURIComponent(token)}`,
           {
             method: "GET",
             headers: {
@@ -38,7 +45,7 @@ export default function EmailVerification() {
           }
         );
 
-        const data = await response.json();
+        const data = (await response.json()) as VerificationResponse;
 
         if (response.ok && data.success) {
           setVerificationStatus("success");
