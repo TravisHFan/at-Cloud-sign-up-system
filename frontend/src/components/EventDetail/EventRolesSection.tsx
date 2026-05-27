@@ -1,3 +1,4 @@
+import { useState } from "react";
 import Icon from "../common/Icon";
 import GuestList from "./GuestList";
 import EventRoleSignup from "../events/EventRoleSignup";
@@ -18,6 +19,7 @@ interface BackendRole {
 }
 
 interface BackendRegistration {
+  id?: string;
   user: {
     id: string;
     username: string;
@@ -30,6 +32,8 @@ interface BackendRegistration {
     systemAuthorizationLevel?: string;
     roleInAtCloud?: string;
   };
+  status?: EventParticipant["registrationStatus"];
+  attendanceConfirmed?: boolean;
   notes?: string;
   registeredAt: string;
 }
@@ -105,6 +109,7 @@ interface EventRolesSectionProps {
   maxRolesForUser: number;
   isRoleAllowedForUser: (roleName: string) => boolean;
   canManageSignups: boolean | null;
+  canManageAttendance: boolean | null;
   // Phase 6: Paid events - indicate if event requires purchase
   requiresPurchase?: boolean;
 }
@@ -138,8 +143,84 @@ function EventRolesSection({
   maxRolesForUser,
   isRoleAllowedForUser,
   canManageSignups,
+  canManageAttendance,
   requiresPurchase = false,
 }: EventRolesSectionProps) {
+  const [savingAttendanceId, setSavingAttendanceId] = useState<string | null>(
+    null,
+  );
+
+  const getAttendanceState = (
+    signup: EventParticipant,
+  ): "attended" | "no_show" | "not_recorded" => {
+    if (signup.registrationStatus === "attended" || signup.attendanceConfirmed)
+      return "attended";
+    if (signup.registrationStatus === "no_show") return "no_show";
+    return "not_recorded";
+  };
+
+  const handleAttendanceChange = async (
+    roleId: string,
+    signup: EventParticipant,
+    attended: boolean,
+  ) => {
+    if (!signup.registrationId) {
+      notification.error("This registration is missing an attendance ID.", {
+        title: "Attendance Not Saved",
+      });
+      return;
+    }
+
+    setSavingAttendanceId(signup.registrationId);
+    try {
+      await eventService.updateRegistrationAttendance(
+        event.id,
+        signup.registrationId,
+        attended,
+      );
+
+      setEvent((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          roles: prev.roles.map((role) =>
+            role.id === roleId
+              ? {
+                  ...role,
+                  currentSignups: role.currentSignups.map((participant) =>
+                    participant.registrationId === signup.registrationId ||
+                    (!participant.registrationId &&
+                      participant.userId === signup.userId)
+                      ? {
+                          ...participant,
+                          attendanceConfirmed: attended,
+                          registrationStatus: attended
+                            ? "attended"
+                            : "no_show",
+                        }
+                      : participant,
+                  ),
+                }
+              : role,
+          ),
+        };
+      });
+
+      notification.success(
+        attended
+          ? "Attendance marked as attended."
+          : "Attendance marked as not attended.",
+        { title: "Attendance Updated" },
+      );
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Failed to update attendance.";
+      notification.error(message, { title: "Attendance Not Saved" });
+    } finally {
+      setSavingAttendanceId(null);
+    }
+  };
+
   return (
     <>
       {isPassedEvent ? (
@@ -173,6 +254,9 @@ function EventRolesSection({
                   {role.currentSignups.map((signup) => {
                     const isClickable =
                       canNavigateToProfiles || signup.userId === currentUserId;
+                    const attendanceState = getAttendanceState(signup);
+                    const isSavingAttendance =
+                      savingAttendanceId === signup.registrationId;
 
                     // Show contact information to all logged-in users
                     // (simplified from old group-based Workshop logic)
@@ -190,7 +274,7 @@ function EventRolesSection({
                     return (
                       <div
                         key={signup.userId}
-                        className={`flex items-center justify-between p-3 rounded-md bg-white border border-gray-200 ${
+                        className={`flex flex-col gap-4 p-3 rounded-md bg-white border border-gray-200 sm:flex-row sm:items-start sm:justify-between ${
                           isClickable
                             ? "cursor-pointer hover:bg-gray-50 transition-colors"
                             : ""
@@ -210,7 +294,7 @@ function EventRolesSection({
                             : undefined
                         }
                       >
-                        <div className="flex items-center space-x-3">
+                        <div className="flex items-center space-x-3 min-w-0 w-full sm:w-auto">
                           <img
                             src={getAvatarUrlWithCacheBust(
                               signup.avatar || null,
@@ -253,38 +337,98 @@ function EventRolesSection({
                             )}
                           </div>
                         </div>
-                        {showContact && (
-                          <div className="mt-2 text-xs text-gray-600 space-y-1">
-                            {signup.email && (
-                              <div className="flex items-center gap-2">
-                                <Icon
-                                  name="envelope"
-                                  className="w-3 h-3 text-gray-500"
-                                />
-                                <a
-                                  className="text-blue-600 hover:underline"
-                                  href={`mailto:${signup.email}`}
+                        <div className="flex flex-col items-start gap-3 shrink-0 w-full sm:w-auto sm:items-end">
+                          {showContact && (
+                            <div className="text-xs text-gray-600 space-y-1 text-left w-full sm:text-right">
+                              {signup.email && (
+                                <div className="flex items-center justify-start gap-2 sm:justify-end">
+                                  <Icon
+                                    name="envelope"
+                                    className="w-3 h-3 text-gray-500"
+                                  />
+                                  <a
+                                    className="text-blue-600 hover:underline break-all"
+                                    href={`mailto:${signup.email}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    {signup.email}
+                                  </a>
+                                </div>
+                              )}
+                              {signup.phone && signup.phone.trim() !== "" && (
+                                <div className="flex items-center justify-start gap-2 sm:justify-end">
+                                  <Icon
+                                    name="phone"
+                                    className="w-3 h-3 text-gray-500"
+                                  />
+                                  <a
+                                    className="text-blue-600 hover:underline"
+                                    href={`tel:${signup.phone}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    {signup.phone}
+                                  </a>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          {canManageAttendance && (
+                            <div
+                              className="flex flex-wrap items-center gap-2"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <span
+                                className={`text-xs font-medium ${
+                                  attendanceState === "attended"
+                                    ? "text-green-700"
+                                    : attendanceState === "no_show"
+                                      ? "text-red-700"
+                                      : "text-gray-500"
+                                }`}
+                              >
+                                {attendanceState === "attended"
+                                  ? "Attended"
+                                  : attendanceState === "no_show"
+                                    ? "Not attended"
+                                    : "Not recorded"}
+                              </span>
+                              <div className="inline-flex rounded-md border border-gray-200 overflow-hidden">
+                                <button
+                                  type="button"
+                                  disabled={isSavingAttendance}
+                                  onClick={() =>
+                                    handleAttendanceChange(role.id, signup, true)
+                                  }
+                                  className={`px-3 py-1 text-xs font-medium transition-colors ${
+                                    attendanceState === "attended"
+                                      ? "bg-green-600 text-white"
+                                      : "bg-white text-gray-700 hover:bg-green-50"
+                                  } disabled:opacity-60`}
                                 >
-                                  {signup.email}
-                                </a>
-                              </div>
-                            )}
-                            {signup.phone && signup.phone.trim() !== "" && (
-                              <div className="flex items-center gap-2">
-                                <Icon
-                                  name="phone"
-                                  className="w-3 h-3 text-gray-500"
-                                />
-                                <a
-                                  className="text-blue-600 hover:underline"
-                                  href={`tel:${signup.phone}`}
+                                  Yes
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={isSavingAttendance}
+                                  onClick={() =>
+                                    handleAttendanceChange(
+                                      role.id,
+                                      signup,
+                                      false,
+                                    )
+                                  }
+                                  className={`px-3 py-1 text-xs font-medium border-l border-gray-200 transition-colors ${
+                                    attendanceState === "no_show"
+                                      ? "bg-red-600 text-white"
+                                      : "bg-white text-gray-700 hover:bg-red-50"
+                                  } disabled:opacity-60`}
                                 >
-                                  {signup.phone}
-                                </a>
+                                  No
+                                </button>
                               </div>
-                            )}
-                          </div>
-                        )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
@@ -714,6 +858,7 @@ function EventRolesSection({
                         currentSignups: role.registrations
                           ? role.registrations.map(
                               (reg: BackendRegistration): EventParticipant => ({
+                                registrationId: reg.id,
                                 userId: reg.user.id,
                                 username: reg.user.username,
                                 firstName: reg.user.firstName,
@@ -731,6 +876,9 @@ function EventRolesSection({
                                   reg.user.systemAuthorizationLevel) as string,
                                 roleInAtCloud: reg.user.roleInAtCloud,
                                 notes: reg.notes,
+                                registeredAt: reg.registeredAt,
+                                registrationStatus: reg.status,
+                                attendanceConfirmed: reg.attendanceConfirmed,
                               })
                             )
                           : role.currentSignups || [],

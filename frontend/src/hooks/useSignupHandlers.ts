@@ -1,4 +1,4 @@
-import type { EventData } from "../types/event";
+import type { EventData, EventParticipant } from "../types/event";
 import { eventService } from "../services/api";
 
 // Types for backend API responses
@@ -16,9 +16,12 @@ type BackendUser = {
 };
 
 type BackendRegistration = {
+  id?: string;
   user: BackendUser;
   notes?: string;
   registeredAt?: string;
+  status?: EventParticipant["registrationStatus"];
+  attendanceConfirmed?: boolean;
 };
 
 type BackendRole = {
@@ -85,6 +88,7 @@ export function useSignupHandlers({
           // Convert new backend format (registrations) to frontend format (currentSignups)
           currentSignups: role.registrations
             ? role.registrations.map((reg: BackendRegistration) => ({
+                registrationId: reg.id,
                 userId: reg.user.id,
                 username: reg.user.username,
                 firstName: reg.user.firstName,
@@ -99,6 +103,8 @@ export function useSignupHandlers({
                 roleInAtCloud: reg.user.roleInAtCloud,
                 notes: reg.notes,
                 registeredAt: reg.registeredAt,
+                registrationStatus: reg.status,
+                attendanceConfirmed: reg.attendanceConfirmed,
               }))
             : role.currentSignups || [],
         })),
@@ -175,6 +181,7 @@ export function useSignupHandlers({
           // Convert new backend format (registrations) to frontend format (currentSignups)
           currentSignups: role.registrations
             ? role.registrations.map((reg: BackendRegistration) => ({
+                registrationId: reg.id,
                 userId: reg.user.id,
                 username: reg.user.username,
                 firstName: reg.user.firstName,
@@ -189,6 +196,8 @@ export function useSignupHandlers({
                 roleInAtCloud: reg.user.roleInAtCloud,
                 notes: reg.notes,
                 registeredAt: reg.registeredAt,
+                registrationStatus: reg.status,
+                attendanceConfirmed: reg.attendanceConfirmed,
               }))
             : role.currentSignups || [],
         })),
@@ -267,6 +276,7 @@ export function useSignupHandlers({
           // Convert new backend format (registrations) to frontend format (currentSignups)
           currentSignups: role.registrations
             ? role.registrations.map((reg: BackendRegistration) => ({
+                registrationId: reg.id,
                 userId: reg.user.id,
                 username: reg.user.username,
                 firstName: reg.user.firstName,
@@ -281,6 +291,8 @@ export function useSignupHandlers({
                 roleInAtCloud: reg.user.roleInAtCloud,
                 notes: reg.notes,
                 registeredAt: reg.registeredAt,
+                registrationStatus: reg.status,
+                attendanceConfirmed: reg.attendanceConfirmed,
               }))
             : role.currentSignups || [],
         })),

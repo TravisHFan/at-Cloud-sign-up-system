@@ -52,7 +52,10 @@ type BackendUser = {
 };
 
 type BackendRegistration = {
+  id?: string;
   user: BackendUser;
+  status?: EventRole["currentSignups"][0]["registrationStatus"];
+  attendanceConfirmed?: boolean;
   notes?: string;
   registeredAt?: string;
 };
@@ -257,6 +260,7 @@ export function useRealtimeEventUpdates({
           case "user_removed":
           case "user_moved":
           case "user_assigned":
+          case "attendance_updated":
             return updateData.data.event;
           case "guest_moved":
             return updateData.data.event;
@@ -304,6 +308,7 @@ export function useRealtimeEventUpdates({
                 capacityRemaining: r.capacityRemaining,
                 currentSignups: role.registrations
                   ? role.registrations.map((reg: BackendRegistration) => ({
+                      registrationId: reg.id,
                       userId: reg.user.id,
                       username: reg.user.username,
                       firstName: reg.user.firstName,
@@ -318,6 +323,8 @@ export function useRealtimeEventUpdates({
                       roleInAtCloud: reg.user.roleInAtCloud,
                       notes: reg.notes,
                       registeredAt: reg.registeredAt,
+                      registrationStatus: reg.status,
+                      attendanceConfirmed: reg.attendanceConfirmed,
                     }))
                   : role.currentSignups || [],
               };
@@ -488,6 +495,11 @@ export function useRealtimeEventUpdates({
           }
           break;
         }
+        case "attendance_updated":
+          notificationRef.current.info(`Attendance updated`, {
+            title: "Event Updated",
+          });
+          break;
         case "guest_cancellation":
           notificationRef.current.info(`A guest cancelled their registration`, {
             title: "Event Updated",
@@ -564,6 +576,7 @@ export function useRealtimeEventUpdates({
                   capacityRemaining: r.capacityRemaining,
                   currentSignups: role.registrations
                     ? role.registrations.map((reg: BackendRegistration) => ({
+                        registrationId: reg.id,
                         userId: reg.user.id,
                         username: reg.user.username,
                         firstName: reg.user.firstName,
@@ -578,6 +591,8 @@ export function useRealtimeEventUpdates({
                         roleInAtCloud: reg.user.roleInAtCloud,
                         notes: reg.notes,
                         registeredAt: reg.registeredAt,
+                        registrationStatus: reg.status,
+                        attendanceConfirmed: reg.attendanceConfirmed,
                       }))
                     : role.currentSignups || [],
                 };

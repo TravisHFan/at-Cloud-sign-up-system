@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { EventData } from "../types/event";
+import type { EventData, EventParticipant } from "../types/event";
 import { eventService, guestService } from "../services/api";
 
 // Types for backend API responses
@@ -17,9 +17,12 @@ type BackendUser = {
 };
 
 type BackendRegistration = {
+  id?: string;
   user: BackendUser;
   notes?: string;
   registeredAt?: string;
+  status?: EventParticipant["registrationStatus"];
+  attendanceConfirmed?: boolean;
 };
 
 export type BackendRole = {
@@ -204,6 +207,7 @@ export function useDragDropHandlers({
           // Convert new backend format (registrations) to frontend format (currentSignups)
           currentSignups: role.registrations
             ? role.registrations.map((reg: BackendRegistration) => ({
+                registrationId: reg.id,
                 userId: reg.user.id,
                 username: reg.user.username,
                 firstName: reg.user.firstName,
@@ -218,6 +222,8 @@ export function useDragDropHandlers({
                 roleInAtCloud: reg.user.roleInAtCloud,
                 notes: reg.notes,
                 registeredAt: reg.registeredAt,
+                registrationStatus: reg.status,
+                attendanceConfirmed: reg.attendanceConfirmed,
               }))
             : role.currentSignups || [],
         })),

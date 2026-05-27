@@ -28,6 +28,8 @@ interface BackendRegistration {
   user: BackendUser;
   notes?: string;
   registeredAt?: string;
+  status?: EventParticipant["registrationStatus"];
+  attendanceConfirmed?: boolean;
 }
 
 interface BackendRole {
@@ -120,6 +122,7 @@ function EventHeader({
           // Convert registrations array to currentSignups array
           currentSignups: role.registrations
             ? role.registrations.map((reg) => ({
+                registrationId: reg.id,
                 userId: reg.user.id,
                 username: reg.user.username,
                 firstName: reg.user.firstName,
@@ -132,6 +135,9 @@ function EventHeader({
                   reg.user.role || reg.user.systemAuthorizationLevel,
                 roleInAtCloud: reg.user.roleInAtCloud,
                 notes: reg.notes,
+                registeredAt: reg.registeredAt,
+                registrationStatus: reg.status,
+                attendanceConfirmed: reg.attendanceConfirmed,
               }))
             : Array.isArray(role.currentSignups)
               ? role.currentSignups

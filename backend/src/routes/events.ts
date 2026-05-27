@@ -694,6 +694,14 @@ router.post(
   EventController.assignUserToRole,
 );
 
+router.patch(
+  "/:id/manage/registrations/:registrationId/attendance",
+  validateObjectId,
+  handleValidationErrors,
+  authorizeEventManagement,
+  EventController.updateRegistrationAttendance,
+);
+
 // User's event routes
 router.get("/user/registered", EventController.getUserEvents);
 router.get("/user/created", EventController.getCreatedEvents);

@@ -106,7 +106,8 @@ export interface RegistrationWithUser {
   userId: string;
   eventId: string;
   roleId: string;
-  status: "active" | "cancelled" | "waitlist";
+  status: "active" | "waitlisted" | "attended" | "no_show";
+  attendanceConfirmed?: boolean;
   user: UserBasicInfo;
   registeredAt: Date;
   // Participant-provided fields captured at signup time
@@ -256,11 +257,14 @@ export interface WebSocketEventUpdate {
     | "user_moved"
     | "event_updated"
     | "role_capacity_changed"
-    | "workshop_topic_updated";
+    | "workshop_topic_updated"
+    | "attendance_updated";
   eventId: string;
   data: {
     userId?: string;
+    registrationId?: string;
     roleId?: string;
+    attended?: boolean;
     fromRoleId?: string;
     toRoleId?: string;
     newCount?: number;

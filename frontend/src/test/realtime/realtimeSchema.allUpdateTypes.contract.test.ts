@@ -78,6 +78,17 @@ describe("Realtime schema: all updateTypes compile against union", () => {
         data: { group: "A", topic: "Topic" },
         timestamp: new Date().toISOString(),
       },
+      {
+        eventId: "e1",
+        updateType: "attendance_updated",
+        data: {
+          registrationId: "reg1",
+          userId: "u1",
+          roleId: "r1",
+          attended: true,
+        },
+        timestamp: new Date().toISOString(),
+      },
 
       // Role capacity updates
       {
@@ -95,7 +106,7 @@ describe("Realtime schema: all updateTypes compile against union", () => {
     ];
 
     expect(Array.isArray(samples)).toBe(true);
-    expect(samples).toHaveLength(12);
+    expect(samples).toHaveLength(13);
 
     // Order-agnostic assertion: ensure we cover exactly the expected update types
     const updateTypes = samples.map((s) => s.updateType).sort();
@@ -110,6 +121,7 @@ describe("Realtime schema: all updateTypes compile against union", () => {
       "user_moved",
       "user_assigned",
       "workshop_topic_updated",
+      "attendance_updated",
       "role_full",
       "role_available",
     ].sort();
