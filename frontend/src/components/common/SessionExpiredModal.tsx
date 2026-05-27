@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { onSessionExpired } from "../../services/session";
+import { LOGIN_HASH_ROUTE, onSessionExpired } from "../../services/session";
 import AlertModal from "./AlertModal";
 
 /**
@@ -29,7 +29,7 @@ export default function SessionExpiredModal() {
     // Use hard navigation to force full app reload.
     // This ensures AuthContext re-initializes with no token, avoiding
     // race conditions where stale currentUser state redirects back.
-    window.location.href = "/login";
+    window.location.href = LOGIN_HASH_ROUTE;
   };
 
   return (

@@ -43,7 +43,7 @@ describe("Session expired prompt and redirect", () => {
     await new Promise((r) => setTimeout(r, 5));
     const assign = (window.location as any).assign as ReturnType<typeof vi.fn>;
     expect(assign).toHaveBeenCalledTimes(1);
-    expect(assign).toHaveBeenCalledWith("/login");
+    expect(assign).toHaveBeenCalledWith("/#/login");
     expect(localStorage.getItem("authToken")).toBeNull();
   });
 
@@ -84,7 +84,7 @@ describe("Session expired prompt and redirect", () => {
     await new Promise((r) => setTimeout(r, 5));
     const assign = (window.location as any).assign as ReturnType<typeof vi.fn>;
     expect(assign).toHaveBeenCalledTimes(1);
-    expect(assign).toHaveBeenCalledWith("/login");
+    expect(assign).toHaveBeenCalledWith("/#/login");
     expect(localStorage.getItem("authToken")).toBeNull();
   });
 });
