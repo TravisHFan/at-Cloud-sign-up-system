@@ -19,6 +19,9 @@ vi.mock("../../../../src/models", () => ({
   GuestRegistration: {
     find: vi.fn(),
   },
+  Program: {
+    find: vi.fn(),
+  },
 }));
 
 vi.mock("../../../../src/models/Purchase", () => ({
@@ -83,6 +86,8 @@ describe("ExportAnalyticsController", () => {
     res = {
       status: statusMock,
       json: jsonMock,
+      setHeader: vi.fn(),
+      send: vi.fn(),
     } as unknown as Partial<Response>;
   });
 
@@ -379,7 +384,7 @@ describe("ExportAnalyticsController", () => {
       expect(writeMock).toHaveBeenCalledWith("Title,Format,Status,CreatedAt\n");
       expect(writeMock).toHaveBeenCalledWith("# Registrations\n");
       expect(writeMock).toHaveBeenCalledWith(
-        "UserId,EventId,Status,CreatedAt\n",
+        "UserId,UserEmail,UserName,EventId,EventTitle,RoleId,RoleName,Status,AttendanceStatus,AttendanceConfirmed,RegistrationDate\n",
       );
       expect(endMock).toHaveBeenCalled();
     });

@@ -19,6 +19,9 @@ vi.mock("../../../../src/models", () => ({
   GuestRegistration: {
     find: vi.fn(),
   },
+  Program: {
+    find: vi.fn(),
+  },
 }));
 
 vi.mock("../../../../src/models/Purchase", () => ({
@@ -64,6 +67,7 @@ import {
   Event,
   Registration,
   GuestRegistration,
+  Program,
 } from "../../../../src/models";
 import Purchase from "../../../../src/models/Purchase";
 import DonationTransaction from "../../../../src/models/DonationTransaction";
@@ -184,6 +188,13 @@ describe("ExportAnalyticsController - Programs and Donations Coverage", () => {
       limit: vi.fn().mockReturnThis(),
       lean: vi.fn().mockResolvedValue([]),
     } as unknown as ReturnType<typeof GuestRegistration.find>);
+
+    vi.mocked(Program.find).mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      sort: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      lean: vi.fn().mockResolvedValue([]),
+    } as unknown as ReturnType<typeof Program.find>);
   });
 
   describe("xlsx format with programs data", () => {
