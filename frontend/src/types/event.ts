@@ -1,4 +1,5 @@
 export interface EventParticipant {
+  registrationId?: string;
   userId: string; // Changed from number to string to match Management UUIDs
   username: string;
   firstName?: string; // Optional for flexibility
@@ -10,6 +11,9 @@ export interface EventParticipant {
   avatar?: string;
   gender?: "male" | "female"; // For default avatar selection
   notes?: string;
+  registeredAt?: string;
+  registrationStatus?: "active" | "waitlisted" | "attended" | "no_show";
+  attendanceConfirmed?: boolean;
 }
 
 export interface OrganizerDetail {

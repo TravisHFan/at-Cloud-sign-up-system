@@ -451,6 +451,26 @@ class EventsApiClient extends BaseApiClient {
     throw new Error(response.message || "Failed to assign user to role");
   }
 
+  async updateRegistrationAttendance(
+    eventId: string,
+    registrationId: string,
+    attended: boolean,
+  ): Promise<EventData> {
+    const response = await this.request<{ event: EventData }>(
+      `/events/${eventId}/manage/registrations/${registrationId}/attendance`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ attended }),
+      },
+    );
+
+    if (response.data) {
+      return response.data.event;
+    }
+
+    throw new Error(response.message || "Failed to update attendance");
+  }
+
   // ========== Event Status Management ==========
 
   async updateEventStatuses(): Promise<{ updatedCount: number }> {
@@ -737,6 +757,16 @@ export const eventsService = {
       roleId,
       notes,
       sendNotifications,
+    ),
+  updateRegistrationAttendance: (
+    eventId: string,
+    registrationId: string,
+    attended: boolean,
+  ) =>
+    eventsApiClient.updateRegistrationAttendance(
+      eventId,
+      registrationId,
+      attended,
     ),
 
   // Status management

@@ -8,6 +8,7 @@ export type EventUpdateType =
   | "role_full"
   | "role_available"
   | "workshop_topic_updated"
+  | "attendance_updated"
   | "user_assigned"
   | "guest_registration"
   | "guest_cancellation"

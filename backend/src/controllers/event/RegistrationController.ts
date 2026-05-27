@@ -33,6 +33,132 @@ interface EventSignupRequest {
  * - assignUserToRole: Assign user to a role (admin action)
  */
 export class RegistrationController {
+  static async updateRegistrationAttendance(
+    req: Request,
+    res: Response,
+  ): Promise<void> {
+    try {
+      const { id: eventId, registrationId } = req.params;
+      const { attended } = req.body as { attended?: unknown };
+
+      if (
+        !mongoose.Types.ObjectId.isValid(eventId) ||
+        !mongoose.Types.ObjectId.isValid(registrationId)
+      ) {
+        res.status(400).json({
+          success: false,
+          message: "Invalid event or registration ID.",
+        });
+        return;
+      }
+
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          message: "Authentication required.",
+        });
+        return;
+      }
+
+      if (typeof attended !== "boolean") {
+        res.status(400).json({
+          success: false,
+          message: "Attendance value must be true or false.",
+        });
+        return;
+      }
+
+      const event = await Event.findById(eventId);
+      if (!event) {
+        res.status(404).json({
+          success: false,
+          message: "Event not found.",
+        });
+        return;
+      }
+
+      if (event.status !== "completed") {
+        res.status(400).json({
+          success: false,
+          message: "Attendance can only be updated for completed events.",
+        });
+        return;
+      }
+
+      const registration = await Registration.findOne({
+        _id: registrationId,
+        eventId: event._id,
+      });
+      if (!registration) {
+        res.status(404).json({
+          success: false,
+          message: "Registration not found for this event.",
+        });
+        return;
+      }
+
+      const previousState = {
+        attendanceConfirmed: registration.attendanceConfirmed === true,
+        status: registration.status,
+      };
+
+      registration.attendanceConfirmed = attended;
+      registration.status = attended ? "attended" : "no_show";
+      registration.addAuditEntry(
+        "updated_notes",
+        req.user._id,
+        attended ? "Attendance marked attended" : "Attendance marked no-show",
+        previousState,
+        {
+          attendanceConfirmed: registration.attendanceConfirmed,
+          status: registration.status,
+        },
+      );
+
+      await registration.save();
+      await CachePatterns.invalidateEventCache(eventId);
+      await CachePatterns.invalidateAnalyticsCache();
+
+      const updatedEvent =
+        await ResponseBuilderService.buildEventWithRegistrations(
+          eventId,
+          req.user ? EventController.toIdString(req.user._id) : undefined,
+          (req.user as { role?: string } | undefined)?.role,
+        );
+
+      socketService.emitEventUpdate(eventId, "attendance_updated", {
+        registrationId,
+        userId: EventController.toIdString(registration.userId),
+        roleId: registration.roleId,
+        attended,
+        event: updatedEvent,
+      });
+
+      res.status(200).json({
+        success: true,
+        message: attended
+          ? "Attendance marked as attended."
+          : "Attendance marked as not attended.",
+        data: { event: updatedEvent },
+      });
+    } catch (error: unknown) {
+      console.error("Update attendance error:", error);
+      CorrelatedLogger.fromRequest(req, "EventController").error(
+        "updateRegistrationAttendance failed",
+        error as Error,
+        undefined,
+        {
+          eventId: req.params?.id,
+          registrationId: req.params?.registrationId,
+        },
+      );
+      res.status(500).json({
+        success: false,
+        message: "Failed to update attendance.",
+      });
+    }
+  }
+
   static async signUpForEvent(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
