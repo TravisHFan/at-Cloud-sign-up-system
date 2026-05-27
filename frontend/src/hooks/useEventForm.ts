@@ -8,6 +8,7 @@ import { useAuth } from "./useAuth";
 import { eventService } from "../services/api";
 import { normalizeEventDate } from "../utils/eventStatsUtils";
 import type { TimeOverlapConflict } from "../utils/timeOverlapConflicts";
+import { hardNavigateToHashRoute } from "../utils/hashRouting";
 
 export type RecurringConfig = {
   isRecurring?: boolean;
@@ -242,13 +243,13 @@ export const useEventForm = (
           text: "View Event",
           onClick: () => {
             if (createdEventId) {
-              window.location.href = `/dashboard/event/${createdEventId}`;
+              hardNavigateToHashRoute(`/dashboard/event/${createdEventId}`);
             } else {
               const userRole = currentUser?.role;
               if (userRole === "Guest Expert" || userRole === "Participant") {
-                window.location.href = "/dashboard";
+                hardNavigateToHashRoute("/dashboard");
               } else {
-                window.location.href = "/dashboard/upcoming";
+                hardNavigateToHashRoute("/dashboard/upcoming");
               }
             }
           },

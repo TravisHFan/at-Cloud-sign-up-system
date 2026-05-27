@@ -101,7 +101,7 @@ describe("SessionExpiredModal", () => {
     );
 
     // Verify hard navigation to login page was triggered
-    expect(window.location.href).toBe("/login");
+    expect(window.location.href).toBe("/#/login");
   });
 
   it("only shows modal once even if handleSessionExpired is called multiple times", async () => {

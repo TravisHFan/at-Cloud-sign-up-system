@@ -1,6 +1,7 @@
 import React from "react";
 import type { ChangeEvent } from "react";
 import type { UseFormSetValue } from "react-hook-form";
+import { hardNavigateToHashRoute } from "../../utils/hashRouting";
 
 // Type for roles in the form (before submission)
 interface FormRole {
@@ -232,7 +233,7 @@ const RoleManagement: React.FC<RoleManagementProps> = ({
             <button
               type="button"
               onClick={() => {
-                window.location.href = "/dashboard/configure-roles-templates";
+                hardNavigateToHashRoute("/dashboard/configure-roles-templates");
               }}
               className="px-4 py-2 text-sm bg-gray-100 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-200"
             >
@@ -353,8 +354,9 @@ const RoleManagement: React.FC<RoleManagementProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    window.location.href =
-                      "/dashboard/configure-roles-templates";
+                    hardNavigateToHashRoute(
+                      "/dashboard/configure-roles-templates",
+                    );
                   }}
                   className="px-4 py-2 text-sm bg-white border border-blue-300 text-blue-700 rounded-md hover:bg-blue-50 hover:border-blue-400 transition-colors"
                 >

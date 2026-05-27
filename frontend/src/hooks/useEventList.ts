@@ -6,6 +6,7 @@ import {
   calculateUpcomingEventStats,
   calculatePassedEventStats,
 } from "../utils/eventStatsUtils";
+import { hardNavigateToHashRoute } from "../utils/hashRouting";
 
 interface UseEventListProps {
   events: EventData[];
@@ -106,7 +107,7 @@ export function useEventList({
           text: "View My Events",
           onClick: () => {
             // Navigate to user's events
-            window.location.href = "/my-events";
+            hardNavigateToHashRoute("/dashboard/my-events");
           },
           variant: "primary",
         },

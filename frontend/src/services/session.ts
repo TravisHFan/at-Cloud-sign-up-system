@@ -1,7 +1,11 @@
 // Centralized session expiration handler for the frontend
 // Shows a clear prompt and redirects to login once.
 
+import { getHashRouteUrl } from "../utils/hashRouting";
+
 let sessionPromptShown = false;
+
+export const LOGIN_HASH_ROUTE = getHashRouteUrl("/login");
 
 // Lightweight pub/sub so components (e.g., a top-level listener) can show a custom modal
 type SessionExpiredListener = () => void;
@@ -43,7 +47,7 @@ export function handleSessionExpired(): void {
     setTimeout(() => {
       try {
         if (typeof window !== "undefined" && window.location) {
-          window.location.assign("/login");
+          window.location.assign(LOGIN_HASH_ROUTE);
         }
       } catch {
         void 0;
