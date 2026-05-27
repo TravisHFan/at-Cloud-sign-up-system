@@ -18,6 +18,7 @@ export interface EventPermissionsResult {
   canDeleteEvent: boolean | null;
   isPassedEvent: boolean;
   canManageSignups: boolean | null;
+  canManageAttendance: boolean | null;
   isRoleAllowedForUser: (roleName: string) => boolean;
 }
 
@@ -234,14 +235,18 @@ export function useEventPermissions({
   // Check if this is a passed event
   const isPassedEvent = event?.status === "completed";
 
-  // Check if current user can manage signups (Administrator/Super Admin or Organizer) - but not for passed events
-  const canManageSignups =
+  const canManageEvent =
     event &&
-    !isPassedEvent &&
     (currentUserRole === "Super Admin" ||
       currentUserRole === "Administrator" ||
       isCurrentUserOrganizer ||
       isAffiliatedProgramEditor);
+
+  // Check if current user can manage signups (Administrator/Super Admin or Organizer) - but not for passed events
+  const canManageSignups = event && !isPassedEvent && canManageEvent;
+
+  // Attendance is only editable after the event has reached completed status.
+  const canManageAttendance = event && isPassedEvent && canManageEvent;
 
   // Universal role visibility: all roles are allowed for every user.
   const isRoleAllowedForUser = (_roleName: string): boolean => true;
@@ -257,6 +262,7 @@ export function useEventPermissions({
     canDeleteEvent,
     isPassedEvent,
     canManageSignups,
+    canManageAttendance,
     isRoleAllowedForUser,
   };
 }

@@ -109,6 +109,7 @@ interface EventRolesSectionProps {
   maxRolesForUser: number;
   isRoleAllowedForUser: (roleName: string) => boolean;
   canManageSignups: boolean | null;
+  canManageAttendance: boolean | null;
   // Phase 6: Paid events - indicate if event requires purchase
   requiresPurchase?: boolean;
 }
@@ -142,6 +143,7 @@ function EventRolesSection({
   maxRolesForUser,
   isRoleAllowedForUser,
   canManageSignups,
+  canManageAttendance,
   requiresPurchase = false,
 }: EventRolesSectionProps) {
   const [savingAttendanceId, setSavingAttendanceId] = useState<string | null>(
@@ -370,7 +372,7 @@ function EventRolesSection({
                               )}
                             </div>
                           )}
-                          {canManageSignups && (
+                          {canManageAttendance && (
                             <div
                               className="flex flex-wrap items-center gap-2"
                               onClick={(e) => e.stopPropagation()}

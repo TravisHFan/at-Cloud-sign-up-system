@@ -139,6 +139,7 @@ export default function EventDetail() {
     canDeleteEvent,
     isPassedEvent,
     canManageSignups,
+    canManageAttendance,
     isRoleAllowedForUser,
   } = useEventPermissions({
     event,
@@ -764,8 +765,7 @@ export default function EventDetail() {
                   <p className="text-sm text-blue-600">
                     This event took place on {formatDateToAmerican(event.date)}{" "}
                     and had {event.attendees || event.signedUp} attendees. You
-                    can view the participant list below, but no changes can be
-                    made.
+                    can view the participant list below.
                   </p>
                 </div>
               </div>
@@ -936,6 +936,7 @@ export default function EventDetail() {
               maxRolesForUser={maxRolesForUser}
               isRoleAllowedForUser={isRoleAllowedForUser}
               canManageSignups={canManageSignups}
+              canManageAttendance={canManageAttendance}
               requiresPurchase={event.pricing?.isFree === false}
             />
           </div>
