@@ -19,6 +19,9 @@ vi.mock("../../../../src/models", () => ({
   GuestRegistration: {
     find: vi.fn(),
   },
+  Program: {
+    find: vi.fn(),
+  },
 }));
 
 vi.mock("../../../../src/models/Purchase", () => ({
@@ -64,6 +67,7 @@ import {
   Event,
   Registration,
   GuestRegistration,
+  Program,
 } from "../../../../src/models";
 import Purchase from "../../../../src/models/Purchase";
 import DonationTransaction from "../../../../src/models/DonationTransaction";
@@ -265,9 +269,12 @@ describe("ExportAnalyticsController - Comprehensive Coverage", () => {
     {
       userId: "user-prog-1",
       programId: "prog-leadership",
+      purchaseType: "program",
+      orderNumber: "ORD-LEADERSHIP",
       finalPrice: 15000,
       status: "completed",
       purchaseDate: new Date("2025-02-01"),
+      studentRoleName: "Participant",
       isClassRep: true,
       isEarlyBird: true,
       promoCode: "EARLY2025",
@@ -276,11 +283,41 @@ describe("ExportAnalyticsController - Comprehensive Coverage", () => {
     {
       userId: "user-prog-2",
       programId: "prog-mentorship",
+      purchaseType: "program",
+      orderNumber: "ORD-MENTORSHIP",
       finalPrice: 7500,
       status: "pending",
       purchaseDate: new Date("2025-03-15"),
+      studentRoleName: "Mentee",
       isClassRep: false,
       isEarlyBird: false,
+    },
+  ];
+
+  const mockProgramCatalogComplete = [
+    {
+      _id: "prog-leadership",
+      title: "Leadership Program",
+      programType: "NextGen",
+      hostedBy: "@Cloud Marketplace Ministry",
+      period: {
+        startYear: "2025",
+        startMonth: "06",
+        endYear: "2025",
+        endMonth: "08",
+      },
+      isFree: false,
+      createdAt: new Date("2025-01-01"),
+      updatedAt: new Date("2025-01-10"),
+    },
+    {
+      _id: "prog-mentorship",
+      title: "Mentorship Program",
+      programType: "EMBA Mentor Circles",
+      hostedBy: "@Cloud Marketplace Ministry",
+      isFree: true,
+      createdAt: new Date("2025-02-01"),
+      updatedAt: new Date("2025-02-10"),
     },
   ];
 
@@ -343,6 +380,7 @@ describe("ExportAnalyticsController - Comprehensive Coverage", () => {
     } as unknown as Partial<Response>;
 
     vi.mocked(hasPermission).mockReturnValue(true);
+    vi.mocked(XLSX.write).mockReturnValue(Buffer.from("test-xlsx-content"));
 
     // Default empty mocks
     vi.mocked(User.find).mockReturnValue(
@@ -358,6 +396,9 @@ describe("ExportAnalyticsController - Comprehensive Coverage", () => {
       createChainedMock([]) as unknown as ReturnType<
         typeof GuestRegistration.find
       >,
+    );
+    vi.mocked(Program.find).mockReturnValue(
+      createChainedMock([]) as unknown as ReturnType<typeof Program.find>,
     );
     vi.mocked(Purchase.find).mockReturnValue(
       createChainedMock([]) as unknown as ReturnType<typeof Purchase.find>,
@@ -508,6 +549,35 @@ describe("ExportAnalyticsController - Comprehensive Coverage", () => {
         roleName: "Speaker",
       });
     });
+
+    it("should export registration ObjectId references as readable IDs", async () => {
+      req.query = { format: "json" };
+      vi.mocked(Registration.find).mockReturnValue(
+        createChainedMock([
+          {
+            userId: { toHexString: () => "64f000000000000000000001" },
+            eventId: { toHexString: () => "64f000000000000000000002" },
+            registeredBy: { toHexString: () => "64f000000000000000000003" },
+            roleId: "role-attendee",
+            status: "attended",
+            attendanceConfirmed: false,
+          },
+        ]) as unknown as ReturnType<typeof Registration.find>,
+      );
+
+      await ExportAnalyticsController.exportAnalytics(
+        req as Request,
+        res as Response,
+      );
+
+      const sentData = JSON.parse(sendMock.mock.calls[0][0] as string);
+      expect(sentData.registrations[0]).toMatchObject({
+        userId: "64f000000000000000000001",
+        eventId: "64f000000000000000000002",
+        registeredBy: "64f000000000000000000003",
+        attendanceStatus: "Attended",
+      });
+    });
   });
 
   describe("JSON format - guest registrations data", () => {
@@ -587,6 +657,11 @@ describe("ExportAnalyticsController - Comprehensive Coverage", () => {
         createChainedMock(
           mockGuestRegistrationsComplete,
         ) as unknown as ReturnType<typeof GuestRegistration.find>,
+      );
+      vi.mocked(Program.find).mockReturnValue(
+        createChainedMock(mockProgramCatalogComplete) as unknown as ReturnType<
+          typeof Program.find
+        >,
       );
       vi.mocked(Purchase.find).mockReturnValue(
         createChainedMock(mockProgramsComplete) as unknown as ReturnType<
@@ -707,7 +782,7 @@ describe("ExportAnalyticsController - Comprehensive Coverage", () => {
 
       expect(writeMock).toHaveBeenCalledWith("# Registrations\n");
       expect(writeMock).toHaveBeenCalledWith(
-        "UserId,EventId,Status,CreatedAt\n",
+        "UserId,UserEmail,UserName,EventId,EventTitle,RoleId,RoleName,Status,AttendanceStatus,AttendanceConfirmed,RegistrationDate\n",
       );
 
       const regRowCalls = writeMock.mock.calls.filter(
@@ -818,6 +893,11 @@ describe("ExportAnalyticsController - Comprehensive Coverage", () => {
           mockGuestRegistrationsComplete,
         ) as unknown as ReturnType<typeof GuestRegistration.find>,
       );
+      vi.mocked(Program.find).mockReturnValue(
+        createChainedMock(mockProgramCatalogComplete) as unknown as ReturnType<
+          typeof Program.find
+        >,
+      );
       vi.mocked(Purchase.find).mockReturnValue(
         createChainedMock(mockProgramsComplete) as unknown as ReturnType<
           typeof Purchase.find
@@ -873,6 +953,11 @@ describe("ExportAnalyticsController - Comprehensive Coverage", () => {
         expect.anything(),
         expect.anything(),
         "Programs",
+      );
+      expect(XLSX.utils.book_append_sheet).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.anything(),
+        "Program Catalog",
       );
       expect(XLSX.utils.book_append_sheet).toHaveBeenCalledWith(
         expect.anything(),
@@ -1008,11 +1093,27 @@ describe("ExportAnalyticsController - Comprehensive Coverage", () => {
       const regData = regSheetCall?.[0] as unknown[][];
       expect(regData[0]).toEqual([
         "User ID",
+        "User Email",
+        "User Name",
         "Event ID",
+        "Event Title",
         "Role ID",
-        "Status",
+        "Role Name",
+        "Registration Status",
+        "Attendance Status",
+        "Attendance Confirmed",
         "Registration Date",
+        "Registered By",
+        "Notes",
+        "Special Requirements",
       ]);
+      expect(regData[1][0]).toBe("user-123");
+      expect(regData[1][1]).toBe("john@example.com");
+      expect(regData[1][2]).toBe("John Doe");
+      expect(regData[1][3]).toBe("event-456");
+      expect(regData[1][4]).toBe("Annual Conference");
+      expect(regData[1][8]).toBe("Attended");
+      expect(regData[1][9]).toBe("Yes");
     });
 
     it("should format guest registration data correctly for XLSX", async () => {
@@ -1054,6 +1155,11 @@ describe("ExportAnalyticsController - Comprehensive Coverage", () => {
     });
 
     it("should format programs data correctly for XLSX", async () => {
+      vi.mocked(Program.find).mockReturnValue(
+        createChainedMock(mockProgramCatalogComplete) as unknown as ReturnType<
+          typeof Program.find
+        >,
+      );
       vi.mocked(Purchase.find).mockReturnValue(
         createChainedMock(mockProgramsComplete) as unknown as ReturnType<
           typeof Purchase.find
@@ -1070,17 +1176,21 @@ describe("ExportAnalyticsController - Comprehensive Coverage", () => {
         (call) =>
           Array.isArray(call[0]) &&
           call[0][0] &&
-          call[0][0][2] === "Final Price (cents)",
+          call[0][0][3] === "Program Title",
       );
 
       expect(programsSheetCall).toBeDefined();
       const progData = programsSheetCall?.[0] as unknown[][];
       expect(progData[0]).toEqual([
         "User ID",
+        "Purchase Type",
         "Program ID",
+        "Program Title",
+        "Order Number",
         "Final Price (cents)",
         "Status",
         "Purchase Date",
+        "Student Role",
         "Class Rep",
         "Early Bird",
         "Promo Code",
@@ -1088,10 +1198,72 @@ describe("ExportAnalyticsController - Comprehensive Coverage", () => {
       ]);
       // First program row
       expect(progData[1][0]).toBe("user-prog-1");
-      expect(progData[1][2]).toBe(15000);
-      expect(progData[1][5]).toBe("Yes"); // isClassRep
-      expect(progData[1][6]).toBe("Yes"); // isEarlyBird
-      expect(progData[1][7]).toBe("EARLY2025");
+      expect(progData[1][2]).toBe("prog-leadership");
+      expect(progData[1][3]).toBe("Leadership Program");
+      expect(progData[1][5]).toBe(15000);
+      expect(progData[1][9]).toBe("Yes"); // isClassRep
+      expect(progData[1][10]).toBe("Yes"); // isEarlyBird
+      expect(progData[1][11]).toBe("EARLY2025");
+    });
+
+    it("should resolve program titles when purchase programId is an ObjectId reference", async () => {
+      req.query = { format: "json" };
+      vi.mocked(Program.find).mockReturnValue(
+        createChainedMock(mockProgramCatalogComplete) as unknown as ReturnType<
+          typeof Program.find
+        >,
+      );
+      vi.mocked(Purchase.find).mockReturnValue(
+        createChainedMock([
+          {
+            userId: { toHexString: () => "64f000000000000000000004" },
+            programId: { toHexString: () => "prog-leadership" },
+            finalPrice: 15000,
+            status: "completed",
+          },
+        ]) as unknown as ReturnType<typeof Purchase.find>,
+      );
+
+      await ExportAnalyticsController.exportAnalytics(
+        req as Request,
+        res as Response,
+      );
+
+      const sentData = JSON.parse(sendMock.mock.calls[0][0] as string);
+      expect(sentData.programs[0]).toMatchObject({
+        userId: "64f000000000000000000004",
+        programId: "prog-leadership",
+        programTitle: "Leadership Program",
+      });
+    });
+
+    it("should include a program catalog lookup sheet for program names", async () => {
+      vi.mocked(Program.find).mockReturnValue(
+        createChainedMock(mockProgramCatalogComplete) as unknown as ReturnType<
+          typeof Program.find
+        >,
+      );
+
+      await ExportAnalyticsController.exportAnalytics(
+        req as Request,
+        res as Response,
+      );
+
+      const aoaCalls = vi.mocked(XLSX.utils.aoa_to_sheet).mock.calls;
+      const catalogSheetCall = aoaCalls.find(
+        (call) =>
+          Array.isArray(call[0]) &&
+          call[0][0] &&
+          call[0][0][0] === "Program ID" &&
+          call[0][0][1] === "Program Name",
+      );
+
+      expect(catalogSheetCall).toBeDefined();
+      const catalogData = catalogSheetCall?.[0] as unknown[][];
+      expect(catalogData[1][0]).toBe("prog-leadership");
+      expect(catalogData[1][1]).toBe("Leadership Program");
+      expect(catalogData[1][2]).toBe("NextGen");
+      expect(catalogData[1][4]).toBe("2025-06 to 2025-08");
     });
 
     it("should format donations data correctly for XLSX", async () => {
@@ -1486,12 +1658,12 @@ describe("ExportAnalyticsController - Comprehensive Coverage", () => {
         (call) =>
           Array.isArray(call[0]) &&
           call[0][0] &&
-          call[0][0][2] === "Final Price (cents)",
+          call[0][0][5] === "Final Price (cents)",
       );
 
       expect(programsSheetCall).toBeDefined();
       const progData = programsSheetCall?.[0] as unknown[][];
-      expect(progData[1][2]).toBe(0);
+      expect(progData[1][5]).toBe(0);
     });
 
     it("should handle donations with zero amount", async () => {

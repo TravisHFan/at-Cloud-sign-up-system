@@ -1,10 +1,12 @@
 import { io, Socket } from "socket.io-client";
 import type { EventUpdate, ConnectedPayload } from "../types/realtime";
+import { resolveSocketURL } from "../config/apiUrl";
 
 // For WebSocket connection, we need the base server URL, not the API path
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:5001/api";
-const SOCKET_URL = API_BASE_URL.replace("/api", "");
+const SOCKET_URL = resolveSocketURL(
+  import.meta.env.VITE_API_URL,
+  import.meta.env.VITE_SOCKET_URL,
+);
 
 interface UserUpdateData {
   userId: string;
@@ -74,7 +76,7 @@ class SocketServiceFrontend {
       (this.socket?.connected && this.currentToken === token)
     ) {
       console.log(
-        "📡 Socket already connected or connecting, skipping reconnection"
+        "📡 Socket already connected or connecting, skipping reconnection",
       );
       return;
     }
@@ -186,7 +188,7 @@ class SocketServiceFrontend {
       // Handle specific "Invalid namespace" error
       if (error.message && error.message.includes("Invalid namespace")) {
         console.error(
-          "Invalid namespace error detected - this may be a development issue"
+          "Invalid namespace error detected - this may be a development issue",
         );
         // Don't attempt reconnection for namespace errors as they indicate a configuration issue
         return;
@@ -240,7 +242,7 @@ class SocketServiceFrontend {
 
     setTimeout(() => {
       console.log(
-        `🔌 Attempting reconnection ${this.reconnectAttempts}/${this.maxReconnectAttempts}...`
+        `🔌 Attempting reconnection ${this.reconnectAttempts}/${this.maxReconnectAttempts}...`,
       );
       this.socket?.connect();
     }, delay);
@@ -273,7 +275,7 @@ class SocketServiceFrontend {
         console.log(`📡 Joined event room: ${eventId}`);
       } else if (!connected) {
         console.warn(
-          `📡 Cannot join event room ${eventId} - socket not connected`
+          `📡 Cannot join event room ${eventId} - socket not connected`,
         );
       }
     }
@@ -297,7 +299,7 @@ class SocketServiceFrontend {
       // Remove from tracking even if socket is disconnected
       this.joinedRooms.delete(eventId);
       console.log(
-        `📡 Removed ${eventId} from joined rooms (socket disconnected)`
+        `📡 Removed ${eventId} from joined rooms (socket disconnected)`,
       );
     }
 
@@ -310,7 +312,7 @@ class SocketServiceFrontend {
    */
   on<K extends keyof SocketEventHandlers>(
     event: K,
-    handler: SocketEventHandlers[K]
+    handler: SocketEventHandlers[K],
   ): void {
     this.eventHandlers[event] = handler;
   }

@@ -1,7 +1,8 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import App from "../App";
+import { API_BASE_URL } from "../services/api";
 
 // Lightweight harness mirroring main entry but using MemoryRouter
 const renderWithRouter = (initialEntries: string[]) => {
@@ -39,12 +40,39 @@ describe("App routing", () => {
     expect(screen.getByText(/Login to @Cloud/i)).toBeInTheDocument();
   });
 
+  it("renders email verification from root query token", async () => {
+    localStorage.removeItem("authToken");
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, alreadyVerified: true }),
+    } as Response);
+
+    renderWithRouter(["/?verifyEmailToken=query-token"]);
+
+    expect(screen.getByText(/email verification/i)).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith(
+        `${API_BASE_URL}/auth/verify-email/query-token`,
+        expect.objectContaining({ method: "GET" })
+      );
+    });
+
+    fetchSpy.mockRestore();
+  });
+
   it("renders dashboard layout shell for /dashboard route as guest", async () => {
     // Clear auth token to simulate unauthenticated state
     localStorage.removeItem("authToken");
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, data: [] }),
+    } as Response);
 
     renderWithRouter(["/dashboard"]);
     // /dashboard is now guest-accessible; it should render the layout, not redirect to login
     expect(document.body.innerHTML.length).toBeGreaterThan(0);
+
+    fetchSpy.mockRestore();
   });
 });

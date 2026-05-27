@@ -4,6 +4,7 @@ import helmet from "helmet";
 import {
   securityHeaders,
   corsOptions,
+  getAllowedFrontendOrigins,
   xssProtection,
   requestSizeLimit,
   ipSecurity,
@@ -13,7 +14,7 @@ import {
 // Mock helmet
 vi.mock("helmet", () => ({
   default: vi.fn(
-    () => (req: Request, res: Response, next: NextFunction) => next()
+    () => (req: Request, res: Response, next: NextFunction) => next(),
   ),
 }));
 
@@ -55,7 +56,7 @@ describe("Security Middleware", () => {
       securityHeaders(
         mockRequest as Request,
         mockResponse as Response,
-        mockNext
+        mockNext,
       );
       expect(mockNext).toHaveBeenCalled();
     });
@@ -103,6 +104,38 @@ describe("Security Middleware", () => {
       }
     });
 
+    it("should allow staging and production Render frontend origins", () => {
+      const callback = vi.fn();
+      const allowedOrigins = [
+        "https://atcloud-erp-frontend-staging.onrender.com",
+        "https://atcloud-erp-frontend-prod.onrender.com",
+      ];
+
+      allowedOrigins.forEach((origin) => {
+        callback.mockClear();
+        corsOptions.origin!(origin, callback);
+        expect(callback).toHaveBeenCalledWith(null, true);
+      });
+    });
+
+    it("should allow comma-separated frontend origins from environment", () => {
+      process.env.FRONTEND_ORIGINS =
+        "https://preview-one.example.com, https://preview-two.example.com/";
+
+      expect(getAllowedFrontendOrigins()).toEqual(
+        expect.arrayContaining([
+          "https://preview-one.example.com",
+          "https://preview-two.example.com",
+        ]),
+      );
+
+      const callback = vi.fn();
+      corsOptions.origin!("https://preview-two.example.com", callback);
+      expect(callback).toHaveBeenCalledWith(null, true);
+
+      delete process.env.FRONTEND_ORIGINS;
+    });
+
     it("should reject requests from disallowed origins", () => {
       const callback = vi.fn();
       corsOptions.origin!("https://malicious-site.com", callback);
@@ -110,7 +143,7 @@ describe("Security Middleware", () => {
       expect(callback).toHaveBeenCalledWith(
         expect.objectContaining({
           message: "Not allowed by CORS",
-        })
+        }),
       );
     });
 
@@ -234,7 +267,7 @@ describe("Security Middleware", () => {
       requestSizeLimit(
         mockRequest as Request,
         mockResponse as Response,
-        mockNext
+        mockNext,
       );
 
       expect(mockGet).toHaveBeenCalledWith("content-length");
@@ -249,7 +282,7 @@ describe("Security Middleware", () => {
       requestSizeLimit(
         mockRequest as Request,
         mockResponse as Response,
-        mockNext
+        mockNext,
       );
 
       expect(mockNext).toHaveBeenCalled();
@@ -263,7 +296,7 @@ describe("Security Middleware", () => {
       requestSizeLimit(
         mockRequest as Request,
         mockResponse as Response,
-        mockNext
+        mockNext,
       );
 
       expect(mockResponse.status).toHaveBeenCalledWith(413);
@@ -281,7 +314,7 @@ describe("Security Middleware", () => {
       requestSizeLimit(
         mockRequest as Request,
         mockResponse as Response,
-        mockNext
+        mockNext,
       );
 
       expect(mockNext).toHaveBeenCalled();
@@ -295,7 +328,7 @@ describe("Security Middleware", () => {
       requestSizeLimit(
         mockRequest as Request,
         mockResponse as Response,
-        mockNext
+        mockNext,
       );
 
       expect(mockNext).toHaveBeenCalled();
@@ -372,11 +405,11 @@ describe("Security Middleware", () => {
         corsError,
         mockRequest as Request,
         mockResponse as Response,
-        mockNext
+        mockNext,
       );
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        "Security warning: Not allowed by CORS from IP: 192.168.1.100"
+        "Security warning: Not allowed by CORS from IP: 192.168.1.100",
       );
       expect(mockResponse.status).toHaveBeenCalledWith(500);
       expect(mockResponse.json).toHaveBeenCalledWith({
@@ -387,7 +420,7 @@ describe("Security Middleware", () => {
 
     it("should log rate limit-related errors", () => {
       const rateLimitError = new Error(
-        "Too many requests - rate limit exceeded"
+        "Too many requests - rate limit exceeded",
       );
       (mockRequest as any).ip = "10.0.0.1";
 
@@ -395,11 +428,11 @@ describe("Security Middleware", () => {
         rateLimitError,
         mockRequest as Request,
         mockResponse as Response,
-        mockNext
+        mockNext,
       );
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        "Security warning: Too many requests - rate limit exceeded from IP: 10.0.0.1"
+        "Security warning: Too many requests - rate limit exceeded from IP: 10.0.0.1",
       );
     });
 
@@ -410,7 +443,7 @@ describe("Security Middleware", () => {
         regularError,
         mockRequest as Request,
         mockResponse as Response,
-        mockNext
+        mockNext,
       );
 
       expect(consoleSpy).not.toHaveBeenCalled();
@@ -427,7 +460,7 @@ describe("Security Middleware", () => {
         error,
         mockRequest as Request,
         mockResponse as Response,
-        mockNext
+        mockNext,
       );
 
       expect(mockResponse.json).toHaveBeenCalledWith({
@@ -454,7 +487,7 @@ describe("Security Middleware", () => {
         error,
         mockRequest as Request,
         mockResponse as Response,
-        mockNext
+        mockNext,
       );
 
       expect(mockResponse.json).toHaveBeenCalledWith({
@@ -477,7 +510,7 @@ describe("Security Middleware", () => {
         error,
         mockRequest as Request,
         mockResponse as Response,
-        mockNext
+        mockNext,
       );
 
       expect(consoleSpy).not.toHaveBeenCalled();
@@ -552,7 +585,7 @@ describe("Security Middleware", () => {
 
       // message field should keep HTML but strip script tags
       expect(mockRequest.body.message).toBe(
-        "<p>Hello</p><strong>World</strong>"
+        "<p>Hello</p><strong>World</strong>",
       );
       // subject field should have scripts stripped (not in allowlist)
       expect(mockRequest.body.subject).toBe("Subject");

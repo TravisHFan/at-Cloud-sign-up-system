@@ -1,4 +1,5 @@
 import { EmailTransporter, EmailOptions } from "../../email";
+import { EmailHelpers } from "../EmailHelpers";
 import {
   generateVerificationEmail,
   generatePasswordResetEmail,
@@ -40,9 +41,9 @@ export class AuthEmailService {
     name: string,
     verificationToken: string
   ): Promise<boolean> {
-    const verificationUrl = `${
-      process.env.FRONTEND_URL || "http://localhost:5173"
-    }/verify-email/${verificationToken}`;
+    const verificationUrl = EmailHelpers.buildFrontendHashUrl(
+      `/verify-email/${verificationToken}`
+    );
 
     const html = generateVerificationEmail({ name, verificationUrl });
 
@@ -59,9 +60,9 @@ export class AuthEmailService {
     name: string,
     resetToken: string
   ): Promise<boolean> {
-    const resetUrl = `${
-      process.env.FRONTEND_URL || "http://localhost:5173"
-    }/reset-password/${resetToken}`;
+    const resetUrl = EmailHelpers.buildFrontendHashUrl(
+      `/reset-password/${resetToken}`
+    );
 
     const html = generatePasswordResetEmail({ name, resetUrl });
 
@@ -78,9 +79,9 @@ export class AuthEmailService {
     name: string,
     confirmToken: string
   ): Promise<boolean> {
-    const confirmUrl = `${
-      process.env.FRONTEND_URL || "http://localhost:5173"
-    }/change-password/confirm/${confirmToken}`;
+    const confirmUrl = EmailHelpers.buildFrontendHashUrl(
+      `/change-password/confirm/${confirmToken}`
+    );
 
     const html = generatePasswordChangeRequestEmail({ name, confirmUrl });
 
@@ -114,9 +115,7 @@ export class AuthEmailService {
   }
 
   static async sendWelcomeEmail(email: string, name: string): Promise<boolean> {
-    const dashboardUrl = `${
-      process.env.FRONTEND_URL || "http://localhost:5173"
-    }/dashboard`;
+    const dashboardUrl = EmailHelpers.buildFrontendHashUrl("/dashboard");
 
     const html = generateWelcomeEmail({ name, dashboardUrl });
 

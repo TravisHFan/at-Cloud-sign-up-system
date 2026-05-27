@@ -7,12 +7,14 @@ Note on terminology: "Leader" denotes the System Authorization Level. The user-f
 Run this before deploying to catch issues early:
 
 ```bash
-# Generate secure secrets
-node generate-secrets.js
+# Quick code and deployment-contract validation
+npm run verify
 
-# Check deployment readiness
-node health-check.js
+# Generate secure secrets when creating a new environment
+node generate-secrets.js
 ```
+
+For the staging/production parity contract, see `docs/STAGING_PRODUCTION_PARITY.md`.
 
 ## ✅ Critical Issues Fixed
 
@@ -95,6 +97,8 @@ node health-check.js
    JWT_REFRESH_SECRET=<generated>
    SESSION_SECRET=<generated>
    FRONTEND_URL=https://your-frontend.onrender.com
+   BACKEND_URL=https://your-backend.onrender.com
+   UPLOAD_DESTINATION=/uploads/
    # ... email config
    ```
 

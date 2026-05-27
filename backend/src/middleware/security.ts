@@ -4,6 +4,35 @@ import { Request, Response, NextFunction } from "express";
 import { createLogger } from "../services/LoggerService";
 const log = createLogger("Security");
 
+const DEFAULT_FRONTEND_ORIGINS = [
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "http://localhost:5174",
+  "http://localhost:5175",
+  "http://localhost:5176",
+  "https://at-cloud-sign-up-system.onrender.com",
+  "https://atcloud-erp-frontend-prod.onrender.com",
+  "https://atcloud-erp-frontend-staging.onrender.com",
+];
+
+function normalizeOrigin(origin: string): string {
+  return origin.trim().replace(/\/+$/, "");
+}
+
+function parseOrigins(value: string | undefined): string[] {
+  return (value || "").split(",").map(normalizeOrigin).filter(Boolean);
+}
+
+export function getAllowedFrontendOrigins(): string[] {
+  return Array.from(
+    new Set([
+      ...DEFAULT_FRONTEND_ORIGINS,
+      ...parseOrigins(process.env.FRONTEND_URL),
+      ...parseOrigins(process.env.FRONTEND_ORIGINS),
+    ]),
+  );
+}
+
 // Security headers middleware
 export const securityHeaders = helmet({
   // Keep tight CSP but allow images from any https origin so avatars can load
@@ -30,16 +59,9 @@ export const securityHeaders = helmet({
 export const corsOptions = {
   origin: function (
     origin: string | undefined,
-    callback: (err: Error | null, allow?: boolean) => void
+    callback: (err: Error | null, allow?: boolean) => void,
   ) {
-    const allowedOrigins = [
-      process.env.FRONTEND_URL || "http://localhost:5173",
-      "http://localhost:3000", // Development fallback
-      "http://localhost:5174", // Vite preview
-      "http://localhost:5175", // Vite alternative port
-      "http://localhost:5176", // Vite alternative port 2
-      "https://at-cloud-sign-up-system.onrender.com", // Production frontend
-    ];
+    const allowedOrigins = getAllowedFrontendOrigins();
 
     // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
@@ -68,7 +90,7 @@ export const corsOptions = {
 export const xssProtection = (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void => {
   // Basic XSS protection for request body
   if (req.body) {
@@ -84,7 +106,7 @@ export const xssProtection = (
       if (typeof obj === "string") {
         return obj.replace(
           /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
-          ""
+          "",
         );
       }
       if (typeof obj === "object" && obj !== null) {
@@ -96,18 +118,18 @@ export const xssProtection = (
             if (typeof v === "string") {
               rec[key] = v.replace(
                 /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
-                ""
+                "",
               );
             } else {
               rec[key] = sanitizeObject(
                 v,
-                parentPath ? `${parentPath}.${key}` : key
+                parentPath ? `${parentPath}.${key}` : key,
               );
             }
           } else {
             rec[key] = sanitizeObject(
               rec[key],
-              parentPath ? `${parentPath}.${key}` : key
+              parentPath ? `${parentPath}.${key}` : key,
             );
           }
         }
@@ -126,7 +148,7 @@ export const xssProtection = (
 export const requestSizeLimit = (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void => {
   const contentLength = parseInt(req.get("content-length") || "0");
   const maxSize = 10 * 1024 * 1024; // 10MB limit
@@ -146,7 +168,7 @@ export const requestSizeLimit = (
 export const ipSecurity = (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void => {
   const clientIp = req.ip || req.connection.remoteAddress || "unknown";
 
@@ -164,7 +186,7 @@ export const securityErrorHandler = (
   err: Error,
   req: Request,
   res: Response,
-  _next: NextFunction
+  _next: NextFunction,
 ): void => {
   // Log security-related errors
   if (err.message.includes("CORS") || err.message.includes("rate limit")) {

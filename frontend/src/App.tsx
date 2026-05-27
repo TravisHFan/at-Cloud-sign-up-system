@@ -1,4 +1,10 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import {
+  Routes,
+  Route,
+  Navigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { NotificationProvider } from "./contexts/NotificationContext";
 import { NotificationProvider as NotificationModalProvider } from "./contexts/NotificationModalContext";
@@ -65,12 +71,22 @@ import RefundRequestDecision from "./pages/RefundRequestDecision";
 import SessionExpiredModal from "./components/common/SessionExpiredModal";
 import EventPurchase from "./pages/EventPurchase";
 import EventPurchaseSuccess from "./pages/EventPurchaseSuccess";
-import { useParams } from "react-router-dom";
 
 /** Redirect legacy /pr/:id to /dashboard/programs/:id */
 function PrRedirect() {
   const { id } = useParams();
   return <Navigate to={`/dashboard/programs/${id}`} replace />;
+}
+
+function RootRoute() {
+  const [searchParams] = useSearchParams();
+  const verificationToken = searchParams.get("verifyEmailToken");
+
+  if (verificationToken) {
+    return <EmailVerification tokenOverride={verificationToken} />;
+  }
+
+  return <Home />;
 }
 
 function App() {
@@ -80,7 +96,7 @@ function App() {
         <NotificationProvider>
           <SessionExpiredModal />
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route path="/" element={<RootRoute />} />
             <Route path="/signup" element={<SignUp />} />
             <Route path="/login" element={<Login />} />
             {/* Public guest routes (migrated to root) */}

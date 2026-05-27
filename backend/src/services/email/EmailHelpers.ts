@@ -6,6 +6,39 @@
  */
 
 export class EmailHelpers {
+  private static readonly URL_WITH_PROTOCOL = /^[a-z][a-z0-9+.-]*:\/\//i;
+  private static readonly LOCAL_FRONTEND_HOST =
+    /^(localhost|127(?:\.\d{1,3}){3}|\[::1\])(?::\d+)?(?:\/|$)/i;
+
+  /**
+   * Normalize FRONTEND_URL into an absolute origin for links rendered in emails.
+   */
+  static getFrontendBaseUrl(defaultUrl = "http://localhost:5173"): string {
+    const configuredUrl = process.env.FRONTEND_URL?.trim();
+    const raw = configuredUrl || defaultUrl;
+    const withProtocol = this.URL_WITH_PROTOCOL.test(raw)
+      ? raw
+      : `${this.LOCAL_FRONTEND_HOST.test(raw) ? "http" : "https"}://${raw}`;
+
+    return withProtocol.replace(/\/+$/, "");
+  }
+
+  static buildFrontendUrl(
+    path: string,
+    defaultUrl = "http://localhost:5173"
+  ): string {
+    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+    return `${this.getFrontendBaseUrl(defaultUrl)}${normalizedPath}`;
+  }
+
+  static buildFrontendHashUrl(
+    path: string,
+    defaultUrl = "http://localhost:5173"
+  ): string {
+    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+    return `${this.getFrontendBaseUrl(defaultUrl)}/#${normalizedPath}`;
+  }
+
   /**
    * Normalize time string from 12h to 24h format
    */

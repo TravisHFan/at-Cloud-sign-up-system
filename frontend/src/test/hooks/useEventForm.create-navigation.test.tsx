@@ -92,7 +92,7 @@ describe("useEventForm create success navigation", () => {
     expect(toastOptions.actionButton.text).toBe("View Event");
     toastOptions.actionButton.onClick();
 
-    expect(window.location.href).toBe("/dashboard/event/evt-created-1");
+    expect(window.location.href).toBe("/#/dashboard/event/evt-created-1");
   });
 
   it("uses the first returned event id for recurring event creation", async () => {
@@ -131,7 +131,9 @@ describe("useEventForm create success navigation", () => {
     const toastOptions = toastSuccess.mock.calls[0][1];
     toastOptions.actionButton.onClick();
 
-    expect(window.location.href).toBe("/dashboard/event/evt-recurring-first");
+    expect(window.location.href).toBe(
+      "/#/dashboard/event/evt-recurring-first",
+    );
   });
 
   it("does not create when overlap confirmation is cancelled", async () => {

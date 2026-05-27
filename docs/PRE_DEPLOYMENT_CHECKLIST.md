@@ -11,6 +11,9 @@ npm run pre-deploy
 # Quick verification (lint + type-check)
 npm run verify
 
+# Deployment contract guardrails only
+npm run check:deployment-guardrails
+
 # Check dependency tree
 npm run check-deps
 
@@ -74,8 +77,26 @@ npm run check-deps
 
 1. Runs ESLint
 2. Runs TypeScript type-check
+3. Runs deployment guardrails for staging/production routing and hosting assumptions
 
 **When to use**: Before every commit
+
+### `npm run check:deployment-guardrails`
+
+**Purpose**: Prevent staging-only deployment assumptions from returning
+
+**Checks**:
+
+1. Frontend entrypoint still uses `HashRouter`
+2. Internal hard navigations do not point at direct static paths like `/login`
+3. Avatar URLs are not tied to one production backend hostname
+4. Upload paths are normalized instead of string-concatenated
+5. `render.yaml` keeps the frontend static rewrite contract
+
+**When to use**:
+
+- Before staging and production deploys
+- When changing routing, auth/session behavior, avatar uploads, or Render config
 
 ### `npm run clean-install`
 
