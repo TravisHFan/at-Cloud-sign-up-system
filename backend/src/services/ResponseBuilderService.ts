@@ -81,6 +81,7 @@ type RegLean = {
   eventId: Types.ObjectId;
   roleId: string;
   status?: string;
+  attendanceConfirmed?: boolean;
   createdAt?: Date;
 };
 
@@ -271,8 +272,10 @@ export class ResponseBuilderService {
               roleId: reg.roleId,
               status: (reg.status ?? "active") as
                 | "active"
-                | "cancelled"
-                | "waitlist",
+                | "waitlisted"
+                | "attended"
+                | "no_show",
+              attendanceConfirmed: reg.attendanceConfirmed === true,
               // Include participant-provided metadata
               notes: (reg as { notes?: string }).notes,
               specialRequirements: (reg as { specialRequirements?: string })
@@ -618,8 +621,10 @@ export class ResponseBuilderService {
                 roleId: reg.roleId,
                 status: (reg.status || "active") as
                   | "active"
-                  | "cancelled"
-                  | "waitlist",
+                  | "waitlisted"
+                  | "attended"
+                  | "no_show",
+                attendanceConfirmed: reg.attendanceConfirmed === true,
                 user: ResponseBuilderService.buildUserBasicInfo(
                   (typeof reg.userId === "object"
                     ? (reg.userId as LeanUser)

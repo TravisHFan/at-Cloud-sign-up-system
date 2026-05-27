@@ -452,6 +452,16 @@ export class EventController {
     return RegistrationController.assignUserToRole(req, res);
   }
 
+  // Mark attendance for completed event registrations
+  static async updateRegistrationAttendance(
+    req: Request,
+    res: Response,
+  ): Promise<void> {
+    const { RegistrationController } =
+      await import("./event/RegistrationController");
+    return RegistrationController.updateRegistrationAttendance(req, res);
+  }
+
   // Get user's registered events
   static async getUserEvents(req: Request, res: Response): Promise<void> {
     const { MaintenanceController } =

@@ -8,6 +8,7 @@ export type EventUpdateType =
   | "role_full"
   | "role_available"
   | "workshop_topic_updated"
+  | "attendance_updated"
   | "user_assigned"
   | "guest_registration"
   | "guest_cancellation"
@@ -105,6 +106,14 @@ export interface WorkshopTopicUpdatedPayload {
   userId?: string; // actor id
 }
 
+export interface AttendanceUpdatedPayload {
+  registrationId: string;
+  userId: string;
+  roleId: string;
+  attended: boolean;
+  event?: MinimalEventSnapshot;
+}
+
 // Role capacity state payloads (minimal contract for UI hints)
 export interface RoleFullPayload {
   roleId: string;
@@ -187,6 +196,12 @@ export type EventUpdate =
       data: WorkshopTopicUpdatedPayload;
       timestamp: string;
     }
+  | {
+      eventId: string;
+      updateType: "attendance_updated";
+      data: AttendanceUpdatedPayload;
+      timestamp: string;
+    }
   // Role capacity updates
   | {
       eventId: string;
@@ -214,6 +229,7 @@ export type EventUpdate =
         | "user_moved"
         | "user_assigned"
         | "workshop_topic_updated"
+        | "attendance_updated"
         | "role_full"
         | "role_available"
       >;

@@ -114,7 +114,10 @@ vi.mock("../../../../src/models/AuditLog", () => ({
   },
 }));
 
-import { Event, User } from "../../../../src/models";
+import { Event, Registration, User } from "../../../../src/models";
+import { ResponseBuilderService } from "../../../../src/services/ResponseBuilderService";
+import { CachePatterns } from "../../../../src/services";
+import { socketService } from "../../../../src/services/infrastructure/SocketService";
 
 describe("RegistrationController", () => {
   let req: Partial<Request>;
@@ -561,6 +564,115 @@ describe("RegistrationController", () => {
       expect(jsonMock).toHaveBeenCalledWith({
         success: false,
         message: "User is inactive or not verified.",
+      });
+    });
+  });
+
+  describe("updateRegistrationAttendance", () => {
+    it("should return 400 when attendance value is missing", async () => {
+      req.params = {
+        id: "507f1f77bcf86cd799439011",
+        registrationId: "507f1f77bcf86cd799439012",
+      };
+      req.body = {};
+
+      await RegistrationController.updateRegistrationAttendance(
+        req as Request,
+        res as Response,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(400);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: false,
+        message: "Attendance value must be true or false.",
+      });
+    });
+
+    it("should reject attendance updates for non-completed events", async () => {
+      req.params = {
+        id: "507f1f77bcf86cd799439011",
+        registrationId: "507f1f77bcf86cd799439012",
+      };
+      req.body = { attended: true };
+      vi.mocked(Event.findById).mockResolvedValueOnce({
+        _id: "507f1f77bcf86cd799439011",
+        status: "upcoming",
+      });
+
+      await RegistrationController.updateRegistrationAttendance(
+        req as Request,
+        res as Response,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(400);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: false,
+        message: "Attendance can only be updated for completed events.",
+      });
+    });
+
+    it("should mark attendance and emit an event update", async () => {
+      const eventId = "507f1f77bcf86cd799439011";
+      const registrationId = "507f1f77bcf86cd799439012";
+      const userId = "507f1f77bcf86cd799439013";
+      const updatedEvent = { id: eventId, roles: [] } as Awaited<
+        ReturnType<typeof ResponseBuilderService.buildEventWithRegistrations>
+      >;
+      const mockRegistration = {
+        _id: registrationId,
+        eventId,
+        userId,
+        roleId: "role-123",
+        status: "active",
+        attendanceConfirmed: false,
+        addAuditEntry: vi.fn(),
+        save: vi.fn().mockResolvedValue({}),
+      };
+
+      req.params = { id: eventId, registrationId };
+      req.body = { attended: true };
+      vi.mocked(Event.findById).mockResolvedValueOnce({
+        _id: eventId,
+        status: "completed",
+      });
+      vi.mocked(Registration.findOne).mockResolvedValueOnce(mockRegistration);
+      vi.mocked(
+        ResponseBuilderService.buildEventWithRegistrations,
+      ).mockResolvedValueOnce(updatedEvent);
+
+      await RegistrationController.updateRegistrationAttendance(
+        req as Request,
+        res as Response,
+      );
+
+      expect(mockRegistration.attendanceConfirmed).toBe(true);
+      expect(mockRegistration.status).toBe("attended");
+      expect(mockRegistration.addAuditEntry).toHaveBeenCalledWith(
+        "updated_notes",
+        req.user?._id,
+        "Attendance marked attended",
+        { attendanceConfirmed: false, status: "active" },
+        { attendanceConfirmed: true, status: "attended" },
+      );
+      expect(mockRegistration.save).toHaveBeenCalled();
+      expect(CachePatterns.invalidateEventCache).toHaveBeenCalledWith(eventId);
+      expect(CachePatterns.invalidateAnalyticsCache).toHaveBeenCalled();
+      expect(socketService.emitEventUpdate).toHaveBeenCalledWith(
+        eventId,
+        "attendance_updated",
+        {
+          registrationId,
+          userId,
+          roleId: "role-123",
+          attended: true,
+          event: updatedEvent,
+        },
+      );
+      expect(statusMock).toHaveBeenCalledWith(200);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: true,
+        message: "Attendance marked as attended.",
+        data: { event: updatedEvent },
       });
     });
   });
