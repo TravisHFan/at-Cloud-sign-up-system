@@ -1,5 +1,11 @@
 import { Request, Response } from "express";
-import { User, Event, Registration, GuestRegistration } from "../../models";
+import {
+  User,
+  Event,
+  Registration,
+  GuestRegistration,
+  Program,
+} from "../../models";
 import Purchase from "../../models/Purchase";
 import DonationTransaction from "../../models/DonationTransaction";
 import { hasPermission, PERMISSIONS } from "../../utils/roleUtils";
@@ -64,6 +70,148 @@ export default class ExportAnalyticsController {
       const registrationFilter = {
         createdAt: { $gte: fromDate, $lte: toDate },
       } as const;
+
+      const toIdString = (value: unknown): string => {
+        if (value == null) return "";
+        if (typeof value === "string") return value;
+        if (typeof value === "number") return String(value);
+        if (typeof value === "object") {
+          const maybeDoc = value as {
+            _id?: unknown;
+            id?: unknown;
+            toHexString?: () => string;
+            toString?: () => string;
+          };
+          if (maybeDoc._id != null) return toIdString(maybeDoc._id);
+          if (typeof maybeDoc.toHexString === "function") {
+            return maybeDoc.toHexString();
+          }
+          if (maybeDoc.id != null) return toIdString(maybeDoc.id);
+          if (
+            typeof maybeDoc.toString === "function" &&
+            maybeDoc.toString !== Object.prototype.toString
+          ) {
+            return maybeDoc.toString();
+          }
+        }
+        return String(value);
+      };
+
+      const titleFromRef = (value: unknown): string => {
+        if (value && typeof value === "object" && "title" in value) {
+          return String((value as { title?: unknown }).title ?? "");
+        }
+        return "";
+      };
+
+      const deriveAttendanceStatus = (reg: {
+        status?: string;
+        attendanceConfirmed?: boolean;
+      }): string => {
+        if (reg.status === "attended" || reg.attendanceConfirmed === true) {
+          return "Attended";
+        }
+        if (reg.status === "no_show") {
+          return "No Show";
+        }
+        return "Not Recorded";
+      };
+
+      const snapshotName = (snapshot?: {
+        username?: string;
+        firstName?: string;
+        lastName?: string;
+      }): string => {
+        if (!snapshot) return "";
+        const fullName = [snapshot.firstName, snapshot.lastName]
+          .filter(Boolean)
+          .join(" ")
+          .trim();
+        return fullName || snapshot.username || "";
+      };
+
+      const csvValue = (value: unknown): string =>
+        String(value ?? "")
+          .replace(/\r?\n/g, " ")
+          .replace(/,/g, " ");
+
+      const programPeriod = (period?: {
+        startYear?: string;
+        startMonth?: string;
+        endYear?: string;
+        endMonth?: string;
+      }): string => {
+        if (!period) return "";
+        const start = [period.startYear, period.startMonth]
+          .filter(Boolean)
+          .join("-");
+        const end = [period.endYear, period.endMonth]
+          .filter(Boolean)
+          .join("-");
+        return [start, end].filter(Boolean).join(" to ");
+      };
+
+      type RawRegistrationExport = {
+        userId?: unknown;
+        eventId?: unknown;
+        roleId?: string;
+        status?: string;
+        registrationDate?: string | Date;
+        attendanceConfirmed?: boolean;
+        notes?: string;
+        specialRequirements?: string;
+        registeredBy?: unknown;
+        userSnapshot?: {
+          username?: string;
+          firstName?: string;
+          lastName?: string;
+          email?: string;
+        };
+        eventSnapshot?: {
+          title?: string;
+          date?: string;
+          time?: string;
+          location?: string;
+          type?: string;
+          roleName?: string;
+        };
+      };
+
+      type ProgramCatalogExport = {
+        _id?: unknown;
+        id?: unknown;
+        title?: string;
+        programType?: string;
+        hostedBy?: string;
+        period?: {
+          startYear?: string;
+          startMonth?: string;
+          endYear?: string;
+          endMonth?: string;
+        };
+        isFree?: boolean;
+        createdAt?: string | Date;
+        updatedAt?: string | Date;
+      };
+
+      type RawProgramPurchaseExport = {
+        userId?: unknown;
+        purchaseType?: string;
+        programId?: unknown;
+        eventId?: unknown;
+        membershipId?: unknown;
+        orderNumber?: string;
+        itemTitle?: string;
+        itemLabel?: string;
+        finalPrice?: number;
+        status?: string;
+        purchaseDate?: string | Date;
+        studentRoleName?: string;
+        isClassRep?: boolean;
+        isEarlyBird?: boolean;
+        promoCode?: string;
+        stripePaymentIntentId?: string;
+      };
 
       // Helper to safely fetch arrays from mongoose or mocked find() calls
       const safeFetch = async <T = unknown>(
@@ -146,6 +294,31 @@ export default class ExportAnalyticsController {
         }
       };
 
+      const programCatalog = (
+        (await safeFetch(Program as unknown, {}, {
+          select:
+            "title programType hostedBy period isFree createdAt updatedAt",
+          sort: { createdAt: -1 },
+          limit: maxRows,
+          strict: false,
+        })) as ProgramCatalogExport[]
+      ).map((program) => ({
+        id: toIdString(program._id ?? program.id),
+        title: program.title ?? "",
+        programType: program.programType ?? "",
+        hostedBy: program.hostedBy ?? "",
+        period: program.period,
+        isFree: program.isFree,
+        createdAt: program.createdAt,
+        updatedAt: program.updatedAt,
+      }));
+
+      const programTitleById = new Map(
+        programCatalog
+          .filter((program) => program.id)
+          .map((program) => [program.id, program.title])
+      );
+
       // Get constrained analytics data
       const data = {
         users: (await safeFetch(User as unknown, userFilter, {
@@ -202,39 +375,30 @@ export default class ExportAnalyticsController {
             | string;
           createdAt?: string | Date;
         }>,
-        registrations: (await safeFetch(
-          Registration as unknown,
-          registrationFilter,
-          {
-            sort: { createdAt: -1 },
-            limit: maxRows,
-            strict: true,
-          }
-        )) as Array<{
-          userId?: string;
-          eventId?: string;
-          roleId?: string;
-          status?: string;
-          registrationDate?: string | Date;
-          attendanceConfirmed?: boolean;
-          notes?: string;
-          specialRequirements?: string;
-          registeredBy?: string;
-          userSnapshot?: {
-            username?: string;
-            firstName?: string;
-            lastName?: string;
-            email?: string;
-          };
-          eventSnapshot?: {
-            title?: string;
-            date?: string;
-            time?: string;
-            location?: string;
-            type?: string;
-            roleName?: string;
-          };
-        }>,
+        registrations: (
+          (await safeFetch(
+            Registration as unknown,
+            registrationFilter,
+            {
+              sort: { createdAt: -1 },
+              limit: maxRows,
+              strict: true,
+            }
+          )) as RawRegistrationExport[]
+        ).map((reg) => ({
+          userId: toIdString(reg.userId),
+          eventId: toIdString(reg.eventId),
+          roleId: reg.roleId,
+          status: reg.status,
+          attendanceStatus: deriveAttendanceStatus(reg),
+          attendanceConfirmed: reg.attendanceConfirmed,
+          registrationDate: reg.registrationDate,
+          notes: reg.notes,
+          specialRequirements: reg.specialRequirements,
+          registeredBy: toIdString(reg.registeredBy),
+          userSnapshot: reg.userSnapshot,
+          eventSnapshot: reg.eventSnapshot,
+        })),
         guestRegistrations: (await (async () => {
           // Define a minimal lean shape for GuestRegistration to avoid explicit 'any'.
           type GuestRegLean = {
@@ -332,25 +496,43 @@ export default class ExportAnalyticsController {
           notes?: string;
         }>,
         // Programs (Purchases)
-        programs: (await safeFetch(
-          Purchase as unknown,
-          {},
-          {
-            sort: { purchaseDate: -1 },
-            limit: maxRows,
-            strict: false,
-          }
-        )) as Array<{
-          userId?: unknown;
-          programId?: unknown;
-          finalPrice?: number;
-          status?: string;
-          purchaseDate?: string | Date;
-          isClassRep?: boolean;
-          isEarlyBird?: boolean;
-          promoCode?: string;
-          stripePaymentIntentId?: string;
-        }>,
+        programs: (
+          (await safeFetch(
+            Purchase as unknown,
+            {},
+            {
+              sort: { purchaseDate: -1 },
+              limit: maxRows,
+              strict: false,
+            }
+          )) as RawProgramPurchaseExport[]
+        ).map((purchase) => {
+          const programId = toIdString(purchase.programId);
+          return {
+            userId: toIdString(purchase.userId),
+            purchaseType: purchase.purchaseType ?? "program",
+            programId,
+            eventId: toIdString(purchase.eventId),
+            membershipId: toIdString(purchase.membershipId),
+            orderNumber: purchase.orderNumber,
+            itemTitle: purchase.itemTitle,
+            itemLabel: purchase.itemLabel,
+            programTitle:
+              purchase.itemTitle ||
+              titleFromRef(purchase.programId) ||
+              programTitleById.get(programId) ||
+              "",
+            finalPrice: purchase.finalPrice,
+            status: purchase.status,
+            purchaseDate: purchase.purchaseDate,
+            studentRoleName: purchase.studentRoleName,
+            isClassRep: purchase.isClassRep,
+            isEarlyBird: purchase.isEarlyBird,
+            promoCode: purchase.promoCode,
+            stripePaymentIntentId: purchase.stripePaymentIntentId,
+          };
+        }),
+        programCatalog,
         // Donations (Transactions)
         donations: (await safeFetch(
           DonationTransaction as unknown,
@@ -426,17 +608,26 @@ export default class ExportAnalyticsController {
           }
           // Registrations
           res.write(`# Registrations\n`);
-          res.write("UserId,EventId,Status,CreatedAt\n");
+          res.write(
+            "UserId,UserEmail,UserName,EventId,EventTitle,RoleId,RoleName,Status,AttendanceStatus,AttendanceConfirmed,RegistrationDate\n"
+          );
           for (const r of data.registrations) {
             const row = [
               r.userId ?? "",
+              r.userSnapshot?.email ?? "",
+              snapshotName(r.userSnapshot),
               r.eventId ?? "",
+              r.eventSnapshot?.title ?? "",
+              r.roleId ?? "",
+              r.eventSnapshot?.roleName ?? "",
               r.status ?? "",
+              r.attendanceStatus ?? "",
+              r.attendanceConfirmed ? "Yes" : "No",
               r.registrationDate
                 ? new Date(r.registrationDate).toISOString()
                 : "",
             ]
-              .map((v) => String(v).replace(/\n/g, " ").replace(/,/g, " "))
+              .map(csvValue)
               .join(",");
             res.write(`${row}\n`);
           }
@@ -453,6 +644,9 @@ export default class ExportAnalyticsController {
           csv += `GuestRegistrations,${data.guestRegistrations.length}\n`;
         }
         csv += `Programs,${data.programs.length}\n`;
+        if (data.programCatalog && data.programCatalog.length > 0) {
+          csv += `ProgramCatalog,${data.programCatalog.length}\n`;
+        }
         csv += `Donations,${data.donations.length}\n`;
         res.send(csv);
       } else if (format === "xlsx") {
@@ -473,6 +667,13 @@ export default class ExportAnalyticsController {
           ["Total Programs", data.programs.length, data.timestamp],
           ["Total Donations", data.donations.length, data.timestamp],
         ];
+        if (data.programCatalog.length > 0) {
+          overviewData.splice(6, 0, [
+            "Total Program Catalog",
+            data.programCatalog.length,
+            data.timestamp,
+          ]);
+        }
         const overviewWS = XLSX.utils.aoa_to_sheet(overviewData);
         XLSX.utils.book_append_sheet(workbook, overviewWS, "Overview");
 
@@ -526,18 +727,41 @@ export default class ExportAnalyticsController {
         const eventsWS = XLSX.utils.aoa_to_sheet(eventsData);
         XLSX.utils.book_append_sheet(workbook, eventsWS, "Events");
 
-        // Registrations sheet (minimal schema expected by tests)
-        // Columns (0-based): User ID(0), Event ID(1), Role ID(2), Status(3), Registration Date(4)
+        // Registrations sheet
         const registrationsData = [
-          ["User ID", "Event ID", "Role ID", "Status", "Registration Date"],
+          [
+            "User ID",
+            "User Email",
+            "User Name",
+            "Event ID",
+            "Event Title",
+            "Role ID",
+            "Role Name",
+            "Registration Status",
+            "Attendance Status",
+            "Attendance Confirmed",
+            "Registration Date",
+            "Registered By",
+            "Notes",
+            "Special Requirements",
+          ],
           ...data.registrations.map((reg) => [
             reg.userId ?? "",
+            reg.userSnapshot?.email ?? "",
+            snapshotName(reg.userSnapshot),
             reg.eventId ?? "",
+            reg.eventSnapshot?.title ?? "",
             reg.roleId ?? "",
+            reg.eventSnapshot?.roleName ?? "",
             reg.status ?? "",
+            reg.attendanceStatus ?? "",
+            reg.attendanceConfirmed ? "Yes" : "No",
             reg.registrationDate
               ? new Date(reg.registrationDate).toLocaleString()
               : "",
+            reg.registeredBy ?? "",
+            reg.notes ?? "",
+            reg.specialRequirements ?? "",
           ]),
         ];
         const registrationsWS = XLSX.utils.aoa_to_sheet(registrationsData);
@@ -602,21 +826,29 @@ export default class ExportAnalyticsController {
           const programsData = [
             [
               "User ID",
+              "Purchase Type",
               "Program ID",
+              "Program Title",
+              "Order Number",
               "Final Price (cents)",
               "Status",
               "Purchase Date",
+              "Student Role",
               "Class Rep",
               "Early Bird",
               "Promo Code",
               "Stripe Payment Intent",
             ],
             ...data.programs.map((p) => [
-              p.userId ? String(p.userId) : "",
-              p.programId ? String(p.programId) : "",
+              p.userId ?? "",
+              p.purchaseType ?? "",
+              p.programId ?? "",
+              p.programTitle || p.itemTitle || p.itemLabel || "",
+              p.orderNumber ?? "",
               p.finalPrice ?? 0,
               p.status ?? "",
               p.purchaseDate ? new Date(p.purchaseDate).toLocaleString() : "",
+              p.studentRoleName ?? "",
               p.isClassRep ? "Yes" : "No",
               p.isEarlyBird ? "Yes" : "No",
               p.promoCode ?? "",
@@ -625,6 +857,42 @@ export default class ExportAnalyticsController {
           ];
           const programsWS = XLSX.utils.aoa_to_sheet(programsData);
           XLSX.utils.book_append_sheet(workbook, programsWS, "Programs");
+        }
+
+        if (data.programCatalog && data.programCatalog.length > 0) {
+          const programCatalogData = [
+            [
+              "Program ID",
+              "Program Name",
+              "Program Type",
+              "Hosted By",
+              "Period",
+              "Free",
+              "Created Date",
+              "Updated Date",
+            ],
+            ...data.programCatalog.map((program) => [
+              program.id,
+              program.title,
+              program.programType,
+              program.hostedBy,
+              programPeriod(program.period),
+              program.isFree ? "Yes" : "No",
+              program.createdAt
+                ? new Date(program.createdAt).toLocaleString()
+                : "",
+              program.updatedAt
+                ? new Date(program.updatedAt).toLocaleString()
+                : "",
+            ]),
+          ];
+          const programCatalogWS =
+            XLSX.utils.aoa_to_sheet(programCatalogData);
+          XLSX.utils.book_append_sheet(
+            workbook,
+            programCatalogWS,
+            "Program Catalog"
+          );
         }
 
         // Donations sheet (Transactions)
