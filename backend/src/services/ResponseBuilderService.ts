@@ -105,6 +105,31 @@ export type AnalyticsEventInput = {
 
 export class ResponseBuilderService {
   private static logger = createLogger("ResponseBuilderService");
+
+  private static getRegistrationCreatedTime(registration: RegLean): number {
+    if (registration.createdAt) {
+      return new Date(registration.createdAt).getTime();
+    }
+
+    return registration._id.getTimestamp().getTime();
+  }
+
+  private static sortRegistrationsByCreatedTime<T extends RegLean>(
+    registrations: T[],
+  ): T[] {
+    return [...registrations].sort((left, right) => {
+      const timeDifference =
+        ResponseBuilderService.getRegistrationCreatedTime(left) -
+        ResponseBuilderService.getRegistrationCreatedTime(right);
+
+      if (timeDifference !== 0) {
+        return timeDifference;
+      }
+
+      return left._id.toString().localeCompare(right._id.toString());
+    });
+  }
+
   /**
    * Helper method to populate fresh organizer contact information
    */
@@ -220,32 +245,35 @@ export class ResponseBuilderService {
           const registrations: RegistrationWithUser[] = [];
 
           // Get registrations for this role
-          const roleRegistrations = (await Registration.find({
-            eventId: event._id,
-            roleId: role.id,
-          })
-            .populate({
-              path: "userId",
-              select:
-                "username firstName lastName email phone avatar gender systemAuthorizationLevel roleInAtCloud role",
-            })
-            .lean()) as unknown as Array<
-            RegLean & {
-              userId: {
-                _id: Types.ObjectId;
-                username: string;
-                firstName: string;
-                lastName: string;
-                email?: string;
-                phone?: string;
-                avatar?: string;
-                gender?: "male" | "female";
-                systemAuthorizationLevel?: string;
-                roleInAtCloud?: string;
-                role?: string;
-              };
-            }
-          >;
+          const roleRegistrations =
+            ResponseBuilderService.sortRegistrationsByCreatedTime(
+              (await Registration.find({
+                eventId: event._id,
+                roleId: role.id,
+              })
+                .populate({
+                  path: "userId",
+                  select:
+                    "username firstName lastName email phone avatar gender systemAuthorizationLevel roleInAtCloud role",
+                })
+                .lean()) as unknown as Array<
+                RegLean & {
+                  userId: {
+                    _id: Types.ObjectId;
+                    username: string;
+                    firstName: string;
+                    lastName: string;
+                    email?: string;
+                    phone?: string;
+                    avatar?: string;
+                    gender?: "male" | "female";
+                    systemAuthorizationLevel?: string;
+                    roleInAtCloud?: string;
+                    role?: string;
+                  };
+                }
+              >,
+            );
 
           // Transform each registration with privacy logic
           for (const reg of roleRegistrations) {
