@@ -244,6 +244,107 @@ describe("ResponseBuilderService", () => {
       expect(result!.roles[0].registrations[0].user.firstName).toBe("Jane");
     });
 
+    it("keeps role registrations ordered by original creation time", async () => {
+      const olderUserId = new Types.ObjectId();
+      const newerUserId = new Types.ObjectId();
+      const mockEvent = {
+        _id: eventId,
+        title: "Ordered Event",
+        location: "Room A",
+        date: "2026-06-01",
+        time: "10:00",
+        status: "completed",
+        createdBy: {
+          _id: userId,
+          username: "organizer",
+          firstName: "Org",
+          lastName: "User",
+        },
+        roles: [
+          {
+            id: roleId,
+            name: "Participant",
+            description: "Participant role",
+            maxParticipants: 10,
+          },
+        ],
+      };
+
+      const mockRegistrations = [
+        {
+          _id: new Types.ObjectId("665100000000000000000002"),
+          eventId,
+          roleId,
+          createdAt: new Date("2026-05-02T10:00:00.000Z"),
+          status: "attended",
+          attendanceConfirmed: true,
+          userId: {
+            _id: newerUserId,
+            username: "newer",
+            firstName: "Newer",
+            lastName: "Person",
+            email: "newer@example.com",
+          },
+        },
+        {
+          _id: new Types.ObjectId("665000000000000000000001"),
+          eventId,
+          roleId,
+          createdAt: new Date("2026-05-01T10:00:00.000Z"),
+          status: "active",
+          attendanceConfirmed: false,
+          userId: {
+            _id: olderUserId,
+            username: "older",
+            firstName: "Older",
+            lastName: "Person",
+            email: "older@example.com",
+          },
+        },
+      ];
+
+      vi.mocked(Event.findById).mockReturnValue({
+        populate: vi.fn().mockReturnValue({
+          lean: vi.fn().mockResolvedValue(mockEvent),
+        }),
+      } as any);
+
+      vi.mocked(
+        RegistrationQueryService.getEventSignupCounts,
+      ).mockResolvedValue({
+        eventId,
+        totalSignups: 2,
+        totalSlots: 10,
+        roles: [
+          {
+            roleId,
+            roleName: "Participant",
+            maxParticipants: 10,
+            currentCount: 2,
+            availableSpots: 8,
+            isFull: false,
+            waitlistCount: 0,
+          },
+        ],
+      } as any);
+
+      vi.mocked(Registration.find).mockReturnValue({
+        lean: vi.fn().mockResolvedValue([]),
+        populate: vi.fn().mockReturnValue({
+          lean: vi.fn().mockResolvedValue(mockRegistrations),
+        }),
+      } as any);
+
+      const result =
+        await ResponseBuilderService.buildEventWithRegistrations(eventId);
+
+      expect(
+        result!.roles[0].registrations.map(
+          (registration) => registration.user.firstName,
+        ),
+      ).toEqual(["Older", "Newer"]);
+    });
+
     it("should return null when event is not found", async () => {
       vi.mocked(Event.findById).mockReturnValue({
         populate: vi.fn().mockReturnValue({
