@@ -79,7 +79,7 @@ interface EventRolesSectionProps {
   handleNameCardClick: (
     userId: string,
     userName: string,
-    userRole?: string
+    userRole?: string,
   ) => void;
   draggedUserId: string | null;
   draggedGuestId: string | null;
@@ -88,12 +88,12 @@ interface EventRolesSectionProps {
   handleDragStart: (
     e: React.DragEvent,
     userId: string,
-    fromRoleId: string
+    fromRoleId: string,
   ) => void;
   handleGuestDragStart: (
     e: React.DragEvent,
     guestId: string,
-    fromRoleId: string
+    fromRoleId: string,
   ) => void;
   handleDragEnd: () => void;
   setEvent: React.Dispatch<React.SetStateAction<EventData | null>>;
@@ -149,6 +149,8 @@ function EventRolesSection({
   const [savingAttendanceId, setSavingAttendanceId] = useState<string | null>(
     null,
   );
+  const attendanceButtonBase =
+    "inline-flex h-8 min-w-[4.25rem] items-center justify-center gap-1.5 rounded-md border px-2.5 text-xs font-semibold shadow-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60";
 
   const getAttendanceState = (
     signup: EventParticipant,
@@ -194,9 +196,7 @@ function EventRolesSection({
                       ? {
                           ...participant,
                           attendanceConfirmed: attended,
-                          registrationStatus: attended
-                            ? "attended"
-                            : "no_show",
+                          registrationStatus: attended ? "attended" : "no_show",
                         }
                       : participant,
                   ),
@@ -255,6 +255,8 @@ function EventRolesSection({
                     const isClickable =
                       canNavigateToProfiles || signup.userId === currentUserId;
                     const attendanceState = getAttendanceState(signup);
+                    const attendedSelected = attendanceState === "attended";
+                    const noShowSelected = attendanceState === "no_show";
                     const isSavingAttendance =
                       savingAttendanceId === signup.registrationId;
 
@@ -284,7 +286,7 @@ function EventRolesSection({
                             handleNameCardClick(
                               signup.userId,
                               `${signup.firstName} ${signup.lastName}`,
-                              signup.roleInAtCloud
+                              signup.roleInAtCloud,
                             );
                           }
                         }}
@@ -298,12 +300,12 @@ function EventRolesSection({
                           <img
                             src={getAvatarUrlWithCacheBust(
                               signup.avatar || null,
-                              signup.gender || "male"
+                              signup.gender || "male",
                             )}
                             alt={getAvatarAlt(
                               signup.firstName || "",
                               signup.lastName || "",
-                              !!signup.avatar
+                              !!signup.avatar,
                             )}
                             className="h-8 w-8 rounded-full object-cover"
                           />
@@ -374,41 +376,54 @@ function EventRolesSection({
                           )}
                           {canManageAttendance && (
                             <div
-                              className="flex flex-wrap items-center gap-2"
+                              className="flex flex-wrap items-center justify-start gap-2 sm:justify-end"
                               onClick={(e) => e.stopPropagation()}
                             >
                               <span
-                                className={`text-xs font-medium ${
-                                  attendanceState === "attended"
-                                    ? "text-green-700"
-                                    : attendanceState === "no_show"
-                                      ? "text-red-700"
-                                      : "text-gray-500"
+                                className={`inline-flex h-7 items-center rounded-full px-2.5 text-xs font-semibold ${
+                                  attendedSelected
+                                    ? "bg-green-50 text-green-700 ring-1 ring-green-200"
+                                    : noShowSelected
+                                      ? "bg-red-50 text-red-700 ring-1 ring-red-200"
+                                      : "bg-gray-100 text-gray-600 ring-1 ring-gray-200"
                                 }`}
                               >
-                                {attendanceState === "attended"
+                                {attendedSelected
                                   ? "Attended"
-                                  : attendanceState === "no_show"
+                                  : noShowSelected
                                     ? "Not attended"
                                     : "Not recorded"}
                               </span>
-                              <div className="inline-flex rounded-md border border-gray-200 overflow-hidden">
+                              <div className="flex items-center gap-1.5">
                                 <button
                                   type="button"
+                                  aria-label="Yes"
+                                  aria-pressed={attendedSelected}
                                   disabled={isSavingAttendance}
                                   onClick={() =>
-                                    handleAttendanceChange(role.id, signup, true)
+                                    handleAttendanceChange(
+                                      role.id,
+                                      signup,
+                                      true,
+                                    )
                                   }
-                                  className={`px-3 py-1 text-xs font-medium transition-colors ${
-                                    attendanceState === "attended"
-                                      ? "bg-green-600 text-white"
-                                      : "bg-white text-gray-700 hover:bg-green-50"
-                                  } disabled:opacity-60`}
+                                  className={`${attendanceButtonBase} ${
+                                    attendedSelected
+                                      ? "border-green-600 bg-green-600 text-white focus-visible:ring-green-500"
+                                      : "border-gray-300 bg-white text-gray-700 hover:border-green-300 hover:bg-green-50 hover:text-green-700 focus-visible:ring-green-500"
+                                  }`}
                                 >
+                                  <Icon
+                                    name="check-circle"
+                                    size="sm"
+                                    className="shrink-0"
+                                  />
                                   Yes
                                 </button>
                                 <button
                                   type="button"
+                                  aria-label="No"
+                                  aria-pressed={noShowSelected}
                                   disabled={isSavingAttendance}
                                   onClick={() =>
                                     handleAttendanceChange(
@@ -417,12 +432,17 @@ function EventRolesSection({
                                       false,
                                     )
                                   }
-                                  className={`px-3 py-1 text-xs font-medium border-l border-gray-200 transition-colors ${
-                                    attendanceState === "no_show"
-                                      ? "bg-red-600 text-white"
-                                      : "bg-white text-gray-700 hover:bg-red-50"
-                                  } disabled:opacity-60`}
+                                  className={`${attendanceButtonBase} ${
+                                    noShowSelected
+                                      ? "border-red-600 bg-red-600 text-white focus-visible:ring-red-500"
+                                      : "border-gray-300 bg-white text-gray-700 hover:border-red-300 hover:bg-red-50 hover:text-red-700 focus-visible:ring-red-500"
+                                  }`}
                                 >
+                                  <Icon
+                                    name="x-mark"
+                                    size="sm"
+                                    className="shrink-0"
+                                  />
                                   No
                                 </button>
                               </div>
@@ -501,7 +521,7 @@ function EventRolesSection({
                                   roles: prev.roles.map((r) =>
                                     r.id === role.id
                                       ? { ...r, openToPublic: newValue }
-                                      : r
+                                      : r,
                                   ),
                                 };
                               });
@@ -511,11 +531,11 @@ function EventRolesSection({
                                 roles: event.roles.map((r) =>
                                   r.id === role.id
                                     ? { ...r, openToPublic: newValue }
-                                    : r
+                                    : r,
                                 ),
                                 // Include organizerDetails to satisfy UpdateEventPayload contract
                                 organizerDetails: Array.isArray(
-                                  event.organizerDetails
+                                  event.organizerDetails,
                                 )
                                   ? [...event.organizerDetails]
                                   : [],
@@ -526,7 +546,7 @@ function EventRolesSection({
                                 `Role "${role.name}" ${
                                   newValue ? "opened" : "closed"
                                 } to public registration`,
-                                { title: "Role Updated" }
+                                { title: "Role Updated" },
                               );
                             } catch {
                               // Rollback on error
@@ -537,13 +557,13 @@ function EventRolesSection({
                                   roles: prev.roles.map((r) =>
                                     r.id === role.id
                                       ? { ...r, openToPublic: !newValue }
-                                      : r
+                                      : r,
                                   ),
                                 };
                               });
                               notification.error(
                                 "Failed to update role public access",
-                                { title: "Update Failed" }
+                                { title: "Update Failed" },
                               );
                             }
                           }}
@@ -629,7 +649,7 @@ function EventRolesSection({
                             handleNameCardClick(
                               signup.userId,
                               `${signup.firstName} ${signup.lastName}`,
-                              signup.roleInAtCloud
+                              signup.roleInAtCloud,
                             );
                           }
                         }}
@@ -638,12 +658,12 @@ function EventRolesSection({
                           <img
                             src={getAvatarUrlWithCacheBust(
                               signup.avatar || null,
-                              signup.gender || "male"
+                              signup.gender || "male",
                             )}
                             alt={getAvatarAlt(
                               signup.firstName || "",
                               signup.lastName || "",
-                              !!signup.avatar
+                              !!signup.avatar,
                             )}
                             className="h-8 w-8 rounded-full object-cover"
                           />
@@ -809,7 +829,7 @@ function EventRolesSection({
           {event.roles.map((role) => {
             // Check if user is already signed up for this specific role
             const isSignedUpForThisRole = role.currentSignups.some(
-              (signup) => signup.userId === currentUserId
+              (signup) => signup.userId === currentUserId,
             );
 
             // Get ALL viewer's workshop group letters (fix for multi-group bug)
@@ -837,7 +857,7 @@ function EventRolesSection({
                 onAssignUser={async (
                   roleId,
                   userId,
-                  sendNotifications = true
+                  sendNotifications = true,
                 ) => {
                   try {
                     const updatedEvent = await eventService.assignUserToRole(
@@ -845,7 +865,7 @@ function EventRolesSection({
                       userId,
                       roleId,
                       undefined, // notes
-                      sendNotifications
+                      sendNotifications,
                     );
                     const convertedEvent: EventData = {
                       ...event,
@@ -879,7 +899,7 @@ function EventRolesSection({
                                 registeredAt: reg.registeredAt,
                                 registrationStatus: reg.status,
                                 attendanceConfirmed: reg.attendanceConfirmed,
-                              })
+                              }),
                             )
                           : role.currentSignups || [],
                       })),
@@ -891,7 +911,7 @@ function EventRolesSection({
                             (role.registrations?.length ||
                               role.currentSignups?.length ||
                               0),
-                          0
+                          0,
                         ) ||
                         0,
                     };
@@ -902,7 +922,7 @@ function EventRolesSection({
                       `User has been assigned to ${roleName}.`,
                       {
                         title: "Assignment Complete",
-                      }
+                      },
                     );
                   } catch (error: unknown) {
                     const message =
