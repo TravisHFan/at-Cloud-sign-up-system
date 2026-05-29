@@ -47,14 +47,21 @@ export class ShortLinkController {
 
       // Generate full URL for short links
       const shortPath = `/s/${result.shortLink.key}`;
+      const frontendShortPath = `/#${shortPath}`;
       let fullUrl: string;
 
       if (process.env.PUBLIC_SHORT_BASE_URL) {
-        // Explicit base URL from environment (production)
+        // Explicit short-link base URL from environment, usually a backend/edge route that serves /s/:key.
         fullUrl = `${process.env.PUBLIC_SHORT_BASE_URL.replace(
           /\/$/,
           "",
         )}${shortPath}`;
+      } else if (process.env.FRONTEND_URL) {
+        // HashRouter deployments need the route in the fragment when the link opens on the frontend host.
+        fullUrl = `${process.env.FRONTEND_URL.replace(
+          /\/$/,
+          "",
+        )}${frontendShortPath}`;
       } else {
         // Auto-detect base URL from request context (development)
         const protocol =
@@ -66,7 +73,7 @@ export class ShortLinkController {
           const frontendUrl =
             process.env.FRONTEND_URL ||
             `${protocol}://${host.replace(/:\d+$/, ":5173")}`;
-          fullUrl = `${frontendUrl.replace(/\/$/, "")}${shortPath}`;
+          fullUrl = `${frontendUrl.replace(/\/$/, "")}${frontendShortPath}`;
         } else {
           fullUrl = `${protocol}://${host}${shortPath}`;
         }

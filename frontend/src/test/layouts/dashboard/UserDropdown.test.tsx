@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { BrowserRouter } from "react-router-dom";
+import { BrowserRouter, MemoryRouter } from "react-router-dom";
 import UserDropdown from "../../../layouts/dashboard/UserDropdown";
 
 // Mock dependencies
@@ -51,6 +51,7 @@ const mockUser = {
 describe("UserDropdown", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.history.pushState({}, "", "/");
   });
 
   describe("Initial Render", () => {
@@ -253,6 +254,25 @@ describe("UserDropdown", () => {
       await waitFor(() => {
         expect(screen.queryByText("Profile")).toBeNull();
       });
+    });
+  });
+
+  describe("Guest Dropdown Menu Items", () => {
+    it("preserves the current shared program page in the Login link", async () => {
+      render(
+        <MemoryRouter
+          initialEntries={["/dashboard/programs/program-123?ref=share"]}
+        >
+          <UserDropdown user={null} isGuest={true} />
+        </MemoryRouter>,
+      );
+
+      fireEvent.click(screen.getByRole("button"));
+
+      const loginLink = await screen.findByText("Login");
+      expect(loginLink.closest("a")?.getAttribute("href")).toBe(
+        "/login?redirect=%2Fdashboard%2Fprograms%2Fprogram-123%3Fref%3Dshare",
+      );
     });
   });
 

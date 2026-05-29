@@ -47,7 +47,7 @@ Responses:
     "eventId": "...",
     "slug": "my-event",
     "expiresAt": "2025-03-01T10:00:00.000Z",
-    "url": "/s/abc123"
+    "url": "https://frontend.example.com/#/s/abc123"
   }
 }
 ```
@@ -91,9 +91,9 @@ Responses:
 
 ### 3. GET `/s/:key`
 
-Public redirect. Returns relative path for the public event page.
+Public redirect. Redirects to the frontend hash route for the public event page.
 
-- 302 -> `/public/events/:slug`
+- 302 -> `https://frontend.example.com/#/p/:slug`
 - 410 -> `Short link expired` (plain text)
 - 404 -> `Short link not found` (plain text)
 

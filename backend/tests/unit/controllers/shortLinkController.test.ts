@@ -373,7 +373,37 @@ describe("ShortLinkController", () => {
         expect(jsonMock).toHaveBeenCalledWith(
           expect.objectContaining({
             data: expect.objectContaining({
-              url: "http://localhost:5173/s/abc123",
+              url: "http://localhost:5173/#/s/abc123",
+            }),
+          }),
+        );
+      });
+
+      it("should use a frontend hash route when FRONTEND_URL is set in production", async () => {
+        process.env.NODE_ENV = "production";
+        process.env.FRONTEND_URL = "https://app.example.com";
+        mockReq.body = { eventId: "event123" };
+        mockReq.user = { id: "user123" } as any;
+
+        vi.mocked(ShortLinkService.getOrCreateForEvent).mockResolvedValue({
+          created: true,
+          shortLink: {
+            key: "abc123",
+            eventId: "event123",
+            targetSlug: "test-event",
+            expiresAt: new Date("2025-12-31"),
+          },
+        } as any);
+
+        await ShortLinkController.create(
+          mockReq as Request,
+          mockRes as Response,
+        );
+
+        expect(jsonMock).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              url: "https://app.example.com/#/s/abc123",
             }),
           }),
         );
@@ -404,7 +434,7 @@ describe("ShortLinkController", () => {
         expect(jsonMock).toHaveBeenCalledWith(
           expect.objectContaining({
             data: expect.objectContaining({
-              url: "http://localhost:5173/s/abc123",
+              url: "http://localhost:5173/#/s/abc123",
             }),
           }),
         );
