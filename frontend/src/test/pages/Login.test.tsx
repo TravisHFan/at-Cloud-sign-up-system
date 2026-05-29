@@ -60,11 +60,11 @@ describe("Login page", () => {
     render(
       <MemoryRouter>
         <Login />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     const emailInput = screen.getByPlaceholderText(
-      /Enter your username or email/i
+      /Enter your username or email/i,
     );
     const passwordInput = screen.getByPlaceholderText(/Enter your password/i);
 
@@ -90,14 +90,14 @@ describe("Login page", () => {
     render(
       <MemoryRouter>
         <Login />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     fireEvent.change(
       screen.getByPlaceholderText(/Enter your username or email/i),
       {
         target: { value: "test@example.com" },
-      }
+      },
     );
     fireEvent.change(screen.getByPlaceholderText(/Enter your password/i), {
       target: { value: "password123" },
@@ -124,13 +124,13 @@ describe("Login page", () => {
     render(
       <MemoryRouter>
         <Login />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     // Forgot password form has its own heading/submit button; we just
     // assert that the login form fields are no longer present.
     expect(
-      screen.queryByLabelText(/Username or Email/i)
+      screen.queryByLabelText(/Username or Email/i),
     ).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Password/i)).not.toBeInTheDocument();
   });
@@ -165,14 +165,14 @@ describe("Login page", () => {
     render(
       <MemoryRouter>
         <Login />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     const emailInput = screen.getByPlaceholderText(/Enter your email address/i);
     fireEvent.change(emailInput, { target: { value: "recover@example.com" } });
 
     fireEvent.click(
-      screen.getByRole("button", { name: /Send Recovery Email/i })
+      screen.getByRole("button", { name: /Send Recovery Email/i }),
     );
 
     await waitFor(() => {
@@ -197,7 +197,7 @@ describe("Login page", () => {
             <Route path="/login" element={<Login />} />
             <Route path="/dashboard" element={<div>Dashboard Page</div>} />
           </Routes>
-        </MemoryRouter>
+        </MemoryRouter>,
       );
 
       expect(screen.getByText("Dashboard Page")).toBeInTheDocument();
@@ -218,10 +218,53 @@ describe("Login page", () => {
               element={<div>Event Detail Page</div>}
             />
           </Routes>
-        </MemoryRouter>
+        </MemoryRouter>,
       );
 
       expect(screen.getByText("Event Detail Page")).toBeInTheDocument();
+    });
+
+    it("redirects authenticated user to program detail ?redirect param", () => {
+      mockedUseAuth.mockReturnValue({
+        currentUser: { id: "user1", username: "testuser" },
+        isLoading: false,
+      } as any);
+
+      render(
+        <MemoryRouter
+          initialEntries={[
+            "/login?redirect=%2Fdashboard%2Fprograms%2Fprogram-123%3Fref%3Dshare",
+          ]}
+        >
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route
+              path="/dashboard/programs/:id"
+              element={<div>Program Detail Page</div>}
+            />
+          </Routes>
+        </MemoryRouter>,
+      );
+
+      expect(screen.getByText("Program Detail Page")).toBeInTheDocument();
+    });
+
+    it("ignores unsafe authenticated-user redirect params", () => {
+      mockedUseAuth.mockReturnValue({
+        currentUser: { id: "user1", username: "testuser" },
+        isLoading: false,
+      } as any);
+
+      render(
+        <MemoryRouter initialEntries={["/login?redirect=//evil.example"]}>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/dashboard" element={<div>Dashboard Page</div>} />
+          </Routes>
+        </MemoryRouter>,
+      );
+
+      expect(screen.getByText("Dashboard Page")).toBeInTheDocument();
     });
 
     it("clears sessionStorage returnUrl when authenticated user is present", () => {
@@ -234,7 +277,7 @@ describe("Login page", () => {
       // Set the returnUrl before rendering
       window.sessionStorage.setItem("returnUrl", "/dashboard/donate");
       expect(window.sessionStorage.getItem("returnUrl")).toBe(
-        "/dashboard/donate"
+        "/dashboard/donate",
       );
 
       render(
@@ -245,7 +288,7 @@ describe("Login page", () => {
             <Route path="/dashboard" element={<div>Dashboard Page</div>} />
             <Route path="*" element={<div>Not Found</div>} />
           </Routes>
-        </MemoryRouter>
+        </MemoryRouter>,
       );
 
       // The key behavior: sessionStorage should be cleared after Login processes it

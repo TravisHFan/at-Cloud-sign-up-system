@@ -11,6 +11,7 @@ import {
   getRemainingCooldown,
   formatCooldownTime,
 } from "../utils/emailValidationUtils";
+import { getRedirectParam } from "../utils/loginRedirect";
 
 export function useLogin() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -31,7 +32,7 @@ export function useLogin() {
         {
           title: "Account Temporarily Locked",
           autoCloseDelay: 6000,
-        }
+        },
       );
       return;
     }
@@ -40,20 +41,7 @@ export function useLogin() {
 
     try {
       // Capture redirect from query (?redirect=...)
-      let explicitRedirect: string | null = null;
-      try {
-        const search = location.search || "";
-        if (search.startsWith("?")) {
-          const params = new URLSearchParams(search);
-          const r = params.get("redirect");
-          if (r && /^\//.test(r)) {
-            // basic safety: only allow same-site relative paths starting with /
-            explicitRedirect = r;
-          }
-        }
-      } catch {
-        // ignore malformed
-      }
+      const explicitRedirect = getRedirectParam(location.search || "");
 
       // Call the AuthContext login method
       const result = await login(data);
@@ -94,7 +82,7 @@ export function useLogin() {
           {
             title: "Login Successful",
             autoCloseDelay: 2000,
-          }
+          },
         );
         navigate(targetPath, { replace: true });
       } else {
@@ -108,19 +96,19 @@ export function useLogin() {
             {
               title: "Account Locked",
               autoCloseDelay: 6000,
-            }
+            },
           );
         } else {
           const baseMsg = buildLoginFailureBaseMessage(
             isEmailInput,
-            result.error
+            result.error,
           );
           notification.error(
             `${baseMsg}. ${5 - newAttempts} attempts remaining.`,
             {
               title: "Login Failed",
               autoCloseDelay: 5000,
-            }
+            },
           );
         }
       }
@@ -133,7 +121,7 @@ export function useLogin() {
         {
           title: "Connection Error",
           autoCloseDelay: 5000,
-        }
+        },
       );
     } finally {
       setIsSubmitting(false);
@@ -157,12 +145,12 @@ export function useLogin() {
         const remainingTime = getRemainingCooldown(email, "verification");
         notification.warning(
           `Please wait ${formatCooldownTime(
-            remainingTime
+            remainingTime,
           )} before requesting another verification email.`,
           {
             title: "Cooldown Period Active",
             autoCloseDelay: 5000,
-          }
+          },
         );
         return;
       }
@@ -178,7 +166,7 @@ export function useLogin() {
       await emailNotificationService.sendEmailVerification(
         email,
         user.firstName, // Use actual user's first name
-        verificationToken
+        verificationToken,
       );
 
       // Mark email as sent for cooldown tracking
@@ -189,7 +177,7 @@ export function useLogin() {
         {
           title: "Email Sent",
           autoCloseDelay: 4000,
-        }
+        },
       );
     } catch (error) {
       console.error("Error resending verification email:", error);
@@ -203,7 +191,7 @@ export function useLogin() {
             onClick: () => handleResendVerification(email),
             variant: "primary",
           },
-        }
+        },
       );
     }
   };
@@ -246,7 +234,7 @@ export function useLogin() {
 // Pure helper exported for testing (single definition)
 export function buildLoginFailureBaseMessage(
   isEmailInput: boolean,
-  backendError?: string
+  backendError?: string,
 ): string {
   let baseMsg = backendError || "Invalid credentials";
   if (backendError?.includes("Invalid") || !backendError) {
