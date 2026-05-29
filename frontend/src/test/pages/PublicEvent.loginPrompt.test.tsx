@@ -72,7 +72,7 @@ describe("PublicEvent login prompt", () => {
     const link = screen.getByRole("link", { name: /log in/i });
     expect(link).toHaveAttribute(
       "href",
-      "/login?redirect=/dashboard/event/evt123",
+      "/login?redirect=%2Fdashboard%2Fevent%2Fevt123",
     );
   });
 

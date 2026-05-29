@@ -30,6 +30,10 @@ import type { ProgramRoles } from "../types/program";
 import { normalizeProgramRoles } from "../utils/programRoles";
 import type { AnnualMembership } from "../types/annualMembership";
 import { formatCurrency } from "../utils/currency";
+import {
+  buildLoginRedirectUrl,
+  getPathWithSearch,
+} from "../utils/loginRedirect";
 
 type Program = {
   id: string;
@@ -109,7 +113,7 @@ export default function ProgramDetail({
   const [sortDir, setSortDir] = useState<"asc" | "desc">(initialSortDir);
   const [pageInput, setPageInput] = useState<string>(String(initialPage));
   const [announceText, setAnnounceText] = useState<string>("");
-  const loginRedirectPath = `${location.pathname}${location.search}`;
+  const loginRedirectUrl = buildLoginRedirectUrl(getPathWithSearch(location));
   const [pageHelper, setPageHelper] = useState<string>("");
   const [pageDebounceId, setPageDebounceId] = useState<number | null>(null);
   // Prefer explicit prop (tests) then env flag
@@ -930,11 +934,7 @@ export default function ProgramDetail({
                 Cancel
               </button>
               <button
-                onClick={() =>
-                  navigate(
-                    `/login?redirect=${encodeURIComponent(loginRedirectPath)}`,
-                  )
-                }
+                onClick={() => navigate(loginRedirectUrl)}
                 className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-md transition-colors"
               >
                 Login
