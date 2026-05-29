@@ -13,6 +13,7 @@ import type {
   PublicRegistrationResponse,
 } from "../types/publicEvent";
 import { formatEventDateTimeRangeInViewerTZ } from "../utils/eventStatsUtils";
+import { buildLoginRedirectUrl } from "../utils/loginRedirect";
 
 export default function PublicEvent() {
   const { slug } = useParams();
@@ -114,6 +115,10 @@ export default function PublicEvent() {
       setShowPastEventModal(true);
     }
   }, [data]);
+
+  const eventLoginUrl = data?.id
+    ? buildLoginRedirectUrl(`/dashboard/event/${data.id}`)
+    : "/login";
 
   if (loading) {
     return (
@@ -391,7 +396,7 @@ export default function PublicEvent() {
                   !isNaN(endDate.getTime()) && endDate.getTime() < Date.now();
                 return isPast ? null : (
                   <Link
-                    to={`/login?redirect=/dashboard/event/${data.id}`}
+                    to={eventLoginUrl}
                     className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-lg hover:shadow-xl transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                   >
                     <Icon name="ticket" className="mr-2" />
@@ -424,7 +429,7 @@ export default function PublicEvent() {
               </p>
               <div className="flex items-center gap-2">
                 <Link
-                  to={`/login?redirect=/dashboard/event/${data.id}`}
+                  to={eventLoginUrl}
                   className="inline-flex items-center justify-center h-10 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 whitespace-nowrap"
                 >
                   Log In
@@ -958,9 +963,7 @@ export default function PublicEvent() {
                   Cancel
                 </button>
                 <button
-                  onClick={() =>
-                    navigate(`/login?redirect=/dashboard/event/${data.id}`)
-                  }
+                  onClick={() => navigate(eventLoginUrl)}
                   className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                   data-testid="past-event-modal-login"
                 >

@@ -63,4 +63,38 @@ describe("useLogin redirect param", () => {
       replace: true,
     });
   });
+
+  it("navigates to redirect query param /dashboard/programs/:id after success", async () => {
+    const redirect = encodeURIComponent(
+      "/dashboard/programs/program-123?ref=share",
+    );
+    const { result } = setup(`/login?redirect=${redirect}`);
+
+    await act(async () => {
+      await result.current.handleLogin({
+        emailOrUsername: "user@example.com",
+        password: "pass",
+      } as any);
+    });
+
+    expect(navigateMock).toHaveBeenCalledWith(
+      "/dashboard/programs/program-123?ref=share",
+      { replace: true },
+    );
+  });
+
+  it("ignores unsafe redirect query params", async () => {
+    const { result } = setup("/login?redirect=//evil.example/path");
+
+    await act(async () => {
+      await result.current.handleLogin({
+        emailOrUsername: "user@example.com",
+        password: "pass",
+      } as any);
+    });
+
+    expect(navigateMock).toHaveBeenCalledWith("/dashboard", {
+      replace: true,
+    });
+  });
 });

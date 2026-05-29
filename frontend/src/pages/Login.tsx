@@ -18,6 +18,7 @@ import { useLogin } from "../hooks/useLogin";
 import { useForgotPassword } from "../hooks/useForgotPassword";
 import { useAuthForm } from "../hooks/useAuthForm";
 import { useAuth } from "../hooks/useAuth";
+import { getRedirectParam } from "../utils/loginRedirect";
 
 export default function Login() {
   const { currentUser } = useAuth();
@@ -51,9 +52,8 @@ export default function Login() {
   // This handles the race condition where login succeeds but navigation doesn't complete
   if (currentUser) {
     // Check for redirect query param first
-    const params = new URLSearchParams(location.search);
-    const redirectParam = params.get("redirect");
-    if (redirectParam && /^\//.test(redirectParam)) {
+    const redirectParam = getRedirectParam(location.search);
+    if (redirectParam) {
       return <Navigate to={redirectParam} replace />;
     }
 

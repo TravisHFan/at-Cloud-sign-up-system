@@ -66,6 +66,25 @@ describe("ProgramHeader - Share Button", () => {
       expect(mockWriteText).toHaveBeenCalledWith(
         "https://example.com/dashboard/programs/507f1f77bcf86cd799439011",
       );
+      expect(mockWriteText.mock.calls[0][0]).not.toContain("/login");
+    });
+  });
+
+  it("copies a guest-friendly program detail link", async () => {
+    mockWriteText.mockResolvedValue(undefined);
+
+    render(
+      <MemoryRouter>
+        <ProgramHeader {...defaultProps} programId="emba-2026" />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByText("Share"));
+
+    await waitFor(() => {
+      expect(mockWriteText).toHaveBeenCalledWith(
+        "https://example.com/dashboard/programs/emba-2026",
+      );
     });
   });
 
