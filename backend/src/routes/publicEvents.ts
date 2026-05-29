@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { Types } from "mongoose";
 import Event, { IEvent } from "../models/Event";
 import { serializePublicEvent } from "../utils/publicEventSerializer";
 import PublicEventController from "../controllers/publicEventController";
@@ -203,16 +204,17 @@ router.get("/events", async (req, res) => {
   }
 });
 
-// GET /api/public/events/:slug
+// GET /api/public/events/:slugOrId
 router.get("/events/:slug", authenticateOptional, async (req, res) => {
   try {
     const { slug } = req.params;
     if (!slug) {
       return res.status(400).json({ success: false, message: "Missing slug" });
     }
-    const event = await Event.findOne({
-      publicSlug: slug,
-    }).lean();
+    const lookup = Types.ObjectId.isValid(slug)
+      ? { $or: [{ publicSlug: slug }, { _id: slug }] }
+      : { publicSlug: slug };
+    const event = await Event.findOne(lookup).lean();
     if (!event) {
       return res
         .status(404)

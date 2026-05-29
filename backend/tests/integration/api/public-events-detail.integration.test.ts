@@ -100,6 +100,23 @@ describe("Public Event Detail Integration Tests", () => {
       expect(response.body.data.isAuthenticated).toBe(false);
     });
 
+    it("should return public event detail by event id", async () => {
+      const event = await Event.create(
+        createTestEvent({
+          title: "Event Id Public Detail",
+          publicSlug: "event-id-public-detail",
+        }),
+      );
+
+      const response = await request(app)
+        .get(`/api/public/events/${event._id.toString()}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.title).toBe("Event Id Public Detail");
+      expect(response.body.data.slug).toBe("event-id-public-detail");
+    });
+
     it("should include authentication status for authenticated users", async () => {
       await Event.create(
         createTestEvent({

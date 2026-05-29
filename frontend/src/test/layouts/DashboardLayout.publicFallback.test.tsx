@@ -66,6 +66,31 @@ describe("DashboardLayout - Guest Allowed Routes", () => {
     expect(screen.queryByTestId("login")).not.toBeInTheDocument();
   });
 
+  it("allows guest access to program detail links with non-ObjectId ids", async () => {
+    mockUnauthenticated();
+    const { default: Layout } = await import("../../layouts/DashboardLayout");
+
+    render(
+      <MemoryRouter initialEntries={["/dashboard/programs/emba-2026"]}>
+        <Routes>
+          <Route path="/dashboard/*" element={<Layout />}>
+            <Route
+              path="programs/:id"
+              element={<div data-testid="program-detail">Program Detail</div>}
+            />
+          </Route>
+          <Route
+            path="/login"
+            element={<div data-testid="login">Login Page</div>}
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId("program-detail")).toBeInTheDocument();
+    expect(screen.queryByTestId("login")).not.toBeInTheDocument();
+  });
+
   it("allows guest access to /dashboard/welcome", async () => {
     mockUnauthenticated();
     const { default: Layout } = await import("../../layouts/DashboardLayout");

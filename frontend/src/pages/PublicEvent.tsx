@@ -98,8 +98,13 @@ export default function PublicEvent() {
     if (data?.isAuthenticated && data?.id) {
       // Redirect to internal authenticated event detail page (dashboard path)
       navigate(`/dashboard/event/${data.id}`, { replace: true });
+      return;
     }
-  }, [data?.isAuthenticated, data?.id, navigate]);
+
+    if (data?.slug && slug && data.slug !== slug) {
+      navigate(`/p/${data.slug}`, { replace: true });
+    }
+  }, [data?.isAuthenticated, data?.id, data?.slug, slug, navigate]);
 
   // Show modal when viewing a past event
   useEffect(() => {
