@@ -1,12 +1,16 @@
 import { useState, useEffect, useRef } from "react";
 import ConfirmLogoutModal from "../../components/common/ConfirmLogoutModal";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ChevronDownIcon, UserCircleIcon } from "@heroicons/react/24/outline";
 import {
   getAvatarUrlWithCacheBust,
   getAvatarAlt,
 } from "../../utils/avatarUtils";
 import { useAuth } from "../../hooks/useAuth";
+import {
+  buildLoginRedirectUrl,
+  getPathWithSearch,
+} from "../../utils/loginRedirect";
 
 interface User {
   firstName: string;
@@ -28,10 +32,12 @@ export default function UserDropdown({
 }: UserDropdownProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { logout } = useAuth();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
+  const guestLoginHref = buildLoginRedirectUrl(getPathWithSearch(location));
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -79,7 +85,7 @@ export default function UserDropdown({
           <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50">
             <div className="py-1">
               <Link
-                to="/login"
+                to={guestLoginHref}
                 className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                 onClick={() => setDropdownOpen(false)}
               >

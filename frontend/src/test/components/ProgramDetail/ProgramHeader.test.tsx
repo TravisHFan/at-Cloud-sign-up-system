@@ -64,7 +64,7 @@ describe("ProgramHeader - Share Button", () => {
 
     await waitFor(() => {
       expect(mockWriteText).toHaveBeenCalledWith(
-        "https://example.com/dashboard/programs/507f1f77bcf86cd799439011",
+        "https://example.com/#/dashboard/programs/507f1f77bcf86cd799439011",
       );
       expect(mockWriteText.mock.calls[0][0]).not.toContain("/login");
     });
@@ -83,7 +83,7 @@ describe("ProgramHeader - Share Button", () => {
 
     await waitFor(() => {
       expect(mockWriteText).toHaveBeenCalledWith(
-        "https://example.com/dashboard/programs/emba-2026",
+        "https://example.com/#/dashboard/programs/emba-2026",
       );
     });
   });

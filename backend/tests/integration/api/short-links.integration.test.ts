@@ -176,7 +176,7 @@ describe("Short Links Redirect /s/:key", () => {
     const key = createRes.body.data.key;
 
     const res = await request(app).get(`/s/${key}`).expect(302);
-    expect(res.headers.location).toMatch(new RegExp(event.publicSlug));
+    expect(res.headers.location).toContain(`/#/p/${event.publicSlug}`);
   });
 
   it("redirects (302) even for DB-expired key (no expiration)", async () => {
@@ -195,7 +195,7 @@ describe("Short Links Redirect /s/:key", () => {
     ShortLinkTestHooks.clearCache();
 
     const res = await request(app).get(`/s/${key}`).expect(302);
-    expect(res.headers.location).toMatch(new RegExp(event.publicSlug));
+    expect(res.headers.location).toContain(`/#/p/${event.publicSlug}`);
   });
 
   it("returns 404 for unknown key redirect", async () => {

@@ -83,7 +83,7 @@ describe("Short Link persistence after unpublish", () => {
 
     // Redirect should still work (302)
     const redirectRes = await request(app).get(`/s/${key}`).expect(302);
-    expect(redirectRes.headers.location).toContain(event.publicSlug);
+    expect(redirectRes.headers.location).toContain(`/#/p/${event.publicSlug}`);
   });
 
   it("restores the same short link key after event is republished", async () => {
@@ -140,7 +140,7 @@ describe("Short Link persistence after unpublish", () => {
 
     // Redirect should work again
     const redirectRes = await request(app).get(`/s/${originalKey}`).expect(302);
-    expect(redirectRes.headers.location).toContain(event.publicSlug);
+    expect(redirectRes.headers.location).toContain(`/#/p/${event.publicSlug}`);
   });
 
   it("fixes stale expiresAt when existing link has incorrect timezone", async () => {

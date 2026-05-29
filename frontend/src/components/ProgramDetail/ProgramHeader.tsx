@@ -4,6 +4,7 @@ import EditButton from "../common/EditButton";
 import { Icon } from "../common";
 import { PlusIcon, EnvelopeIcon, ShareIcon } from "@heroicons/react/24/outline";
 import type { ProgramType } from "../../constants/programTypes";
+import { getAbsoluteHashRouteUrl } from "../../utils/hashRouting";
 
 interface ProgramHeaderProps {
   programId: string;
@@ -50,7 +51,9 @@ export default function ProgramHeader({
   const [shareButtonText, setShareButtonText] = useState("Share");
 
   const handleShare = async () => {
-    const publicUrl = `${window.location.origin}/dashboard/programs/${programId}`;
+    const publicUrl = getAbsoluteHashRouteUrl(
+      `/dashboard/programs/${encodeURIComponent(programId)}`
+    );
     try {
       await navigator.clipboard.writeText(publicUrl);
       setShareButtonText("Copied!");

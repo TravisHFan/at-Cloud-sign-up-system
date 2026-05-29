@@ -203,8 +203,8 @@ app.get("/s/:key", async (req, res) => {
       try {
         shortLinkRedirectCounter.inc({ status: "active" });
       } catch {}
-      // Redirect to frontend public event page path (relative). Frontend can handle full rendering.
-      const targetPath = `/p/${result.slug}`;
+      // Redirect to the frontend hash route so static HashRouter deployments hydrate on the public event page.
+      const targetPath = `/#/p/${encodeURIComponent(result.slug)}`;
       // Prefer explicit FRONTEND_URL for absolute redirect to avoid white page when user hits backend port directly.
       // If not set (dev), and request host looks like backend (e.g. :5001), attempt common Vite dev port 5176 fallback.
       const configuredFrontend = process.env.FRONTEND_URL?.replace(/\/$/, "");
