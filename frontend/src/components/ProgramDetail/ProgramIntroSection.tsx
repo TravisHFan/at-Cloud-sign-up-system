@@ -1,6 +1,10 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
+import {
+  buildLoginRedirectUrl,
+  getPathWithSearch,
+} from "../../utils/loginRedirect";
 
 interface ProgramIntroSectionProps {
   programId: string;
@@ -45,8 +49,10 @@ export default function ProgramIntroSection({
   onEnrollClick,
 }: ProgramIntroSectionProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { currentUser } = useAuth();
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const loginRedirectUrl = buildLoginRedirectUrl(getPathWithSearch(location));
 
   return (
     <>
@@ -92,7 +98,7 @@ export default function ProgramIntroSection({
                                   ? "As a class rep of this program, you have full access."
                                   : accessReason === "membership"
                                     ? "Your annual membership gives you access to this program."
-                                : "Thank you for enrolling. You now have access to all events in this program."}
+                                    : "Thank you for enrolling. You now have access to all events in this program."}
                         </p>
                       </div>
                     </div>
@@ -167,7 +173,7 @@ export default function ProgramIntroSection({
                 Cancel
               </button>
               <button
-                onClick={() => navigate("/login")}
+                onClick={() => navigate(loginRedirectUrl)}
                 className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-md transition-colors"
               >
                 Login
