@@ -47,7 +47,7 @@ import EditEvent from "./pages/EditEvent";
 import Feedback from "./pages/Feedback";
 import AuditLogs from "./pages/AuditLogs";
 import DashboardLayout from "./layouts/DashboardLayout";
-import EventDetail from "./pages/EventDetail";
+import EventDetailAccessRoute from "./components/EventDetail/EventDetailAccessRoute";
 import GetInvolved from "./pages/GetInvolved";
 import GuestRegistration from "./pages/GuestRegistration.tsx";
 import GuestConfirmation from "./pages/GuestConfirmation.tsx";
@@ -411,11 +411,7 @@ function App() {
             {/* Event Detail Page */}
             <Route
               path="/dashboard/event/:id"
-              element={
-                <ProtectedRoute>
-                  <EventDetail />
-                </ProtectedRoute>
-              }
+              element={<EventDetailAccessRoute />}
             />
             <Route path="/logout" element={<Home />} />
             {/* Public events list page (unauthenticated) */}

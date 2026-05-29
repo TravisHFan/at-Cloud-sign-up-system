@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import {
+  useParams,
+  useNavigate,
+  useSearchParams,
+  useLocation,
+} from "react-router-dom";
 import {
   annualMembershipService,
   programService,
@@ -74,6 +79,7 @@ export default function ProgramDetail({
 }: { forceServerPagination?: boolean } = {}) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { hasRole, currentUser } = useAuth();
   const notification = useToastReplacement();
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -103,6 +109,7 @@ export default function ProgramDetail({
   const [sortDir, setSortDir] = useState<"asc" | "desc">(initialSortDir);
   const [pageInput, setPageInput] = useState<string>(String(initialPage));
   const [announceText, setAnnounceText] = useState<string>("");
+  const loginRedirectPath = `${location.pathname}${location.search}`;
   const [pageHelper, setPageHelper] = useState<string>("");
   const [pageDebounceId, setPageDebounceId] = useState<number | null>(null);
   // Prefer explicit prop (tests) then env flag
@@ -923,7 +930,11 @@ export default function ProgramDetail({
                 Cancel
               </button>
               <button
-                onClick={() => navigate("/login")}
+                onClick={() =>
+                  navigate(
+                    `/login?redirect=${encodeURIComponent(loginRedirectPath)}`,
+                  )
+                }
                 className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-md transition-colors"
               >
                 Login
