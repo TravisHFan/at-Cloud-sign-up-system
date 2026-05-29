@@ -23,6 +23,10 @@ import {
   HeartIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../../hooks/useAuth";
+import {
+  buildLoginRedirectUrl,
+  getPathWithSearch,
+} from "../../utils/loginRedirect";
 
 interface NavigationItem {
   name: string;
@@ -47,6 +51,7 @@ export default function Sidebar({
   const { logout } = useAuth();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
+  const guestLoginHref = buildLoginRedirectUrl(getPathWithSearch(location));
 
   const handleLogout = async () => {
     try {
@@ -92,7 +97,7 @@ export default function Sidebar({
         { name: "Donate", href: "/dashboard/donate", icon: HeartIcon },
         {
           name: "Log In",
-          href: "/login",
+          href: guestLoginHref,
           icon: ArrowRightOnRectangleIcon,
         },
       ];

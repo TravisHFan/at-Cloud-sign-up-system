@@ -173,7 +173,7 @@ describe("Public end-to-end publish→redirect→register flow", () => {
     const redirect = await request(app).get(`/s/${shortKey}`).redirects(0);
     expect(redirect.status).toBe(302);
     const loc = redirect.headers["location"];
-    expect(loc).toContain(slug);
+    expect(loc).toContain(`/#/p/${slug}`);
 
     // 6. Public registration
     const eventDoc: any = await Event.findById(eventId).lean();

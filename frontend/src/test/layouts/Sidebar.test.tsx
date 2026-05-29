@@ -220,4 +220,32 @@ describe("Sidebar Component - Income History Link Visibility", () => {
       expect(screen.getByText("Community")).toBeInTheDocument();
     });
   });
+
+  describe("Guest Login Redirect", () => {
+    it("preserves the shared program detail page when guests log in", () => {
+      mockUseAuth.mockReturnValue({
+        currentUser: null,
+        isAuthenticated: false,
+        isLoading: false,
+        logout: vi.fn(),
+      });
+
+      render(
+        <MemoryRouter
+          initialEntries={["/dashboard/programs/program-123?ref=share"]}
+        >
+          <Sidebar
+            userRole="guest"
+            sidebarOpen={true}
+            setSidebarOpen={mockSetSidebarOpen}
+          />
+        </MemoryRouter>,
+      );
+
+      expect(screen.getByText("Log In").closest("a")).toHaveAttribute(
+        "href",
+        "/login?redirect=%2Fdashboard%2Fprograms%2Fprogram-123%3Fref%3Dshare",
+      );
+    });
+  });
 });

@@ -66,7 +66,7 @@ describe("app.ts branch coverage", () => {
 
       const res = await request(app).get("/s/abc123");
       expect(res.status).toBe(302);
-      expect(res.headers.location).toContain("/p/test-event-slug");
+      expect(res.headers.location).toContain("/#/p/test-event-slug");
       expect(ShortLinkMetricsService.increment).toHaveBeenCalledWith(
         "redirect_active",
       );
