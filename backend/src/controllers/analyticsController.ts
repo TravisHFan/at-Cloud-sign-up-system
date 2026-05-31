@@ -25,6 +25,17 @@ export class AnalyticsController {
     return EventAnalyticsController.getEventAnalytics(req, res);
   }
 
+  // Get attendance analytics
+  static async getAttendanceAnalytics(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    const { default: AttendanceAnalyticsController } = await import(
+      "./analytics/AttendanceAnalyticsController"
+    );
+    return AttendanceAnalyticsController.getAttendanceAnalytics(req, res);
+  }
+
   // Get engagement analytics
   static async getEngagementAnalytics(
     req: Request,

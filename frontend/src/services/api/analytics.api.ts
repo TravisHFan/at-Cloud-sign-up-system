@@ -1,6 +1,27 @@
 import { BaseApiClient } from "./common";
 
 /**
+ * Overview Analytics Types
+ */
+export interface AnalyticsOverview {
+  overview: {
+    totalUsers: number;
+    totalEvents: number;
+    totalRegistrations: number;
+    activeParticipants: number;
+    averageSignupRate: number;
+    activeUsers: number;
+    upcomingEvents: number;
+    recentRegistrations: number;
+  };
+  growth: {
+    userGrowthRate: number;
+    eventGrowthRate: number;
+    registrationGrowthRate: number;
+  };
+}
+
+/**
  * Program Analytics Types
  */
 export interface ProgramTypeBreakdown {
@@ -114,6 +135,59 @@ export interface TrendsData {
 }
 
 /**
+ * Attendance Analytics Types
+ */
+export interface AttendanceCounts {
+  registered: number;
+  attended: number;
+  absent: number;
+  unrecorded: number;
+  recorded: number;
+  attendanceRate: number;
+  noShowRate: number;
+  completionRate: number;
+}
+
+export interface AttendancePersonAnalytics extends AttendanceCounts {
+  userId: string;
+  name: string;
+  roleInAtCloud: string;
+  systemAuthorizationLevel: string;
+  programs: string[];
+  completedEvents: number;
+  lastAttendedAt?: string;
+  lastAttendedEvent?: string;
+}
+
+export interface AttendanceProgramAnalytics extends AttendanceCounts {
+  programId: string;
+  programTitle: string;
+  programType: string;
+  completedEvents: number;
+}
+
+export interface AttendanceProgramRef {
+  id: string;
+  title: string;
+  programType?: string;
+}
+
+export interface AttendanceEventAnalytics extends AttendanceCounts {
+  eventId: string;
+  eventTitle: string;
+  eventDate: string;
+  eventType: string;
+  programs: AttendanceProgramRef[];
+}
+
+export interface AttendanceAnalytics {
+  summary: AttendanceCounts;
+  byPerson: AttendancePersonAnalytics[];
+  byProgram: AttendanceProgramAnalytics[];
+  byEvent: AttendanceEventAnalytics[];
+}
+
+/**
  * Analytics API Service
  * Handles analytics data retrieval and export
  */
@@ -122,8 +196,8 @@ class AnalyticsApiClient extends BaseApiClient {
    * Get overall analytics data
    * @returns Analytics object
    */
-  async getAnalytics(): Promise<unknown> {
-    const response = await this.request<unknown>("/analytics");
+  async getAnalytics(): Promise<AnalyticsOverview> {
+    const response = await this.request<AnalyticsOverview>("/analytics");
 
     if (response.data) {
       return response.data;
@@ -172,6 +246,22 @@ class AnalyticsApiClient extends BaseApiClient {
     }
 
     throw new Error(response.message || "Failed to get engagement analytics");
+  }
+
+  /**
+   * Get attendance confirmation analytics for completed events
+   * @returns Attendance analytics grouped by summary, person, program, and event
+   */
+  async getAttendanceAnalytics(): Promise<AttendanceAnalytics> {
+    const response = await this.request<AttendanceAnalytics>(
+      "/analytics/attendance"
+    );
+
+    if (response.data) {
+      return response.data;
+    }
+
+    throw new Error(response.message || "Failed to get attendance analytics");
   }
 
   /**
@@ -282,6 +372,7 @@ export const analyticsService = {
   getUserAnalytics: () => analyticsApiClient.getUserAnalytics(),
   getEventAnalytics: () => analyticsApiClient.getEventAnalytics(),
   getEngagementAnalytics: () => analyticsApiClient.getEngagementAnalytics(),
+  getAttendanceAnalytics: () => analyticsApiClient.getAttendanceAnalytics(),
   getProgramAnalytics: () => analyticsApiClient.getProgramAnalytics(),
   getDonationAnalytics: () => analyticsApiClient.getDonationAnalytics(),
   getFinancialSummary: () => analyticsApiClient.getFinancialSummary(),

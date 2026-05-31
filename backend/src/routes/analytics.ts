@@ -20,6 +20,11 @@ router.get(
   AnalyticsController.getEngagementAnalytics
 );
 router.get(
+  "/attendance",
+  analyticsLimiter,
+  AnalyticsController.getAttendanceAnalytics
+);
+router.get(
   "/programs",
   analyticsLimiter,
   AnalyticsController.getProgramAnalytics

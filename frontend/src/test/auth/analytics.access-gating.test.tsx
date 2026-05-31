@@ -2,18 +2,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import Analytics from "../../pages/Analytics";
+import { NotificationProvider } from "../../contexts/NotificationModalContext";
 
 // Mock Auth to simulate a regular Participant (no analytics access)
 vi.mock("../../hooks/useAuth", () => ({
   useAuth: () => ({ currentUser: { id: "u1", role: "Participant" } }),
-}));
-
-// Avoid hitting real backend hooks; provide minimal shape
-vi.mock("../../hooks/useBackendIntegration", () => ({
-  useAnalyticsData: () => ({
-    eventAnalytics: { upcomingEvents: [], completedEvents: [] },
-    exportData: vi.fn(),
-  }),
 }));
 
 // Provide minimal user data and role stats hooks
@@ -37,7 +30,14 @@ describe("Analytics access gating", () => {
     render(
       <MemoryRouter initialEntries={["/analytics"]}>
         <Routes>
-          <Route path="/analytics" element={<Analytics />} />
+          <Route
+            path="/analytics"
+            element={
+              <NotificationProvider>
+                <Analytics />
+              </NotificationProvider>
+            }
+          />
         </Routes>
       </MemoryRouter>
     );

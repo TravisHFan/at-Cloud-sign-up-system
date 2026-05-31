@@ -90,52 +90,66 @@ export interface RoleFormatDistributionProps {
   formatStats: Record<string, number>;
 }
 
+export function SystemAuthorizationDistributionCard({
+  roleStats,
+}: {
+  roleStats: RoleStats;
+}) {
+  return (
+    <div className="bg-white border rounded-lg p-6">
+      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        System Authorization Level Distribution
+      </h3>
+      <div className="space-y-3">
+        <DistributionRow label="Super Admin" value={roleStats.superAdmin} />
+        <DistributionRow
+          label="Administrators"
+          value={roleStats.administrators}
+        />
+        <DistributionRow label="Leaders" value={roleStats.leaders} />
+        <DistributionRow label="Guest Experts" value={roleStats.guestExperts} />
+        <DistributionRow label="Participants" value={roleStats.participants} />
+        <DistributionRow
+          label="@Cloud Co-workers"
+          value={roleStats.atCloudLeaders}
+        />
+      </div>
+    </div>
+  );
+}
+
+export function EventFormatDistributionCard({
+  formatStats,
+}: {
+  formatStats: Record<string, number>;
+}) {
+  return (
+    <div className="bg-white border rounded-lg p-6">
+      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        Event Format Distribution
+      </h3>
+      <div className="space-y-3">
+        {Object.entries(formatStats).map(([format, count]) => (
+          <div key={format} className="flex justify-between items-center">
+            <span className="text-sm text-gray-600">{format}:</span>
+            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+              {count}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function RoleFormatDistribution({
   roleStats,
   formatStats,
 }: RoleFormatDistributionProps) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-      <div className="bg-white border rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          System Authorization Level Distribution
-        </h3>
-        <div className="space-y-3">
-          <DistributionRow label="Super Admin" value={roleStats.superAdmin} />
-          <DistributionRow
-            label="Administrators"
-            value={roleStats.administrators}
-          />
-          <DistributionRow label="Leaders" value={roleStats.leaders} />
-          <DistributionRow
-            label="Guest Experts"
-            value={roleStats.guestExperts}
-          />
-          <DistributionRow
-            label="Participants"
-            value={roleStats.participants}
-          />
-          <DistributionRow
-            label="@Cloud Co-workers"
-            value={roleStats.atCloudLeaders}
-          />
-        </div>
-      </div>
-      <div className="bg-white border rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          Event Format Distribution
-        </h3>
-        <div className="space-y-3">
-          {Object.entries(formatStats).map(([format, count]) => (
-            <div key={format} className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">{format}:</span>
-              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
-                {count}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
+      <SystemAuthorizationDistributionCard roleStats={roleStats} />
+      <EventFormatDistributionCard formatStats={formatStats} />
     </div>
   );
 }

@@ -26,43 +26,58 @@ vi.mock("../../services/socketService", () => ({
   },
 }));
 
-vi.mock("../../hooks/useBackendIntegration", () => ({
-  useAnalyticsData: () => ({
-    isLoading: false,
-    isError: false,
-    error: null,
-    eventAnalytics: {
-      totalEvents: 42,
-      upcomingEvents: 10,
-      passedEvents: 32,
-      averageSignupRate: 57.3,
-      upcomingStats: {
-        totalSlots: 0,
-        signedUp: 0,
-        availableSlots: 0,
-        fillRate: 0,
+vi.mock("../../hooks/useAnalyticsResources", () => ({
+  useAnalyticsOverviewResource: () => ({
+    data: {
+      overview: {
+        totalEvents: 42,
+        totalUsers: 120,
+        totalRegistrations: 80,
+        activeParticipants: 18,
+        averageSignupRate: 57.3,
+        activeUsers: 12,
+        upcomingEvents: 10,
+        recentRegistrations: 4,
       },
-      passedStats: { totalSlots: 0, signedUp: 0, fillRate: 0 },
-      formatStats: {},
-      mostActiveParticipants: [],
-      engagementStats: { low: 0, medium: 0, high: 0, elite: 0 },
+      growth: {
+        userGrowthRate: 0,
+        eventGrowthRate: 0,
+        registrationGrowthRate: 0,
+      },
     },
-    users: [],
-    roleStats: {
-      total: 120,
-      superAdmin: 1,
-      administrators: 2,
-      leaders: 3,
-      guestExperts: 4,
-      participants: 5,
-      atCloudLeaders: 6,
-    },
-    engagementMetrics: {
-      uniqueParticipants: 18,
-      mostActiveUsers: [],
-      distribution: {},
-      averageEngagement: 0,
-    },
+    loading: false,
+    error: null,
+    refresh: vi.fn(),
+  }),
+  useEventAnalyticsResource: () => ({
+    data: null,
+    loading: false,
+    error: null,
+    refresh: vi.fn(),
+  }),
+  useAttendanceAnalyticsResource: () => ({
+    data: null,
+    loading: false,
+    error: null,
+    refresh: vi.fn(),
+  }),
+  useProgramAnalyticsResource: () => ({
+    data: null,
+    loading: false,
+    error: null,
+    refresh: vi.fn(),
+  }),
+  useFinancialSummaryResource: () => ({
+    data: null,
+    loading: false,
+    error: null,
+    refresh: vi.fn(),
+  }),
+  useDonationAnalyticsResource: () => ({
+    data: null,
+    loading: false,
+    error: null,
+    refresh: vi.fn(),
   }),
 }));
 
