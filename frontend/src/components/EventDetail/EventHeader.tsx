@@ -219,18 +219,18 @@ function EventHeader({
       )}{" "}
       {/* Action Buttons Row - Edit and Delete for authorized users, Add to Calendar for all */}
       <div className="flex items-center space-x-3 mb-4">
+        {canEditEvent && (
+          <EditButton
+            onClick={() =>
+              navigate(`/dashboard/edit-event/${event.id}`, {
+                state: { returnTo: `/dashboard/event/${event.id}` },
+              })
+            }
+            title="Edit Event"
+          />
+        )}
         {!isPassedEvent && (
           <>
-            {canEditEvent && (
-              <EditButton
-                onClick={() =>
-                  navigate(`/dashboard/edit-event/${event.id}`, {
-                    state: { returnTo: `/dashboard/event/${event.id}` },
-                  })
-                }
-                title="Edit Event"
-              />
-            )}
             {canDeleteEvent && (
               <button
                 onClick={() => setShowDeletionModal(true)}
