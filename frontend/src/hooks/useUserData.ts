@@ -8,6 +8,7 @@ export const useUserData = (options?: {
   fetchAll?: boolean;
   limit?: number;
   suppressErrors?: boolean;
+  enabled?: boolean;
 }) => {
   const {
     users: apiUsers,
@@ -16,7 +17,10 @@ export const useUserData = (options?: {
     refreshUsers,
     pagination,
     loadPage,
-  } = useUsers({ suppressErrors: options?.suppressErrors });
+  } = useUsers({
+    suppressErrors: options?.suppressErrors,
+    autoFetch: options?.enabled !== false && !options?.fetchAll,
+  });
   const [users, setUsers] = useState<User[]>([]);
   const [fetchingAll, setFetchingAll] = useState(false);
   const notification = useToastReplacement();
@@ -71,6 +75,7 @@ export const useUserData = (options?: {
 
   // Optionally fetch ALL users across pages (for Analytics)
   useEffect(() => {
+    if (options?.enabled === false) return;
     if (!options?.fetchAll) return;
 
     let cancelled = false;
@@ -184,7 +189,7 @@ export const useUserData = (options?: {
     return () => {
       cancelled = true;
     };
-  }, [options?.fetchAll, options?.limit]);
+  }, [options?.enabled, options?.fetchAll, options?.limit]);
 
   // User management functions
   const promoteUser = useCallback(

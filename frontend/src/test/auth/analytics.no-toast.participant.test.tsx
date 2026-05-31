@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import Analytics from "../../pages/Analytics";
 
 // Mock useAuth hook to return a Participant user
@@ -11,20 +12,47 @@ vi.mock("../../hooks/useAuth", () => ({
   }),
 }));
 
-// Spy on useAnalyticsData to verify it's called with enabled: false for Participants
-const useAnalyticsDataMock = vi.fn().mockReturnValue({
-  analytics: null,
-  userAnalytics: null,
-  eventAnalytics: null,
-  engagementAnalytics: null,
+const analyticsResourceMocks = vi.hoisted(() => ({
+  overview: vi.fn(),
+  events: vi.fn(),
+  attendance: vi.fn(),
+  programs: vi.fn(),
+  financialSummary: vi.fn(),
+  donations: vi.fn(),
+}));
+
+const disabledResource = vi.hoisted(() => ({
+  data: null,
   loading: false,
   error: null,
-  refreshAnalytics: vi.fn(),
-  exportData: vi.fn(),
-});
+  refresh: vi.fn(),
+}));
 
-vi.mock("../../hooks/useBackendIntegration", () => ({
-  useAnalyticsData: (...args: any[]) => useAnalyticsDataMock(...args),
+vi.mock("../../hooks/useAnalyticsResources", () => ({
+  useAnalyticsOverviewResource: (enabled: boolean) => {
+    analyticsResourceMocks.overview(enabled);
+    return disabledResource;
+  },
+  useEventAnalyticsResource: (enabled: boolean) => {
+    analyticsResourceMocks.events(enabled);
+    return disabledResource;
+  },
+  useAttendanceAnalyticsResource: (enabled: boolean) => {
+    analyticsResourceMocks.attendance(enabled);
+    return disabledResource;
+  },
+  useProgramAnalyticsResource: (enabled: boolean) => {
+    analyticsResourceMocks.programs(enabled);
+    return disabledResource;
+  },
+  useFinancialSummaryResource: (enabled: boolean) => {
+    analyticsResourceMocks.financialSummary(enabled);
+    return disabledResource;
+  },
+  useDonationAnalyticsResource: (enabled: boolean) => {
+    analyticsResourceMocks.donations(enabled);
+    return disabledResource;
+  },
 }));
 
 // Mock toast replacement to ensure error would be visible if called
@@ -35,21 +63,24 @@ vi.mock("../../contexts/NotificationModalContext", () => ({
 
 describe("Analytics access (participant)", () => {
   beforeEach(() => {
-    useAnalyticsDataMock.mockClear();
+    Object.values(analyticsResourceMocks).forEach((mock) => mock.mockClear());
     toast.error.mockClear();
   });
 
   it("gates analytics fetch and does not show error toast for participants", async () => {
-    render(<Analytics />);
+    render(
+      <MemoryRouter>
+        <Analytics />
+      </MemoryRouter>
+    );
 
     // Access Restricted page is shown
     expect(await screen.findByText(/Access Restricted/i)).toBeInTheDocument();
 
-    // The hook is invoked once with options that include enabled: false
-    expect(useAnalyticsDataMock).toHaveBeenCalled();
-    const callArgs = useAnalyticsDataMock.mock.calls[0]?.[0] ?? {};
-    expect(callArgs.enabled).toBe(false);
-    expect(callArgs.suppressAuthErrors).toBe(true);
+    expect(analyticsResourceMocks.overview).toHaveBeenCalledWith(false);
+    expect(analyticsResourceMocks.events).toHaveBeenCalledWith(false);
+    expect(analyticsResourceMocks.attendance).toHaveBeenCalledWith(false);
+    expect(analyticsResourceMocks.programs).toHaveBeenCalledWith(false);
 
     // No error toast should be raised
     expect(toast.error).not.toHaveBeenCalled();

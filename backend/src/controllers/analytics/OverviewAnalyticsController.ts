@@ -65,13 +65,16 @@ export default class OverviewAnalyticsController {
             totalUsers,
             totalEvents,
             totalRegistrations,
+            activeParticipants,
             activeUsers,
             upcomingEvents,
             recentRegistrations,
+            signupCapacity,
           ] = await Promise.all([
             User.countDocuments({ isActive: true }),
             Event.countDocuments(),
             Registration.countDocuments(),
+            Registration.distinct("userId").then((ids) => ids.length),
             User.countDocuments({
               isActive: true,
               lastLogin: {
@@ -86,13 +89,47 @@ export default class OverviewAnalyticsController {
                 $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
               },
             }),
+            Event.aggregate([
+              {
+                $lookup: {
+                  from: "registrations",
+                  localField: "_id",
+                  foreignField: "eventId",
+                  as: "registrations",
+                },
+              },
+              {
+                $project: {
+                  totalSlots: { $sum: "$roles.maxParticipants" },
+                  filledSlots: { $size: "$registrations" },
+                },
+              },
+              {
+                $group: {
+                  _id: null,
+                  totalSlots: { $sum: "$totalSlots" },
+                  filledSlots: { $sum: "$filledSlots" },
+                },
+              },
+            ]),
           ]);
+
+          const capacity = signupCapacity[0] || {
+            totalSlots: 0,
+            filledSlots: 0,
+          };
+          const averageSignupRate =
+            capacity.totalSlots > 0
+              ? (capacity.filledSlots / capacity.totalSlots) * 100
+              : 0;
 
           return {
             overview: {
               totalUsers,
               totalEvents,
               totalRegistrations,
+              activeParticipants,
+              averageSignupRate,
               activeUsers,
               upcomingEvents,
               recentRegistrations,
