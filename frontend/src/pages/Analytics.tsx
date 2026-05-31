@@ -24,6 +24,7 @@ import {
   AnalyticsOverviewLoadingState,
   AnalyticsCardSectionLoadingState,
 } from "../components/ui/LoadingStates";
+import { TabNav } from "../components/ui";
 import type { EventData } from "../types/event";
 import {
   calculateChurchAnalytics,
@@ -314,8 +315,8 @@ export default function Analytics() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-6">
+      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div className="flex flex-col gap-4 p-6 pb-4 lg:flex-row lg:items-center lg:justify-between">
           <h1 className="text-2xl font-bold text-gray-900">
             Analytics Dashboard
           </h1>
@@ -363,163 +364,151 @@ export default function Analytics() {
           </div>
         </div>
 
-        <div className="border-b border-gray-200 mb-6 overflow-x-auto">
-          <div className="flex min-w-max gap-1" role="tablist">
-            {availableTabs.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  role="tab"
-                  aria-selected={isActive}
-                  onClick={() => handleTabChange(tab.id)}
-                  className={`inline-flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                    isActive
-                      ? "border-blue-600 text-blue-700"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }`}
-                >
-                  <Icon className="h-4 w-4" aria-hidden="true" />
-                  {tab.label}
-                </button>
-              );
-            })}
-          </div>
+        <TabNav
+          tabs={availableTabs}
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          ariaLabel="Analytics sections"
+        />
+
+        <div className="p-6">
+          {activeTab === "overview" && (
+            <>
+              {overviewResource.error ? (
+                <SectionError message={overviewResource.error} />
+              ) : overviewIsLoading || !overview ? (
+                <AnalyticsOverviewLoadingState />
+              ) : (
+                <AnalyticsOverviewCards
+                  totalEvents={overview.totalEvents}
+                  totalUsers={overview.totalUsers}
+                  activeParticipants={overview.activeParticipants}
+                  averageSignupRate={overview.averageSignupRate}
+                />
+              )}
+            </>
+          )}
+
+          {activeTab === "events" && (
+            <>
+              {eventResource.error ? (
+                <SectionError message={eventResource.error} />
+              ) : eventsAreLoading ? (
+                <AnalyticsCardSectionLoadingState cardCount={2} itemCount={5} />
+              ) : (
+                <div className="space-y-6">
+                  <EventStatisticsCards
+                    upcomingEvents={eventAnalytics.upcomingEvents}
+                    upcomingStats={eventAnalytics.upcomingStats}
+                    passedEvents={eventAnalytics.passedEvents}
+                    passedStats={eventAnalytics.passedStats}
+                  />
+                  <EventFormatDistributionCard
+                    formatStats={eventAnalytics.formatStats}
+                  />
+                </div>
+              )}
+            </>
+          )}
+
+          {activeTab === "attendance" && (
+            <>
+              {attendanceResource.error ? (
+                <SectionError message={attendanceResource.error} />
+              ) : attendanceIsLoading || !attendanceResource.data ? (
+                <AnalyticsCardSectionLoadingState cardCount={3} itemCount={6} />
+              ) : (
+                <AttendanceAnalyticsSection
+                  analytics={attendanceResource.data}
+                />
+              )}
+            </>
+          )}
+
+          {activeTab === "people" && (
+            <>
+              {eventResource.error ? (
+                <SectionError message={eventResource.error} />
+              ) : eventsAreLoading || usersLoading ? (
+                <AnalyticsCardSectionLoadingState cardCount={2} itemCount={6} />
+              ) : (
+                <div className="space-y-6">
+                  <UserEngagementSection
+                    mostActiveUsers={engagementMetrics.mostActiveUsers}
+                    uniqueParticipants={engagementMetrics.uniqueParticipants}
+                    userSignups={engagementMetrics.userSignups}
+                    guestSignups={guestAggregates.guestSignups}
+                    uniqueGuests={guestAggregates.uniqueGuests}
+                    totalEvents={eventAnalytics.totalEvents}
+                    avgRolesPerParticipant={avgRolesPerParticipant}
+                  />
+                  <SystemAuthorizationDistributionCard roleStats={roleStats} />
+                  <ParticipantDemographics
+                    churchAnalytics={churchAnalytics}
+                    occupationAnalytics={occupationAnalytics}
+                  />
+                </div>
+              )}
+            </>
+          )}
+
+          {activeTab === "programs" && (
+            <>
+              {programResource.error ? (
+                <SectionError message={programResource.error} />
+              ) : programsAreLoading || !programResource.data ? (
+                <AnalyticsCardSectionLoadingState cardCount={2} itemCount={5} />
+              ) : (
+                <ProgramAnalyticsSection analytics={programResource.data} />
+              )}
+            </>
+          )}
+
+          {activeTab === "finance" && hasFinancialAccess && (
+            <>
+              {financialSummaryResource.error || donationResource.error ? (
+                <SectionError
+                  message={
+                    financialSummaryResource.error ||
+                    donationResource.error ||
+                    "Failed to load financial analytics"
+                  }
+                />
+              ) : financeIsLoading ||
+                !financialSummaryResource.data ||
+                !donationResource.data ? (
+                <AnalyticsCardSectionLoadingState cardCount={2} itemCount={5} />
+              ) : (
+                <div className="space-y-6">
+                  <FinancialHealthCards
+                    totalRevenue={financialSummaryResource.data.totalRevenue}
+                    programRevenue={
+                      financialSummaryResource.data.programs.revenue
+                    }
+                    programPurchases={
+                      financialSummaryResource.data.programs.purchases
+                    }
+                    donationRevenue={
+                      financialSummaryResource.data.donations.revenue
+                    }
+                    donationGifts={
+                      financialSummaryResource.data.donations.gifts
+                    }
+                    last30DaysRevenue={
+                      financialSummaryResource.data.last30Days.revenue
+                    }
+                    last30DaysPercentage={
+                      financialSummaryResource.data.last30Days.percentage
+                    }
+                    growthRate={financialSummaryResource.data.growthRate}
+                  />
+                  <FinancialTrendsChart />
+                  <DonationAnalyticsSection analytics={donationResource.data} />
+                </div>
+              )}
+            </>
+          )}
         </div>
-
-        {activeTab === "overview" && (
-          <>
-            {overviewResource.error ? (
-              <SectionError message={overviewResource.error} />
-            ) : overviewIsLoading || !overview ? (
-              <AnalyticsOverviewLoadingState />
-            ) : (
-              <AnalyticsOverviewCards
-                totalEvents={overview.totalEvents}
-                totalUsers={overview.totalUsers}
-                activeParticipants={overview.activeParticipants}
-                averageSignupRate={overview.averageSignupRate}
-              />
-            )}
-          </>
-        )}
-
-        {activeTab === "events" && (
-          <>
-            {eventResource.error ? (
-              <SectionError message={eventResource.error} />
-            ) : eventsAreLoading ? (
-              <AnalyticsCardSectionLoadingState cardCount={2} itemCount={5} />
-            ) : (
-              <div className="space-y-6">
-                <EventStatisticsCards
-                  upcomingEvents={eventAnalytics.upcomingEvents}
-                  upcomingStats={eventAnalytics.upcomingStats}
-                  passedEvents={eventAnalytics.passedEvents}
-                  passedStats={eventAnalytics.passedStats}
-                />
-                <EventFormatDistributionCard
-                  formatStats={eventAnalytics.formatStats}
-                />
-              </div>
-            )}
-          </>
-        )}
-
-        {activeTab === "attendance" && (
-          <>
-            {attendanceResource.error ? (
-              <SectionError message={attendanceResource.error} />
-            ) : attendanceIsLoading || !attendanceResource.data ? (
-              <AnalyticsCardSectionLoadingState cardCount={3} itemCount={6} />
-            ) : (
-              <AttendanceAnalyticsSection
-                analytics={attendanceResource.data}
-              />
-            )}
-          </>
-        )}
-
-        {activeTab === "people" && (
-          <>
-            {eventResource.error ? (
-              <SectionError message={eventResource.error} />
-            ) : eventsAreLoading || usersLoading ? (
-              <AnalyticsCardSectionLoadingState cardCount={2} itemCount={6} />
-            ) : (
-              <div className="space-y-6">
-                <UserEngagementSection
-                  mostActiveUsers={engagementMetrics.mostActiveUsers}
-                  uniqueParticipants={engagementMetrics.uniqueParticipants}
-                  userSignups={engagementMetrics.userSignups}
-                  guestSignups={guestAggregates.guestSignups}
-                  uniqueGuests={guestAggregates.uniqueGuests}
-                  totalEvents={eventAnalytics.totalEvents}
-                  avgRolesPerParticipant={avgRolesPerParticipant}
-                />
-                <SystemAuthorizationDistributionCard roleStats={roleStats} />
-                <ParticipantDemographics
-                  churchAnalytics={churchAnalytics}
-                  occupationAnalytics={occupationAnalytics}
-                />
-              </div>
-            )}
-          </>
-        )}
-
-        {activeTab === "programs" && (
-          <>
-            {programResource.error ? (
-              <SectionError message={programResource.error} />
-            ) : programsAreLoading || !programResource.data ? (
-              <AnalyticsCardSectionLoadingState cardCount={2} itemCount={5} />
-            ) : (
-              <ProgramAnalyticsSection analytics={programResource.data} />
-            )}
-          </>
-        )}
-
-        {activeTab === "finance" && hasFinancialAccess && (
-          <>
-            {financialSummaryResource.error || donationResource.error ? (
-              <SectionError
-                message={
-                  financialSummaryResource.error ||
-                  donationResource.error ||
-                  "Failed to load financial analytics"
-                }
-              />
-            ) : financeIsLoading ||
-              !financialSummaryResource.data ||
-              !donationResource.data ? (
-              <AnalyticsCardSectionLoadingState cardCount={2} itemCount={5} />
-            ) : (
-              <div className="space-y-6">
-                <FinancialHealthCards
-                  totalRevenue={financialSummaryResource.data.totalRevenue}
-                  programRevenue={financialSummaryResource.data.programs.revenue}
-                  programPurchases={
-                    financialSummaryResource.data.programs.purchases
-                  }
-                  donationRevenue={
-                    financialSummaryResource.data.donations.revenue
-                  }
-                  donationGifts={financialSummaryResource.data.donations.gifts}
-                  last30DaysRevenue={
-                    financialSummaryResource.data.last30Days.revenue
-                  }
-                  last30DaysPercentage={
-                    financialSummaryResource.data.last30Days.percentage
-                  }
-                  growthRate={financialSummaryResource.data.growthRate}
-                />
-                <FinancialTrendsChart />
-                <DonationAnalyticsSection analytics={donationResource.data} />
-              </div>
-            )}
-          </>
-        )}
       </div>
     </div>
   );
