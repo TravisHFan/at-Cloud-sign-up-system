@@ -205,13 +205,6 @@ function EventRolesSection({
           ),
         };
       });
-
-      notification.success(
-        attended
-          ? "Attendance marked as attended."
-          : "Attendance marked as not attended.",
-        { title: "Attendance Updated" },
-      );
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "Failed to update attendance.";

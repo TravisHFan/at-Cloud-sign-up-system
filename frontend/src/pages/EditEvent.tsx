@@ -224,7 +224,8 @@ export default function EditEvent() {
   }, [register, setValue]);
 
   // Add validation hook and watch functionality
-  const { validations } = useEventValidation(watch);
+  const allowPastDates = eventData?.status === "completed";
+  const { validations } = useEventValidation(watch, { allowPastDates });
 
   // Watch the format field to show/hide conditional fields
   const selectedFormat = watch("format");
@@ -630,6 +631,7 @@ export default function EditEvent() {
             originalSecondaryFlyerUrl={originalSecondaryFlyerUrl}
             id={id}
             isEditMode={true}
+            allowPastDates={allowPastDates}
           />
 
           {/* Format Settings */}

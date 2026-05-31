@@ -32,6 +32,30 @@ export function useEventActions({
   notification,
   navigate,
 }: UseEventActionsParams): EventActionsResult {
+  const getAttendanceStatus = (
+    signup: EventData["roles"][number]["currentSignups"][number],
+  ) => {
+    if (signup.registrationStatus === "attended" || signup.attendanceConfirmed) {
+      return "Attended";
+    }
+    if (signup.registrationStatus === "no_show") {
+      return "Not attended";
+    }
+    return "Not recorded";
+  };
+
+  const getAttendanceConfirmed = (
+    signup: EventData["roles"][number]["currentSignups"][number],
+  ) => {
+    if (signup.registrationStatus === "attended" || signup.attendanceConfirmed) {
+      return "Yes";
+    }
+    if (signup.registrationStatus === "no_show") {
+      return "No";
+    }
+    return "";
+  };
+
   // Helper function to download calendar file
   const handleDownloadCalendar = async () => {
     if (!event) return;
@@ -87,6 +111,8 @@ export function useEventActions({
           "Event Role": role.name,
           "Role Description": role.description,
           "Signup Notes": signup.notes || "",
+          "Attendance Status": getAttendanceStatus(signup),
+          "Attendance Confirmed": getAttendanceConfirmed(signup),
         });
       });
     });
@@ -112,6 +138,8 @@ export function useEventActions({
             "Event Role": roleMap.get(guest.roleId) || "",
             "Role Description": "",
             "Signup Notes": guest.notes || "",
+            "Attendance Status": "Not tracked",
+            "Attendance Confirmed": "",
           });
         });
         guestCount = guestsResult.guests.length;

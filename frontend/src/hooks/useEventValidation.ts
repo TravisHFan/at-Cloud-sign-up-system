@@ -8,8 +8,15 @@ import {
 } from "../utils/eventValidationUtils";
 import type { EventFormData } from "../schemas/eventSchema";
 
-export function useEventValidation(watch: UseFormWatch<EventFormData>) {
+export function useEventValidation(
+  watch: UseFormWatch<EventFormData>,
+  options?: { allowPastDates?: boolean },
+) {
   const formData = watch();
+  const validationFormData = {
+    ...formData,
+    allowPastDates: options?.allowPastDates === true,
+  };
   // Create a stable key for complex objects to satisfy exhaustive-deps without over-firing
   const formKey = JSON.stringify({
     title: formData.title,
@@ -26,30 +33,63 @@ export function useEventValidation(watch: UseFormWatch<EventFormData>) {
     format: formData.format,
     zoomLink: formData.zoomLink,
     roles: formData.roles,
+    allowPastDates: options?.allowPastDates === true,
   });
 
   const validations: EventValidationState = useMemo(
     () => ({
-      title: validateEventField("title", formData.title, formData),
+      title: validateEventField("title", formData.title, validationFormData),
       programLabels: validateEventField(
         "programLabels",
         formData.programLabels,
-        formData
+        validationFormData,
       ),
-      type: validateEventField("type", formData.type, formData),
-      date: validateEventField("date", formData.date, formData),
-      endDate: validateEventField("endDate", formData.endDate, formData),
-      time: validateEventField("time", formData.time, formData),
-      endTime: validateEventField("endTime", formData.endTime, formData),
-      startOverlap: validateEventField("startOverlap", undefined, formData),
-      endOverlap: validateEventField("endOverlap", undefined, formData),
-      location: validateEventField("location", formData.location, formData),
-      purpose: validateEventField("purpose", formData.purpose, formData),
-      agenda: validateEventField("agenda", formData.agenda, formData),
-      organizer: validateEventField("organizer", formData.organizer, formData),
-      format: validateEventField("format", formData.format, formData),
-      zoomLink: validateEventField("zoomLink", formData.zoomLink, formData),
-      roles: validateEventField("roles", formData.roles, formData),
+      type: validateEventField("type", formData.type, validationFormData),
+      date: validateEventField("date", formData.date, validationFormData),
+      endDate: validateEventField(
+        "endDate",
+        formData.endDate,
+        validationFormData,
+      ),
+      time: validateEventField("time", formData.time, validationFormData),
+      endTime: validateEventField(
+        "endTime",
+        formData.endTime,
+        validationFormData,
+      ),
+      startOverlap: validateEventField(
+        "startOverlap",
+        undefined,
+        validationFormData,
+      ),
+      endOverlap: validateEventField(
+        "endOverlap",
+        undefined,
+        validationFormData,
+      ),
+      location: validateEventField(
+        "location",
+        formData.location,
+        validationFormData,
+      ),
+      purpose: validateEventField(
+        "purpose",
+        formData.purpose,
+        validationFormData,
+      ),
+      agenda: validateEventField("agenda", formData.agenda, validationFormData),
+      organizer: validateEventField(
+        "organizer",
+        formData.organizer,
+        validationFormData,
+      ),
+      format: validateEventField("format", formData.format, validationFormData),
+      zoomLink: validateEventField(
+        "zoomLink",
+        formData.zoomLink,
+        validationFormData,
+      ),
+      roles: validateEventField("roles", formData.roles, validationFormData),
     }),
     // formKey encodes the primitive snapshot; depending only on it prevents over-firing
     // eslint-disable-next-line react-hooks/exhaustive-deps
