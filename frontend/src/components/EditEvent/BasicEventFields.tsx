@@ -76,6 +76,7 @@ interface BasicEventFieldsProps {
   originalSecondaryFlyerUrl: string | null;
   id?: string; // For time conflict check
   allowedEventTypes?: string[]; // Optional: filtered event types for CreateEvent
+  allowPastDates?: boolean;
   // Recurrence props
   isEditMode?: boolean; // When true, Repeat is locked to "Never"
   repeatFrequency?: string;
@@ -119,6 +120,7 @@ export default function BasicEventFields({
   originalSecondaryFlyerUrl,
   id,
   allowedEventTypes, // Filtered event types for CreateEvent
+  allowPastDates = false,
   isEditMode,
   repeatFrequency,
   onRepeatFrequencyChange,
@@ -251,7 +253,7 @@ export default function BasicEventFields({
               },
             })}
             type="date"
-            min={getTodayDateString()}
+            min={allowPastDates ? undefined : getTodayDateString()}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <ValidationIndicator validation={validations.date} />
@@ -301,7 +303,7 @@ export default function BasicEventFields({
               },
             })}
             type="date"
-            min={getTodayDateString()}
+            min={allowPastDates ? undefined : getTodayDateString()}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <ValidationIndicator validation={validations.endDate} />

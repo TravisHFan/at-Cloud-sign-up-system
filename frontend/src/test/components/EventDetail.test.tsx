@@ -159,6 +159,45 @@ describe("EventDetail Component", () => {
     });
   });
 
+  it("shows edit, email, and export actions for completed events", async () => {
+    vi.mocked(eventService.getEvent).mockResolvedValue({
+      id: "e2",
+      title: "Completed Event",
+      type: "Meeting",
+      format: "Online",
+      date: "2025-08-10",
+      endTime: "11:00",
+      time: "10:00",
+      location: "Zoom",
+      organizer: "Org Team",
+      purpose: "",
+      roles: [],
+      signedUp: 0,
+      totalSlots: 10,
+      createdBy: "test-user",
+      createdAt: new Date().toISOString(),
+      status: "completed",
+    });
+
+    render(
+      <TestWrapper>
+        <EventDetail />
+      </TestWrapper>
+    );
+
+    await screen.findAllByText(/Completed Event/);
+
+    expect(
+      screen.getByRole("button", { name: /^Edit$/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Email Participants/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Export Data/i }),
+    ).toBeInTheDocument();
+  });
+
   it("shows end date when different from start date", async () => {
     vi.mocked(eventService.getEvent).mockResolvedValue({
       id: "e2",

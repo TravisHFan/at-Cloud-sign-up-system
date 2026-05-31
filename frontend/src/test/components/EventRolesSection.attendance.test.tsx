@@ -1,6 +1,7 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import EventRolesSection from "../../components/EventDetail/EventRolesSection";
+import { eventService } from "../../services/api";
 import type { EventData } from "../../types/event";
 
 vi.mock("../../components/events/EventRoleSignup", () => ({
@@ -9,6 +10,12 @@ vi.mock("../../components/events/EventRoleSignup", () => ({
 
 vi.mock("../../components/EventDetail/GuestList", () => ({
   default: () => <div data-testid="guest-list" />,
+}));
+
+vi.mock("../../services/api", () => ({
+  eventService: {
+    updateRegistrationAttendance: vi.fn(),
+  },
 }));
 
 const baseEvent: EventData = {
@@ -85,6 +92,13 @@ const defaultProps = {
 };
 
 describe("EventRolesSection attendance controls", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(eventService.updateRegistrationAttendance).mockResolvedValue(
+      baseEvent,
+    );
+  });
+
   it("shows attendance controls for completed events when attendance can be managed", () => {
     render(<EventRolesSection {...defaultProps} />);
 
@@ -110,5 +124,25 @@ describe("EventRolesSection attendance controls", () => {
     expect(
       screen.queryByRole("button", { name: "No" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("updates attendance without showing a success confirmation modal", async () => {
+    const notification = {
+      success: vi.fn(),
+      error: vi.fn(),
+    };
+
+    render(<EventRolesSection {...defaultProps} notification={notification} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Yes" }));
+
+    await waitFor(() => {
+      expect(eventService.updateRegistrationAttendance).toHaveBeenCalledWith(
+        "event-1",
+        "reg-1",
+        true,
+      );
+    });
+    expect(notification.success).not.toHaveBeenCalled();
   });
 });

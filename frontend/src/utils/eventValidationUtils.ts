@@ -34,6 +34,7 @@ export function validateEventField(
     programLabels?: string[];
     __startOverlapValidation?: FieldValidation;
     __endOverlapValidation?: FieldValidation;
+    allowPastDates?: boolean;
   },
 ): FieldValidation {
   switch (fieldName) {
@@ -44,7 +45,7 @@ export function validateEventField(
     case "type":
       return validateType(String(value ?? ""));
     case "date":
-      return validateDate(String(value ?? ""));
+      return validateDate(String(value ?? ""), formData?.allowPastDates);
     case "endDate":
       return validateEndDate(String(value ?? ""), formData?.date);
     case "time":
@@ -335,7 +336,7 @@ function validateType(type: string): FieldValidation {
   };
 }
 
-function validateDate(date: string): FieldValidation {
+function validateDate(date: string, allowPastDates = false): FieldValidation {
   if (!date || date.trim().length === 0) {
     return {
       isValid: false,
@@ -371,7 +372,7 @@ function validateDate(date: string): FieldValidation {
     };
   }
 
-  if (eventDate < today) {
+  if (!allowPastDates && eventDate < today) {
     return {
       isValid: false,
       message: "Event date cannot be in the past",
