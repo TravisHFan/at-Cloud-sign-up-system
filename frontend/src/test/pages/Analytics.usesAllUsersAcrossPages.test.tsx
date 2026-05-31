@@ -8,43 +8,44 @@ vi.mock("../../hooks/useAuth", () => ({
   useAuth: () => ({ currentUser: { id: "admin", role: "Administrator" } }),
 }));
 
-// Mock analytics backend hook minimal shape
-vi.mock("../../hooks/useBackendIntegration", () => ({
-  useAnalyticsData: () => ({
-    isLoading: false,
-    isError: false,
+// Mock analytics resources. The people tab still needs event analytics for
+// engagement, but this test focuses on the paginated user fetch.
+vi.mock("../../hooks/useAnalyticsResources", () => ({
+  useAnalyticsOverviewResource: () => ({
+    data: null,
+    loading: false,
     error: null,
-    eventAnalytics: {
-      upcomingEvents: 0,
-      passedEvents: 0,
-      totalEvents: 0,
-      upcomingStats: {
-        totalSlots: 0,
-        signedUp: 0,
-        availableSlots: 0,
-        fillRate: 0,
-      },
-      passedStats: { totalSlots: 0, signedUp: 0, fillRate: 0 },
-      averageSignupRate: 0,
-      formatStats: {},
-      mostActiveParticipants: [],
-      engagementStats: { low: 0, medium: 0, high: 0, elite: 0 },
-    },
-    users: [],
-    roleStats: {
-      superAdmin: 0,
-      administrators: 0,
-      leaders: 0,
-      guestExperts: 0,
-      participants: 0,
-      atCloudLeaders: 0,
-    },
-    engagementMetrics: {
-      mostActiveUsers: [],
-      distribution: {},
-      averageEngagement: 0,
-    },
-    exportData: vi.fn(),
+    refresh: vi.fn(),
+  }),
+  useEventAnalyticsResource: () => ({
+    data: { upcomingEvents: [], completedEvents: [] },
+    loading: false,
+    error: null,
+    refresh: vi.fn(),
+  }),
+  useAttendanceAnalyticsResource: () => ({
+    data: null,
+    loading: false,
+    error: null,
+    refresh: vi.fn(),
+  }),
+  useProgramAnalyticsResource: () => ({
+    data: null,
+    loading: false,
+    error: null,
+    refresh: vi.fn(),
+  }),
+  useFinancialSummaryResource: () => ({
+    data: null,
+    loading: false,
+    error: null,
+    refresh: vi.fn(),
+  }),
+  useDonationAnalyticsResource: () => ({
+    data: null,
+    loading: false,
+    error: null,
+    refresh: vi.fn(),
   }),
 }));
 
@@ -73,7 +74,7 @@ describe("Analytics users aggregation across pagination", () => {
     getUsersMock.mockReset();
   });
 
-  it("counts all users from multiple pages, not just the first 20", async () => {
+  it("counts all users from multiple pages on the People tab", async () => {
     // Simulate two pages: first returns 20 users, hasNext true; second returns 5 users, hasNext false
     const makeUser = (i: number) => ({
       id: `u${i}`,
@@ -114,19 +115,18 @@ describe("Analytics users aggregation across pagination", () => {
     });
 
     render(
-      <MemoryRouter initialEntries={["/analytics"]}>
+      <MemoryRouter initialEntries={["/analytics?tab=people"]}>
         <Routes>
           <Route path="/analytics" element={<Analytics />} />
         </Routes>
       </MemoryRouter>
     );
 
-    // The "Total Users" value should be 25, not 20
     await waitFor(() => {
-      // Value is rendered in a p with aria-label="total-users-value"
-      const valueEl = screen.getByLabelText(/total-users-value/i);
-      expect(valueEl).toBeTruthy();
-      expect(valueEl.textContent).toMatch(/25/);
+      expect(screen.getByTestId("role-dist-leader").textContent).toBe("13");
+      expect(screen.getByTestId("role-dist-participant").textContent).toBe(
+        "12"
+      );
     });
   });
 });

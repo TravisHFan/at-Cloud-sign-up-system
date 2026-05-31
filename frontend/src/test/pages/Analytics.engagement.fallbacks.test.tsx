@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import { NotificationProvider } from "../../contexts/NotificationModalContext";
 
 // Mock auth to allow access to Analytics page
 vi.mock("../../hooks/useAuth", () => ({
@@ -21,10 +23,16 @@ vi.mock("../../hooks/useRoleStats", () => ({
   }),
 }));
 
-// Mock backend analytics hook to provide events with registrations-only payload
-vi.mock("../../hooks/useBackendIntegration", () => ({
-  useAnalyticsData: () => ({
-    eventAnalytics: {
+// Mock tab-specific analytics resources to provide events with registrations-only payload
+vi.mock("../../hooks/useAnalyticsResources", () => ({
+  useAnalyticsOverviewResource: () => ({
+    data: null,
+    loading: false,
+    error: null,
+    refresh: vi.fn(),
+  }),
+  useEventAnalyticsResource: () => ({
+    data: {
       upcomingEvents: [
         {
           id: "evt-1",
@@ -88,6 +96,33 @@ vi.mock("../../hooks/useBackendIntegration", () => ({
         },
       ],
     },
+    loading: false,
+    error: null,
+    refresh: vi.fn(),
+  }),
+  useAttendanceAnalyticsResource: () => ({
+    data: null,
+    loading: false,
+    error: null,
+    refresh: vi.fn(),
+  }),
+  useProgramAnalyticsResource: () => ({
+    data: null,
+    loading: false,
+    error: null,
+    refresh: vi.fn(),
+  }),
+  useFinancialSummaryResource: () => ({
+    data: null,
+    loading: false,
+    error: null,
+    refresh: vi.fn(),
+  }),
+  useDonationAnalyticsResource: () => ({
+    data: null,
+    loading: false,
+    error: null,
+    refresh: vi.fn(),
   }),
 }));
 
@@ -99,7 +134,13 @@ describe("Analytics engagement fallbacks", () => {
   });
 
   it("renders Most Active Participants and Engagement Summary using registrations", async () => {
-    render(<Analytics />);
+    render(
+      <MemoryRouter initialEntries={["/analytics?tab=people"]}>
+        <NotificationProvider>
+          <Analytics />
+        </NotificationProvider>
+      </MemoryRouter>
+    );
 
     // Most Active Participants should show John Doe with 2 events
     const mostActiveHeading = await screen.findByText(

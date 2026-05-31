@@ -28,49 +28,65 @@ vi.mock("../../services/socketService", () => ({
   },
 }));
 
-// Mock analytics data hook
-vi.mock("../../hooks/useBackendIntegration", () => ({
-  useAnalyticsData: () => ({
-    isLoading: false,
-    isError: false,
+vi.mock("../../hooks/useUserData", () => ({
+  useUserData: () => ({ users: [], loading: false }),
+}));
+
+vi.mock("../../hooks/useRoleStats", () => ({
+  useRoleStats: () => ({
+    total: 21,
+    superAdmin: 1,
+    administrators: 2,
+    leaders: 3,
+    guestExperts: 4,
+    participants: 5,
+    atCloudLeaders: 6,
+  }),
+}));
+
+vi.mock("../../hooks/useAnalyticsResources", () => ({
+  useAnalyticsOverviewResource: () => ({
+    data: null,
+    loading: false,
     error: null,
-    eventAnalytics: {
-      upcomingEvents: 0,
-      passedEvents: 0,
-      totalEvents: 0,
-      upcomingStats: {
-        totalSlots: 0,
-        signedUp: 0,
-        availableSlots: 0,
-        fillRate: 0,
-      },
-      passedStats: { totalSlots: 0, signedUp: 0, fillRate: 0 },
-      averageSignupRate: 0,
-      formatStats: { "In-person": 3 },
-      mostActiveParticipants: [],
-      engagementStats: { low: 0, medium: 0, high: 0, elite: 0 },
-    },
-    users: [],
-    roleStats: {
-      superAdmin: 1,
-      administrators: 2,
-      leaders: 3,
-      guestExperts: 4,
-      participants: 5,
-      atCloudLeaders: 6,
-    },
-    engagementMetrics: {
-      mostActiveUsers: [],
-      distribution: {},
-      averageEngagement: 0,
-    },
+    refresh: vi.fn(),
+  }),
+  useEventAnalyticsResource: () => ({
+    data: { upcomingEvents: [], completedEvents: [] },
+    loading: false,
+    error: null,
+    refresh: vi.fn(),
+  }),
+  useAttendanceAnalyticsResource: () => ({
+    data: null,
+    loading: false,
+    error: null,
+    refresh: vi.fn(),
+  }),
+  useProgramAnalyticsResource: () => ({
+    data: null,
+    loading: false,
+    error: null,
+    refresh: vi.fn(),
+  }),
+  useFinancialSummaryResource: () => ({
+    data: null,
+    loading: false,
+    error: null,
+    refresh: vi.fn(),
+  }),
+  useDonationAnalyticsResource: () => ({
+    data: null,
+    loading: false,
+    error: null,
+    refresh: vi.fn(),
   }),
 }));
 
 describe("Analytics Authorization Distribution styling & icons", () => {
   it("renders colored badges and an icon for each role row", () => {
     render(
-      <MemoryRouter>
+      <MemoryRouter initialEntries={["/analytics?tab=people"]}>
         <NotificationProvider>
           <Analytics />
         </NotificationProvider>
