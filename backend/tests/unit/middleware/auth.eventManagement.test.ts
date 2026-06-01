@@ -272,7 +272,7 @@ describe("authorizeEventManagement middleware", () => {
     expect(jsonMock).toHaveBeenCalledWith({
       success: false,
       message:
-        "Access denied. You must be an Administrator, Super Admin, event creator, listed organizer, or a Leader who is a mentor/class rep of an affiliated program to manage this event.",
+        "Access denied. You must be an Administrator, Super Admin, event creator, listed organizer, or a mentor/class rep of an affiliated program to manage this event.",
     });
     expect(mockNext).not.toHaveBeenCalled();
   });

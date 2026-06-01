@@ -26,6 +26,10 @@ vi.mock("../../../../src/utils/privacy", () => ({
   }),
 }));
 
+vi.mock("../../../../src/services/AnnualMembershipAccessService", () => ({
+  hasAnnualMembershipAccessToProgram: vi.fn().mockResolvedValue(false),
+}));
+
 import { sanitizeMentors } from "../../../../src/utils/privacy";
 import { Purchase } from "../../../../src/models";
 
@@ -358,7 +362,9 @@ describe("RetrievalController", () => {
         expect(Purchase.findOne).toHaveBeenCalledWith({
           userId: userId,
           programId: programId,
+          purchaseType: "program",
           status: "completed",
+          unenrolledAt: { $exists: false },
         });
         expect(sanitizeMentors).toHaveBeenCalledWith(
           mockProgramData.mentors,
@@ -366,7 +372,7 @@ describe("RetrievalController", () => {
         );
       });
 
-      it("should allow free program user to view mentor contacts", async () => {
+      it("should hide mentor contacts for free program users without enrollment", async () => {
         mockReq.user = {
           _id: userId,
           role: "Participant",
@@ -389,18 +395,16 @@ describe("RetrievalController", () => {
         };
 
         vi.mocked(Program.findById).mockResolvedValue(mockProgram as any);
+        vi.mocked(Purchase.findOne).mockResolvedValue(null);
 
         await RetrievalController.getById(
           mockReq as Request,
           mockRes as Response,
         );
 
-        // Free program - no purchase check needed
-        expect(Purchase.findOne).not.toHaveBeenCalled();
-        expect(sanitizeMentors).toHaveBeenCalledWith(
-          mockProgramData.mentors,
-          true, // Free program user is considered enrolled
-        );
+        expect(sanitizeMentors).toHaveBeenCalled();
+        const calls = vi.mocked(sanitizeMentors).mock.calls;
+        expect(calls[0][1]).toBe(false);
       });
 
       it("should allow admin-enrolled mentee to view mentor contacts", async () => {

@@ -7,6 +7,7 @@ export interface AnalyticsOverview {
   overview: {
     totalUsers: number;
     totalEvents: number;
+    completedEvents: number;
     totalRegistrations: number;
     activeParticipants: number;
     averageSignupRate: number;
@@ -19,6 +20,44 @@ export interface AnalyticsOverview {
     eventGrowthRate: number;
     registrationGrowthRate: number;
   };
+  last30Days: {
+    newUsers: number;
+    newEvents: number;
+    registrations: number;
+    attendanceCompletionRate: number;
+    attendanceRate: number;
+  };
+  needsAttention: {
+    lowSignupUpcomingEvents: number;
+    completedEventsMissingAttendance: number;
+    unrecordedAttendance: number;
+    waitlistedRegistrations: number;
+  };
+  topEvents: Array<{
+    id: string;
+    title: string;
+    date?: string;
+    type?: string;
+    status?: string;
+    registrations: number;
+    totalSlots: number;
+    signupRate: number;
+  }>;
+  topPrograms: Array<{
+    id: string;
+    title: string;
+    programType?: string;
+    registrations: number;
+    events: number;
+  }>;
+  recentActivity: Array<{
+    id: string;
+    type: "registration";
+    person: string;
+    eventTitle: string;
+    eventDate?: string;
+    createdAt: string;
+  }>;
 }
 
 /**

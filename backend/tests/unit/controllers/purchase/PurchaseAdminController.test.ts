@@ -13,7 +13,9 @@ function mockPurchaseFindChain(purchases: any[]) {
     populate: vi.fn().mockReturnValue({
       populate: vi.fn().mockReturnValue({
         populate: vi.fn().mockReturnValue({
-          sort: vi.fn().mockResolvedValue(purchases),
+          populate: vi.fn().mockReturnValue({
+            sort: vi.fn().mockResolvedValue(purchases),
+          }),
         }),
       }),
     }),
@@ -956,7 +958,9 @@ describe("PurchaseAdminController", () => {
         populate: vi.fn().mockReturnValue({
           populate: vi.fn().mockReturnValue({
             populate: vi.fn().mockReturnValue({
-              sort: vi.fn().mockRejectedValue(dbError),
+              populate: vi.fn().mockReturnValue({
+                sort: vi.fn().mockRejectedValue(dbError),
+              }),
             }),
           }),
         }),
@@ -987,8 +991,11 @@ describe("PurchaseAdminController", () => {
       const mockPurchases: any[] = [];
 
       const sortMock = vi.fn().mockResolvedValue(mockPurchases);
-      const populateMock3 = vi.fn().mockReturnValue({
+      const populateMock4 = vi.fn().mockReturnValue({
         sort: sortMock,
+      });
+      const populateMock3 = vi.fn().mockReturnValue({
+        populate: populateMock4,
       });
       const populateMock2 = vi.fn().mockReturnValue({
         populate: populateMock3,
@@ -1018,8 +1025,11 @@ describe("PurchaseAdminController", () => {
       const mockPurchases: any[] = [];
 
       const sortMock = vi.fn().mockResolvedValue(mockPurchases);
-      const populateMock3 = vi.fn().mockReturnValue({
+      const populateMock4 = vi.fn().mockReturnValue({
         sort: sortMock,
+      });
+      const populateMock3 = vi.fn().mockReturnValue({
+        populate: populateMock4,
       });
       const populateMock2 = vi.fn().mockReturnValue({
         populate: populateMock3,
@@ -1044,6 +1054,14 @@ describe("PurchaseAdminController", () => {
       expect(populateMock2).toHaveBeenCalledWith({
         path: "programId",
         select: "title startDate endDate",
+      });
+      expect(populateMock3).toHaveBeenCalledWith({
+        path: "eventId",
+        select: "title",
+      });
+      expect(populateMock4).toHaveBeenCalledWith({
+        path: "membershipId",
+        select: "title",
       });
     });
 

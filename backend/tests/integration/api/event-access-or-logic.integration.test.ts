@@ -334,7 +334,7 @@ describe("Event Access - OR Logic (Purchase ANY associated program)", () => {
     // This is the correct OR logic behavior!
   });
 
-  it("should grant access when ANY program is free", async () => {
+  it("should require enrollment before granting access to a free program", async () => {
     // Make Program B free
     await Program.findByIdAndUpdate(programBId, { isFree: true });
 
@@ -344,8 +344,8 @@ describe("Event Access - OR Logic (Purchase ANY associated program)", () => {
       .get(`/api/purchases/check-access/${programBId}`)
       .set("Authorization", `Bearer ${authToken}`);
 
-    expect(responseB.body.data.hasAccess).toBe(true);
-    expect(responseB.body.data.reason).toBe("free");
-    // Frontend will grant access to event because ANY program (B) is free
+    expect(responseB.body.data.hasAccess).toBe(false);
+    expect(responseB.body.data.reason).toBe("not_purchased");
+    // Current policy requires enrollment/purchase even when the program is free.
   });
 });

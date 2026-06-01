@@ -435,6 +435,65 @@ describe("ExportAnalyticsController", () => {
       );
       expect(userRow).toBeDefined();
     });
+
+    it("should serialize ObjectId-like registration references without recursing", async () => {
+      req.query = { format: "csv", mode: "rows" };
+      const objectIdHex = "507f1f77bcf86cd799439011";
+      const objectIdLike = {
+        toHexString: () => objectIdHex,
+        toString: () => "should-not-use-to-string",
+      } as Record<string, unknown> & {
+        toHexString: () => string;
+        toString: () => string;
+      };
+      Object.defineProperty(objectIdLike, "_id", {
+        get: () => objectIdLike,
+      });
+
+      const { User, Event, Registration, GuestRegistration } =
+        await import("../../../../src/models");
+
+      vi.mocked(User.find).mockReturnValue({
+        sort: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        lean: vi.fn().mockResolvedValue([]),
+      } as unknown as ReturnType<typeof User.find>);
+      vi.mocked(Event.find).mockReturnValue({
+        sort: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        lean: vi.fn().mockResolvedValue([]),
+      } as unknown as ReturnType<typeof Event.find>);
+      vi.mocked(Registration.find).mockReturnValue({
+        sort: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        lean: vi.fn().mockResolvedValue([
+          {
+            userId: objectIdLike,
+            eventId: objectIdLike,
+            roleId: "role-1",
+            status: "active",
+            registrationDate: new Date("2025-01-03"),
+            registeredBy: objectIdLike,
+          },
+        ]),
+      } as unknown as ReturnType<typeof Registration.find>);
+      vi.mocked(GuestRegistration.find).mockReturnValue({
+        sort: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        lean: vi.fn().mockResolvedValue([]),
+      } as unknown as ReturnType<typeof GuestRegistration.find>);
+
+      await ExportAnalyticsController.exportAnalytics(
+        req as Request,
+        res as Response,
+      );
+
+      expect(statusMock).not.toHaveBeenCalledWith(500);
+      expect(writeMock).toHaveBeenCalledWith(
+        expect.stringContaining(objectIdHex),
+      );
+      expect(endMock).toHaveBeenCalled();
+    });
   });
 
   describe("exportAnalytics - date filtering", () => {

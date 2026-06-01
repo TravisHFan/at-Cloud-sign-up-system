@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import userEvent from "@testing-library/user-event";
@@ -38,9 +38,10 @@ vi.mock("../../services/api", () => ({
 }));
 
 vi.mock("react-router-dom", async () => {
-  const actual = await vi.importActual<typeof import("react-router-dom")>(
-    "react-router-dom",
-  );
+  const actual =
+    await vi.importActual<typeof import("react-router-dom")>(
+      "react-router-dom",
+    );
   return {
     ...actual,
     useNavigate: () => mocks.navigate,
@@ -93,6 +94,10 @@ describe("Annual Membership pages", () => {
     mocks.programService.list.mockResolvedValue([]);
   });
 
+  afterEach(() => {
+    window.location.hash = "";
+  });
+
   it("renders membership cards with purchase status and price", async () => {
     renderWithRouter(<AnnualMemberships />);
 
@@ -110,7 +115,9 @@ describe("Annual Membership pages", () => {
     renderWithRouter(<AnnualMemberships />);
 
     expect(await screen.findByText("New Membership")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: /new membership/i }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /new membership/i }),
+    );
 
     expect(mocks.navigate).toHaveBeenCalledWith(
       "/dashboard/annual-memberships/new",

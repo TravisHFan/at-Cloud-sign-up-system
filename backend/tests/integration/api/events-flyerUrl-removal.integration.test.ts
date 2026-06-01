@@ -4,6 +4,8 @@ import app from "../../../src/app";
 import User from "../../../src/models/User";
 import Event from "../../../src/models/Event";
 import { buildValidEventPayload } from "../../test-utils/eventTestHelpers";
+import { retryRequest } from "../_utils/retryRequest";
+import { ensureIntegrationDB } from "../setup/connect";
 
 /**
  * Integration tests for event flyerUrl update/removal behavior.
@@ -14,6 +16,7 @@ describe("Events API - flyerUrl update/removal", () => {
   let adminToken: string;
 
   beforeEach(async () => {
+    await ensureIntegrationDB();
     await Promise.all([User.deleteMany({}), Event.deleteMany({})]);
 
     // Create and verify admin user
@@ -29,15 +32,22 @@ describe("Events API - flyerUrl update/removal", () => {
       isAtCloudLeader: false,
       acceptTerms: true,
     } as const;
-    await request(app).post("/api/auth/register").send(adminData).expect(201);
+    await retryRequest(() =>
+      request(app).post("/api/auth/register").send(adminData).expect(201),
+    );
     await User.findOneAndUpdate(
       { email: adminData.email },
-      { isVerified: true, role: "Administrator" }
+      { isVerified: true, role: "Administrator" },
     );
-    const loginRes = await request(app)
-      .post("/api/auth/login")
-      .send({ emailOrUsername: adminData.email, password: adminData.password })
-      .expect(200);
+    const loginRes = await retryRequest(() =>
+      request(app)
+        .post("/api/auth/login")
+        .send({
+          emailOrUsername: adminData.email,
+          password: adminData.password,
+        })
+        .expect(200),
+    );
     adminToken = loginRes.body.data.accessToken;
   }, 30000);
 
@@ -51,34 +61,40 @@ describe("Events API - flyerUrl update/removal", () => {
       },
     });
 
-    const createRes = await request(app)
-      .post("/api/events")
-      .set("Authorization", `Bearer ${adminToken}`)
-      .send(eventPayload)
-      .expect(201);
+    const createRes = await retryRequest(() =>
+      request(app)
+        .post("/api/events")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send(eventPayload)
+        .expect(201),
+    );
 
     const eventId =
       createRes.body.data.event.id || createRes.body.data.event._id;
     expect(createRes.body.data.event.flyerUrl).toBe("/uploads/test-flyer.png");
 
     // Update event with empty string flyerUrl
-    const updateRes = await request(app)
-      .put(`/api/events/${eventId}`)
-      .set("Authorization", `Bearer ${adminToken}`)
-      .send({
-        flyerUrl: "",
-        suppressNotifications: true,
-      })
-      .expect(200);
+    const updateRes = await retryRequest(() =>
+      request(app)
+        .put(`/api/events/${eventId}`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({
+          flyerUrl: "",
+          suppressNotifications: true,
+        })
+        .expect(200),
+    );
 
     // Verify flyerUrl was removed
     expect(updateRes.body.data.event.flyerUrl).toBeUndefined();
 
     // Double-check by fetching event
-    const fetchRes = await request(app)
-      .get(`/api/events/${eventId}`)
-      .set("Authorization", `Bearer ${adminToken}`)
-      .expect(200);
+    const fetchRes = await retryRequest(() =>
+      request(app)
+        .get(`/api/events/${eventId}`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .expect(200),
+    );
     expect(fetchRes.body.data.flyerUrl).toBeUndefined();
   });
 
@@ -92,27 +108,31 @@ describe("Events API - flyerUrl update/removal", () => {
       },
     });
 
-    const createRes = await request(app)
-      .post("/api/events")
-      .set("Authorization", `Bearer ${adminToken}`)
-      .send(eventPayload)
-      .expect(201);
+    const createRes = await retryRequest(() =>
+      request(app)
+        .post("/api/events")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send(eventPayload)
+        .expect(201),
+    );
 
     const eventId =
       createRes.body.data.event.id || createRes.body.data.event._id;
     expect(createRes.body.data.event.flyerUrl).toBe(
-      "/uploads/another-flyer.jpg"
+      "/uploads/another-flyer.jpg",
     );
 
     // Update event with null flyerUrl
-    const updateRes = await request(app)
-      .put(`/api/events/${eventId}`)
-      .set("Authorization", `Bearer ${adminToken}`)
-      .send({
-        flyerUrl: null,
-        suppressNotifications: true,
-      })
-      .expect(200);
+    const updateRes = await retryRequest(() =>
+      request(app)
+        .put(`/api/events/${eventId}`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({
+          flyerUrl: null,
+          suppressNotifications: true,
+        })
+        .expect(200),
+    );
 
     // Verify flyerUrl was removed
     expect(updateRes.body.data.event.flyerUrl).toBeUndefined();
@@ -128,31 +148,35 @@ describe("Events API - flyerUrl update/removal", () => {
       },
     });
 
-    const createRes = await request(app)
-      .post("/api/events")
-      .set("Authorization", `Bearer ${adminToken}`)
-      .send(eventPayload)
-      .expect(201);
+    const createRes = await retryRequest(() =>
+      request(app)
+        .post("/api/events")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send(eventPayload)
+        .expect(201),
+    );
 
     const eventId =
       createRes.body.data.event.id || createRes.body.data.event._id;
     expect(createRes.body.data.event.flyerUrl).toBe(
-      "/uploads/persistent-flyer.png"
+      "/uploads/persistent-flyer.png",
     );
 
     // Update event without flyerUrl in payload
-    const updateRes = await request(app)
-      .put(`/api/events/${eventId}`)
-      .set("Authorization", `Bearer ${adminToken}`)
-      .send({
-        title: "Updated Event Title",
-        suppressNotifications: true,
-      })
-      .expect(200);
+    const updateRes = await retryRequest(() =>
+      request(app)
+        .put(`/api/events/${eventId}`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({
+          title: "Updated Event Title",
+          suppressNotifications: true,
+        })
+        .expect(200),
+    );
 
     // Verify flyerUrl was preserved
     expect(updateRes.body.data.event.flyerUrl).toBe(
-      "/uploads/persistent-flyer.png"
+      "/uploads/persistent-flyer.png",
     );
   });
 });

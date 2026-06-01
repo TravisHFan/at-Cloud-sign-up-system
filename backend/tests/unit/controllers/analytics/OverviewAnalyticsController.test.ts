@@ -9,9 +9,12 @@ vi.mock("../../../../src/models", () => ({
   },
   Event: {
     countDocuments: vi.fn(),
+    aggregate: vi.fn(),
   },
   Registration: {
     countDocuments: vi.fn(),
+    distinct: vi.fn(),
+    aggregate: vi.fn(),
   },
 }));
 
@@ -38,6 +41,7 @@ vi.mock("../../../../src/services/CorrelatedLogger", () => ({
 
 import { hasPermission } from "../../../../src/utils/roleUtils";
 import { CachePatterns } from "../../../../src/services";
+import { User, Event, Registration } from "../../../../src/models";
 
 interface MockRequest {
   query: Record<string, string>;
@@ -192,9 +196,150 @@ describe("OverviewAnalyticsController", () => {
         );
 
         expect(CachePatterns.getAnalyticsData).toHaveBeenCalledWith(
-          "system-overview",
+          "system-overview-v2",
           expect.any(Function)
         );
+      });
+
+      it("should build enriched overview data from lightweight aggregate queries", async () => {
+        vi.mocked(hasPermission).mockReturnValue(true);
+        vi.mocked(CachePatterns.getAnalyticsData).mockImplementation(
+          async (_key, factory) => factory()
+        );
+
+        vi.mocked(User.countDocuments)
+          .mockResolvedValueOnce(100)
+          .mockResolvedValueOnce(75)
+          .mockResolvedValueOnce(6)
+          .mockResolvedValueOnce(10)
+          .mockResolvedValueOnce(15);
+        vi.mocked(Event.countDocuments)
+          .mockResolvedValueOnce(50)
+          .mockResolvedValueOnce(18)
+          .mockResolvedValueOnce(10)
+          .mockResolvedValueOnce(3)
+          .mockResolvedValueOnce(20)
+          .mockResolvedValueOnce(10);
+        vi.mocked(Registration.countDocuments)
+          .mockResolvedValueOnce(200)
+          .mockResolvedValueOnce(30)
+          .mockResolvedValueOnce(14)
+          .mockResolvedValueOnce(3)
+          .mockResolvedValueOnce(0)
+          .mockResolvedValueOnce(7);
+        vi.mocked(Registration.distinct).mockResolvedValue(["u1", "u2"]);
+        vi.mocked(Event.aggregate)
+          .mockResolvedValueOnce([{ totalSlots: 40, filledSlots: 20 }])
+          .mockResolvedValueOnce([{ count: 2 }])
+          .mockResolvedValueOnce([
+            {
+              id: "event-1",
+              title: "Leadership Night",
+              date: "2026-01-02",
+              type: "Meeting",
+              status: "completed",
+              registrations: 32,
+              totalSlots: 40,
+              signupRate: 80,
+            },
+          ])
+          .mockResolvedValueOnce([
+            {
+              id: "program-1",
+              title: "EMBA",
+              programType: "EMBA Mentor Circles",
+              registrations: 28,
+              events: 4,
+            },
+          ]);
+        vi.mocked(Registration.aggregate)
+          .mockResolvedValueOnce([{ registered: 10, recorded: 8, attended: 6 }])
+          .mockResolvedValueOnce([{ count: 1 }])
+          .mockResolvedValueOnce([{ count: 5 }])
+          .mockResolvedValueOnce([
+            {
+              id: "registration-1",
+              firstName: "Ann",
+              lastName: "Lee",
+              eventTitle: "Leadership Night",
+              eventDate: "2026-01-02",
+              createdAt: new Date("2026-01-01T00:00:00.000Z"),
+            },
+          ]);
+
+        await OverviewAnalyticsController.getAnalytics(
+          mockReq as any,
+          mockRes as Response
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(200);
+        expect(jsonMock).toHaveBeenCalledWith({
+          success: true,
+          data: {
+            overview: {
+              totalUsers: 100,
+              totalEvents: 50,
+              completedEvents: 18,
+              totalRegistrations: 200,
+              activeParticipants: 2,
+              averageSignupRate: 50,
+              activeUsers: 75,
+              upcomingEvents: 10,
+              recentRegistrations: 30,
+            },
+            growth: {
+              userGrowthRate: 50,
+              eventGrowthRate: -50,
+              registrationGrowthRate: 100,
+            },
+            last30Days: {
+              newUsers: 6,
+              newEvents: 3,
+              registrations: 14,
+              attendanceCompletionRate: 80,
+              attendanceRate: 75,
+            },
+            needsAttention: {
+              lowSignupUpcomingEvents: 2,
+              completedEventsMissingAttendance: 1,
+              unrecordedAttendance: 5,
+              waitlistedRegistrations: 3,
+            },
+            topEvents: [
+              {
+                id: "event-1",
+                title: "Leadership Night",
+                date: "2026-01-02",
+                type: "Meeting",
+                status: "completed",
+                registrations: 32,
+                totalSlots: 40,
+                signupRate: 80,
+              },
+            ],
+            topPrograms: [
+              {
+                id: "program-1",
+                title: "EMBA",
+                programType: "EMBA Mentor Circles",
+                registrations: 28,
+                events: 4,
+              },
+            ],
+            recentActivity: [
+              {
+                id: "registration-1",
+                type: "registration",
+                person: "Ann Lee",
+                eventTitle: "Leadership Night",
+                eventDate: "2026-01-02",
+                createdAt: "2026-01-01T00:00:00.000Z",
+              },
+            ],
+          },
+        });
+        expect(Event.aggregate).toHaveBeenCalledTimes(4);
+        expect(Registration.aggregate).toHaveBeenCalledTimes(4);
       });
     });
 

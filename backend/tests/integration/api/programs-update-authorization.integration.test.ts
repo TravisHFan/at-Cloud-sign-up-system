@@ -189,7 +189,7 @@ describe("PUT /api/programs/:id - Authorization Tests", () => {
       expect(response!.status).toBe(403);
       expect(response!.body.success).toBe(false);
       expect(response!.body.message).toBe(
-        "You do not have permission to edit this program. Only Administrators, the program creator, and assigned mentors can edit programs.",
+        "You do not have permission to edit this program. Only Administrators, the program creator, assigned mentors, and class reps can edit programs.",
       );
 
       // Verify program was not updated
@@ -215,7 +215,7 @@ describe("PUT /api/programs/:id - Authorization Tests", () => {
       expect(response.status).toBe(403);
       expect(response.body.success).toBe(false);
       expect(response.body.message).toBe(
-        "You do not have permission to edit this program. Only Administrators, the program creator, and assigned mentors can edit programs.",
+        "You do not have permission to edit this program. Only Administrators, the program creator, assigned mentors, and class reps can edit programs.",
       );
 
       // Verify program was not updated
@@ -241,7 +241,7 @@ describe("PUT /api/programs/:id - Authorization Tests", () => {
       expect(response.status).toBe(403);
       expect(response.body.success).toBe(false);
       expect(response.body.message).toBe(
-        "You do not have permission to edit this program. Only Administrators, the program creator, and assigned mentors can edit programs.",
+        "You do not have permission to edit this program. Only Administrators, the program creator, assigned mentors, and class reps can edit programs.",
       );
 
       // Verify program was not updated
@@ -267,7 +267,7 @@ describe("PUT /api/programs/:id - Authorization Tests", () => {
       expect(response.status).toBe(403);
       expect(response.body.success).toBe(false);
       expect(response.body.message).toBe(
-        "You do not have permission to edit this program. Only Administrators, the program creator, and assigned mentors can edit programs.",
+        "You do not have permission to edit this program. Only Administrators, the program creator, assigned mentors, and class reps can edit programs.",
       );
 
       // Verify program was not updated
@@ -328,11 +328,31 @@ describe("PUT /api/programs/:id - Authorization Tests", () => {
     it("should validate program data during update", async () => {
       const { token } = await createAndLoginTestUser({ role: "Administrator" });
 
-      // Try to update with invalid classRepLimit (max is 5)
+      // Try to update with invalid student role limit (max is 5)
       const invalidData = {
         title: "Test Program",
         programType: "EMBA Mentor Circles",
-        classRepLimit: 10, // Exceeds max of 5
+        programRoles: {
+          teacherRoleName: "Mentor",
+          studentRoles: [
+            {
+              id: "student",
+              name: "Student",
+              discountEligible: false,
+              discountAmount: 0,
+              limit: 0,
+              count: 0,
+            },
+            {
+              id: "class-rep",
+              name: "Class Representative",
+              discountEligible: true,
+              discountAmount: 100,
+              limit: 10,
+              count: 0,
+            },
+          ],
+        },
       };
 
       const response = await request(app)

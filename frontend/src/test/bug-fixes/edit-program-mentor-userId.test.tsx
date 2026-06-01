@@ -170,7 +170,7 @@ describe("Bug Fix: Edit Program mentor userId payload", () => {
       ).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /add mentors/i }));
+    fireEvent.click(screen.getByRole("button", { name: /add mentor/i }));
 
     const mentorOption = await screen.findByRole("button", {
       name: /Mentor OnlyId/i,

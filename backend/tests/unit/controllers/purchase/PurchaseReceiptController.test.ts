@@ -8,13 +8,15 @@ import mongoose from "mongoose";
 vi.mock("../../../../src/models/Purchase");
 
 /**
- * Helper to create mock chain for Purchase.findById().populate().populate().populate()
+ * Helper to create mock chain for Purchase.findById().populate().populate().populate().populate()
  */
 function mockPurchaseFindByIdChain(purchase: any) {
   return {
     populate: vi.fn().mockReturnValue({
       populate: vi.fn().mockReturnValue({
-        populate: vi.fn().mockResolvedValue(purchase),
+        populate: vi.fn().mockReturnValue({
+          populate: vi.fn().mockResolvedValue(purchase),
+        }),
       }),
     }),
   } as any;
@@ -354,8 +356,11 @@ describe("PurchaseReceiptController", () => {
       };
 
       const populateUserMock = vi.fn().mockResolvedValue(mockPurchase);
-      const populateEventMock = vi.fn().mockReturnValue({
+      const populateMembershipMock = vi.fn().mockReturnValue({
         populate: populateUserMock,
+      });
+      const populateEventMock = vi.fn().mockReturnValue({
+        populate: populateMembershipMock,
       });
       const populateProgramMock = vi.fn().mockReturnValue({
         populate: populateEventMock,
@@ -376,6 +381,10 @@ describe("PurchaseReceiptController", () => {
         "title programType hostedBy",
       );
       expect(populateEventMock).toHaveBeenCalledWith("eventId", "title");
+      expect(populateMembershipMock).toHaveBeenCalledWith(
+        "membershipId",
+        "title price",
+      );
       expect(populateUserMock).toHaveBeenCalledWith(
         "userId",
         "firstName lastName email",
@@ -394,7 +403,9 @@ describe("PurchaseReceiptController", () => {
       vi.mocked(Purchase.findById).mockReturnValue({
         populate: vi.fn().mockReturnValue({
           populate: vi.fn().mockReturnValue({
-            populate: vi.fn().mockRejectedValue(dbError),
+            populate: vi.fn().mockReturnValue({
+              populate: vi.fn().mockRejectedValue(dbError),
+            }),
           }),
         }),
       } as any);
@@ -432,7 +443,9 @@ describe("PurchaseReceiptController", () => {
       vi.mocked(Purchase.findById).mockReturnValue({
         populate: vi.fn().mockReturnValue({
           populate: vi.fn().mockReturnValue({
-            populate: vi.fn().mockRejectedValue("Unexpected error"),
+            populate: vi.fn().mockReturnValue({
+              populate: vi.fn().mockRejectedValue("Unexpected error"),
+            }),
           }),
         }),
       } as any);

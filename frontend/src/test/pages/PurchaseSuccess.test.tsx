@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import PurchaseSuccess from "../../pages/PurchaseSuccess";
 import { purchaseService } from "../../services/api";
@@ -19,13 +19,17 @@ vi.mock("../../components/promo/BundlePromoCodeCard", () => ({
 describe("PurchaseSuccess page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Mock alert
     vi.spyOn(window, "alert").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it("shows loading state initially", () => {
     vi.mocked(purchaseService.verifySession).mockImplementation(
-      () => new Promise(() => {}) // Never resolves
+      () => new Promise(() => {}),
     );
 
     render(
@@ -33,7 +37,7 @@ describe("PurchaseSuccess page", () => {
         <Routes>
           <Route path="/" element={<PurchaseSuccess />} />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     expect(screen.getByText(/loading your purchase/i)).toBeInTheDocument();
@@ -65,7 +69,7 @@ describe("PurchaseSuccess page", () => {
         <Routes>
           <Route path="/" element={<PurchaseSuccess />} />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     await waitFor(() => {
@@ -102,7 +106,7 @@ describe("PurchaseSuccess page", () => {
         <Routes>
           <Route path="/" element={<PurchaseSuccess />} />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     await waitFor(() => {
@@ -113,8 +117,12 @@ describe("PurchaseSuccess page", () => {
   });
 
   it("shows error message after retries fail", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {});
+
     vi.mocked(purchaseService.verifySession).mockRejectedValue(
-      new Error("Session not found")
+      new Error("Session not found"),
     );
 
     render(
@@ -122,21 +130,33 @@ describe("PurchaseSuccess page", () => {
         <Routes>
           <Route path="/" element={<PurchaseSuccess />} />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
-    // Wait for error message to appear after retries
-    await waitFor(
-      () => {
-        expect(
-          screen.getByText(/your payment was successful/i)
-        ).toBeInTheDocument();
-        expect(
-          screen.getByText(/still processing your purchase/i)
-        ).toBeInTheDocument();
-      },
-      { timeout: 15000 }
-    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(purchaseService.verifySession).toHaveBeenCalledTimes(1);
+
+    for (const [delay, expectedCallCount] of [
+      [2000, 2],
+      [4000, 3],
+      [6000, 4],
+    ] as const) {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(delay);
+      });
+      expect(purchaseService.verifySession).toHaveBeenCalledTimes(
+        expectedCallCount,
+      );
+    }
+
+    expect(
+      screen.getByText(/your payment was successful/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/still processing your purchase/i),
+    ).toBeInTheDocument();
   });
 
   it("redirects to programs when session_id is missing", () => {
@@ -148,7 +168,7 @@ describe("PurchaseSuccess page", () => {
           <Route path="/" element={<PurchaseSuccess />} />
           <Route path="/dashboard/programs" element={<div>Programs</div>} />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     expect(alertSpy).toHaveBeenCalledWith("Invalid payment session");

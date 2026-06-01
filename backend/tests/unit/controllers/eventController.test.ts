@@ -1557,7 +1557,8 @@ describe("EventController", () => {
       expect(mockJson).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          message: "Insufficient permissions to create events.",
+          message:
+            "Insufficient permissions to create events. Select a program where you are a mentor or class rep.",
         }),
       );
     });
@@ -4573,6 +4574,9 @@ describe("EventController", () => {
       mockRequest.user = { _id: "user123", role: "Leader" } as any;
       mockRequest.get = vi.fn().mockReturnValue("test-user-agent");
       mockRequest.ip = "127.0.0.1";
+      vi.mocked(mongoose.Types.ObjectId.isValid).mockImplementation((id: any) =>
+        /^[0-9a-fA-F]{24}$/.test(String(id)),
+      );
       mockRequest.body = {
         programLabels: ["507f1f77bcf86cd799439012", "507f1f77bcf86cd799439013"],
       } as any;
@@ -4813,7 +4817,7 @@ describe("EventController", () => {
           ).toHaveBeenCalledWith("event123");
         });
 
-        it("should allow co-organizers to delete events", async () => {
+        it("should reject co-organizers who are not the event creator", async () => {
           // Arrange
           const mockEvent = {
             _id: "event123",
@@ -4844,10 +4848,15 @@ describe("EventController", () => {
           );
 
           // Assert
-          expect(mockStatus).toHaveBeenCalledWith(200);
+          expect(mockStatus).toHaveBeenCalledWith(403);
+          expect(mockJson).toHaveBeenCalledWith({
+            success: false,
+            message:
+              "Insufficient permissions to delete this event. You must be the event creator.",
+          });
           expect(
             vi.mocked(EventCascadeService.deleteEventFully),
-          ).toHaveBeenCalledWith("event123");
+          ).not.toHaveBeenCalled();
         });
 
         it("should reject unauthorized users", async () => {
@@ -4880,7 +4889,7 @@ describe("EventController", () => {
           expect(mockJson).toHaveBeenCalledWith({
             success: false,
             message:
-              "Insufficient permissions to delete this event. You must be the event creator or a co-organizer.",
+              "Insufficient permissions to delete this event. You must be the event creator.",
           });
         });
       });
@@ -4951,7 +4960,7 @@ describe("EventController", () => {
           expect(mockJson).toHaveBeenCalledWith({
             success: false,
             message:
-              "Insufficient permissions to delete this event. You must be the event creator or a co-organizer.",
+              "Insufficient permissions to delete this event. You must be the event creator.",
           });
         });
 

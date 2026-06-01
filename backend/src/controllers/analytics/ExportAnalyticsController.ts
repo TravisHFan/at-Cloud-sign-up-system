@@ -56,7 +56,7 @@ export default class ExportAnalyticsController {
       const maxRows = Math.min(
         Math.max(0, Number(maxRowsParam ?? SOFT_DEFAULT_CAP)) ||
           SOFT_DEFAULT_CAP,
-        MAX_ROWS_HARD_CAP
+        MAX_ROWS_HARD_CAP,
       );
 
       // Base filters
@@ -82,11 +82,15 @@ export default class ExportAnalyticsController {
             toHexString?: () => string;
             toString?: () => string;
           };
-          if (maybeDoc._id != null) return toIdString(maybeDoc._id);
           if (typeof maybeDoc.toHexString === "function") {
             return maybeDoc.toHexString();
           }
-          if (maybeDoc.id != null) return toIdString(maybeDoc.id);
+          if (maybeDoc._id != null && maybeDoc._id !== value) {
+            return toIdString(maybeDoc._id);
+          }
+          if (maybeDoc.id != null && maybeDoc.id !== value) {
+            return toIdString(maybeDoc.id);
+          }
           if (
             typeof maybeDoc.toString === "function" &&
             maybeDoc.toString !== Object.prototype.toString
@@ -145,9 +149,7 @@ export default class ExportAnalyticsController {
         const start = [period.startYear, period.startMonth]
           .filter(Boolean)
           .join("-");
-        const end = [period.endYear, period.endMonth]
-          .filter(Boolean)
-          .join("-");
+        const end = [period.endYear, period.endMonth].filter(Boolean).join("-");
         return [start, end].filter(Boolean).join(" to ");
       };
 
@@ -223,14 +225,14 @@ export default class ExportAnalyticsController {
           limit?: number;
           lean?: boolean;
           strict?: boolean;
-        }
+        },
       ): Promise<T[]> => {
         try {
           const hasFind =
             model && typeof (model as { find?: unknown }).find === "function";
           const finder = hasFind
             ? (model as { find: (f: Record<string, unknown>) => unknown }).find(
-                filter
+                filter,
               )
             : undefined;
           // Chainable mongoose query path
@@ -240,7 +242,7 @@ export default class ExportAnalyticsController {
             const sel = (
               q as {
                 select?: (
-                  s: string | Record<string, number | boolean>
+                  s: string | Record<string, number | boolean>,
                 ) => unknown;
               }
             ).select;
@@ -295,13 +297,17 @@ export default class ExportAnalyticsController {
       };
 
       const programCatalog = (
-        (await safeFetch(Program as unknown, {}, {
-          select:
-            "title programType hostedBy period isFree createdAt updatedAt",
-          sort: { createdAt: -1 },
-          limit: maxRows,
-          strict: false,
-        })) as ProgramCatalogExport[]
+        (await safeFetch(
+          Program as unknown,
+          {},
+          {
+            select:
+              "title programType hostedBy period isFree createdAt updatedAt",
+            sort: { createdAt: -1 },
+            limit: maxRows,
+            strict: false,
+          },
+        )) as ProgramCatalogExport[]
       ).map((program) => ({
         id: toIdString(program._id ?? program.id),
         title: program.title ?? "",
@@ -316,7 +322,7 @@ export default class ExportAnalyticsController {
       const programTitleById = new Map(
         programCatalog
           .filter((program) => program.id)
-          .map((program) => [program.id, program.title])
+          .map((program) => [program.id, program.title]),
       );
 
       // Get constrained analytics data
@@ -376,15 +382,11 @@ export default class ExportAnalyticsController {
           createdAt?: string | Date;
         }>,
         registrations: (
-          (await safeFetch(
-            Registration as unknown,
-            registrationFilter,
-            {
-              sort: { createdAt: -1 },
-              limit: maxRows,
-              strict: true,
-            }
-          )) as RawRegistrationExport[]
+          (await safeFetch(Registration as unknown, registrationFilter, {
+            sort: { createdAt: -1 },
+            limit: maxRows,
+            strict: true,
+          })) as RawRegistrationExport[]
         ).map((reg) => ({
           userId: toIdString(reg.userId),
           eventId: toIdString(reg.eventId),
@@ -472,7 +474,7 @@ export default class ExportAnalyticsController {
           } catch (e) {
             console.warn(
               "GuestRegistrations fetch failed, continuing without guests:",
-              e
+              e,
             );
             return [] as GuestRegLean[];
           }
@@ -504,7 +506,7 @@ export default class ExportAnalyticsController {
               sort: { purchaseDate: -1 },
               limit: maxRows,
               strict: false,
-            }
+            },
           )) as RawProgramPurchaseExport[]
         ).map((purchase) => {
           const programId = toIdString(purchase.programId);
@@ -541,7 +543,7 @@ export default class ExportAnalyticsController {
             sort: { giftDate: -1 },
             limit: maxRows,
             strict: false,
-          }
+          },
         )) as Array<{
           userId?: unknown;
           donationId?: unknown;
@@ -563,7 +565,7 @@ export default class ExportAnalyticsController {
         res.setHeader("Content-Type", "application/json");
         res.setHeader(
           "Content-Disposition",
-          "attachment; filename=analytics.json"
+          "attachment; filename=analytics.json",
         );
         res.send(JSON.stringify(data, null, 2));
       } else if (format === "csv") {
@@ -571,7 +573,7 @@ export default class ExportAnalyticsController {
         res.setHeader("Content-Type", "text/csv");
         res.setHeader(
           "Content-Disposition",
-          "attachment; filename=analytics.csv"
+          "attachment; filename=analytics.csv",
         );
 
         const mode = (req.query.mode as string) || "summary"; // "summary" | "rows"
@@ -609,7 +611,7 @@ export default class ExportAnalyticsController {
           // Registrations
           res.write(`# Registrations\n`);
           res.write(
-            "UserId,UserEmail,UserName,EventId,EventTitle,RoleId,RoleName,Status,AttendanceStatus,AttendanceConfirmed,RegistrationDate\n"
+            "UserId,UserEmail,UserName,EventId,EventTitle,RoleId,RoleName,Status,AttendanceStatus,AttendanceConfirmed,RegistrationDate\n",
           );
           for (const r of data.registrations) {
             const row = [
@@ -768,7 +770,7 @@ export default class ExportAnalyticsController {
         XLSX.utils.book_append_sheet(
           workbook,
           registrationsWS,
-          "Registrations"
+          "Registrations",
         );
 
         // Guest Registrations sheet (only when data present to preserve legacy test expectations)
@@ -799,7 +801,7 @@ export default class ExportAnalyticsController {
               g.eventSnapshot?.title ?? "",
               g.eventSnapshot?.date
                 ? new Date(
-                    g.eventSnapshot.date as Date | string
+                    g.eventSnapshot.date as Date | string,
                   ).toLocaleString()
                 : "",
               g.eventSnapshot?.location ?? "",
@@ -817,7 +819,7 @@ export default class ExportAnalyticsController {
           XLSX.utils.book_append_sheet(
             workbook,
             guestRegsWS,
-            "Guest Registrations"
+            "Guest Registrations",
           );
         }
 
@@ -886,12 +888,11 @@ export default class ExportAnalyticsController {
                 : "",
             ]),
           ];
-          const programCatalogWS =
-            XLSX.utils.aoa_to_sheet(programCatalogData);
+          const programCatalogWS = XLSX.utils.aoa_to_sheet(programCatalogData);
           XLSX.utils.book_append_sheet(
             workbook,
             programCatalogWS,
-            "Program Catalog"
+            "Program Catalog",
           );
         }
 
@@ -929,11 +930,11 @@ export default class ExportAnalyticsController {
 
         res.setHeader(
           "Content-Type",
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         );
         res.setHeader(
           "Content-Disposition",
-          "attachment; filename=analytics.xlsx"
+          "attachment; filename=analytics.xlsx",
         );
         res.send(buffer);
       }
@@ -944,7 +945,7 @@ export default class ExportAnalyticsController {
           "Export analytics error",
           error as Error,
           "exportAnalytics",
-          { query: req.query }
+          { query: req.query },
         );
       } catch {}
       res.status(500).json({

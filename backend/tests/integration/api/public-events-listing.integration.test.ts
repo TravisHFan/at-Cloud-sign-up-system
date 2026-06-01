@@ -102,7 +102,7 @@ describe("Public Events Listing Integration Tests", () => {
           date: "2025-12-25",
           time: "09:00",
           endTime: "10:00",
-        })
+        }),
       );
 
       const response = await request(app).get("/api/public/events").expect(200);
@@ -270,7 +270,7 @@ describe("Public Events Listing Integration Tests", () => {
           title: "Capacity Test Event",
           publicSlug: "capacity-test",
           date: "2025-12-15",
-        })
+        }),
       );
 
       // Create 3 different users for registrations
@@ -384,7 +384,7 @@ describe("Public Events Listing Integration Tests", () => {
             title: `Event ${i}`,
             publicSlug: `event-${i}`,
             date: "2025-12-15",
-          })
+          }),
         );
       }
       await Event.create(events);
@@ -449,7 +449,7 @@ describe("Public Events Listing Integration Tests", () => {
           title: "Test Event",
           publicSlug: "test-event-etag",
           date: "2025-12-15",
-        })
+        }),
       );
 
       // First request to get ETag
@@ -475,23 +475,24 @@ describe("Public Events Listing Integration Tests", () => {
           date: "2025-12-15",
           flyerUrl: "https://example.com/flyer.jpg",
           secondaryFlyerUrl: "https://example.com/flyer2.jpg",
-        })
+        }),
       );
 
       const response = await request(app).get("/api/public/events").expect(200);
 
       expect(response.body.data.items[0].flyerUrl).toBe(
-        "https://example.com/flyer.jpg"
+        "https://example.com/flyer.jpg",
       );
       expect(response.body.data.items[0].secondaryFlyerUrl).toBe(
-        "https://example.com/flyer2.jpg"
+        "https://example.com/flyer2.jpg",
       );
     });
 
     it("should handle errors gracefully", async () => {
       // Force an error by providing invalid query parameters
       const response = await request(app)
-        .get("/api/public/events?page=-1")
+        .get("/api/public/events")
+        .query({ page: -1 })
         .expect(200);
 
       // Should still work with corrected values

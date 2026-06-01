@@ -25,7 +25,7 @@ describe("ProgramLinkageService.extractPreviousLabels", () => {
     expect(
       ProgramLinkageService.extractPreviousLabels({
         programLabels: "not-array",
-      })
+      }),
     ).toEqual([]);
   });
 
@@ -48,17 +48,17 @@ describe("ProgramLinkageService.processAndValidate", () => {
 
   it("treats null or empty string as explicit clear", async () => {
     await expect(
-      ProgramLinkageService.processAndValidate(null)
+      ProgramLinkageService.processAndValidate(null),
     ).resolves.toEqual({ success: true, programIds: [], linkedPrograms: [] });
 
     await expect(ProgramLinkageService.processAndValidate("")).resolves.toEqual(
-      { success: true, programIds: [], linkedPrograms: [] }
+      { success: true, programIds: [], linkedPrograms: [] },
     );
   });
 
   it("returns success with empty arrays when input is not an array", async () => {
     await expect(
-      ProgramLinkageService.processAndValidate("not-array")
+      ProgramLinkageService.processAndValidate("not-array"),
     ).resolves.toEqual({ success: true, programIds: [], linkedPrograms: [] });
   });
 
@@ -174,7 +174,7 @@ describe("ProgramLinkageService.processAndValidate", () => {
         unauthorizedProgramId,
       ],
       "leader-1",
-      "Leader"
+      "Leader",
     );
 
     expect(failResult.success).toBe(false);
@@ -188,7 +188,7 @@ describe("ProgramLinkageService.processAndValidate", () => {
     const okResult = await ProgramLinkageService.processAndValidate(
       [freeProgramId, mentorProgramId, purchasedProgramId],
       "leader-1",
-      "Leader"
+      "Leader",
     );
 
     expect(okResult.success).toBe(true);
@@ -230,6 +230,7 @@ describe("ProgramLinkageService.processAndValidate", () => {
       userId: "class-rep-1",
       programId: classRepProgramId,
       status: "completed",
+      unenrolledAt: { $exists: false },
       isClassRep: true,
     });
 

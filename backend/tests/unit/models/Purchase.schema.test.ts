@@ -15,9 +15,9 @@ describe("Purchase Schema Conditional Required Fields", () => {
     test("should require programId when purchaseType is 'program'", () => {
       // Access the programId path's required validator
       const programIdPath = Purchase.schema.path("programId");
-      const requiredFn = programIdPath.options.required as (
-        this: { purchaseType: string }
-      ) => boolean;
+      const requiredFn = programIdPath.options.required as (this: {
+        purchaseType: string;
+      }) => boolean;
 
       const context = { purchaseType: "program" };
       expect(requiredFn.call(context)).toBe(true);
@@ -25,9 +25,9 @@ describe("Purchase Schema Conditional Required Fields", () => {
 
     test("should not require programId when purchaseType is 'event'", () => {
       const programIdPath = Purchase.schema.path("programId");
-      const requiredFn = programIdPath.options.required as (
-        this: { purchaseType: string }
-      ) => boolean;
+      const requiredFn = programIdPath.options.required as (this: {
+        purchaseType: string;
+      }) => boolean;
 
       const context = { purchaseType: "event" };
       expect(requiredFn.call(context)).toBe(false);
@@ -37,9 +37,9 @@ describe("Purchase Schema Conditional Required Fields", () => {
   describe("eventId conditional required", () => {
     test("should require eventId when purchaseType is 'event'", () => {
       const eventIdPath = Purchase.schema.path("eventId");
-      const requiredFn = eventIdPath.options.required as (
-        this: { purchaseType: string }
-      ) => boolean;
+      const requiredFn = eventIdPath.options.required as (this: {
+        purchaseType: string;
+      }) => boolean;
 
       const context = { purchaseType: "event" };
       expect(requiredFn.call(context)).toBe(true);
@@ -47,9 +47,9 @@ describe("Purchase Schema Conditional Required Fields", () => {
 
     test("should not require eventId when purchaseType is 'program'", () => {
       const eventIdPath = Purchase.schema.path("eventId");
-      const requiredFn = eventIdPath.options.required as (
-        this: { purchaseType: string }
-      ) => boolean;
+      const requiredFn = eventIdPath.options.required as (this: {
+        purchaseType: string;
+      }) => boolean;
 
       const context = { purchaseType: "program" };
       expect(requiredFn.call(context)).toBe(false);
@@ -57,12 +57,13 @@ describe("Purchase Schema Conditional Required Fields", () => {
   });
 
   describe("purchaseType enum validation", () => {
-    test("should only allow 'program' and 'event' values", () => {
+    test("should allow program, event, and membership values", () => {
       const purchaseTypePath = Purchase.schema.path("purchaseType");
       const enumValues = purchaseTypePath.options.enum;
       expect(enumValues).toContain("program");
       expect(enumValues).toContain("event");
-      expect(enumValues).toHaveLength(2);
+      expect(enumValues).toContain("membership");
+      expect(enumValues).toHaveLength(3);
     });
 
     test("should default to 'program' for backward compatibility", () => {

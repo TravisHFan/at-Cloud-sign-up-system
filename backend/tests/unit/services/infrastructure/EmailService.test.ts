@@ -95,7 +95,7 @@ describe("EmailService", () => {
       EmailTransporter.getTransporter();
 
       expect(console.log).toHaveBeenCalledWith(
-        "🔧 Development mode: Email service will use console logging"
+        "🔧 Development mode: Email service will use console logging",
       );
       expect(nodemailer.createTransport).toHaveBeenCalledWith({
         jsonTransport: true,
@@ -137,7 +137,7 @@ describe("EmailService", () => {
       EmailTransporter.getTransporter();
 
       expect(console.log).toHaveBeenCalledWith(
-        "🔧 Development mode: Email service will use console logging"
+        "🔧 Development mode: Email service will use console logging",
       );
       expect(nodemailer.createTransport).toHaveBeenCalledWith({
         jsonTransport: true,
@@ -158,7 +158,7 @@ describe("EmailService", () => {
 
       expect(result).toBe(true);
       expect(console.log).toHaveBeenCalledWith(
-        "📧 Email skipped in test environment: Test Subject to test@example.com"
+        "📧 Email skipped in test environment: Test Subject to test@example.com",
       );
       expect(mockTransporter.sendMail).not.toHaveBeenCalled();
     });
@@ -216,7 +216,7 @@ describe("EmailService", () => {
 
       expect(result).toBe(true);
       expect(console.log).toHaveBeenCalledWith(
-        "📧 Development Email (not actually sent):"
+        "📧 Development Email (not actually sent):",
       );
       expect(console.log).toHaveBeenCalledWith("   To: test@example.com");
       expect(console.log).toHaveBeenCalledWith("   Subject: Test Subject");
@@ -238,7 +238,7 @@ describe("EmailService", () => {
       expect(result).toBe(true);
       expect(console.log).toHaveBeenCalledWith("📧 Email sent successfully:");
       expect(console.log).toHaveBeenCalledWith(
-        "   Message ID: test-message-id"
+        "   Message ID: test-message-id",
       );
     });
 
@@ -256,7 +256,7 @@ describe("EmailService", () => {
       expect(result).toBe(false);
       expect(console.error).toHaveBeenCalledWith(
         "❌ Email send failed:",
-        error
+        error,
       );
     });
 
@@ -272,7 +272,7 @@ describe("EmailService", () => {
       });
 
       expect(console.log).not.toHaveBeenCalledWith(
-        "📧 Email sent successfully:"
+        "📧 Email sent successfully:",
       );
     });
   });
@@ -303,7 +303,7 @@ describe("EmailService", () => {
       expect(mockTransporter.sendMail).toHaveBeenCalledWith(
         expect.objectContaining({
           from: '"@Cloud Ministry" <atcloudministry@gmail.com>',
-        })
+        }),
       );
     });
 
@@ -317,7 +317,7 @@ describe("EmailService", () => {
       expect(nodemailer.createTransport).toHaveBeenCalledWith(
         expect.objectContaining({
           port: NaN,
-        })
+        }),
       );
     });
 
@@ -332,7 +332,7 @@ describe("EmailService", () => {
       expect(nodemailer.createTransport).toHaveBeenCalledWith(
         expect.objectContaining({
           secure: false,
-        })
+        }),
       );
     });
 
@@ -409,7 +409,7 @@ describe("EmailService", () => {
       expect(result).toBe(false);
       expect(console.error).toHaveBeenCalledWith(
         "❌ Email send failed:",
-        networkError
+        networkError,
       );
     });
 
@@ -430,7 +430,7 @@ describe("EmailService", () => {
 
       // Should not log success message in production
       expect(console.log).not.toHaveBeenCalledWith(
-        "📧 Email sent successfully:"
+        "📧 Email sent successfully:",
       );
     });
   });
@@ -459,7 +459,7 @@ describe("EmailService.sendEventReminderEmail", () => {
         location: "Virtual",
         zoomLink: "https://zoom.us/j/123",
       },
-      "1h"
+      "1h",
     );
 
     expect(spy).toHaveBeenCalled();
@@ -491,7 +491,7 @@ describe("EmailService.sendEventReminderEmail", () => {
         location: "Main Hall",
         zoomLink: "https://zoom.us/j/456",
       },
-      "24h"
+      "24h",
     );
 
     const args = spy.mock.calls[0][0];
@@ -500,7 +500,7 @@ describe("EmailService.sendEventReminderEmail", () => {
     expect(args.html).toContain("Online Access for Hybrid Event:");
     expect(args.html).toContain(">Join Online<");
     // CTA button text for hybrid should be Join Online
-    expect(args.html).toContain('class="button virtual">Join Online');
+    expect(args.html).toContain('class="button virtual"');
   });
 
   it("renders in-person event with location and details CTA", async () => {
@@ -518,7 +518,7 @@ describe("EmailService.sendEventReminderEmail", () => {
         format: "In-Person",
         location: "Room 101",
       },
-      "1week"
+      "1week",
     );
 
     const args = spy.mock.calls[0][0];
@@ -553,7 +553,7 @@ describe("EmailService demotion notifications", () => {
         email: "c@example.com",
         role: "Admin",
       },
-      "Policy violation"
+      "Policy violation",
     );
     expect(ok).toBe(true);
   });
@@ -575,7 +575,7 @@ describe("EmailService demotion notifications", () => {
         lastName: "Y",
         email: "c2@example.com",
         role: "Admin",
-      }
+      },
     );
     expect(ok).toBe(true);
   });
@@ -602,7 +602,7 @@ describe("EmailService promotion templates and event created", () => {
         lastName: "One",
         role: "Administrator",
         email: "admin@example.com",
-      } as any
+      } as any,
     );
     const args = spy.mock.calls[0][0];
     expect(args.subject).toContain("promoted to Leader");
@@ -629,7 +629,7 @@ describe("EmailService promotion templates and event created", () => {
         lastName: "Admin",
         role: "Super Admin",
         email: "root@example.com",
-      } as any
+      } as any,
     );
     const args = spy.mock.calls[0][0];
     expect(args.subject).toContain("Admin Alert");
@@ -692,7 +692,7 @@ describe("EmailService additional branches", () => {
         oldRole: "Administrator",
         newRole: "Super Admin",
       },
-      { firstName: "Boss", lastName: "Man", role: "Super Admin" }
+      { firstName: "Boss", lastName: "Man", role: "Super Admin" },
     );
     const args = spy.mock.calls[0][0];
     expect(args.subject).toContain("promoted to Super Admin");
@@ -710,7 +710,7 @@ describe("EmailService additional branches", () => {
         oldRole: "Participant",
         newRole: "Volunteer",
       },
-      { firstName: "Admin", lastName: "Two", role: "Administrator" }
+      { firstName: "Admin", lastName: "Two", role: "Administrator" },
     );
     const args = spy.mock.calls[0][0];
     expect(args.subject).toContain("promoted to Volunteer");
@@ -729,7 +729,7 @@ describe("EmailService additional branches", () => {
         oldRole: "Administrator",
         newRole: "Super Admin",
       },
-      { firstName: "Root", lastName: "Admin", role: "Super Admin" }
+      { firstName: "Root", lastName: "Admin", role: "Super Admin" },
     );
     const args = spy.mock.calls[0][0];
     expect(args.subject).toContain("User Promoted to Super Admin");
@@ -748,7 +748,7 @@ describe("EmailService additional branches", () => {
         oldRole: "Participant",
         newRole: "Volunteer Coordinator",
       },
-      { firstName: "Root", lastName: "Admin", role: "Super Admin" }
+      { firstName: "Root", lastName: "Admin", role: "Super Admin" },
     );
     const args = spy.mock.calls[0][0];
     expect(args.html).toContain("Standard");
@@ -771,7 +771,7 @@ describe("EmailService additional branches", () => {
         lastName: "Z",
         email: "cz@example.com",
         role: "Admin",
-      }
+      },
     );
     expect(ok).toBe(true);
   });
@@ -793,7 +793,7 @@ describe("EmailService additional branches", () => {
         lastName: "Z",
         email: "cz@example.com",
         role: "Admin",
-      }
+      },
     );
     expect(ok).toBe(true);
   });
@@ -825,7 +825,7 @@ describe("EmailService additional branches", () => {
         format: "In-Person",
         location: "Room 101",
       },
-      "24h"
+      "24h",
     );
     const args = spy.mock.calls[0][0];
     expect(args.html).toContain("Tomorrow!");

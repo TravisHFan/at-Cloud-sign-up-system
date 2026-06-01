@@ -3,6 +3,7 @@ import { Types } from "mongoose";
 import { ResponseBuilderService } from "../../../src/services/ResponseBuilderService";
 import { Event, Registration, User } from "../../../src/models";
 import { RegistrationQueryService } from "../../../src/services/RegistrationQueryService";
+import { withSilencedConsole } from "../../test-utils/silenceConsole";
 
 // Mock the models
 vi.mock("../../../src/models", () => ({
@@ -390,8 +391,9 @@ describe("ResponseBuilderService", () => {
         }),
       } as any);
 
-      const result =
-        await ResponseBuilderService.buildEventWithRegistrations(eventId);
+      const result = await withSilencedConsole(["error"], () =>
+        ResponseBuilderService.buildEventWithRegistrations(eventId),
+      );
 
       expect(result).toBeNull();
     });
@@ -600,7 +602,9 @@ describe("ResponseBuilderService", () => {
         lean: vi.fn().mockRejectedValue(new Error("Database error")),
       } as any);
 
-      const result = await ResponseBuilderService.buildAnalyticsEventData([]);
+      const result = await withSilencedConsole(["error"], () =>
+        ResponseBuilderService.buildAnalyticsEventData([]),
+      );
 
       expect(result).toEqual([]);
     });
@@ -793,32 +797,11 @@ describe("ResponseBuilderService", () => {
         lean: vi.fn().mockRejectedValue(new Error("Database error")),
       } as any);
 
-      const result = await ResponseBuilderService.buildUserSignupStatus(
-        userId,
-        eventId,
+      const result = await withSilencedConsole(["error"], () =>
+        ResponseBuilderService.buildUserSignupStatus(userId, eventId),
       );
 
       expect(result).toBeNull();
-    });
-  });
-
-  describe("Workshop Multi-Group Contact Visibility Fix", () => {
-    it("simple test to check execution", async () => {
-      console.log("🚨 SIMPLE TEST STARTING!");
-      expect(1 + 1).toBe(2);
-      console.log("🚨 SIMPLE TEST PASSED!");
-    });
-
-    it("should show contact info for users in ALL groups when viewer is registered in multiple groups", async () => {
-      console.log("🚨 [TEST START] Multi-group test starting...");
-      console.log(
-        "🧪 TEST STARTING: should show contact info for users in ALL groups when viewer is registered in multiple groups",
-      );
-
-      // Just test null for now
-      const result = null;
-      console.log("🧪 TEST 1: Result is:", result);
-      expect(result).toBe(null); // This should pass since we expect null
     });
   });
 });
