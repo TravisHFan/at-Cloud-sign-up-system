@@ -97,7 +97,7 @@ describe("AdminPromoCodes - Staff Code Creation (Minimal Test)", () => {
     render(
       <BrowserRouter>
         <AdminPromoCodes />
-      </BrowserRouter>
+      </BrowserRouter>,
     );
 
     // Wait for component to load
@@ -117,10 +117,10 @@ describe("AdminPromoCodes - Staff Code Creation (Minimal Test)", () => {
     // Verify the tab content loads (should see code type choice)
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: /create personal staff code/i })
+        screen.getByRole("button", { name: /create personal staff code/i }),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: /create general staff code/i })
+        screen.getByRole("button", { name: /create general staff code/i }),
       ).toBeInTheDocument();
     });
   });
@@ -157,7 +157,7 @@ describe("AdminPromoCodes - Staff Code Creation (Minimal Test)", () => {
     render(
       <BrowserRouter>
         <AdminPromoCodes />
-      </BrowserRouter>
+      </BrowserRouter>,
     );
 
     await waitFor(() => {
@@ -165,25 +165,25 @@ describe("AdminPromoCodes - Staff Code Creation (Minimal Test)", () => {
     });
 
     await user.click(
-      screen.getByRole("button", { name: /create staff code/i })
+      screen.getByRole("button", { name: /create staff code/i }),
     );
 
     await user.click(
       await screen.findByRole("button", {
         name: /create general staff code/i,
-      })
+      }),
     );
 
     await user.type(
       screen.getByPlaceholderText(/staff discount 2025/i),
-      "Staff Discount 2026"
+      "Staff Discount 2026",
     );
 
     const submitButtons = screen.getAllByRole("button", {
       name: /create general staff code/i,
     });
     const generateButton = submitButtons.find(
-      (btn) => btn.getAttribute("type") === "submit"
+      (btn) => btn.getAttribute("type") === "submit",
     );
     expect(generateButton).toBeInTheDocument();
     await user.click(generateButton!);
@@ -250,7 +250,7 @@ describe("AdminPromoCodes - Staff Code Creation (Minimal Test)", () => {
     render(
       <BrowserRouter>
         <AdminPromoCodes />
-      </BrowserRouter>
+      </BrowserRouter>,
     );
 
     // Navigate to Create Staff Code tab
@@ -266,7 +266,7 @@ describe("AdminPromoCodes - Staff Code Creation (Minimal Test)", () => {
     // Choose Personal Staff Code option
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: /create personal staff code/i })
+        screen.getByRole("button", { name: /create personal staff code/i }),
       ).toBeInTheDocument();
     });
 
@@ -278,7 +278,7 @@ describe("AdminPromoCodes - Staff Code Creation (Minimal Test)", () => {
     // Wait for the form to appear with Select User button
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: /select user/i })
+        screen.getByRole("button", { name: /select user/i }),
       ).toBeInTheDocument();
     });
 
@@ -291,7 +291,7 @@ describe("AdminPromoCodes - Staff Code Creation (Minimal Test)", () => {
     // Wait for modal to open
     await waitFor(() => {
       expect(
-        screen.getByText("Select User for Staff Code")
+        screen.getByText("Select User for Staff Code"),
       ).toBeInTheDocument();
     });
 
@@ -304,7 +304,7 @@ describe("AdminPromoCodes - Staff Code Creation (Minimal Test)", () => {
       () => {
         expect(api.searchService.searchUsers).toHaveBeenCalled();
       },
-      { timeout: 2000 }
+      { timeout: 2000 },
     );
 
     // Wait for user to appear in results
@@ -312,7 +312,7 @@ describe("AdminPromoCodes - Staff Code Creation (Minimal Test)", () => {
       () => {
         expect(screen.getByText("John Doe")).toBeInTheDocument();
       },
-      { timeout: 2000 }
+      { timeout: 2000 },
     );
 
     // Select the user
@@ -323,7 +323,7 @@ describe("AdminPromoCodes - Staff Code Creation (Minimal Test)", () => {
     // Verify modal closes
     await waitFor(() => {
       expect(
-        screen.queryByText("Select User for Staff Code")
+        screen.queryByText("Select User for Staff Code"),
       ).not.toBeInTheDocument();
     });
 
@@ -341,7 +341,7 @@ describe("AdminPromoCodes - Staff Code Creation (Minimal Test)", () => {
       name: /create staff code/i,
     });
     const generateButton = submitButtons.find(
-      (btn) => btn.getAttribute("type") === "submit"
+      (btn) => btn.getAttribute("type") === "submit",
     );
     expect(generateButton).toBeInTheDocument();
     await user.click(generateButton!);
@@ -351,7 +351,7 @@ describe("AdminPromoCodes - Staff Code Creation (Minimal Test)", () => {
       () => {
         expect(api.apiClient.createStaffPromoCode).toHaveBeenCalled();
       },
-      { timeout: 2000 }
+      { timeout: 2000 },
     );
 
     // Verify the API call included the user ID
@@ -364,11 +364,6 @@ describe("AdminPromoCodes - Staff Code Creation (Minimal Test)", () => {
     expect(firstCallArg.userId).toBeTruthy(); // Guard: not null/undefined
     expect(firstCallArg.userId.length).toBeGreaterThan(0); // Guard: not empty string
     expect(firstCallArg.discountPercent).toBe(40);
-
-    console.log(
-      "✅ SUCCESS: User ID correctly passed to API:",
-      firstCallArg.userId
-    );
   });
 
   /**
@@ -397,7 +392,7 @@ describe("AdminPromoCodes - Staff Code Creation (Minimal Test)", () => {
     render(
       <BrowserRouter>
         <AdminPromoCodes />
-      </BrowserRouter>
+      </BrowserRouter>,
     );
 
     await waitFor(() => {
@@ -412,7 +407,7 @@ describe("AdminPromoCodes - Staff Code Creation (Minimal Test)", () => {
     // Choose Personal Staff Code option
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: /create personal staff code/i })
+        screen.getByRole("button", { name: /create personal staff code/i }),
       ).toBeInTheDocument();
     });
 
@@ -424,7 +419,7 @@ describe("AdminPromoCodes - Staff Code Creation (Minimal Test)", () => {
     // Wait for the form to appear with Select User button
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: /select user/i })
+        screen.getByRole("button", { name: /select user/i }),
       ).toBeInTheDocument();
     });
 
@@ -435,7 +430,7 @@ describe("AdminPromoCodes - Staff Code Creation (Minimal Test)", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("Select User for Staff Code")
+        screen.getByText("Select User for Staff Code"),
       ).toBeInTheDocument();
     });
 
@@ -446,7 +441,7 @@ describe("AdminPromoCodes - Staff Code Creation (Minimal Test)", () => {
       () => {
         expect(api.searchService.searchUsers).toHaveBeenCalled();
       },
-      { timeout: 2000 }
+      { timeout: 2000 },
     );
 
     // Wait a bit to see if user appears (it might not if validation works)
@@ -457,7 +452,7 @@ describe("AdminPromoCodes - Staff Code Creation (Minimal Test)", () => {
       name: /create staff code/i,
     });
     const generateButton = allButtons.find(
-      (btn) => btn.getAttribute("type") === "submit"
+      (btn) => btn.getAttribute("type") === "submit",
     );
 
     if (generateButton && !generateButton.hasAttribute("disabled")) {
@@ -465,21 +460,8 @@ describe("AdminPromoCodes - Staff Code Creation (Minimal Test)", () => {
 
       // Wait to see if API was called
       await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // API should NOT be called with invalid user
-      const apiCalls = vi.mocked(api.apiClient.createStaffPromoCode).mock.calls;
-
-      if (apiCalls.length > 0) {
-        // If API was called, verify it at least has SOME userId value
-        const firstCallArg = apiCalls[0][0];
-        console.warn("⚠️ WARNING: API called with user data:", firstCallArg);
-
-        // This test documents current behavior - ideally API shouldn't be called at all
-        // But if it is, we want to see what data was passed
-        expect(firstCallArg).toHaveProperty("userId");
-      } else {
-        console.log("✅ GOOD: API not called with invalid user");
-      }
     }
+
+    expect(api.apiClient.createStaffPromoCode).not.toHaveBeenCalled();
   });
 });

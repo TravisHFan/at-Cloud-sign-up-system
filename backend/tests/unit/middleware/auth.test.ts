@@ -130,7 +130,7 @@ describe("Auth Middleware", () => {
         expect(jwt.sign).toHaveBeenCalledWith(
           payload,
           "your-access-secret-key",
-          expect.any(Object)
+          expect.any(Object),
         );
       });
     });
@@ -174,7 +174,7 @@ describe("Auth Middleware", () => {
         });
 
         expect(() => TokenService.verifyAccessToken(token)).toThrow(
-          "Invalid access token"
+          "Invalid access token",
         );
       });
     });
@@ -201,7 +201,7 @@ describe("Auth Middleware", () => {
         });
 
         expect(() => TokenService.verifyRefreshToken(token)).toThrow(
-          "Invalid refresh token"
+          "Invalid refresh token",
         );
       });
     });
@@ -232,14 +232,14 @@ describe("Auth Middleware", () => {
             role: "Participant",
           },
           "test-access-secret",
-          expect.any(Object)
+          expect.any(Object),
         );
 
         // Verify refresh token generation
         expect(jwt.sign).toHaveBeenCalledWith(
           { userId: "user123" },
           "test-refresh-secret",
-          expect.any(Object)
+          expect.any(Object),
         );
       });
     });
@@ -472,7 +472,7 @@ describe("Auth Middleware", () => {
 
       const authorizeMiddleware = authorizeRoles(
         ROLES.ADMINISTRATOR,
-        ROLES.LEADER
+        ROLES.LEADER,
       );
       const req = { user: { role: "Administrator" } } as unknown as Request;
       const res = createMockResponse() as Response;
@@ -491,7 +491,7 @@ describe("Auth Middleware", () => {
     it("should return 401 when user not authenticated", () => {
       const authorizeMiddleware = authorizeRoles(
         ROLES.ADMINISTRATOR,
-        ROLES.LEADER
+        ROLES.LEADER,
       );
       const req = {} as Request;
       const res = createMockResponse() as Response;
@@ -513,7 +513,7 @@ describe("Auth Middleware", () => {
 
       const authorizeMiddleware = authorizeRoles(
         ROLES.ADMINISTRATOR,
-        ROLES.LEADER
+        ROLES.LEADER,
       );
       const req = { user: { role: "Participant" } } as unknown as Request;
       const res = createMockResponse() as Response;
@@ -545,7 +545,7 @@ describe("Auth Middleware", () => {
 
       expect(RoleUtils.hasMinimumRole).toHaveBeenCalledWith(
         "Administrator",
-        ROLES.LEADER
+        ROLES.LEADER,
       );
       expect(next).toHaveBeenCalled();
       expect(res.status).not.toHaveBeenCalled();
@@ -622,7 +622,7 @@ describe("Auth Middleware", () => {
 
       expect(hasPermission).toHaveBeenCalledWith(
         ROLES.ADMINISTRATOR,
-        "CAN_EDIT"
+        "CAN_EDIT",
       );
       expect(next).toHaveBeenCalled();
       expect(res.status).not.toHaveBeenCalled();
@@ -818,7 +818,7 @@ describe("Auth Middleware", () => {
         passwordResetToken: hashed,
       });
       expect(select).toHaveBeenCalledWith(
-        "+passwordResetToken +passwordResetExpires"
+        "+passwordResetToken +passwordResetExpires",
       );
       expect(req.user).toEqual(mockUser);
       expect(next).toHaveBeenCalled();
@@ -1037,12 +1037,12 @@ describe("Auth Middleware", () => {
       await authorizeEventManagement(req, res, next);
 
       expect(res.status).toHaveBeenCalledWith(403);
-        expect(res.json).toHaveBeenCalledWith({
-          success: false,
-          message:
-            "Access denied. You must be an Administrator, Super Admin, event creator, listed organizer, or a Leader who is a mentor/class rep of an affiliated program to manage this event.",
-        });
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message:
+          "Access denied. You must be an Administrator, Super Admin, event creator, listed organizer, or a mentor/class rep of an affiliated program to manage this event.",
       });
+    });
   });
 
   describe("authenticateOptional", () => {

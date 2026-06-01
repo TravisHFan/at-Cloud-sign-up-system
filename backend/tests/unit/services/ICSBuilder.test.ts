@@ -173,8 +173,9 @@ describe("ICSBuilder", () => {
         event: mockEvent,
         attendeeEmail: "virtual@example.com",
       });
+      const unfoldedContent = result.content.replace(/\r?\n[ \t]/g, "");
 
-      expect(result.content).toContain(
+      expect(unfoldedContent).toContain(
         "Online Meeting Link: https://zoom.us/j/123456789?pwd=abc123",
       );
       expect(result.content).toContain("Meeting ID: 123 456 789");

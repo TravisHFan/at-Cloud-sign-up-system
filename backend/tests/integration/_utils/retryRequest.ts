@@ -13,22 +13,23 @@ import type { Test, Response } from "supertest";
  *
  * Usage:
  * ```ts
- * const response = await retryRequest(
+ * const response = await retryRequest(() =>
  *   request(app).get('/api/users').set('Authorization', `Bearer ${token}`)
  * );
  * ```
  */
 export async function retryRequest(
-  testRequest: Test,
+  testRequest: Test | (() => Test),
   maxRetries = 2,
-  delayMs = 100
+  delayMs = 100,
 ): Promise<Response> {
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      // Clone the request for each attempt (supertest requests are single-use)
-      const response = await testRequest;
+      const requestForAttempt =
+        typeof testRequest === "function" ? testRequest() : testRequest;
+      const response = await requestForAttempt;
       return response;
     } catch (error: any) {
       lastError = error;

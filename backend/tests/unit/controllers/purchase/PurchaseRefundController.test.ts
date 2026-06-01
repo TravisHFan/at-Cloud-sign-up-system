@@ -54,7 +54,8 @@ describe("PurchaseRefundController", () => {
   const mockPurchaseId = "507f1f77bcf86cd799439012";
 
   function mockPurchaseFindByIdResult(result: unknown) {
-    const secondPopulate = vi.fn().mockResolvedValue(result);
+    const thirdPopulate = vi.fn().mockResolvedValue(result);
+    const secondPopulate = vi.fn().mockReturnValue({ populate: thirdPopulate });
     const firstPopulate = vi.fn().mockReturnValue({ populate: secondPopulate });
     vi.mocked(Purchase.findById).mockReturnValue({
       populate: firstPopulate,
@@ -62,7 +63,8 @@ describe("PurchaseRefundController", () => {
   }
 
   function mockPurchaseFindByIdError(error: Error) {
-    const secondPopulate = vi.fn().mockRejectedValue(error);
+    const thirdPopulate = vi.fn().mockRejectedValue(error);
+    const secondPopulate = vi.fn().mockReturnValue({ populate: thirdPopulate });
     const firstPopulate = vi.fn().mockReturnValue({ populate: secondPopulate });
     vi.mocked(Purchase.findById).mockReturnValue({
       populate: firstPopulate,
@@ -396,10 +398,12 @@ describe("PurchaseRefundController", () => {
           orderNumber: "ORD-12345",
         };
 
-        vi.mocked(RefundRequestService.createApprovalRequest).mockResolvedValue({
-          request: { _id: "refund-request-1" } as any,
-          created: true,
-        });
+        vi.mocked(RefundRequestService.createApprovalRequest).mockResolvedValue(
+          {
+            request: { _id: "refund-request-1" } as any,
+            created: true,
+          },
+        );
         mockPurchaseFindByIdResult(mockPurchase);
 
         await PurchaseRefundController.initiateRefund(
@@ -552,7 +556,9 @@ describe("PurchaseRefundController", () => {
         };
         mockPurchaseFindByIdResult(mockPurchase);
 
-        vi.mocked(processRefund).mockResolvedValue({ id: "re_event123" } as any);
+        vi.mocked(processRefund).mockResolvedValue({
+          id: "re_event123",
+        } as any);
         vi.mocked(
           PurchaseEmailService.sendRefundInitiatedEmail,
         ).mockResolvedValue(true);

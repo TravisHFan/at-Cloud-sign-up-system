@@ -11,6 +11,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import Stripe from "stripe";
 import DonationWebhookController from "../../../../src/controllers/donations/DonationWebhookController";
+import { withSilencedConsole } from "../../../test-utils/silenceConsole";
 
 // Mock dependencies
 vi.mock("../../../../src/models/Donation", () => ({
@@ -82,7 +83,9 @@ describe("DonationWebhookController", () => {
           metadata: { userId: "user-123" },
         } as unknown as Stripe.Checkout.Session;
 
-        await DonationWebhookController.handleDonationCheckout(session);
+        await withSilencedConsole(["error"], () =>
+          DonationWebhookController.handleDonationCheckout(session),
+        );
 
         expect(Donation.findById).not.toHaveBeenCalled();
       });
@@ -92,7 +95,9 @@ describe("DonationWebhookController", () => {
           metadata: { donationId: "donation-123" },
         } as unknown as Stripe.Checkout.Session;
 
-        await DonationWebhookController.handleDonationCheckout(session);
+        await withSilencedConsole(["error"], () =>
+          DonationWebhookController.handleDonationCheckout(session),
+        );
 
         expect(Donation.findById).not.toHaveBeenCalled();
       });
@@ -104,7 +109,9 @@ describe("DonationWebhookController", () => {
 
         vi.mocked(Donation.findById).mockResolvedValue(null);
 
-        await DonationWebhookController.handleDonationCheckout(session);
+        await withSilencedConsole(["error"], () =>
+          DonationWebhookController.handleDonationCheckout(session),
+        );
 
         expect(Donation.findById).toHaveBeenCalledWith("donation-123");
         expect(DonationService.recordTransaction).not.toHaveBeenCalled();
@@ -193,9 +200,11 @@ describe("DonationWebhookController", () => {
         );
 
         // Should not throw
-        await expect(
-          DonationWebhookController.handleDonationCheckout(session),
-        ).resolves.not.toThrow();
+        await withSilencedConsole(["error"], () =>
+          expect(
+            DonationWebhookController.handleDonationCheckout(session),
+          ).resolves.not.toThrow(),
+        );
 
         expect(mockDonation.save).toHaveBeenCalled();
       });
@@ -279,9 +288,11 @@ describe("DonationWebhookController", () => {
         vi.mocked(Donation.findById).mockResolvedValue(mockDonation as any);
         vi.mocked(getPaymentIntent).mockRejectedValue(new Error("API error"));
 
-        await expect(
-          DonationWebhookController.handleDonationCheckout(session),
-        ).resolves.not.toThrow();
+        await withSilencedConsole(["error"], () =>
+          expect(
+            DonationWebhookController.handleDonationCheckout(session),
+          ).resolves.not.toThrow(),
+        );
 
         // Should still record transaction with empty payment method
         expect(DonationService.recordTransaction).toHaveBeenCalledWith(
@@ -313,9 +324,11 @@ describe("DonationWebhookController", () => {
         );
 
         // Should not throw
-        await expect(
-          DonationWebhookController.handleDonationCheckout(session),
-        ).resolves.not.toThrow();
+        await withSilencedConsole(["error"], () =>
+          expect(
+            DonationWebhookController.handleDonationCheckout(session),
+          ).resolves.not.toThrow(),
+        );
 
         expect(mockDonation.save).toHaveBeenCalled();
       });
@@ -509,7 +522,9 @@ describe("DonationWebhookController", () => {
       vi.mocked(DonationTransaction.findOne).mockResolvedValue(null);
       vi.mocked(User.findById).mockResolvedValue({ firstName: "Test" } as any); // No email
 
-      await DonationWebhookController.handleInvoicePaymentSucceeded(invoice);
+      await withSilencedConsole(["warn"], () =>
+        DonationWebhookController.handleInvoicePaymentSucceeded(invoice),
+      );
 
       expect(DonationEmailService.sendDonationReceipt).not.toHaveBeenCalled();
     });

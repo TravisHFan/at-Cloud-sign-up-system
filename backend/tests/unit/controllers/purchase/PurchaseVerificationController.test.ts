@@ -5,6 +5,26 @@ import Purchase from "../../../../src/models/Purchase";
 
 vi.mock("../../../../src/models/Purchase");
 
+function mockPurchaseFindOneChain(result: unknown) {
+  return {
+    populate: vi.fn().mockReturnValue({
+      populate: vi.fn().mockReturnValue({
+        populate: vi.fn().mockResolvedValue(result),
+      }),
+    }),
+  } as any;
+}
+
+function mockPurchaseFindOneChainError(error: unknown) {
+  return {
+    populate: vi.fn().mockReturnValue({
+      populate: vi.fn().mockReturnValue({
+        populate: vi.fn().mockRejectedValue(error),
+      }),
+    }),
+  } as any;
+}
+
 describe("PurchaseVerificationController", () => {
   let mockReq: Partial<Request> & { user?: any };
   let mockRes: Partial<Response>;
@@ -35,7 +55,7 @@ describe("PurchaseVerificationController", () => {
 
       await PurchaseVerificationController.verifySession(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(401);
@@ -51,7 +71,7 @@ describe("PurchaseVerificationController", () => {
 
       await PurchaseVerificationController.verifySession(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -67,7 +87,7 @@ describe("PurchaseVerificationController", () => {
 
       await PurchaseVerificationController.verifySession(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -81,14 +101,13 @@ describe("PurchaseVerificationController", () => {
       mockReq.user = { _id: userId } as any;
       mockReq.params = { sessionId };
 
-      const findOneMock = {
-        populate: vi.fn().mockResolvedValue(null),
-      };
-      vi.mocked(Purchase.findOne).mockReturnValue(findOneMock as any);
+      vi.mocked(Purchase.findOne).mockReturnValue(
+        mockPurchaseFindOneChain(null),
+      );
 
       await PurchaseVerificationController.verifySession(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(404);
@@ -115,14 +134,12 @@ describe("PurchaseVerificationController", () => {
         programId: { title: "Test Program", programType: "workshop" },
       };
 
-      const findOneMock = {
-        populate: vi.fn().mockResolvedValue(mockPurchase),
-      };
+      const findOneMock = mockPurchaseFindOneChain(mockPurchase);
       vi.mocked(Purchase.findOne).mockReturnValue(findOneMock as any);
 
       await PurchaseVerificationController.verifySession(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(Purchase.findOne).toHaveBeenCalledWith({
@@ -131,7 +148,7 @@ describe("PurchaseVerificationController", () => {
       });
       expect(findOneMock.populate).toHaveBeenCalledWith(
         "programId",
-        "title programType"
+        "title programType",
       );
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith({
@@ -153,14 +170,13 @@ describe("PurchaseVerificationController", () => {
         programId: { title: "Async Program", programType: "course" },
       };
 
-      const findOneMock = {
-        populate: vi.fn().mockResolvedValue(mockPurchase),
-      };
-      vi.mocked(Purchase.findOne).mockReturnValue(findOneMock as any);
+      vi.mocked(Purchase.findOne).mockReturnValue(
+        mockPurchaseFindOneChain(mockPurchase),
+      );
 
       await PurchaseVerificationController.verifySession(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -183,14 +199,13 @@ describe("PurchaseVerificationController", () => {
         programId: { title: "Fast Program", programType: "bootcamp" },
       };
 
-      const findOneMock = {
-        populate: vi.fn().mockResolvedValue(mockPurchase),
-      };
-      vi.mocked(Purchase.findOne).mockReturnValue(findOneMock as any);
+      vi.mocked(Purchase.findOne).mockReturnValue(
+        mockPurchaseFindOneChain(mockPurchase),
+      );
 
       await PurchaseVerificationController.verifySession(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -213,35 +228,45 @@ describe("PurchaseVerificationController", () => {
         programId: { title: "Verify Program", programType: "workshop" },
       };
 
+      const membershipPopulateMock = vi.fn().mockResolvedValue(mockPurchase);
+      const eventPopulateMock = vi.fn().mockReturnValue({
+        populate: membershipPopulateMock,
+      });
+      const programPopulateMock = vi.fn().mockReturnValue({
+        populate: eventPopulateMock,
+      });
       const findOneMock = {
-        populate: vi.fn().mockResolvedValue(mockPurchase),
+        populate: programPopulateMock,
       };
       vi.mocked(Purchase.findOne).mockReturnValue(findOneMock as any);
 
       await PurchaseVerificationController.verifySession(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
-      expect(findOneMock.populate).toHaveBeenCalledWith(
+      expect(programPopulateMock).toHaveBeenCalledWith(
         "programId",
-        "title programType"
+        "title programType",
       );
-      expect(findOneMock.populate).toHaveBeenCalledTimes(1);
+      expect(eventPopulateMock).toHaveBeenCalledWith("eventId", "title");
+      expect(membershipPopulateMock).toHaveBeenCalledWith(
+        "membershipId",
+        "title price",
+      );
     });
 
     it("should handle database errors", async () => {
       mockReq.user = { _id: userId } as any;
       mockReq.params = { sessionId };
 
-      const findOneMock = {
-        populate: vi.fn().mockRejectedValue(new Error("Database error")),
-      };
-      vi.mocked(Purchase.findOne).mockReturnValue(findOneMock as any);
+      vi.mocked(Purchase.findOne).mockReturnValue(
+        mockPurchaseFindOneChainError(new Error("Database error")),
+      );
 
       await PurchaseVerificationController.verifySession(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(500);
@@ -255,14 +280,13 @@ describe("PurchaseVerificationController", () => {
       mockReq.user = { _id: userId } as any;
       mockReq.params = { sessionId };
 
-      const findOneMock = {
-        populate: vi.fn().mockRejectedValue("String error"),
-      };
-      vi.mocked(Purchase.findOne).mockReturnValue(findOneMock as any);
+      vi.mocked(Purchase.findOne).mockReturnValue(
+        mockPurchaseFindOneChainError("String error"),
+      );
 
       await PurchaseVerificationController.verifySession(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(500);
@@ -286,14 +310,13 @@ describe("PurchaseVerificationController", () => {
         programId: { title: "ObjectId Program", programType: "course" },
       };
 
-      const findOneMock = {
-        populate: vi.fn().mockResolvedValue(mockPurchase),
-      };
-      vi.mocked(Purchase.findOne).mockReturnValue(findOneMock as any);
+      vi.mocked(Purchase.findOne).mockReturnValue(
+        mockPurchaseFindOneChain(mockPurchase),
+      );
 
       await PurchaseVerificationController.verifySession(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);

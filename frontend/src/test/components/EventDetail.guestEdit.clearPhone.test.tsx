@@ -41,9 +41,8 @@ vi.mock("../../hooks/useAuth", () => ({
   useAuth: () => ({ currentUser: { id: "admin", role: "Super Admin" } }),
 }));
 vi.mock("../../contexts/AuthContext", async (importOriginal) => {
-  const actual = await importOriginal<
-    typeof import("../../contexts/AuthContext")
-  >();
+  const actual =
+    await importOriginal<typeof import("../../contexts/AuthContext")>();
   return {
     ...actual,
     useAuth: () => ({ currentUser: { id: "admin", role: "Super Admin" } }),
@@ -110,9 +109,7 @@ vi.mock("../../services/guestApi", () => {
       }
       return { success: true };
     }),
-    getEventGuests: vi.fn().mockImplementation(async (eventId) => {
-      console.log(`getEventGuests called with eventId: ${eventId}`);
-      console.log("Returning guests:", mockGuestsState.guests);
+    getEventGuests: vi.fn().mockImplementation(async () => {
       return { guests: mockGuestsState.guests };
     }),
   };
@@ -166,9 +163,10 @@ const mockNotification = {
 };
 
 vi.mock("../../contexts/NotificationModalContext", async (importActual) => {
-  const actual = await importActual<
-    typeof import("../../contexts/NotificationModalContext")
-  >();
+  const actual =
+    await importActual<
+      typeof import("../../contexts/NotificationModalContext")
+    >();
   return {
     __esModule: true,
     ...actual,
@@ -201,19 +199,15 @@ describe("EventDetail - Edit Guest clears phone", () => {
     render(
       <Wrapper>
         <EventDetail />
-      </Wrapper>
+      </Wrapper>,
     );
 
     // Wait for event to load
     await waitFor(() =>
-      expect(screen.getByText("Test Event")).toBeInTheDocument()
+      expect(screen.getByText("Test Event")).toBeInTheDocument(),
     );
 
-    // Check if getEventGuests was called
-    console.log(
-      "getEventGuests call count:",
-      (GuestApi.getEventGuests as any).mock.calls.length
-    );
+    expect(GuestApi.getEventGuests).toHaveBeenCalledWith("e1");
 
     // Enter management mode first
     const manageButton = await screen.findByRole("button", {
@@ -223,7 +217,7 @@ describe("EventDetail - Edit Guest clears phone", () => {
 
     // Wait for initial guest render with phone visible
     await waitFor(() =>
-      expect(screen.getByText("Guest One")).toBeInTheDocument()
+      expect(screen.getByText("Guest One")).toBeInTheDocument(),
     );
     // Phone appears in two places (slot list and admin list); ensure present
     expect(screen.getAllByText("+1 555 111 2222").length).toBeGreaterThan(0);
@@ -234,20 +228,17 @@ describe("EventDetail - Edit Guest clears phone", () => {
 
     // Wait for modal to open
     await waitFor(() =>
-      expect(screen.getByTestId("guest-edit-modal")).toBeInTheDocument()
+      expect(screen.getByTestId("guest-edit-modal")).toBeInTheDocument(),
     );
 
     const saveButton = screen.getByTestId("guest-edit-save-button");
     await userEvent.click(saveButton);
 
-    // Debug: Check if notification.error was called
-    if (mockNotification.error.mock.calls.length > 0) {
-      console.log("ERROR NOTIFICATION:", mockNotification.error.mock.calls[0]);
-    }
+    expect(mockNotification.error).not.toHaveBeenCalled();
 
     // Wait for modal to close
     await waitFor(() =>
-      expect(screen.queryByTestId("guest-edit-modal")).not.toBeInTheDocument()
+      expect(screen.queryByTestId("guest-edit-modal")).not.toBeInTheDocument(),
     );
 
     // UI should no longer display the phone number
@@ -255,7 +246,7 @@ describe("EventDetail - Edit Guest clears phone", () => {
       () => {
         expect(screen.queryAllByText("+1 555 111 2222")).toHaveLength(0);
       },
-      { timeout: 5000 }
+      { timeout: 5000 },
     );
 
     // Ensure API called with empty phone string

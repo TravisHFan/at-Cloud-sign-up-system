@@ -33,10 +33,10 @@ exports[`EmailService - Email Template Snapshots > Auth Templates > should match
               
               <p>To confirm and complete your password change, click the button below:</p>
               <p style="text-align: center;">
-                <a href="http://localhost:5173/change-password/confirm/change-token-789" class="button" style="color: #ffffff !important;">Confirm Password Change</a>
+                <a href="http://localhost:5173/#/change-password/confirm/change-token-789" class="button" style="color: #ffffff !important;">Confirm Password Change</a>
               </p>
               <p>Or copy and paste this link into your browser:<br>
-                <a href="http://localhost:5173/change-password/confirm/change-token-789">http://localhost:5173/change-password/confirm/change-token-789</a>
+                <a href="http://localhost:5173/#/change-password/confirm/change-token-789">http://localhost:5173/#/change-password/confirm/change-token-789</a>
               </p>
               
               <p><strong>This link will expire in 10 minutes for security.</strong></p>
@@ -79,10 +79,10 @@ exports[`EmailService - Email Template Snapshots > Auth Templates > should match
               <p>We received a request to reset your password for your @Cloud Ministry account.</p>
               <p>If you requested this password reset, please click the button below to create a new password:</p>
               <div style="text-align: center;">
-                <a href="http://localhost:5173/reset-password/reset-token-456" class="button" style="color: #ffffff !important;">Reset My Password</a>
+                <a href="http://localhost:5173/#/reset-password/reset-token-456" class="button" style="color: #ffffff !important;">Reset My Password</a>
               </div>
               <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
-              <p><a href="http://localhost:5173/reset-password/reset-token-456">http://localhost:5173/reset-password/reset-token-456</a></p>
+              <p><a href="http://localhost:5173/#/reset-password/reset-token-456">http://localhost:5173/#/reset-password/reset-token-456</a></p>
               <p><strong>Important:</strong> This reset link will expire in 10 minutes for security purposes.</p>
               <p>If you didn't request a password reset, please ignore this email. Your password will remain unchanged.</p>
               <p>Blessings,<br>The @Cloud Ministry Team</p>
@@ -173,10 +173,10 @@ exports[`EmailService - Email Template Snapshots > Auth Templates > should match
               <p>Thank you for joining @Cloud Ministry! We're excited to have you as part of our community.</p>
               <p>To complete your registration and start participating in our events, please verify your email address by clicking the button below:</p>
               <div style="text-align: center;">
-                <a href="http://localhost:5173/verify-email/test-token-123" class="button" style="color: #ffffff !important;">Verify My Email</a>
+                <a href="http://localhost:5173/#/verify-email/test-token-123" class="button" style="color: #ffffff !important;">Verify My Email</a>
               </div>
               <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
-              <p><a href="http://localhost:5173/verify-email/test-token-123">http://localhost:5173/verify-email/test-token-123</a></p>
+              <p><a href="http://localhost:5173/#/verify-email/test-token-123">http://localhost:5173/#/verify-email/test-token-123</a></p>
               <p>This verification link will expire in 24 hours for security purposes.</p>
               <p>If you didn't create an account with @Cloud Ministry, please ignore this email.</p>
               <p>Blessings,<br>The @Cloud Ministry Team</p>
@@ -224,7 +224,7 @@ exports[`EmailService - Email Template Snapshots > User Account Templates > shou
                 <li>Participate in our ministry activities</li>
               </ul>
               <div style="text-align: center;">
-                <a href="http://localhost:5173/dashboard" class="button" style="color: #ffffff !important;">Go to Dashboard</a>
+                <a href="http://localhost:5173/#/dashboard" class="button" style="color: #ffffff !important;">Go to Dashboard</a>
               </div>
               <p>We're excited to have you as part of our family and look forward to growing together in faith!</p>
               <p>Blessings,<br>The @Cloud Ministry Team</p>

@@ -32,6 +32,11 @@ vi.mock("../../services/api", () => ({
       if (id === "prog2") return { id: "prog2", title: "ECW Spring" };
       return null;
     }),
+    getParticipants: vi.fn(async () => ({
+      mentees: [],
+      mentors: [],
+      classReps: [],
+    })),
   },
 }));
 
@@ -71,12 +76,12 @@ describe("EventDetail - Associated Programs", () => {
             <Route path="/events/:id" element={<EventDetail />} />
           </Routes>
         </MemoryRouter>
-      </NotificationProvider>
+      </NotificationProvider>,
     );
 
     // Wait for programs to load and be displayed
     await waitFor(() =>
-      expect(screen.getByText(/Associated Programs/i)).toBeInTheDocument()
+      expect(screen.getByText(/Associated Programs/i)).toBeInTheDocument(),
     );
 
     // Check that program names are displayed

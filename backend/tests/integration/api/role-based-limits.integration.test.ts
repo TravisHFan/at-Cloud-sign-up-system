@@ -20,11 +20,9 @@ describe("Role-based registration limits per event", () => {
 
   beforeAll(async () => {
     await ensureIntegrationDB();
-    console.log("[role-limits] Clearing collections...");
     await User.deleteMany({});
     await Event.deleteMany({});
 
-    console.log("[role-limits] Creating admin user...");
     await request(app)
       .post("/api/auth/register")
       .send({
@@ -44,7 +42,7 @@ describe("Role-based registration limits per event", () => {
     // Force elevate to Administrator
     await User.updateOne(
       { email: "admin_limits@example.com" },
-      { $set: { isVerified: true, role: "Administrator" } }
+      { $set: { isVerified: true, role: "Administrator" } },
     );
 
     const adminLogin = await request(app)
@@ -59,7 +57,6 @@ describe("Role-based registration limits per event", () => {
       adminLogin.body?.accessToken ||
       adminLogin.body?.token;
 
-    console.log("[role-limits] Building event with 10 roles...");
     const roles = [];
     for (let i = 1; i <= 10; i++) {
       roles.push({
@@ -75,7 +72,6 @@ describe("Role-based registration limits per event", () => {
       overrides: { suppressNotifications: true },
     });
 
-    console.log("[role-limits] Creating event via API...");
     const createRes = await request(app)
       .post(`/api/events`)
       .set("Authorization", `Bearer ${adminToken}`)
@@ -84,7 +80,6 @@ describe("Role-based registration limits per event", () => {
 
     eventId = createRes.body.data.event.id;
     createRes.body.data.event.roles.forEach((r: any) => roleIds.push(r.id));
-    console.log(`[role-limits] Created event with ${roleIds.length} roles`);
   }, 30000);
 
   afterAll(async () => {
@@ -115,7 +110,7 @@ describe("Role-based registration limits per event", () => {
 
       await User.updateOne(
         { email: "participant_limit@example.com" },
-        { $set: { isVerified: true } }
+        { $set: { isVerified: true } },
       );
 
       const loginRes = await request(app)
@@ -178,7 +173,7 @@ describe("Role-based registration limits per event", () => {
 
       await User.updateOne(
         { email: "guestexpert_limit@example.com" },
-        { $set: { isVerified: true, role: "Guest Expert" } }
+        { $set: { isVerified: true, role: "Guest Expert" } },
       );
 
       const loginRes = await request(app)
@@ -241,7 +236,7 @@ describe("Role-based registration limits per event", () => {
 
       await User.updateOne(
         { email: "leader_limit@example.com" },
-        { $set: { isVerified: true, role: "Leader" } }
+        { $set: { isVerified: true, role: "Leader" } },
       );
 
       const loginRes = await request(app)
@@ -304,7 +299,7 @@ describe("Role-based registration limits per event", () => {
 
       await User.updateOne(
         { email: "superadmin_limit@example.com" },
-        { $set: { isVerified: true, role: "Super Admin" } }
+        { $set: { isVerified: true, role: "Super Admin" } },
       );
 
       const loginRes = await request(app)
@@ -363,7 +358,7 @@ describe("Role-based registration limits per event", () => {
 
       await User.updateOne(
         { email: "administrator_limit@example.com" },
-        { $set: { isVerified: true, role: "Administrator" } }
+        { $set: { isVerified: true, role: "Administrator" } },
       );
 
       const loginRes = await request(app)

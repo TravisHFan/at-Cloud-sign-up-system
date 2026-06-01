@@ -31,12 +31,13 @@ process.env.MONGODB_TEST_URI =
 process.env.EMAIL_SERVICE_ENABLED = "false"; // Disable real emails in tests
 process.env.FRONTEND_URL = "http://localhost:5173";
 
-// Reduce noisy logs in CI/test to keep output clean
-// Preserve console.error and console.warn, stub console.log/info/debug
-const quiet = process.env.CI === "true" || process.env.VITEST_SILENT === "true";
+// Keep backend test output focused by default.
+// Set VITEST_VERBOSE_LOGS=true to inspect console.log/info/debug locally.
+const quiet =
+  process.env.VITEST_VERBOSE_LOGS !== "true" &&
+  process.env.VITEST_SILENT !== "false";
 if (quiet) {
   const noop = () => {};
-  // Only silence non-critical logs
   // eslint-disable-next-line no-console
   console.log = noop as any;
   // eslint-disable-next-line no-console

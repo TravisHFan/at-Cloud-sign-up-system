@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { AuthProvider } from "../../contexts/AuthContext";
 
 // Mock useAuth before importing providers/components
@@ -21,7 +21,7 @@ vi.mock("../../hooks/useSocket", () => ({
 // Mock backend services used by NotificationContext and SystemMessages
 vi.mock("../../services/systemMessageService", async () => {
   const actual = await vi.importActual<any>(
-    "../../services/systemMessageService"
+    "../../services/systemMessageService",
   );
   return {
     ...actual,
@@ -70,7 +70,7 @@ vi.mock("../../services/systemMessageService", async () => {
 
 vi.mock("../../services/notificationService", async () => {
   const actual = await vi.importActual<any>(
-    "../../services/notificationService"
+    "../../services/notificationService",
   );
   return {
     ...actual,
@@ -102,6 +102,11 @@ import { NotificationProvider } from "../../contexts/NotificationContext";
 import { NotificationProvider as NotificationModalProvider } from "../../contexts/NotificationModalContext";
 import SystemMessages from "../../pages/SystemMessages";
 
+function LocationHashProbe() {
+  const location = useLocation();
+  return <div data-testid="router-hash">{location.hash}</div>;
+}
+
 function renderSystemMessagesWithHash() {
   // Polyfill scrollIntoView for jsdom (cast through unknown to avoid any-disable)
   (
@@ -116,13 +121,18 @@ function renderSystemMessagesWithHash() {
             <Routes>
               <Route
                 path="/dashboard/system-messages"
-                element={<SystemMessages />}
+                element={
+                  <>
+                    <SystemMessages />
+                    <LocationHashProbe />
+                  </>
+                }
               />
             </Routes>
           </MemoryRouter>
         </NotificationProvider>
       </NotificationModalProvider>
-    </AuthProvider>
+    </AuthProvider>,
   );
 
   return {
@@ -149,16 +159,15 @@ describe("SystemMessages - hash anchor behavior", () => {
     });
 
     // systemMessageService.markAsRead should be called by the page via context
-    const { systemMessageService } = await import(
-      "../../services/systemMessageService"
-    );
+    const { systemMessageService } =
+      await import("../../services/systemMessageService");
     await waitFor(() => {
       expect(systemMessageService.markAsRead).toHaveBeenCalledWith("m1");
     });
 
-    // Hash should be cleared by SystemMessages effect
+    // Hash should be cleared by SystemMessages effect in React Router state.
     await waitFor(() => {
-      expect(window.location.hash).toBeFalsy();
+      expect(screen.getByTestId("router-hash")).toHaveTextContent("");
     });
   });
 });

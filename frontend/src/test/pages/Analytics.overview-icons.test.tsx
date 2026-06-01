@@ -31,6 +31,7 @@ vi.mock("../../hooks/useAnalyticsResources", () => ({
     data: {
       overview: {
         totalEvents: 42,
+        completedEvents: 18,
         totalUsers: 120,
         totalRegistrations: 80,
         activeParticipants: 18,
@@ -44,6 +45,50 @@ vi.mock("../../hooks/useAnalyticsResources", () => ({
         eventGrowthRate: 0,
         registrationGrowthRate: 0,
       },
+      last30Days: {
+        newUsers: 6,
+        newEvents: 3,
+        registrations: 14,
+        attendanceCompletionRate: 75,
+        attendanceRate: 80,
+      },
+      needsAttention: {
+        lowSignupUpcomingEvents: 2,
+        completedEventsMissingAttendance: 1,
+        unrecordedAttendance: 5,
+        waitlistedRegistrations: 3,
+      },
+      topEvents: [
+        {
+          id: "event-1",
+          title: "Leadership Night",
+          date: "2026-01-02",
+          type: "Meeting",
+          status: "completed",
+          registrations: 32,
+          totalSlots: 40,
+          signupRate: 80,
+        },
+      ],
+      topPrograms: [
+        {
+          id: "program-1",
+          title: "EMBA",
+          programType: "EMBA Mentor Circles",
+          registrations: 28,
+          events: 4,
+        },
+      ],
+      recentActivity: [
+        {
+          id: "registration-1",
+          type: "registration",
+          person: "Ann Lee",
+          eventTitle: "Leadership Night",
+          eventDate: "2026-01-02",
+          createdAt: "2026-01-01T00:00:00.000Z",
+        },
+      ],
     },
     loading: false,
     error: null,
@@ -82,7 +127,7 @@ vi.mock("../../hooks/useAnalyticsResources", () => ({
 }));
 
 describe("Analytics overview cards icons", () => {
-  it("renders four overview cards each with an icon and value", () => {
+  it("renders enriched overview cards and command-center panels", () => {
     render(
       <MemoryRouter>
         <NotificationProvider>
@@ -95,12 +140,19 @@ describe("Analytics overview cards icons", () => {
     const cards = container.querySelectorAll(
       "[data-testid^='analytics-card-']"
     );
-    expect(cards.length).toBe(4);
+    expect(cards.length).toBe(8);
     cards.forEach((card) => {
       const svg = card.querySelector("svg");
       expect(svg).toBeTruthy();
       const valueEl = card.querySelector("p[aria-label$='value']");
       expect(valueEl?.textContent).toMatch(/\d|%/);
     });
+    expect(screen.getByText("Needs Attention")).toBeInTheDocument();
+    expect(screen.getByText("Recent Activity")).toBeInTheDocument();
+    expect(screen.getByText("30-Day Pulse")).toBeInTheDocument();
+    expect(screen.getByText("Top Events")).toBeInTheDocument();
+    expect(screen.getByText("Top Programs")).toBeInTheDocument();
+    expect(screen.getByText("Leadership Night")).toBeInTheDocument();
+    expect(screen.getByText("EMBA")).toBeInTheDocument();
   });
 });

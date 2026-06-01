@@ -38,7 +38,7 @@ vi.mock("../../../src/controllers/unifiedMessageController", () => ({
   },
 }));
 
-describe("Co-Organizer Notification Debug", () => {
+describe("Co-Organizer Notifications", () => {
   beforeEach(async () => {
     await ensureIntegrationDB();
     await User.deleteMany({});
@@ -124,7 +124,7 @@ describe("Co-Organizer Notification Debug", () => {
     if (response.status !== 201) {
       console.error(
         "Event Creation Failed:",
-        JSON.stringify(response.body, null, 2)
+        JSON.stringify(response.body, null, 2),
       );
     }
 
@@ -137,19 +137,19 @@ describe("Co-Organizer Notification Debug", () => {
       coOrganizer.email,
       expect.anything(),
       expect.anything(),
-      expect.anything()
+      expect.anything(),
     );
 
     // Check System Message
     expect(
-      UnifiedMessageController.createTargetedSystemMessage
+      UnifiedMessageController.createTargetedSystemMessage,
     ).toHaveBeenCalled();
     // Verify it was sent to the co-organizer
     const systemMessageCalls = (
       UnifiedMessageController.createTargetedSystemMessage as any
     ).mock.calls;
     const coOrgCall = systemMessageCalls.find((call: any) =>
-      call[1].includes(coOrganizer._id.toString())
+      call[1].includes(coOrganizer._id.toString()),
     );
     expect(coOrgCall).toBeDefined();
   });

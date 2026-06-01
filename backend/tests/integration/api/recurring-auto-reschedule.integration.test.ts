@@ -277,13 +277,6 @@ describe("Recurring Auto-Reschedule", { timeout: 30000 }, () => {
     // For now: require gap2 >=10 and add TODO to revisit once scheduling guarantees are formalized.
     // If bump path (gap1 in 15..20) we still expect the third to be at least 14 days after the (bumped) second (allowing further bumps), so enforce >=14 there.
 
-    // Debug output to aid future refinement
-    // eslint-disable-next-line no-console
-    console.log("[recurring-debug] scheduledDates=", scheduledDates, {
-      gap1,
-      gap2,
-    });
-
     const bumpPath = gap1 >= 15 && gap1 <= 20;
     const skipPath = gap1 >= 28; // original second skipped entirely
 

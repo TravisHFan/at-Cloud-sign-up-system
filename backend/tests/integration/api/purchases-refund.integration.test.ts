@@ -48,7 +48,7 @@ vi.mock("../../../src/services/stripeService", async () => {
 // Spy on email service methods
 const emailInitiatedSpy = vi.spyOn(
   PurchaseEmailService,
-  "sendRefundInitiatedEmail"
+  "sendRefundInitiatedEmail",
 );
 
 describe("Purchase Refund API Integration Tests", () => {
@@ -301,13 +301,13 @@ describe("Purchase Refund API Integration Tests", () => {
     describe("Authentication & Authorization", () => {
       it("should return 401 if not authenticated", async () => {
         const response = await request(app).get(
-          `/api/purchases/refund-eligibility/${completedPurchase._id}`
+          `/api/purchases/refund-eligibility/${completedPurchase._id}`,
         );
 
         expect(response.status).toBe(401);
         expect(response.body.success).toBe(false);
         expect(response.body.message).toMatch(
-          /access denied|no token|authentication/i
+          /access denied|no token|authentication/i,
         );
       });
 
@@ -378,7 +378,7 @@ describe("Purchase Refund API Integration Tests", () => {
         expect(response.body.success).toBe(true);
         expect(response.body.data.isEligible).toBe(false);
         expect(response.body.data.reason).toMatch(
-          /only completed purchases|pending/i
+          /only completed purchases|pending/i,
         );
       });
 
@@ -483,7 +483,7 @@ describe("Purchase Refund API Integration Tests", () => {
         expect(response.status).toBe(401);
         expect(response.body.success).toBe(false);
         expect(response.body.message).toMatch(
-          /access denied|no token|authentication/i
+          /access denied|no token|authentication/i,
         );
       });
 
@@ -569,16 +569,19 @@ describe("Purchase Refund API Integration Tests", () => {
         expect(response.body.message).toMatch(/refunded|only completed/i);
       });
 
-      it("should reject refund for purchase outside 30-day window", async () => {
+      it("should request admin approval for purchase outside 30-day window", async () => {
         const response = await request(app)
           .post("/api/purchases/refund")
           .set("Authorization", `Bearer ${regularUserToken}`)
           .send({ purchaseId: expiredPurchase._id.toString() });
 
-        expect(response.status).toBe(400);
-        expect(response.body.success).toBe(false);
-        expect(response.body.message).toMatch(/window.*expired|30.*day/i);
-        expect(response.body.data.isEligible).toBe(false);
+        expect(response.status).toBe(200);
+        expect(response.body.success).toBe(true);
+        expect(response.body.message).toMatch(/sent to administrators/i);
+        expect(response.body.data).toMatchObject({
+          status: "pending_approval",
+          approvalRequired: true,
+        });
       });
 
       it("should reject if purchase is already in refund_processing status", async () => {
@@ -594,7 +597,7 @@ describe("Purchase Refund API Integration Tests", () => {
         expect(response.status).toBe(400);
         expect(response.body.success).toBe(false);
         expect(response.body.message).toMatch(
-          /refund_processing|only completed/i
+          /refund_processing|only completed/i,
         );
       });
     });
@@ -712,7 +715,7 @@ describe("Purchase Refund API Integration Tests", () => {
 
         // Verify status changed to refund_processing
         const updatedPurchase = await Purchase.findById(
-          failedRefundPurchase._id
+          failedRefundPurchase._id,
         );
         expect(updatedPurchase?.status).toBe("refund_processing");
       });
@@ -722,7 +725,7 @@ describe("Purchase Refund API Integration Tests", () => {
       it("should handle Stripe API errors gracefully", async () => {
         // Mock Stripe to throw an error
         vi.mocked(stripeService.processRefund).mockRejectedValueOnce(
-          new Error("Stripe API error: Insufficient funds")
+          new Error("Stripe API error: Insufficient funds"),
         );
 
         const response = await request(app)
@@ -738,7 +741,7 @@ describe("Purchase Refund API Integration Tests", () => {
       it("should update purchase status to refund_failed on Stripe error", async () => {
         // Mock Stripe to throw an error
         vi.mocked(stripeService.processRefund).mockRejectedValueOnce(
-          new Error("Stripe API error")
+          new Error("Stripe API error"),
         );
 
         await request(app)
@@ -785,8 +788,11 @@ describe("Purchase Refund API Integration Tests", () => {
           .set("Authorization", `Bearer ${regularUserToken}`)
           .send({ purchaseId: noPIPurchase._id.toString() });
 
-        expect(response.status).toBe(500);
+        expect(response.status).toBe(400);
         expect(response.body.success).toBe(false);
+        expect(response.body.message).toMatch(
+          /automatic refund is not available/i,
+        );
       });
     });
 

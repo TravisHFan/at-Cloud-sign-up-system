@@ -52,6 +52,16 @@ vi.mock("../../../src/services/email/domains/PurchaseEmailService", () => ({
   },
 }));
 
+function mockPurchaseFindByIdRefundChain(result: unknown) {
+  return {
+    populate: vi.fn().mockReturnValue({
+      populate: vi.fn().mockReturnValue({
+        populate: vi.fn().mockResolvedValue(result),
+      }),
+    }),
+  } as any;
+}
+
 describe("WebhookController", () => {
   let mockReq: Partial<Request>;
   let mockRes: Partial<Response>;
@@ -1073,6 +1083,7 @@ describe("WebhookController", () => {
         mockPurchase = {
           status: "pending",
           orderNumber: "ORDER-001",
+          purchaseType: "program",
           programId: new mongoose.Types.ObjectId(),
           isClassRep: true,
           save: vi.fn().mockResolvedValue({}),
@@ -1099,7 +1110,12 @@ describe("WebhookController", () => {
 
         expect(Program.findByIdAndUpdate).toHaveBeenCalledWith(
           mockPurchase.programId,
-          { $inc: { classRepCount: -1 } },
+          {
+            $inc: {
+              classRepCount: -1,
+              "programRoles.studentRoles.1.count": -1,
+            },
+          },
           { runValidators: false },
         );
         expect(mockPurchase.status).toBe("failed");
@@ -1174,9 +1190,9 @@ describe("WebhookController", () => {
         vi.mocked(stripeService.constructWebhookEvent).mockReturnValue(
           mockEvent,
         );
-        vi.mocked(Purchase.findById).mockReturnValue({
-          populate: vi.fn().mockResolvedValue(mockPurchase),
-        } as any);
+        vi.mocked(Purchase.findById).mockReturnValue(
+          mockPurchaseFindByIdRefundChain(mockPurchase),
+        );
         vi.mocked(User.findById).mockResolvedValue({
           _id: mockPurchase.userId,
           firstName: "Test",
@@ -1323,9 +1339,9 @@ describe("WebhookController", () => {
       });
 
       it("should handle missing purchase for refund", async () => {
-        vi.mocked(Purchase.findById).mockReturnValue({
-          populate: vi.fn().mockResolvedValue(null),
-        } as any);
+        vi.mocked(Purchase.findById).mockReturnValue(
+          mockPurchaseFindByIdRefundChain(null),
+        );
 
         await WebhookController.handleStripeWebhook(
           mockReq as Request,
@@ -2171,9 +2187,9 @@ describe("WebhookController", () => {
         vi.mocked(stripeService.constructWebhookEvent).mockReturnValue(
           mockEvent,
         );
-        vi.mocked(Purchase.findById).mockReturnValue({
-          populate: vi.fn().mockResolvedValue(mockPurchase),
-        } as any);
+        vi.mocked(Purchase.findById).mockReturnValue(
+          mockPurchaseFindByIdRefundChain(mockPurchase),
+        );
         vi.mocked(User.findById).mockResolvedValue({
           _id: mockPurchase.userId,
           firstName: "Edge",

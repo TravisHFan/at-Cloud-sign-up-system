@@ -11,7 +11,7 @@ vi.mock("../utils/avatarUtils", () => ({
       return gender === "male"
         ? "/default-avatar-male.jpg"
         : "/default-avatar-female.jpg";
-    }
+    },
   ),
 }));
 
@@ -34,7 +34,7 @@ const renderAvatarUpload = (props = {}) => {
   return render(
     <BrowserRouter>
       <AvatarUpload {...defaultProps} />
-    </BrowserRouter>
+    </BrowserRouter>,
   );
 };
 
@@ -119,7 +119,7 @@ describe("AvatarUpload Component Protection", () => {
     });
 
     const fileInput = document.querySelector(
-      'input[type="file"]'
+      'input[type="file"]',
     ) as HTMLInputElement;
 
     // Create a mock file
@@ -134,7 +134,7 @@ describe("AvatarUpload Component Protection", () => {
 
     vi.stubGlobal(
       "FileReader",
-      vi.fn(() => mockFileReader)
+      vi.fn(() => mockFileReader),
     );
 
     // Simulate file selection
@@ -152,7 +152,7 @@ describe("AvatarUpload Component Protection", () => {
 
     expect(mockOnAvatarChange).toHaveBeenCalledWith(
       file,
-      "data:image/jpeg;base64,mock-data"
+      "data:image/jpeg;base64,mock-data",
     );
   });
 });
@@ -165,8 +165,6 @@ describe("Avatar Upload Feature Audit", () => {
     // Component should render successfully
     const avatarImage = screen.getByAltText("Profile Avatar");
     expect(avatarImage).toBeInTheDocument();
-
-    console.log("✅ AvatarUpload component is protected and functional");
   });
 
   it("should validate avatar upload configuration", () => {
@@ -176,8 +174,6 @@ describe("Avatar Upload Feature Audit", () => {
     const fileInput = document.querySelector('input[type="file"]');
     expect(fileInput).toBeInTheDocument();
     expect(fileInput).toHaveAttribute("accept", "image/*");
-
-    console.log("✅ Avatar upload configuration is properly set up");
   });
 
   it("should ensure avatar display logic is working", () => {
@@ -193,7 +189,5 @@ describe("Avatar Upload Feature Audit", () => {
       expect(avatarImage).toHaveAttribute("src", expectedSrc);
       unmount();
     });
-
-    console.log("✅ Avatar display logic is working correctly");
   });
 });

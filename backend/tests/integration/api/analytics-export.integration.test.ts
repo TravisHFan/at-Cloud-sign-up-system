@@ -2,11 +2,13 @@ import request from "supertest";
 import { describe, it, beforeEach, expect } from "vitest";
 import app from "../../../src/app";
 import User from "../../../src/models/User";
+import { ensureIntegrationDB } from "../setup/connect";
 
 describe("Analytics export endpoint", () => {
   let adminToken: string;
 
   beforeEach(async () => {
+    await ensureIntegrationDB();
     await User.deleteMany({});
 
     const a = {
@@ -23,7 +25,7 @@ describe("Analytics export endpoint", () => {
     await request(app).post("/api/auth/register").send(a).expect(201);
     await User.findOneAndUpdate(
       { email: a.email },
-      { isVerified: true, role: "Administrator" }
+      { isVerified: true, role: "Administrator" },
     );
     const la = await request(app)
       .post("/api/auth/login")
@@ -50,7 +52,7 @@ describe("Analytics export endpoint", () => {
       .set("Authorization", `Bearer ${adminToken}`)
       .expect(200);
     expect(res.headers["content-type"]).toContain(
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
   });
 });

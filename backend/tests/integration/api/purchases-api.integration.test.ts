@@ -70,7 +70,7 @@ describe("Purchase API Integration Tests", () => {
       .send(userData);
     await User.findOneAndUpdate(
       { email: "purchase@example.com" },
-      { isVerified: true }
+      { isVerified: true },
     );
     const loginResponse = await request(app).post("/api/auth/login").send({
       emailOrUsername: "purchase@example.com",
@@ -97,7 +97,7 @@ describe("Purchase API Integration Tests", () => {
       .send(adminData);
     await User.findOneAndUpdate(
       { email: "purchaseadmin@example.com" },
-      { isVerified: true, role: "Super Admin" }
+      { isVerified: true, role: "Super Admin" },
     );
     const adminLoginResponse = await request(app).post("/api/auth/login").send({
       emailOrUsername: "purchaseadmin@example.com",
@@ -126,13 +126,13 @@ describe("Purchase API Integration Tests", () => {
 
     if (!mentorResponse.body.data?.user?.id) {
       throw new Error(
-        `Mentor registration failed: ${JSON.stringify(mentorResponse.body)}`
+        `Mentor registration failed: ${JSON.stringify(mentorResponse.body)}`,
       );
     }
 
     await User.findOneAndUpdate(
       { email: "mentor@example.com" },
-      { isVerified: true }
+      { isVerified: true },
     );
     const mentorLoginResponse = await request(app)
       .post("/api/auth/login")
@@ -143,7 +143,7 @@ describe("Purchase API Integration Tests", () => {
 
     if (!mentorLoginResponse.body.data?.accessToken) {
       throw new Error(
-        `Mentor login failed: ${JSON.stringify(mentorLoginResponse.body)}`
+        `Mentor login failed: ${JSON.stringify(mentorLoginResponse.body)}`,
       );
     }
 
@@ -316,14 +316,27 @@ describe("Purchase API Integration Tests", () => {
       expect(purchase?.classRepDiscount).toBe(600);
     });
 
-    it("should reject checkout for free program", async () => {
+    it("should complete checkout for free program without Stripe", async () => {
       const response = await request(app)
         .post("/api/purchases/create-checkout-session")
         .set("Authorization", `Bearer ${authToken}`)
         .send({ programId: freeProgramId, isClassRep: false });
 
-      expect(response.status).toBe(400);
-      expect(response.body.message).toContain("free");
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toMatchObject({
+        sessionId: null,
+        sessionUrl: null,
+        isFree: true,
+      });
+
+      const purchase = await Purchase.findOne({
+        userId,
+        programId: freeProgramId,
+        purchaseType: "program",
+      });
+      expect(purchase?.status).toBe("completed");
+      expect(purchase?.finalPrice).toBe(0);
     });
 
     it("should reject duplicate enrollment", async () => {
@@ -336,7 +349,7 @@ describe("Purchase API Integration Tests", () => {
       // Mark the purchase as completed
       await Purchase.updateOne(
         { userId, programId: paidProgramId },
-        { status: "completed" }
+        { status: "completed" },
       );
 
       // Attempt second purchase
@@ -494,7 +507,7 @@ describe("Purchase API Integration Tests", () => {
       await request(app).post("/api/auth/register").send(otherUserData);
       await User.findOneAndUpdate(
         { email: "other@example.com" },
-        { isVerified: true }
+        { isVerified: true },
       );
       const otherLoginResponse = await request(app)
         .post("/api/auth/login")
@@ -614,7 +627,7 @@ describe("Purchase API Integration Tests", () => {
       await request(app).post("/api/auth/register").send(otherUserData);
       await User.findOneAndUpdate(
         { email: "receipt@example.com" },
-        { isVerified: true }
+        { isVerified: true },
       );
       const otherLoginResponse = await request(app)
         .post("/api/auth/login")
@@ -663,15 +676,15 @@ describe("Purchase API Integration Tests", () => {
       });
     });
 
-    it("should return access for free program", async () => {
+    it("should require enrollment before returning access for free program", async () => {
       const response = await request(app)
         .get(`/api/purchases/check-access/${freeProgramId}`)
         .set("Authorization", `Bearer ${authToken}`);
 
       expect(response.status).toBe(200);
       expect(response.body.data).toMatchObject({
-        hasAccess: true,
-        reason: "free",
+        hasAccess: false,
+        reason: "not_purchased",
       });
     });
 

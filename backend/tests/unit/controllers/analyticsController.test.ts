@@ -7,6 +7,7 @@ import {
   Event,
   Registration,
   GuestRegistration,
+  Program,
 } from "../../../src/models";
 import Purchase from "../../../src/models/Purchase";
 import DonationTransaction from "../../../src/models/DonationTransaction";
@@ -29,10 +30,14 @@ vi.mock("../../../src/models", () => ({
   },
   Registration: {
     countDocuments: vi.fn(),
+    distinct: vi.fn(),
     aggregate: vi.fn(),
     find: vi.fn(),
   },
   GuestRegistration: {
+    find: vi.fn(),
+  },
+  Program: {
     find: vi.fn(),
   },
 }));
@@ -117,6 +122,9 @@ describe("AnalyticsController", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     restoreConsole = silenceConsole(["error"]);
+    vi.mocked(Event.aggregate).mockResolvedValue([]);
+    vi.mocked(Registration.aggregate).mockResolvedValue([]);
+    vi.mocked(Registration.distinct).mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -186,7 +194,7 @@ describe("AnalyticsController", () => {
       await AnalyticsController.getAnalytics(req as Request, res as Response);
 
       expect(CachePatterns.getAnalyticsData).toHaveBeenCalledWith(
-        "system-overview",
+        "system-overview-v2",
         expect.any(Function)
       );
       expect(res.status).toHaveBeenCalledWith(200);
@@ -263,7 +271,7 @@ describe("AnalyticsController", () => {
       });
       expect(Event.countDocuments).toHaveBeenCalledWith();
       expect(Event.countDocuments).toHaveBeenCalledWith({
-        date: { $gte: expect.any(Date) },
+        date: { $gte: expect.any(String) },
       });
       expect(Registration.countDocuments).toHaveBeenCalledWith();
       expect(Registration.countDocuments).toHaveBeenCalledWith({
@@ -798,6 +806,15 @@ describe("AnalyticsController", () => {
       vi.mocked(DonationTransaction.find).mockReturnValue(
         mockDonationQuery as any
       );
+
+      const mockProgramQuery = {
+        select: vi.fn().mockReturnThis(),
+        sort: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        lean: vi.fn().mockResolvedValue([]),
+      };
+
+      vi.mocked(Program.find).mockReturnValue(mockProgramQuery as any);
     });
 
     it("should require authentication", async () => {
@@ -979,8 +996,8 @@ describe("AnalyticsController", () => {
       expect(eventRow[6].length).toBeGreaterThan(0);
 
       // Registration Date should be formatted string as well
-      expect(typeof regRow[4]).toBe("string");
-      expect(regRow[4].length).toBeGreaterThan(0);
+      expect(typeof regRow[10]).toBe("string");
+      expect(regRow[10].length).toBeGreaterThan(0);
     });
 
     it("should format user.createdAt in XLSX users sheet and leave blank when missing", async () => {

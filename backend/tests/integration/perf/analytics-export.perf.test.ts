@@ -2,6 +2,7 @@ import request from "supertest";
 import { describe, it, expect } from "vitest";
 import app from "../../../src/app";
 import { createAdminToken } from "../../test-utils/createTestUser";
+import { ensureIntegrationDB } from "../setup/connect";
 
 /**
  * Lightweight performance smoke tests for analytics export endpoints.
@@ -10,6 +11,7 @@ import { createAdminToken } from "../../test-utils/createTestUser";
  */
 describe("Perf smoke: /api/analytics/export", () => {
   it("json export should respond quickly with defaults", async () => {
+    await ensureIntegrationDB();
     const adminToken = await createAdminToken();
 
     const t0 = Date.now();
@@ -33,6 +35,7 @@ describe("Perf smoke: /api/analytics/export", () => {
   });
 
   it("xlsx export should respond within a generous budget (with range & row cap)", async () => {
+    await ensureIntegrationDB();
     const adminToken = await createAdminToken();
     const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
       .toISOString()
@@ -47,7 +50,7 @@ describe("Perf smoke: /api/analytics/export", () => {
     const ms = Date.now() - t0;
 
     expect(res.headers["content-type"]).toContain(
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
 
     // XLSX involves workbook assembly; set a slightly larger soft budget

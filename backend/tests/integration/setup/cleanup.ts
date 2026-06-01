@@ -18,6 +18,11 @@ import Message from "../../../src/models/Message";
 import ShortLink from "../../../src/models/ShortLink";
 import Program from "../../../src/models/Program";
 
+const verboseLogs = process.env.VITEST_VERBOSE_LOGS === "true";
+const log = (...args: unknown[]) => {
+  if (verboseLogs) console.log(...args);
+};
+
 /**
  * Comprehensive database cleanup with optimized order
  * Cleans up all test data in an order that respects foreign key relationships
@@ -83,9 +88,9 @@ export async function dropTestDatabase() {
       throw new Error("Safety check: Can only drop test databases");
     }
 
-    console.log(`[MongoDB] Dropping test database: ${dbName}`);
+    log(`[MongoDB] Dropping test database: ${dbName}`);
     await mongoose.connection.dropDatabase();
-    console.log(`[MongoDB] Database dropped successfully`);
+    log("[MongoDB] Database dropped successfully");
 
     // Wait for MongoDB to process the drop
     await sleep(100);
@@ -175,7 +180,7 @@ export async function cleanupTestUsersOnly(): Promise<{
     const skippedRealUsers = totalUsers - testUserCount;
 
     if (skippedRealUsers > 0) {
-      console.log(
+      log(
         `[Safe Cleanup] Preserving ${skippedRealUsers} real user(s) with non-test emails`,
       );
     }
@@ -183,7 +188,7 @@ export async function cleanupTestUsersOnly(): Promise<{
     // Only delete users matching test email patterns
     const result = await User.deleteMany(testEmailRegex);
 
-    console.log(
+    log(
       `[Safe Cleanup] Deleted ${result.deletedCount} test user(s) matching test email patterns`,
     );
 
@@ -205,7 +210,7 @@ export async function cleanupTestUsersOnly(): Promise<{
  */
 export async function safeCleanupAllTestData(): Promise<void> {
   try {
-    console.log("[Safe Cleanup] Starting safe test data cleanup...");
+    log("[Safe Cleanup] Starting safe test data cleanup...");
 
     // 1. Clean dependent documents first (these are all test data)
     await Promise.all([
@@ -225,7 +230,7 @@ export async function safeCleanupAllTestData(): Promise<void> {
     // 4. SAFE user cleanup - only test users
     const { deletedCount, skippedRealUsers } = await cleanupTestUsersOnly();
 
-    console.log(
+    log(
       `[Safe Cleanup] Complete. Test users removed: ${deletedCount}, Real users preserved: ${skippedRealUsers}`,
     );
   } catch (error) {

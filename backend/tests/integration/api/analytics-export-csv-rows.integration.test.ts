@@ -2,11 +2,13 @@ import request from "supertest";
 import { describe, it, beforeEach, expect } from "vitest";
 import app from "../../../src/app";
 import User from "../../../src/models/User";
+import { ensureIntegrationDB } from "../setup/connect";
 
 describe("Analytics export CSV rows mode", () => {
   let adminToken: string;
 
   beforeEach(async () => {
+    await ensureIntegrationDB();
     await User.deleteMany({});
 
     const a = {
@@ -23,7 +25,7 @@ describe("Analytics export CSV rows mode", () => {
     await request(app).post("/api/auth/register").send(a).expect(201);
     await User.findOneAndUpdate(
       { email: a.email },
-      { isVerified: true, role: "Administrator" }
+      { isVerified: true, role: "Administrator" },
     );
     const la = await request(app)
       .post("/api/auth/login")
@@ -43,7 +45,7 @@ describe("Analytics export CSV rows mode", () => {
     expect(body).toContain("# Users\nUsername,Email,Role,CreatedAt\n");
     expect(body).toContain("# Events\nTitle,Format,Status,CreatedAt\n");
     expect(body).toContain(
-      "# Registrations\nUserId,EventId,Status,CreatedAt\n"
+      "# Registrations\nUserId,UserEmail,UserName,EventId,EventTitle,RoleId,RoleName,Status,AttendanceStatus,AttendanceConfirmed,RegistrationDate\n",
     );
   });
 });

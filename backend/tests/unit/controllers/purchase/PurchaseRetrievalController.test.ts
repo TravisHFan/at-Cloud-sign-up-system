@@ -12,6 +12,22 @@ vi.mock("../../../../src/models/Purchase", () => ({
 
 import Purchase from "../../../../src/models/Purchase";
 
+function mockPurchaseFindByIdChain(result: unknown) {
+  return {
+    populate: vi.fn().mockReturnValue({
+      populate: vi.fn().mockResolvedValue(result),
+    }),
+  } as any;
+}
+
+function mockPurchaseFindByIdChainError(error: unknown) {
+  return {
+    populate: vi.fn().mockReturnValue({
+      populate: vi.fn().mockRejectedValue(error),
+    }),
+  } as any;
+}
+
 interface MockRequest {
   params: Record<string, string>;
   user?: {
@@ -68,7 +84,7 @@ describe("PurchaseRetrievalController", () => {
 
         await PurchaseRetrievalController.getPurchaseById(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(401);
@@ -85,7 +101,7 @@ describe("PurchaseRetrievalController", () => {
 
         await PurchaseRetrievalController.getPurchaseById(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(400);
@@ -98,13 +114,13 @@ describe("PurchaseRetrievalController", () => {
 
     describe("Not Found", () => {
       it("should return 404 if purchase is not found", async () => {
-        vi.mocked(Purchase.findById).mockReturnValue({
-          populate: vi.fn().mockResolvedValue(null),
-        } as any);
+        vi.mocked(Purchase.findById).mockReturnValue(
+          mockPurchaseFindByIdChain(null),
+        );
 
         await PurchaseRetrievalController.getPurchaseById(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(404);
@@ -129,13 +145,13 @@ describe("PurchaseRetrievalController", () => {
           finalPrice: 10000,
         };
 
-        vi.mocked(Purchase.findById).mockReturnValue({
-          populate: vi.fn().mockResolvedValue(mockPurchase),
-        } as any);
+        vi.mocked(Purchase.findById).mockReturnValue(
+          mockPurchaseFindByIdChain(mockPurchase),
+        );
 
         await PurchaseRetrievalController.getPurchaseById(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(403);
@@ -157,13 +173,13 @@ describe("PurchaseRetrievalController", () => {
           finalPrice: 10000,
         };
 
-        vi.mocked(Purchase.findById).mockReturnValue({
-          populate: vi.fn().mockResolvedValue(mockPurchase),
-        } as any);
+        vi.mocked(Purchase.findById).mockReturnValue(
+          mockPurchaseFindByIdChain(mockPurchase),
+        );
 
         await PurchaseRetrievalController.getPurchaseById(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -187,13 +203,13 @@ describe("PurchaseRetrievalController", () => {
           finalPrice: 10000,
         };
 
-        vi.mocked(Purchase.findById).mockReturnValue({
-          populate: vi.fn().mockResolvedValue(mockPurchase),
-        } as any);
+        vi.mocked(Purchase.findById).mockReturnValue(
+          mockPurchaseFindByIdChain(mockPurchase),
+        );
 
         await PurchaseRetrievalController.getPurchaseById(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -213,13 +229,13 @@ describe("PurchaseRetrievalController", () => {
           finalPrice: 10000,
         };
 
-        vi.mocked(Purchase.findById).mockReturnValue({
-          populate: vi.fn().mockResolvedValue(mockPurchase),
-        } as any);
+        vi.mocked(Purchase.findById).mockReturnValue(
+          mockPurchaseFindByIdChain(mockPurchase),
+        );
 
         await PurchaseRetrievalController.getPurchaseById(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -238,13 +254,13 @@ describe("PurchaseRetrievalController", () => {
           finalPrice: 10000,
         };
 
-        vi.mocked(Purchase.findById).mockReturnValue({
-          populate: vi.fn().mockResolvedValue(mockPurchase),
-        } as any);
+        vi.mocked(Purchase.findById).mockReturnValue(
+          mockPurchaseFindByIdChain(mockPurchase),
+        );
 
         await PurchaseRetrievalController.getPurchaseById(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -253,13 +269,13 @@ describe("PurchaseRetrievalController", () => {
 
     describe("Error Handling", () => {
       it("should return 500 on database error", async () => {
-        vi.mocked(Purchase.findById).mockReturnValue({
-          populate: vi.fn().mockRejectedValue(new Error("Database error")),
-        } as any);
+        vi.mocked(Purchase.findById).mockReturnValue(
+          mockPurchaseFindByIdChainError(new Error("Database error")),
+        );
 
         await PurchaseRetrievalController.getPurchaseById(
           mockReq as any,
-          mockRes as Response
+          mockRes as Response,
         );
 
         expect(statusMock).toHaveBeenCalledWith(500);

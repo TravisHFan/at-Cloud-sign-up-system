@@ -15,12 +15,24 @@ vi.mock("../../../../src/models/Event", () => ({
 }));
 
 /**
- * Helper to create mock chain for Purchase.findById().populate().populate()
+ * Helper to create mock chain for Purchase.findById().populate().populate().populate()
  */
 function mockPurchaseFindByIdChain(purchase: any) {
   return {
     populate: vi.fn().mockReturnValue({
-      populate: vi.fn().mockResolvedValue(purchase),
+      populate: vi.fn().mockReturnValue({
+        populate: vi.fn().mockResolvedValue(purchase),
+      }),
+    }),
+  } as any;
+}
+
+function mockPurchaseFindByIdChainError(error: unknown) {
+  return {
+    populate: vi.fn().mockReturnValue({
+      populate: vi.fn().mockReturnValue({
+        populate: vi.fn().mockRejectedValue(error),
+      }),
     }),
   } as any;
 }
@@ -247,7 +259,9 @@ describe("PurchaseRetryController", () => {
       expect(Purchase.findOne).toHaveBeenCalledWith({
         userId: userId,
         programId: programId,
+        purchaseType: "program",
         status: "completed",
+        unenrolledAt: { $exists: false },
       });
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith({
@@ -457,11 +471,9 @@ describe("PurchaseRetryController", () => {
 
       const dbError = new Error("Database connection failed");
 
-      vi.mocked(Purchase.findById).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockRejectedValue(dbError),
-        }),
-      } as any);
+      vi.mocked(Purchase.findById).mockReturnValue(
+        mockPurchaseFindByIdChainError(dbError),
+      );
 
       await PurchaseRetryController.retryPendingPurchase(
         mockReq as Request,
@@ -601,11 +613,9 @@ describe("PurchaseRetryController", () => {
       };
       mockReq.params = { id: purchaseId.toString() };
 
-      vi.mocked(Purchase.findById).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockRejectedValue("Unexpected string error"),
-        }),
-      } as any);
+      vi.mocked(Purchase.findById).mockReturnValue(
+        mockPurchaseFindByIdChainError("Unexpected string error"),
+      );
 
       await PurchaseRetryController.retryPendingPurchase(
         mockReq as Request,
@@ -661,7 +671,9 @@ describe("PurchaseRetryController", () => {
       expect(Purchase.findOne).toHaveBeenCalledWith({
         userId: userId,
         eventId: eventId,
+        purchaseType: "event",
         status: "completed",
+        unenrolledAt: { $exists: false },
       });
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith({

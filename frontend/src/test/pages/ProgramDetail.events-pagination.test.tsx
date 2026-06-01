@@ -74,10 +74,20 @@ vi.mock("../../contexts/AuthContext", () => ({
   }),
 }));
 
+vi.mock("../../services/socketService", () => ({
+  socketService: {
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+    on: vi.fn(),
+    off: vi.fn(),
+  },
+}));
+
 vi.mock("react-router-dom", async () => {
-  const actual = await vi.importActual<typeof import("react-router-dom")>(
-    "react-router-dom"
-  );
+  const actual =
+    await vi.importActual<typeof import("react-router-dom")>(
+      "react-router-dom",
+    );
   return {
     ...actual,
     useNavigate: () => vi.fn(),
@@ -98,12 +108,12 @@ describe("ProgramDetail Events Pagination", () => {
             <Route path="/dashboard/programs/:id" element={<ProgramDetail />} />
           </Routes>
         </MemoryRouter>
-      </NotificationProvider>
+      </NotificationProvider>,
     );
 
     // Wait for heading to ensure page loaded
     await waitFor(() =>
-      expect(screen.getByText("EMBA 2025")).toBeInTheDocument()
+      expect(screen.getByText("EMBA 2025")).toBeInTheDocument(),
     );
 
     // Scope queries to the Events section container
@@ -126,11 +136,11 @@ describe("ProgramDetail Events Pagination", () => {
             <Route path="/dashboard/programs/:id" element={<ProgramDetail />} />
           </Routes>
         </MemoryRouter>
-      </NotificationProvider>
+      </NotificationProvider>,
     );
 
     await waitFor(() =>
-      expect(screen.getByText("EMBA 2025")).toBeInTheDocument()
+      expect(screen.getByText("EMBA 2025")).toBeInTheDocument(),
     );
     const eventsHeading = screen.getByRole("heading", { name: /events/i });
     const section = eventsHeading.closest("div")!.parentElement!;
@@ -170,11 +180,11 @@ describe("ProgramDetail Events Pagination", () => {
             <Route path="/dashboard/programs/:id" element={<ProgramDetail />} />
           </Routes>
         </MemoryRouter>
-      </NotificationProvider>
+      </NotificationProvider>,
     );
 
     await waitFor(() =>
-      expect(screen.getByText("EMBA 2025")).toBeInTheDocument()
+      expect(screen.getByText("EMBA 2025")).toBeInTheDocument(),
     );
     const eventsHeading = screen.getByRole("heading", { name: /events/i });
     const section = eventsHeading.closest("div")!.parentElement!;
@@ -183,7 +193,7 @@ describe("ProgramDetail Events Pagination", () => {
     expect(within(section).getByText(/Page 2 of 3/)).toBeInTheDocument();
     // Sort select should reflect "desc" from URL
     const sortSelect = within(section).getByLabelText(
-      /sort events/i
+      /sort events/i,
     ) as HTMLSelectElement;
     expect(sortSelect.value).toBe("desc");
   });
@@ -219,7 +229,7 @@ describe("ProgramDetail Events Pagination", () => {
       () =>
         new Promise((resolve: (v: any) => void) => {
           deferredSecondPage.resolve = resolve;
-        })
+        }),
     );
 
     render(
@@ -232,12 +242,12 @@ describe("ProgramDetail Events Pagination", () => {
             />
           </Routes>
         </MemoryRouter>
-      </NotificationProvider>
+      </NotificationProvider>,
     );
 
     // Wait for initial load and verify controls show page 1
     await waitFor(() =>
-      expect(screen.getByText("EMBA 2025")).toBeInTheDocument()
+      expect(screen.getByText("EMBA 2025")).toBeInTheDocument(),
     );
     const eventsHeading = screen.getByRole("heading", { name: /events/i });
     const section = eventsHeading.closest("div")!.parentElement!;
@@ -245,7 +255,7 @@ describe("ProgramDetail Events Pagination", () => {
 
     // Trigger Next page (will set spinner immediately and keep page text at 1 until data arrives)
     fireEvent.click(
-      within(section).getByRole("button", { name: /next page/i })
+      within(section).getByRole("button", { name: /next page/i }),
     );
     // While pending, page text may still read 1 of 2; spinner should be visible
     const spinner = await within(section).findByRole("status");
@@ -255,12 +265,12 @@ describe("ProgramDetail Events Pagination", () => {
     // Resolve the pending request and wait for UI to update
     deferredSecondPage.resolve(secondPagePayload);
     await waitFor(() =>
-      expect(within(section).getByText(/Page 2 of 2/)).toBeInTheDocument()
+      expect(within(section).getByText(/Page 2 of 2/)).toBeInTheDocument(),
     );
 
     // Spinner should disappear after load
     await waitFor(() =>
-      expect(within(section).queryByRole("status")).toBeNull()
+      expect(within(section).queryByRole("status")).toBeNull(),
     );
     // no cleanup needed; prop is local to this render
   });
