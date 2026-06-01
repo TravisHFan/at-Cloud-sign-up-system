@@ -14,7 +14,7 @@ const localStorageMock = {
   },
   clear: () => {
     Object.keys(localStorageData).forEach(
-      (key) => delete localStorageData[key]
+      (key) => delete localStorageData[key],
     );
   },
   get length() {
@@ -37,7 +37,7 @@ const sessionStorageMock = {
   },
   clear: () => {
     Object.keys(sessionStorageData).forEach(
-      (key) => delete sessionStorageData[key]
+      (key) => delete sessionStorageData[key],
     );
   },
   get length() {
@@ -127,7 +127,9 @@ function jsonResponse(payload: unknown, status = 200) {
 
 vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
   const urlStr =
-    typeof input === "string" ? input : (input as Request).url ?? String(input);
+    typeof input === "string"
+      ? input
+      : ((input as Request).url ?? String(input));
   let pathname = "";
   try {
     const u = new URL(urlStr);
@@ -145,6 +147,9 @@ vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
     pathname.endsWith("/api/auth") ||
     pathname === "/auth/profile";
   const isNotifications = pathname.includes("/api/notifications");
+  const isEventAccess =
+    pathname.includes("/events/") && pathname.endsWith("/access");
+  const isUsersList = pathname === "/api/users" || pathname === "/users";
 
   // Stub auth profile and refresh minimally
   if (isAuth) {
@@ -214,6 +219,41 @@ vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
     return jsonResponse({ success: true, message: "ok", data: {} });
   }
 
+  // Newer event/program views make background access checks while rendering.
+  // Most component tests are not about purchase gating, so return an explicit
+  // granted shape instead of letting an unconfigured fetch mock fall into an
+  // error branch and print noisy console output.
+  if (isEventAccess) {
+    return jsonResponse({
+      success: true,
+      message: "ok",
+      data: {
+        hasAccess: true,
+        requiresPurchase: false,
+        accessReason: "test-default",
+      },
+    });
+  }
+
+  // OrganizerSelection can load authorized users in the background before tests
+  // exercise a search path. Empty-but-valid data keeps those tests focused.
+  if (isUsersList) {
+    return jsonResponse({
+      success: true,
+      message: "ok",
+      data: {
+        users: [],
+        pagination: {
+          currentPage: 1,
+          totalPages: 0,
+          totalUsers: 0,
+          hasNext: false,
+          hasPrev: false,
+        },
+      },
+    });
+  }
+
   // Otherwise, forward to original fetch (tests typically mock specific API calls)
   return ORIGINAL_FETCH!(input as any, init);
 });
@@ -234,7 +274,7 @@ vi.mock("socket.io-client", () => {
         return;
       }
       this.listeners[event] = (this.listeners[event] || []).filter(
-        (fn) => fn !== cb
+        (fn) => fn !== cb,
       );
     }
     emit(_event: string, _payload?: unknown) {

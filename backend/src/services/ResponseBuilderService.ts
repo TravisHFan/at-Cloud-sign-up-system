@@ -642,9 +642,13 @@ export class ResponseBuilderService {
               const roleRegs = (regsByRole.get(role.id) || []).map((reg) => ({
                 id: reg._id.toString(),
                 userId:
-                  typeof reg.userId === "object" && "_id" in reg.userId
+                  reg.userId &&
+                  typeof reg.userId === "object" &&
+                  "_id" in reg.userId
                     ? (reg.userId as LeanUser)._id.toString()
-                    : (reg.userId as Types.ObjectId).toString(),
+                    : reg.userId
+                      ? (reg.userId as Types.ObjectId).toString()
+                      : "",
                 eventId: reg.eventId.toString(),
                 roleId: reg.roleId,
                 status: (reg.status || "active") as
@@ -654,10 +658,12 @@ export class ResponseBuilderService {
                   | "no_show",
                 attendanceConfirmed: reg.attendanceConfirmed === true,
                 user: ResponseBuilderService.buildUserBasicInfo(
-                  (typeof reg.userId === "object"
+                  (reg.userId && typeof reg.userId === "object"
                     ? (reg.userId as LeanUser)
                     : ({
-                        id: (reg.userId as Types.ObjectId).toString(),
+                        id: reg.userId
+                          ? (reg.userId as Types.ObjectId).toString()
+                          : "",
                       } as { id: string })) as LeanUser | { id: string },
                 ),
                 registeredAt: reg.createdAt || new Date(),

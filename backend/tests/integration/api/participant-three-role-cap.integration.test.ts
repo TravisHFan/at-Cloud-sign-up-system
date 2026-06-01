@@ -17,15 +17,9 @@ describe("Participant three-role cap (policy update)", () => {
 
   beforeAll(async () => {
     await ensureIntegrationDB();
-    // Diagnostic log sequence to help identify slow/stuck step in CI
-    // (Hook timeout previously observed at 10s default)
-    console.log("[three-role-cap] Clearing collections...");
     await User.deleteMany({});
     await Event.deleteMany({});
 
-    console.log("[three-role-cap] Creating participant user...");
-
-    console.log("[three-role-cap] Creating admin user...");
     await request(app)
       .post("/api/auth/register")
       .send({
@@ -44,7 +38,7 @@ describe("Participant three-role cap (policy update)", () => {
 
     await User.updateOne(
       { email: "cap_participant@example.com" },
-      { $set: { isVerified: true } }
+      { $set: { isVerified: true } },
     );
 
     const loginRes = await request(app)
@@ -79,7 +73,7 @@ describe("Participant three-role cap (policy update)", () => {
     // Force elevate to Administrator (registration defaults everyone to Participant)
     await User.updateOne(
       { email: "admin_capper@example.com" },
-      { $set: { isVerified: true, role: "Administrator" } }
+      { $set: { isVerified: true, role: "Administrator" } },
     );
 
     const adminLogin = await request(app)
@@ -94,7 +88,6 @@ describe("Participant three-role cap (policy update)", () => {
       adminLogin.body?.accessToken ||
       adminLogin.body?.token;
 
-    console.log("[three-role-cap] Building event payload...");
     const payload = buildValidEventPayload({
       title: "Three Role Cap Event",
       roles: [
@@ -106,16 +99,11 @@ describe("Participant three-role cap (policy update)", () => {
       overrides: { suppressNotifications: true },
     });
 
-    console.log("[three-role-cap] Creating event via API...");
     const createRes = await request(app)
       .post(`/api/events`)
       .set("Authorization", `Bearer ${adminToken}`)
       .send(payload)
       .expect(201);
-    console.log(
-      "[three-role-cap] Event created",
-      createRes.body?.data?.event?.id
-    );
     eventId = createRes.body.data.event.id;
     createRes.body.data.event.roles.forEach((r: any) => roleIds.push(r.id));
   }, 30000); // Extend hook timeout to 30s

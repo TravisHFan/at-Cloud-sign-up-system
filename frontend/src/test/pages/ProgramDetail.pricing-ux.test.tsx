@@ -18,6 +18,15 @@ vi.mock("../../contexts/AuthContext", () => ({
   }),
 }));
 
+vi.mock("../../services/socketService", () => ({
+  socketService: {
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+    on: vi.fn(),
+    off: vi.fn(),
+  },
+}));
+
 describe("ProgramDetail Pricing UX", () => {
   beforeEach(() => {
     vi.resetModules();
@@ -45,9 +54,10 @@ describe("ProgramDetail Pricing UX", () => {
     vi.doMock("../../services/api", () => mockServices);
 
     vi.doMock("react-router-dom", async () => {
-      const actual = await vi.importActual<typeof import("react-router-dom")>(
-        "react-router-dom"
-      );
+      const actual =
+        await vi.importActual<typeof import("react-router-dom")>(
+          "react-router-dom",
+        );
       return {
         ...actual,
         useNavigate: () => vi.fn(),
@@ -56,9 +66,8 @@ describe("ProgramDetail Pricing UX", () => {
     });
 
     const { default: Page } = await import("../../pages/ProgramDetail");
-    const { NotificationProvider } = await import(
-      "../../contexts/NotificationModalContext"
-    );
+    const { NotificationProvider } =
+      await import("../../contexts/NotificationModalContext");
 
     render(
       <NotificationProvider>
@@ -67,19 +76,19 @@ describe("ProgramDetail Pricing UX", () => {
             <Route path="/dashboard/programs/:id" element={<Page />} />
           </Routes>
         </MemoryRouter>
-      </NotificationProvider>
+      </NotificationProvider>,
     );
 
     expect(
-      await screen.findByRole("heading", { name: /tuition/i })
+      await screen.findByRole("heading", { name: /tuition/i }),
     ).toBeInTheDocument();
     expect(screen.getByText(/Full Price Ticket/i)).toBeInTheDocument();
     expect(
-      screen.getByText(/Class Representative Discount/i)
+      screen.getByText(/Class Representative Discount/i),
     ).toBeInTheDocument();
     // "Early Bird Discount" appears in multiple places (label + disclaimer), use getAllByText
     expect(screen.getAllByText(/Early Bird Discount/i).length).toBeGreaterThan(
-      0
+      0,
     );
 
     // Examples (query more specifically to avoid label collisions)
@@ -88,17 +97,17 @@ describe("ProgramDetail Pricing UX", () => {
     const examplesContainer =
       screen.getByText(/Computed Examples/i).parentElement!;
     expect(
-      within(examplesContainer).getByText(/Standard/i)
+      within(examplesContainer).getByText(/Standard/i),
     ).toBeInTheDocument();
     expect(
-      within(examplesContainer).getByText(/^Class Representative$/i)
+      within(examplesContainer).getByText(/^Class Representative$/i),
     ).toBeInTheDocument();
     expect(
-      within(examplesContainer).getByText(/^Early Bird$/i)
+      within(examplesContainer).getByText(/^Early Bird$/i),
     ).toBeInTheDocument();
     // Mutual exclusivity: no "Rep + Early Bird" scenario
     expect(
-      within(examplesContainer).queryByText(/Rep \+ Early Bird/i)
+      within(examplesContainer).queryByText(/Rep \+ Early Bird/i),
     ).not.toBeInTheDocument();
 
     // Currency formatted (hedge by checking $1,000 and $900 etc.)
@@ -125,9 +134,10 @@ describe("ProgramDetail Pricing UX", () => {
     vi.doMock("../../services/api", () => mockServices);
 
     vi.doMock("react-router-dom", async () => {
-      const actual = await vi.importActual<typeof import("react-router-dom")>(
-        "react-router-dom"
-      );
+      const actual =
+        await vi.importActual<typeof import("react-router-dom")>(
+          "react-router-dom",
+        );
       return {
         ...actual,
         useNavigate: () => vi.fn(),
@@ -136,9 +146,8 @@ describe("ProgramDetail Pricing UX", () => {
     });
 
     const { default: Page } = await import("../../pages/ProgramDetail");
-    const { NotificationProvider } = await import(
-      "../../contexts/NotificationModalContext"
-    );
+    const { NotificationProvider } =
+      await import("../../contexts/NotificationModalContext");
 
     render(
       <NotificationProvider>
@@ -147,11 +156,11 @@ describe("ProgramDetail Pricing UX", () => {
             <Route path="/dashboard/programs/:id" element={<Page />} />
           </Routes>
         </MemoryRouter>
-      </NotificationProvider>
+      </NotificationProvider>,
     );
 
     expect(
-      await screen.findByRole("heading", { name: /tuition/i })
+      await screen.findByRole("heading", { name: /tuition/i }),
     ).toBeInTheDocument();
     expect(screen.getByText(/Tuition is being set up/i)).toBeInTheDocument();
   });

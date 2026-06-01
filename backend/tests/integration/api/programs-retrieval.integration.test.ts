@@ -583,7 +583,7 @@ describe("Programs Retrieval API Integration Tests", () => {
         expect(response.body.data.mentors[0].email).toBe("mentor@test.com");
       });
 
-      it("should include mentor email for free program users", async () => {
+      it("should hide mentor email for free program users without enrollment", async () => {
         const participant = await createAndLoginTestUser({
           role: "Participant",
         });
@@ -610,7 +610,7 @@ describe("Programs Retrieval API Integration Tests", () => {
           .set("Authorization", `Bearer ${participant.token}`)
           .expect(200);
 
-        expect(response.body.data.mentors[0].email).toBe("mentor@test.com");
+        expect(response.body.data.mentors[0].email).toBeUndefined();
       });
 
       it("should include mentor email for program mentors", async () => {

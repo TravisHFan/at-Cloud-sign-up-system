@@ -6,15 +6,20 @@ import mongoose from "mongoose";
 
 // Mock dependencies
 vi.mock("../../../../src/models/Purchase");
+vi.mock("../../../../src/services/PurchaseRefundService", () => ({
+  applyPurchaseItemSnapshot: vi.fn(() => false),
+}));
 
 /**
- * Helper to create mock chain for Purchase.find().populate().populate().sort()
+ * Helper to create mock chain for Purchase.find().populate().populate().populate().sort()
  */
 function mockPurchaseFindChain(purchases: any[]) {
   return {
     populate: vi.fn().mockReturnValue({
       populate: vi.fn().mockReturnValue({
-        sort: vi.fn().mockResolvedValue(purchases),
+        populate: vi.fn().mockReturnValue({
+          sort: vi.fn().mockResolvedValue(purchases),
+        }),
       }),
     }),
   } as any;
@@ -57,7 +62,7 @@ describe("PurchaseHistoryController", () => {
 
       await PurchaseHistoryController.getMyPurchases(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(401);
@@ -75,12 +80,12 @@ describe("PurchaseHistoryController", () => {
       const mockPurchases: any[] = [];
 
       vi.mocked(Purchase.find).mockReturnValue(
-        mockPurchaseFindChain(mockPurchases)
+        mockPurchaseFindChain(mockPurchases),
       );
 
       await PurchaseHistoryController.getMyPurchases(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(Purchase.find).toHaveBeenCalledWith({
@@ -146,12 +151,12 @@ describe("PurchaseHistoryController", () => {
       ];
 
       vi.mocked(Purchase.find).mockReturnValue(
-        mockPurchaseFindChain(mockPurchases)
+        mockPurchaseFindChain(mockPurchases),
       );
 
       await PurchaseHistoryController.getMyPurchases(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -169,7 +174,9 @@ describe("PurchaseHistoryController", () => {
       const findMock = vi.fn().mockReturnValue({
         populate: vi.fn().mockReturnValue({
           populate: vi.fn().mockReturnValue({
-            sort: vi.fn().mockResolvedValue([]),
+            populate: vi.fn().mockReturnValue({
+              sort: vi.fn().mockResolvedValue([]),
+            }),
           }),
         }),
       });
@@ -178,7 +185,7 @@ describe("PurchaseHistoryController", () => {
 
       await PurchaseHistoryController.getMyPurchases(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(findMock).toHaveBeenCalledWith({
@@ -194,8 +201,11 @@ describe("PurchaseHistoryController", () => {
         _id: userId,
       };
 
-      const populateMock2 = vi.fn().mockReturnValue({
+      const populateMock3 = vi.fn().mockReturnValue({
         sort: vi.fn().mockResolvedValue([]),
+      });
+      const populateMock2 = vi.fn().mockReturnValue({
+        populate: populateMock3,
       });
       const populateMock = vi.fn().mockReturnValue({
         populate: populateMock2,
@@ -207,12 +217,17 @@ describe("PurchaseHistoryController", () => {
 
       await PurchaseHistoryController.getMyPurchases(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(populateMock).toHaveBeenCalledWith(
         "programId",
-        "title programType"
+        "title programType",
+      );
+      expect(populateMock2).toHaveBeenCalledWith("eventId", "title");
+      expect(populateMock3).toHaveBeenCalledWith(
+        "membershipId",
+        "title price programs",
       );
     });
 
@@ -226,14 +241,16 @@ describe("PurchaseHistoryController", () => {
       vi.mocked(Purchase.find).mockReturnValue({
         populate: vi.fn().mockReturnValue({
           populate: vi.fn().mockReturnValue({
-            sort: sortMock,
+            populate: vi.fn().mockReturnValue({
+              sort: sortMock,
+            }),
           }),
         }),
       } as any);
 
       await PurchaseHistoryController.getMyPurchases(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(sortMock).toHaveBeenCalledWith({ purchaseDate: -1 });
@@ -285,12 +302,12 @@ describe("PurchaseHistoryController", () => {
       ];
 
       vi.mocked(Purchase.find).mockReturnValue(
-        mockPurchaseFindChain(mockPurchases)
+        mockPurchaseFindChain(mockPurchases),
       );
 
       await PurchaseHistoryController.getMyPurchases(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       const response = jsonMock.mock.calls[0][0];
@@ -321,12 +338,12 @@ describe("PurchaseHistoryController", () => {
       ];
 
       vi.mocked(Purchase.find).mockReturnValue(
-        mockPurchaseFindChain(mockPurchases)
+        mockPurchaseFindChain(mockPurchases),
       );
 
       await PurchaseHistoryController.getMyPurchases(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -346,19 +363,21 @@ describe("PurchaseHistoryController", () => {
       vi.mocked(Purchase.find).mockReturnValue({
         populate: vi.fn().mockReturnValue({
           populate: vi.fn().mockReturnValue({
-            sort: vi.fn().mockRejectedValue(dbError),
+            populate: vi.fn().mockReturnValue({
+              sort: vi.fn().mockRejectedValue(dbError),
+            }),
           }),
         }),
       } as any);
 
       await PurchaseHistoryController.getMyPurchases(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(console.error).toHaveBeenCalledWith(
         "Error fetching purchases:",
-        dbError
+        dbError,
       );
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith({
@@ -375,19 +394,21 @@ describe("PurchaseHistoryController", () => {
       vi.mocked(Purchase.find).mockReturnValue({
         populate: vi.fn().mockReturnValue({
           populate: vi.fn().mockReturnValue({
-            sort: vi.fn().mockRejectedValue("Unexpected string error"),
+            populate: vi.fn().mockReturnValue({
+              sort: vi.fn().mockRejectedValue("Unexpected string error"),
+            }),
           }),
         }),
       } as any);
 
       await PurchaseHistoryController.getMyPurchases(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(console.error).toHaveBeenCalledWith(
         "Error fetching purchases:",
-        "Unexpected string error"
+        "Unexpected string error",
       );
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith({
@@ -406,7 +427,9 @@ describe("PurchaseHistoryController", () => {
       const findMock = vi.fn().mockReturnValue({
         populate: vi.fn().mockReturnValue({
           populate: vi.fn().mockReturnValue({
-            sort: vi.fn().mockResolvedValue([]),
+            populate: vi.fn().mockReturnValue({
+              sort: vi.fn().mockResolvedValue([]),
+            }),
           }),
         }),
       });
@@ -415,7 +438,7 @@ describe("PurchaseHistoryController", () => {
 
       await PurchaseHistoryController.getMyPurchases(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(findMock).toHaveBeenCalledWith({

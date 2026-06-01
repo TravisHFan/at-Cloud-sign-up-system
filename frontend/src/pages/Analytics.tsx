@@ -379,12 +379,7 @@ export default function Analytics() {
               ) : overviewIsLoading || !overview ? (
                 <AnalyticsOverviewLoadingState />
               ) : (
-                <AnalyticsOverviewCards
-                  totalEvents={overview.totalEvents}
-                  totalUsers={overview.totalUsers}
-                  activeParticipants={overview.activeParticipants}
-                  averageSignupRate={overview.averageSignupRate}
-                />
+                <AnalyticsOverviewCards analytics={overviewResource.data!} />
               )}
             </>
           )}

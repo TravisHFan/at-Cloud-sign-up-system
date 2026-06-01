@@ -19,14 +19,9 @@ describe("Public event guest 1-role limit", () => {
 
   beforeAll(async () => {
     await ensureIntegrationDB();
-    console.log("[guest-1-role] Clearing collections...");
     await User.deleteMany({});
     await Event.deleteMany({});
     await GuestRegistration.deleteMany({});
-
-    console.log(
-      "[guest-1-role] Creating published event with multiple public roles..."
-    );
 
     const event = await createPublishedEvent({
       title: "Guest 1-Role Limit Event",
@@ -55,7 +50,6 @@ describe("Public event guest 1-role limit", () => {
     eventId = event.id;
     eventSlug = event.publicSlug;
     event.roles.forEach((r: any) => roleIds.push(r.id));
-    console.log(`[guest-1-role] Event published with slug: ${eventSlug}`);
   }, 30000);
 
   afterAll(async () => {

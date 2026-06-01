@@ -11,6 +11,7 @@ vi.mock("../../../../src/models", () => ({
     findByIdAndDelete: vi.fn(),
   },
   Program: {
+    findById: vi.fn(),
     findByIdAndUpdate: vi.fn(),
   },
 }));
@@ -23,7 +24,7 @@ describe("PurchaseCancellationController", () => {
 
   beforeEach(() => {
     // Reset all mocks
-    vi.clearAllMocks();
+    vi.resetAllMocks();
 
     // Setup response mocks
     jsonMock = vi.fn();
@@ -42,6 +43,10 @@ describe("PurchaseCancellationController", () => {
     // Mock console methods
     vi.spyOn(console, "log").mockImplementation(() => {});
     vi.spyOn(console, "error").mockImplementation(() => {});
+
+    vi.mocked(Purchase.findByIdAndDelete).mockResolvedValue(null);
+    vi.mocked(Program.findById).mockResolvedValue({ classRepCount: 1 } as any);
+    vi.mocked(Program.findByIdAndUpdate).mockResolvedValue({} as any);
   });
 
   describe("cancelPendingPurchase", () => {
@@ -55,7 +60,7 @@ describe("PurchaseCancellationController", () => {
 
       await PurchaseCancellationController.cancelPendingPurchase(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(401);
@@ -73,7 +78,7 @@ describe("PurchaseCancellationController", () => {
 
       await PurchaseCancellationController.cancelPendingPurchase(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -93,7 +98,7 @@ describe("PurchaseCancellationController", () => {
 
       await PurchaseCancellationController.cancelPendingPurchase(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(Purchase.findById).toHaveBeenCalledWith(purchaseId.toString());
@@ -122,7 +127,7 @@ describe("PurchaseCancellationController", () => {
 
       await PurchaseCancellationController.cancelPendingPurchase(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(403);
@@ -148,7 +153,7 @@ describe("PurchaseCancellationController", () => {
 
       await PurchaseCancellationController.cancelPendingPurchase(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -175,7 +180,7 @@ describe("PurchaseCancellationController", () => {
 
       await PurchaseCancellationController.cancelPendingPurchase(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -202,7 +207,7 @@ describe("PurchaseCancellationController", () => {
 
       await PurchaseCancellationController.cancelPendingPurchase(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -230,20 +235,20 @@ describe("PurchaseCancellationController", () => {
 
       vi.mocked(Purchase.findById).mockResolvedValue(mockPurchase as any);
       vi.mocked(Purchase.findByIdAndDelete).mockResolvedValue(
-        mockPurchase as any
+        mockPurchase as any,
       );
 
       await PurchaseCancellationController.cancelPendingPurchase(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(Purchase.findByIdAndDelete).toHaveBeenCalledWith(
-        purchaseId.toString()
+        purchaseId.toString(),
       );
       expect(Program.findByIdAndUpdate).not.toHaveBeenCalled();
       expect(console.log).toHaveBeenCalledWith(
-        "Cancelled pending purchase ORDER-001"
+        "Cancelled pending purchase ORDER-001",
       );
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith({
@@ -262,6 +267,7 @@ describe("PurchaseCancellationController", () => {
         _id: purchaseId,
         userId,
         programId,
+        purchaseType: "program",
         status: "pending",
         isClassRep: true,
         orderNumber: "ORDER-002",
@@ -269,25 +275,30 @@ describe("PurchaseCancellationController", () => {
 
       vi.mocked(Purchase.findById).mockResolvedValue(mockPurchase as any);
       vi.mocked(Purchase.findByIdAndDelete).mockResolvedValue(
-        mockPurchase as any
+        mockPurchase as any,
       );
       vi.mocked(Program.findByIdAndUpdate).mockResolvedValue({} as any);
 
       await PurchaseCancellationController.cancelPendingPurchase(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(Program.findByIdAndUpdate).toHaveBeenCalledWith(
         programId,
-        { $inc: { classRepCount: -1 } },
-        { runValidators: false }
+        {
+          $inc: {
+            classRepCount: -1,
+            "programRoles.studentRoles.1.count": -1,
+          },
+        },
+        { runValidators: false },
       );
       expect(console.log).toHaveBeenCalledWith(
-        `Decremented classRepCount for program ${programId}`
+        `Decremented classRepCount for program ${programId}`,
       );
       expect(Purchase.findByIdAndDelete).toHaveBeenCalledWith(
-        purchaseId.toString()
+        purchaseId.toString(),
       );
       expect(statusMock).toHaveBeenCalledWith(200);
     });
@@ -308,12 +319,12 @@ describe("PurchaseCancellationController", () => {
 
       vi.mocked(Purchase.findById).mockResolvedValue(mockPurchase as any);
       vi.mocked(Purchase.findByIdAndDelete).mockResolvedValue(
-        mockPurchase as any
+        mockPurchase as any,
       );
 
       await PurchaseCancellationController.cancelPendingPurchase(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(Purchase.findByIdAndDelete).toHaveBeenCalled();
@@ -331,12 +342,12 @@ describe("PurchaseCancellationController", () => {
 
       await PurchaseCancellationController.cancelPendingPurchase(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(console.error).toHaveBeenCalledWith(
         "Error cancelling purchase:",
-        dbError
+        dbError,
       );
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith({
@@ -365,12 +376,12 @@ describe("PurchaseCancellationController", () => {
 
       await PurchaseCancellationController.cancelPendingPurchase(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(console.error).toHaveBeenCalledWith(
         "Error cancelling purchase:",
-        deleteError
+        deleteError,
       );
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith({
@@ -389,6 +400,7 @@ describe("PurchaseCancellationController", () => {
         _id: purchaseId,
         userId,
         programId,
+        purchaseType: "program",
         status: "pending",
         isClassRep: true,
         orderNumber: "ORDER-004",
@@ -401,12 +413,12 @@ describe("PurchaseCancellationController", () => {
 
       await PurchaseCancellationController.cancelPendingPurchase(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(console.error).toHaveBeenCalledWith(
         "Error cancelling purchase:",
-        updateError
+        updateError,
       );
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith({
@@ -425,12 +437,12 @@ describe("PurchaseCancellationController", () => {
 
       await PurchaseCancellationController.cancelPendingPurchase(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(console.error).toHaveBeenCalledWith(
         "Error cancelling purchase:",
-        "Unexpected string error"
+        "Unexpected string error",
       );
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith({

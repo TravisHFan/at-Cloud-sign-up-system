@@ -59,7 +59,7 @@ describe("Events API Integration Tests", () => {
       .send(userData);
     await User.findOneAndUpdate(
       { email: "event@example.com" },
-      { isVerified: true }
+      { isVerified: true },
     );
     const loginResponse = await request(app).post("/api/auth/login").send({
       emailOrUsername: "event@example.com",
@@ -86,7 +86,7 @@ describe("Events API Integration Tests", () => {
       .send(adminData);
     await User.findOneAndUpdate(
       { email: "admin@example.com" },
-      { isVerified: true, role: "Administrator" }
+      { isVerified: true, role: "Administrator" },
     );
     const adminLoginResponse = await request(app).post("/api/auth/login").send({
       emailOrUsername: "admin@example.com",
@@ -236,7 +236,7 @@ describe("Events API Integration Tests", () => {
         0,
         0,
         0,
-        0
+        0,
       );
       const yyyy = y.getFullYear();
       const mm = String(y.getMonth() + 1).padStart(2, "0");
@@ -393,7 +393,7 @@ describe("Events API Integration Tests", () => {
 
       const events = response.body.data.events;
       expect(new Date(events[0].date).getTime()).toBeLessThan(
-        new Date(events[1].date).getTime()
+        new Date(events[1].date).getTime(),
       );
     });
   });
@@ -634,7 +634,7 @@ describe("Events API Integration Tests", () => {
 
       await User.findOneAndUpdate(
         { email: "another.admin@example.com" },
-        { isVerified: true, role: "Administrator" }
+        { isVerified: true, role: "Administrator" },
       );
 
       const anotherAdminLoginResponse = await request(app)
@@ -711,7 +711,9 @@ describe("Events API Integration Tests", () => {
 
       expect(response.body).toMatchObject({
         success: false,
-        message: expect.stringContaining("Access denied"),
+        message: expect.stringContaining(
+          "Insufficient permissions to edit this event",
+        ),
       });
     });
 
@@ -1046,10 +1048,10 @@ describe("Events API Integration Tests", () => {
 
     it("should filter by date range", async () => {
       const startDate = new Date(
-        Date.now() + 6 * 24 * 60 * 60 * 1000
+        Date.now() + 6 * 24 * 60 * 60 * 1000,
       ).toISOString();
       const endDate = new Date(
-        Date.now() + 15 * 24 * 60 * 60 * 1000
+        Date.now() + 15 * 24 * 60 * 60 * 1000,
       ).toISOString();
 
       const response = await request(app)
@@ -1071,7 +1073,7 @@ describe("Events API Integration Tests", () => {
       console.log("All events in database:");
       allEventsResponse.body.data.events.forEach((event: any) => {
         console.log(
-          `- ${event.title}: totalSlots=${event.totalSlots}, maxParticipants=${event.maxParticipants}`
+          `- ${event.title}: totalSlots=${event.totalSlots}, maxParticipants=${event.maxParticipants}`,
         );
       });
 

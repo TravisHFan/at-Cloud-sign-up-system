@@ -19,11 +19,17 @@ vi.mock("../../../src/models", () => ({
   },
 }));
 
+vi.mock("../../../src/services/AnnualMembershipAccessService", () => ({
+  hasAnnualMembershipAccessToProgram: vi.fn(),
+}));
+
 import { Program, Purchase } from "../../../src/models";
+import { hasAnnualMembershipAccessToProgram } from "../../../src/services/AnnualMembershipAccessService";
 
 describe("CoOrganizerProgramAccessService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(hasAnnualMembershipAccessToProgram).mockResolvedValue(false);
   });
 
   afterEach(() => {
@@ -35,7 +41,7 @@ describe("CoOrganizerProgramAccessService", () => {
       const result =
         await CoOrganizerProgramAccessService.validateCoOrganizerAccess(
           undefined,
-          ["program1"]
+          ["program1"],
         );
 
       expect(result.valid).toBe(true);
@@ -45,7 +51,7 @@ describe("CoOrganizerProgramAccessService", () => {
       const result =
         await CoOrganizerProgramAccessService.validateCoOrganizerAccess(
           [],
-          ["program1"]
+          ["program1"],
         );
 
       expect(result.valid).toBe(true);
@@ -60,7 +66,7 @@ describe("CoOrganizerProgramAccessService", () => {
       const result =
         await CoOrganizerProgramAccessService.validateCoOrganizerAccess(
           organizers,
-          undefined
+          undefined,
         );
 
       expect(result.valid).toBe(true);
@@ -75,7 +81,7 @@ describe("CoOrganizerProgramAccessService", () => {
       const result =
         await CoOrganizerProgramAccessService.validateCoOrganizerAccess(
           organizers,
-          []
+          [],
         );
 
       expect(result.valid).toBe(true);
@@ -99,7 +105,7 @@ describe("CoOrganizerProgramAccessService", () => {
       const result =
         await CoOrganizerProgramAccessService.validateCoOrganizerAccess(
           organizers,
-          [programId.toString()]
+          [programId.toString()],
         );
 
       expect(result.valid).toBe(true);
@@ -124,7 +130,7 @@ describe("CoOrganizerProgramAccessService", () => {
       const result =
         await CoOrganizerProgramAccessService.validateCoOrganizerAccess(
           organizers,
-          [programId.toString()]
+          [programId.toString()],
         );
 
       expect(result.valid).toBe(true);
@@ -156,7 +162,7 @@ describe("CoOrganizerProgramAccessService", () => {
       const result =
         await CoOrganizerProgramAccessService.validateCoOrganizerAccess(
           organizers,
-          [programId.toString()]
+          [programId.toString()],
         );
 
       expect(result.valid).toBe(true);
@@ -184,7 +190,7 @@ describe("CoOrganizerProgramAccessService", () => {
       const result =
         await CoOrganizerProgramAccessService.validateCoOrganizerAccess(
           organizers,
-          [programId.toString()]
+          [programId.toString()],
         );
 
       expect(result.valid).toBe(false);
@@ -244,13 +250,13 @@ describe("CoOrganizerProgramAccessService", () => {
       const result =
         await CoOrganizerProgramAccessService.validateCoOrganizerAccess(
           organizers,
-          [programId.toString()]
+          [programId.toString()],
         );
 
       expect(result.valid).toBe(false);
       expect(result.error?.data?.unauthorizedCoOrganizers).toHaveLength(1);
       expect(result.error?.data?.unauthorizedCoOrganizers[0].name).toBe(
-        "Bob Wilson"
+        "Bob Wilson",
       );
     });
 
@@ -295,7 +301,7 @@ describe("CoOrganizerProgramAccessService", () => {
       const result =
         await CoOrganizerProgramAccessService.validateCoOrganizerAccess(
           organizers,
-          [program1Id.toString(), program2Id.toString()]
+          [program1Id.toString(), program2Id.toString()],
         );
 
       // Should pass because user has access to at least one program (program2)
@@ -331,7 +337,7 @@ describe("CoOrganizerProgramAccessService", () => {
       const result =
         await CoOrganizerProgramAccessService.validateCoOrganizerAccess(
           organizers,
-          [freeProgramId.toString(), paidProgramId.toString()]
+          [freeProgramId.toString(), paidProgramId.toString()],
         );
 
       // Should fail because user doesn't have access to the paid program
@@ -359,7 +365,7 @@ describe("CoOrganizerProgramAccessService", () => {
       const result =
         await CoOrganizerProgramAccessService.validateCoOrganizerAccess(
           organizers,
-          [programId.toString()]
+          [programId.toString()],
         );
 
       // Should pass because all organizers without userId are skipped
@@ -377,7 +383,7 @@ describe("CoOrganizerProgramAccessService", () => {
       const result =
         await CoOrganizerProgramAccessService.validateCoOrganizerAccess(
           organizers,
-          ["invalid-id", "another-invalid"]
+          ["invalid-id", "another-invalid"],
         );
 
       // Should pass because no valid programs means no paid program restrictions
@@ -411,7 +417,7 @@ describe("CoOrganizerProgramAccessService", () => {
       const result =
         await CoOrganizerProgramAccessService.validateCoOrganizerAccess(
           organizers,
-          [programId.toString()]
+          [programId.toString()],
         );
 
       expect(result.valid).toBe(false);

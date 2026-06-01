@@ -5,19 +5,24 @@
 
 import mongoose from "mongoose";
 
+const verboseLogs = process.env.VITEST_VERBOSE_LOGS === "true";
+const log = (...args: unknown[]) => {
+  if (verboseLogs) console.log(...args);
+};
+
 export async function setup() {
-  console.log("🔧 Setting up test environment...");
+  log("Setting up test environment...");
 
   // Set test environment variables
   process.env.NODE_ENV = "test";
   process.env.JWT_SECRET = "test-secret-key-for-jwt-tokens";
   process.env.EMAIL_SERVICE_ENABLED = "false";
 
-  console.log("✅ Test environment ready");
+  log("Test environment ready");
 }
 
 export async function teardown() {
-  console.log("🧹 Cleaning up test environment...");
+  log("Cleaning up test environment...");
 
   try {
     // Connect to test database for cleanup
@@ -35,7 +40,7 @@ export async function teardown() {
     }
 
     await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });
-    console.log(`📦 Connected to test database for cleanup`);
+    log("Connected to test database for cleanup");
 
     // Import and run safe cleanup (preserves real users)
     const { safeCleanupAllTestData } =
@@ -43,7 +48,7 @@ export async function teardown() {
     await safeCleanupAllTestData();
 
     await mongoose.disconnect();
-    console.log("✅ Test environment cleaned up (real users preserved)");
+    log("Test environment cleaned up (real users preserved)");
   } catch (error) {
     // Don't fail the test run if cleanup fails
     console.error("⚠️  Cleanup error (non-fatal):", error);

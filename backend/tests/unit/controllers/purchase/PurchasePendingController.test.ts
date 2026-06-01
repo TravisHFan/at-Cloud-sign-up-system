@@ -8,13 +8,27 @@ import mongoose from "mongoose";
 vi.mock("../../../../src/models/Purchase");
 
 /**
- * Helper to create mock chain for Purchase.find().populate().populate().sort()
+ * Helper to create mock chain for Purchase.find().populate().populate().populate().sort()
  */
 function mockPurchaseFindChain(purchases: any[]) {
   return {
     populate: vi.fn().mockReturnValue({
       populate: vi.fn().mockReturnValue({
-        sort: vi.fn().mockResolvedValue(purchases),
+        populate: vi.fn().mockReturnValue({
+          sort: vi.fn().mockResolvedValue(purchases),
+        }),
+      }),
+    }),
+  } as any;
+}
+
+function mockPurchaseFindChainWithSort(sortMock: ReturnType<typeof vi.fn>) {
+  return {
+    populate: vi.fn().mockReturnValue({
+      populate: vi.fn().mockReturnValue({
+        populate: vi.fn().mockReturnValue({
+          sort: sortMock,
+        }),
       }),
     }),
   } as any;
@@ -58,7 +72,7 @@ describe("PurchasePendingController", () => {
 
       await PurchasePendingController.getMyPendingPurchases(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(401);
@@ -80,7 +94,7 @@ describe("PurchasePendingController", () => {
 
       await PurchasePendingController.getMyPendingPurchases(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -94,12 +108,12 @@ describe("PurchasePendingController", () => {
       // Verify the date is approximately 24 hours ago (within 1 second tolerance)
       const callArgs = deleteManyMock.mock.calls[0][0];
       const timeDiff = Math.abs(
-        callArgs.createdAt.$lt.getTime() - twentyFourHoursAgo.getTime()
+        callArgs.createdAt.$lt.getTime() - twentyFourHoursAgo.getTime(),
       );
       expect(timeDiff).toBeLessThan(1000);
 
       expect(console.log).toHaveBeenCalledWith(
-        `Auto-cleaned 3 expired pending purchases for user ${userId}`
+        `Auto-cleaned 3 expired pending purchases for user ${userId}`,
       );
     });
 
@@ -116,11 +130,11 @@ describe("PurchasePendingController", () => {
 
       await PurchasePendingController.getMyPendingPurchases(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(console.log).not.toHaveBeenCalledWith(
-        expect.stringContaining("Auto-cleaned")
+        expect.stringContaining("Auto-cleaned"),
       );
     });
 
@@ -137,7 +151,7 @@ describe("PurchasePendingController", () => {
 
       await PurchasePendingController.getMyPendingPurchases(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -183,20 +197,16 @@ describe("PurchasePendingController", () => {
         },
       ];
 
-      vi.mocked(Purchase.find).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockReturnValue({
-            sort: vi.fn().mockResolvedValue(mockPendingPurchases),
-          }),
-        }),
-      } as any);
+      vi.mocked(Purchase.find).mockReturnValue(
+        mockPurchaseFindChain(mockPendingPurchases),
+      );
 
       // Mock findOne to return null (no completed purchases)
       vi.mocked(Purchase.findOne).mockResolvedValue(null);
 
       await PurchasePendingController.getMyPendingPurchases(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -250,7 +260,9 @@ describe("PurchasePendingController", () => {
         return {
           populate: vi.fn().mockReturnValue({
             populate: vi.fn().mockReturnValue({
-              sort: vi.fn().mockResolvedValue(result),
+              populate: vi.fn().mockReturnValue({
+                sort: vi.fn().mockResolvedValue(result),
+              }),
             }),
           }),
         } as any;
@@ -264,7 +276,7 @@ describe("PurchasePendingController", () => {
 
       await PurchasePendingController.getMyPendingPurchases(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(Purchase.deleteMany).toHaveBeenCalledWith({
@@ -272,7 +284,7 @@ describe("PurchasePendingController", () => {
       });
 
       expect(console.log).toHaveBeenCalledWith(
-        `Auto-cleaned 1 redundant pending purchases (already purchased items) for user ${userId}`
+        `Auto-cleaned 1 redundant pending purchases (already purchased items) for user ${userId}`,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -316,32 +328,32 @@ describe("PurchasePendingController", () => {
         },
       ];
 
-      vi.mocked(Purchase.find).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockReturnValue({
-            sort: vi.fn().mockResolvedValue(mockPendingPurchases),
-          }),
-        }),
-      } as any);
+      vi.mocked(Purchase.find).mockReturnValue(
+        mockPurchaseFindChain(mockPendingPurchases),
+      );
 
       const findOneMock = vi.fn().mockResolvedValue(null);
       vi.mocked(Purchase.findOne).mockImplementation(findOneMock);
 
       await PurchasePendingController.getMyPendingPurchases(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(findOneMock).toHaveBeenCalledTimes(2);
       expect(findOneMock).toHaveBeenCalledWith({
         userId: userId,
         programId: programId1,
+        purchaseType: "program",
         status: "completed",
+        unenrolledAt: { $exists: false },
       });
       expect(findOneMock).toHaveBeenCalledWith({
         userId: userId,
         programId: programId2,
+        purchaseType: "program",
         status: "completed",
+        unenrolledAt: { $exists: false },
       });
     });
 
@@ -354,19 +366,13 @@ describe("PurchasePendingController", () => {
         deletedCount: 0,
       } as any);
 
-      const findMock = vi.fn().mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockReturnValue({
-            sort: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      });
+      const findMock = vi.fn().mockReturnValue(mockPurchaseFindChain([]));
 
       vi.mocked(Purchase.find).mockImplementation(findMock);
 
       await PurchasePendingController.getMyPendingPurchases(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(findMock).toHaveBeenCalledWith({
@@ -384,8 +390,14 @@ describe("PurchasePendingController", () => {
         deletedCount: 0,
       } as any);
 
-      const populateMock = vi.fn().mockReturnValue({
+      const membershipPopulateMock = vi.fn().mockReturnValue({
         sort: vi.fn().mockResolvedValue([]),
+      });
+      const eventPopulateMock = vi.fn().mockReturnValue({
+        populate: membershipPopulateMock,
+      });
+      const populateMock = vi.fn().mockReturnValue({
+        populate: eventPopulateMock,
       });
 
       vi.mocked(Purchase.find).mockReturnValue({
@@ -394,12 +406,17 @@ describe("PurchasePendingController", () => {
 
       await PurchasePendingController.getMyPendingPurchases(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(populateMock).toHaveBeenCalledWith(
         "programId",
-        "title programType"
+        "title programType",
+      );
+      expect(eventPopulateMock).toHaveBeenCalledWith("eventId", "title date");
+      expect(membershipPopulateMock).toHaveBeenCalledWith(
+        "membershipId",
+        "title price",
       );
     });
 
@@ -414,17 +431,13 @@ describe("PurchasePendingController", () => {
 
       const sortMock = vi.fn().mockResolvedValue([]);
 
-      vi.mocked(Purchase.find).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockReturnValue({
-            sort: sortMock,
-          }),
-        }),
-      } as any);
+      vi.mocked(Purchase.find).mockReturnValue(
+        mockPurchaseFindChainWithSort(sortMock),
+      );
 
       await PurchasePendingController.getMyPendingPurchases(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(sortMock).toHaveBeenCalledWith({ createdAt: -1 });
@@ -468,7 +481,9 @@ describe("PurchasePendingController", () => {
         return {
           populate: vi.fn().mockReturnValue({
             populate: vi.fn().mockReturnValue({
-              sort: vi.fn().mockResolvedValue(result),
+              populate: vi.fn().mockReturnValue({
+                sort: vi.fn().mockResolvedValue(result),
+              }),
             }),
           }),
         };
@@ -481,7 +496,7 @@ describe("PurchasePendingController", () => {
 
       await PurchasePendingController.getMyPendingPurchases(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       // Should be called twice: once initially, once after redundant cleanup
@@ -502,12 +517,12 @@ describe("PurchasePendingController", () => {
 
       await PurchasePendingController.getMyPendingPurchases(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(console.error).toHaveBeenCalledWith(
         "Error fetching pending purchases:",
-        dbError
+        dbError,
       );
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith({
@@ -526,22 +541,18 @@ describe("PurchasePendingController", () => {
       } as any);
 
       const fetchError = new Error("Fetch failed");
-      vi.mocked(Purchase.find).mockReturnValue({
-        populate: vi.fn().mockReturnValue({
-          populate: vi.fn().mockReturnValue({
-            sort: vi.fn().mockRejectedValue(fetchError),
-          }),
-        }),
-      } as any);
+      vi.mocked(Purchase.find).mockReturnValue(
+        mockPurchaseFindChainWithSort(vi.fn().mockRejectedValue(fetchError)),
+      );
 
       await PurchasePendingController.getMyPendingPurchases(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(console.error).toHaveBeenCalledWith(
         "Error fetching pending purchases:",
-        fetchError
+        fetchError,
       );
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith({
@@ -556,17 +567,17 @@ describe("PurchasePendingController", () => {
       };
 
       vi.mocked(Purchase.deleteMany).mockRejectedValue(
-        "Unexpected string error"
+        "Unexpected string error",
       );
 
       await PurchasePendingController.getMyPendingPurchases(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(console.error).toHaveBeenCalledWith(
         "Error fetching pending purchases:",
-        "Unexpected string error"
+        "Unexpected string error",
       );
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith({
@@ -622,7 +633,9 @@ describe("PurchasePendingController", () => {
         return {
           populate: vi.fn().mockReturnValue({
             populate: vi.fn().mockReturnValue({
-              sort: vi.fn().mockResolvedValue(result),
+              populate: vi.fn().mockReturnValue({
+                sort: vi.fn().mockResolvedValue(result),
+              }),
             }),
           }),
         } as any;
@@ -635,7 +648,7 @@ describe("PurchasePendingController", () => {
 
       await PurchasePendingController.getMyPendingPurchases(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(Purchase.deleteMany).toHaveBeenCalledWith({
@@ -643,7 +656,7 @@ describe("PurchasePendingController", () => {
       });
 
       expect(console.log).toHaveBeenCalledWith(
-        `Auto-cleaned 2 redundant pending purchases (already purchased items) for user ${userId}`
+        `Auto-cleaned 2 redundant pending purchases (already purchased items) for user ${userId}`,
       );
     });
 
@@ -690,7 +703,9 @@ describe("PurchasePendingController", () => {
         return {
           populate: vi.fn().mockReturnValue({
             populate: vi.fn().mockReturnValue({
-              sort: vi.fn().mockResolvedValue(result),
+              populate: vi.fn().mockReturnValue({
+                sort: vi.fn().mockResolvedValue(result),
+              }),
             }),
           }),
         } as any;
@@ -704,13 +719,15 @@ describe("PurchasePendingController", () => {
 
       await PurchasePendingController.getMyPendingPurchases(
         mockReq as Request,
-        mockRes as Response
+        mockRes as Response,
       );
 
       expect(Purchase.findOne).toHaveBeenCalledWith({
         userId: userId,
         eventId: eventId1,
+        purchaseType: "event",
         status: "completed",
+        unenrolledAt: { $exists: false },
       });
 
       expect(statusMock).toHaveBeenCalledWith(200);

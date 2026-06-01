@@ -252,7 +252,7 @@ describe("UpdateController", () => {
       expect(jsonMock).toHaveBeenCalledWith({
         success: false,
         message:
-          "Insufficient permissions to edit this event. You must be the event creator, a co-organizer, or a Leader who is a mentor/class rep of an affiliated program.",
+          "Insufficient permissions to edit this event. You must be the event creator, a co-organizer, or a mentor/class rep of an affiliated program.",
       });
     });
 
@@ -890,16 +890,22 @@ describe("UpdateController", () => {
       vi.mocked(AuditLog.create).mockRejectedValue(
         new Error("Audit log DB error"),
       );
-      vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleErrorSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
-      await UpdateController.updateEvent(req as Request, res as Response);
+      try {
+        await UpdateController.updateEvent(req as Request, res as Response);
 
-      expect(console.error).toHaveBeenCalledWith(
-        "Failed to create audit log for event cancellation:",
-        expect.any(Error),
-      );
-      // Should still return success
-      expect(statusMock).toHaveBeenCalledWith(200);
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          "Failed to create audit log for event cancellation:",
+          expect.any(Error),
+        );
+        // Should still return success
+        expect(statusMock).toHaveBeenCalledWith(200);
+      } finally {
+        consoleErrorSpy.mockRestore();
+      }
     });
   });
 
@@ -1197,15 +1203,24 @@ describe("UpdateController", () => {
 
     it("should return 500 on database error", async () => {
       vi.mocked(Event.findById).mockRejectedValue(new Error("Database error"));
-      vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleErrorSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
-      await UpdateController.updateYoutubeUrl(req as Request, res as Response);
+      try {
+        await UpdateController.updateYoutubeUrl(
+          req as Request,
+          res as Response,
+        );
 
-      expect(statusMock).toHaveBeenCalledWith(500);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        message: "Failed to update YouTube URL.",
-      });
+        expect(statusMock).toHaveBeenCalledWith(500);
+        expect(jsonMock).toHaveBeenCalledWith({
+          success: false,
+          message: "Failed to update YouTube URL.",
+        });
+      } finally {
+        consoleErrorSpy.mockRestore();
+      }
     });
   });
 });

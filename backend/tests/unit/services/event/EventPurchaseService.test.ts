@@ -94,9 +94,8 @@ describe("EventPurchaseService", () => {
 
       vi.mocked(Event.findById).mockResolvedValue(mockEvent as unknown);
 
-      const result = await EventPurchaseService.createEventPurchase(
-        validParams
-      );
+      const result =
+        await EventPurchaseService.createEventPurchase(validParams);
 
       expect(Event.findById).toHaveBeenCalled();
       expect(result).toBeDefined();
@@ -108,7 +107,7 @@ describe("EventPurchaseService", () => {
       vi.mocked(Event.findById).mockResolvedValue(null);
 
       await expect(
-        EventPurchaseService.createEventPurchase(validParams)
+        EventPurchaseService.createEventPurchase(validParams),
       ).rejects.toThrow("Event not found");
     });
 
@@ -121,7 +120,7 @@ describe("EventPurchaseService", () => {
       vi.mocked(Event.findById).mockResolvedValue(mockEvent as unknown);
 
       await expect(
-        EventPurchaseService.createEventPurchase(validParams)
+        EventPurchaseService.createEventPurchase(validParams),
       ).rejects.toThrow("Cannot purchase tickets for free events");
     });
 
@@ -134,7 +133,7 @@ describe("EventPurchaseService", () => {
       vi.mocked(Event.findById).mockResolvedValue(mockEvent as unknown);
 
       await expect(
-        EventPurchaseService.createEventPurchase(validParams)
+        EventPurchaseService.createEventPurchase(validParams),
       ).rejects.toThrow("Cannot purchase tickets for free events");
     });
   });
@@ -148,7 +147,7 @@ describe("EventPurchaseService", () => {
 
       const result = await EventPurchaseService.hasUserPurchasedEvent(
         userId,
-        eventId
+        eventId,
       );
 
       expect(result).toBe(true);
@@ -157,6 +156,7 @@ describe("EventPurchaseService", () => {
         purchaseType: "event",
         eventId: expect.any(mongoose.Types.ObjectId),
         status: "completed",
+        unenrolledAt: { $exists: false },
       });
     });
 
@@ -165,7 +165,7 @@ describe("EventPurchaseService", () => {
 
       const result = await EventPurchaseService.hasUserPurchasedEvent(
         userId,
-        eventId
+        eventId,
       );
 
       expect(result).toBe(false);
@@ -179,7 +179,7 @@ describe("EventPurchaseService", () => {
 
       const result = await EventPurchaseService.hasUserPurchasedEvent(
         new mongoose.Types.ObjectId(userId),
-        new mongoose.Types.ObjectId(eventId)
+        new mongoose.Types.ObjectId(eventId),
       );
 
       expect(result).toBe(true);
@@ -190,7 +190,7 @@ describe("EventPurchaseService", () => {
 
       const result = await EventPurchaseService.hasUserPurchasedEvent(
         userId,
-        eventId
+        eventId,
       );
 
       expect(result).toBe(false);
@@ -256,7 +256,7 @@ describe("EventPurchaseService", () => {
       } as unknown as mongoose.Query<unknown, unknown>);
 
       await EventPurchaseService.getPurchaseById(
-        new mongoose.Types.ObjectId(purchaseId)
+        new mongoose.Types.ObjectId(purchaseId),
       );
 
       expect(Purchase.findById).toHaveBeenCalled();
@@ -270,7 +270,7 @@ describe("EventPurchaseService", () => {
       } as unknown as mongoose.Query<unknown, unknown>);
 
       await expect(
-        EventPurchaseService.getPurchaseById(purchaseId)
+        EventPurchaseService.getPurchaseById(purchaseId),
       ).rejects.toThrow("DB error");
     });
   });
@@ -283,19 +283,19 @@ describe("EventPurchaseService", () => {
       };
 
       vi.mocked(Purchase.findByIdAndUpdate).mockResolvedValue(
-        mockPurchase as unknown
+        mockPurchase as unknown,
       );
 
       const result = await EventPurchaseService.updatePurchaseStatus(
         purchaseId,
-        "completed"
+        "completed",
       );
 
       expect(result).toEqual(mockPurchase);
       expect(Purchase.findByIdAndUpdate).toHaveBeenCalledWith(
         expect.any(mongoose.Types.ObjectId),
         { status: "completed" },
-        { new: true }
+        { new: true },
       );
     });
 
@@ -307,19 +307,19 @@ describe("EventPurchaseService", () => {
       };
 
       vi.mocked(Purchase.findByIdAndUpdate).mockResolvedValue(
-        mockPurchase as unknown
+        mockPurchase as unknown,
       );
 
       await EventPurchaseService.updatePurchaseStatus(
         purchaseId,
         "completed",
-        "pi_test_123"
+        "pi_test_123",
       );
 
       expect(Purchase.findByIdAndUpdate).toHaveBeenCalledWith(
         expect.any(mongoose.Types.ObjectId),
         { status: "completed", stripePaymentIntentId: "pi_test_123" },
-        { new: true }
+        { new: true },
       );
     });
 
@@ -328,7 +328,7 @@ describe("EventPurchaseService", () => {
 
       const result = await EventPurchaseService.updatePurchaseStatus(
         purchaseId,
-        "completed"
+        "completed",
       );
 
       expect(result).toBeNull();
@@ -342,7 +342,7 @@ describe("EventPurchaseService", () => {
 
       await EventPurchaseService.updatePurchaseStatus(
         new mongoose.Types.ObjectId(purchaseId),
-        "completed"
+        "completed",
       );
 
       expect(Purchase.findByIdAndUpdate).toHaveBeenCalled();
@@ -350,11 +350,11 @@ describe("EventPurchaseService", () => {
 
     it("should throw error on database failure", async () => {
       vi.mocked(Purchase.findByIdAndUpdate).mockRejectedValue(
-        new Error("DB error")
+        new Error("DB error"),
       );
 
       await expect(
-        EventPurchaseService.updatePurchaseStatus(purchaseId, "completed")
+        EventPurchaseService.updatePurchaseStatus(purchaseId, "completed"),
       ).rejects.toThrow("DB error");
     });
 
@@ -375,7 +375,7 @@ describe("EventPurchaseService", () => {
         expect(Purchase.findByIdAndUpdate).toHaveBeenCalledWith(
           expect.any(mongoose.Types.ObjectId),
           { status },
-          { new: true }
+          { new: true },
         );
       }
     });
@@ -391,7 +391,7 @@ describe("EventPurchaseService", () => {
       ];
 
       vi.mocked(Purchase.find).mockResolvedValue(
-        mockPurchases as unknown as never
+        mockPurchases as unknown as never,
       );
 
       const result = await EventPurchaseService.getEventTicketSales(eventId);
@@ -415,7 +415,7 @@ describe("EventPurchaseService", () => {
       vi.mocked(Purchase.find).mockResolvedValue([] as unknown as never);
 
       await EventPurchaseService.getEventTicketSales(
-        new mongoose.Types.ObjectId(eventId)
+        new mongoose.Types.ObjectId(eventId),
       );
 
       expect(Purchase.find).toHaveBeenCalled();
@@ -425,7 +425,7 @@ describe("EventPurchaseService", () => {
       vi.mocked(Purchase.find).mockRejectedValue(new Error("DB error"));
 
       await expect(
-        EventPurchaseService.getEventTicketSales(eventId)
+        EventPurchaseService.getEventTicketSales(eventId),
       ).rejects.toThrow("DB error");
     });
   });

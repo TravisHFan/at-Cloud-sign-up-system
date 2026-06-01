@@ -84,16 +84,24 @@ describe("ListController", () => {
       expect(jsonMock).toHaveBeenCalledWith({
         success: true,
         data: [
-          {
+          expect.objectContaining({
             id: programId1.toString(),
             title: "Program 1",
             programType: "Workshop",
-          },
-          {
+            programRoles: expect.objectContaining({
+              teacherRoleName: "Mentor",
+              studentRoles: expect.any(Array),
+            }),
+          }),
+          expect.objectContaining({
             id: programId2.toString(),
             title: "Program 2",
             programType: "Course",
-          },
+            programRoles: expect.objectContaining({
+              teacherRoleName: "Mentor",
+              studentRoles: expect.any(Array),
+            }),
+          }),
         ],
       });
     });

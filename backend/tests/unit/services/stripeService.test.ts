@@ -18,6 +18,7 @@ import {
   createCheckoutSession,
   stripe,
 } from "../../../src/services/stripeService";
+import { withSilencedConsole } from "../../test-utils/silenceConsole";
 
 // Mock the Stripe instance
 vi.mock("stripe", () => {
@@ -73,10 +74,10 @@ describe("Stripe Service Unit Tests", () => {
       expect(callArgs.line_items).toHaveLength(1);
       expect(callArgs.line_items[0].price_data.unit_amount).toBe(2000); // $20 in cents
       expect(callArgs.line_items[0].price_data.product_data.name).toBe(
-        "Test Mentor Circle"
+        "Test Mentor Circle",
       );
       expect(callArgs.line_items[0].price_data.product_data.description).toBe(
-        "Program enrollment"
+        "Program enrollment",
       );
     });
 
@@ -238,9 +239,9 @@ describe("Stripe Service Unit Tests", () => {
           classRepDiscount: 500, // $5.00 in cents
           finalPrice: 0,
           isClassRep: true,
-        })
+        }),
       ).rejects.toThrow(
-        /Cannot create payment for \$0\.00\. Stripe requires a minimum of \$0\.50/
+        /Cannot create payment for \$0\.00\. Stripe requires a minimum of \$0\.50/,
       );
 
       // Session creation should not be called
@@ -424,7 +425,7 @@ describe("Stripe Service Unit Tests", () => {
       const callArgs = mockSessionCreate.mock.calls[0][0];
 
       expect(callArgs.line_items[0].price_data.product_data.name).toBe(
-        "Mentor Circle: Leadership & Innovation (2025)"
+        "Mentor Circle: Leadership & Innovation (2025)",
       );
     });
 
@@ -437,9 +438,9 @@ describe("Stripe Service Unit Tests", () => {
           classRepDiscount: 1500, // $15.00 in cents
           finalPrice: 0, // Capped at 0, not negative
           isClassRep: true,
-        })
+        }),
       ).rejects.toThrow(
-        /Cannot create payment for \$0\.00\. Stripe requires a minimum of \$0\.50/
+        /Cannot create payment for \$0\.00\. Stripe requires a minimum of \$0\.50/,
       );
 
       // Should not create negative price - validation catches it first
@@ -574,9 +575,8 @@ describe("Stripe Service - Refunds", () => {
     };
     mockRefundsCreate.mockResolvedValue(mockRefund);
 
-    const { processRefund } = await import(
-      "../../../src/services/stripeService"
-    );
+    const { processRefund } =
+      await import("../../../src/services/stripeService");
 
     const result = await processRefund({
       paymentIntentId: "pi_test_001",
@@ -596,9 +596,8 @@ describe("Stripe Service - Refunds", () => {
   it("should include metadata when processing refund", async () => {
     mockRefundsCreate.mockResolvedValue({ id: "re_test_002" });
 
-    const { processRefund } = await import(
-      "../../../src/services/stripeService"
-    );
+    const { processRefund } =
+      await import("../../../src/services/stripeService");
 
     await processRefund({
       paymentIntentId: "pi_test_002",
@@ -623,9 +622,8 @@ describe("Stripe Service - Refunds", () => {
   it("should round amount to nearest cent", async () => {
     mockRefundsCreate.mockResolvedValue({ id: "re_test_003" });
 
-    const { processRefund } = await import(
-      "../../../src/services/stripeService"
-    );
+    const { processRefund } =
+      await import("../../../src/services/stripeService");
 
     await processRefund({
       paymentIntentId: "pi_test_003",
@@ -635,7 +633,7 @@ describe("Stripe Service - Refunds", () => {
     expect(mockRefundsCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         amount: 2000,
-      })
+      }),
     );
   });
 
@@ -657,19 +655,20 @@ describe("Stripe Service - Refunds", () => {
 
   it("should handle refund errors", async () => {
     mockRefundsCreate.mockRejectedValue(
-      new Error("Insufficient funds for refund")
+      new Error("Insufficient funds for refund"),
     );
 
-    const { processRefund } = await import(
-      "../../../src/services/stripeService"
-    );
+    const { processRefund } =
+      await import("../../../src/services/stripeService");
 
-    await expect(
-      processRefund({
-        paymentIntentId: "pi_test_error",
-        amount: 5000,
-      })
-    ).rejects.toThrow("Insufficient funds for refund");
+    await withSilencedConsole(["error"], () =>
+      expect(
+        processRefund({
+          paymentIntentId: "pi_test_error",
+          amount: 5000,
+        }),
+      ).rejects.toThrow("Insufficient funds for refund"),
+    );
   });
 });
 
@@ -699,9 +698,8 @@ describe("Stripe Service - Payment Intent & Checkout Retrieval", () => {
     };
     mockPaymentIntentsRetrieve.mockResolvedValue(mockPaymentIntent);
 
-    const { getPaymentIntent } = await import(
-      "../../../src/services/stripeService"
-    );
+    const { getPaymentIntent } =
+      await import("../../../src/services/stripeService");
 
     const result = await getPaymentIntent("pi_test_001");
 
@@ -717,9 +715,8 @@ describe("Stripe Service - Payment Intent & Checkout Retrieval", () => {
     };
     mockSessionsRetrieve.mockResolvedValue(mockSession);
 
-    const { getCheckoutSession } = await import(
-      "../../../src/services/stripeService"
-    );
+    const { getCheckoutSession } =
+      await import("../../../src/services/stripeService");
 
     const result = await getCheckoutSession("cs_test_001");
 
@@ -748,9 +745,8 @@ describe("Stripe Service - Webhook Events", () => {
       constructEvent: mockConstructEvent,
     };
 
-    const { constructWebhookEvent } = await import(
-      "../../../src/services/stripeService"
-    );
+    const { constructWebhookEvent } =
+      await import("../../../src/services/stripeService");
 
     const result = constructWebhookEvent(payload, signature);
 
@@ -785,9 +781,8 @@ describe("Stripe Service - Donation Customer Management", () => {
       data: [existingCustomer],
     });
 
-    const { getOrCreateDonationCustomer } = await import(
-      "../../../src/services/stripeService"
-    );
+    const { getOrCreateDonationCustomer } =
+      await import("../../../src/services/stripeService");
 
     const customerId = await getOrCreateDonationCustomer({
       userId: "user123",
@@ -811,9 +806,8 @@ describe("Stripe Service - Donation Customer Management", () => {
     };
     mockCustomersCreate.mockResolvedValue(newCustomer);
 
-    const { getOrCreateDonationCustomer } = await import(
-      "../../../src/services/stripeService"
-    );
+    const { getOrCreateDonationCustomer } =
+      await import("../../../src/services/stripeService");
 
     const customerId = await getOrCreateDonationCustomer({
       userId: "user456",
@@ -863,9 +857,8 @@ describe("Stripe Service - Donation Checkout Sessions", () => {
       url: "https://checkout.stripe.com/pay/cs_donation_001",
     });
 
-    const { createDonationCheckoutSession } = await import(
-      "../../../src/services/stripeService"
-    );
+    const { createDonationCheckoutSession } =
+      await import("../../../src/services/stripeService");
 
     const today = new Date();
     const result = await createDonationCheckoutSession({
@@ -881,10 +874,10 @@ describe("Stripe Service - Donation Checkout Sessions", () => {
 
     expect(callArgs.line_items[0].price_data.unit_amount).toBe(5000);
     expect(callArgs.line_items[0].price_data.product_data.name).toBe(
-      "Ministry Donation"
+      "Ministry Donation",
     );
     expect(
-      callArgs.line_items[0].price_data.product_data.description
+      callArgs.line_items[0].price_data.product_data.description,
     ).toContain("One-time donation to our ministry");
     expect(callArgs.metadata).toMatchObject({
       donationId: "donation_123",
@@ -900,9 +893,8 @@ describe("Stripe Service - Donation Checkout Sessions", () => {
     });
     mockSessionCreate.mockResolvedValue({ id: "cs_donation_002" });
 
-    const { createDonationCheckoutSession } = await import(
-      "../../../src/services/stripeService"
-    );
+    const { createDonationCheckoutSession } =
+      await import("../../../src/services/stripeService");
 
     const futureDate = new Date();
     futureDate.setMonth(futureDate.getMonth() + 1);
@@ -919,14 +911,13 @@ describe("Stripe Service - Donation Checkout Sessions", () => {
     const callArgs = mockSessionCreate.mock.calls[0][0];
 
     expect(
-      callArgs.line_items[0].price_data.product_data.description
+      callArgs.line_items[0].price_data.product_data.description,
     ).toContain("scheduled for");
   });
 
   it("should reject donation amount below $1.00", async () => {
-    const { createDonationCheckoutSession } = await import(
-      "../../../src/services/stripeService"
-    );
+    const { createDonationCheckoutSession } =
+      await import("../../../src/services/stripeService");
 
     await expect(
       createDonationCheckoutSession({
@@ -936,7 +927,7 @@ describe("Stripe Service - Donation Checkout Sessions", () => {
         userName: "Bob Donor",
         amount: 50, // $0.50 - below minimum
         giftDate: new Date(),
-      })
+      }),
     ).rejects.toThrow("Donation amount must be at least $1.00");
 
     expect(mockSessionCreate).not.toHaveBeenCalled();
@@ -948,9 +939,8 @@ describe("Stripe Service - Donation Checkout Sessions", () => {
     });
     mockSessionCreate.mockResolvedValue({ id: "cs_donation_003" });
 
-    const { createDonationCheckoutSession } = await import(
-      "../../../src/services/stripeService"
-    );
+    const { createDonationCheckoutSession } =
+      await import("../../../src/services/stripeService");
 
     await createDonationCheckoutSession({
       donationId: "donation_789",

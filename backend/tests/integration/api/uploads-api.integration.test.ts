@@ -250,22 +250,12 @@ describe("Uploads API - Integration Tests", () => {
       });
 
       it("should allow authenticated regular members to upload images", async () => {
-        console.log("Test PNG path:", validImagePath);
-        console.log("PNG exists:", fs.existsSync(validImagePath));
-        if (fs.existsSync(validImagePath)) {
-          const stats = fs.statSync(validImagePath);
-          console.log("PNG size:", stats.size, "bytes");
-          const buffer = fs.readFileSync(validImagePath);
-          console.log("PNG signature:", buffer.slice(0, 8).toString("hex"));
-        }
+        expect(fs.existsSync(validImagePath)).toBe(true);
 
         const response = await request(app)
           .post("/api/uploads/image")
           .set("Authorization", `Bearer ${memberToken}`)
           .attach("image", validImagePath);
-
-        console.log("Response status:", response.status);
-        console.log("Response body:", JSON.stringify(response.body, null, 2));
 
         expect(response.status).toBe(200);
         expect(response.body.success).toBe(true);
@@ -619,7 +609,8 @@ describe("Uploads API - Integration Tests", () => {
             error &&
             typeof error === "object" &&
             "code" in error &&
-            error.code !== "EPIPE"
+            error.code !== "EPIPE" &&
+            error.code !== "ECONNRESET"
           ) {
             throw error;
           }
@@ -656,7 +647,8 @@ describe("Uploads API - Integration Tests", () => {
             error &&
             typeof error === "object" &&
             "code" in error &&
-            error.code !== "EPIPE"
+            error.code !== "EPIPE" &&
+            error.code !== "ECONNRESET"
           ) {
             throw error;
           }

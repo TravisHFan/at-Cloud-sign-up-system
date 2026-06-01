@@ -219,6 +219,7 @@ describe("EventProgramLinkageService", () => {
         userId: mockUser._id,
         programId: validProgramId1,
         status: "completed",
+        unenrolledAt: { $exists: false },
       });
     });
 
@@ -251,6 +252,7 @@ describe("EventProgramLinkageService", () => {
         userId: classRepUser._id,
         programId: validProgramId1,
         status: "completed",
+        unenrolledAt: { $exists: false },
         isClassRep: true,
       });
     });
@@ -284,6 +286,7 @@ describe("EventProgramLinkageService", () => {
         userId: participantUser._id,
         programId: validProgramId1,
         status: "completed",
+        unenrolledAt: { $exists: false },
         isClassRep: true,
       });
     });
