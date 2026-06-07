@@ -21,7 +21,11 @@ describe("DeletionController - DELETE /api/promo-codes/:id", () => {
       username: "admin",
       email: "admin@test.com",
       password: "Password123",
+      firstName: "Admin",
+      lastName: "User",
+      gender: "male",
       role: ROLES.ADMINISTRATOR,
+      isAtCloudLeader: false,
       isActive: true,
       isVerified: true,
     });
@@ -34,7 +38,11 @@ describe("DeletionController - DELETE /api/promo-codes/:id", () => {
       username: "user",
       email: "user@test.com",
       password: "Password123",
+      firstName: "Regular",
+      lastName: "User",
+      gender: "female",
       role: ROLES.PARTICIPANT,
+      isAtCloudLeader: false,
       isActive: true,
       isVerified: true,
     });
