@@ -30,15 +30,13 @@ export const GuestRegistrationForm: React.FC<Props> = ({
   onSuccess,
   perspective = "self",
 }) => {
-  type GuestSignupFormState = Omit<GuestSignupPayload, "gender"> & {
-    gender?: "male" | "female";
-  };
+  type GuestSignupFormState = GuestSignupPayload;
 
   const [form, setForm] = useState<GuestSignupFormState>({
     roleId,
     fullName: "",
     email: "",
-    gender: undefined, // start empty; UI requires user to choose before submit
+    gender: undefined,
     phone: "",
     notes: "",
   });
@@ -62,21 +60,16 @@ export const GuestRegistrationForm: React.FC<Props> = ({
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    // Validate before toggling submitting state so early returns don't leave it stuck
-    // Enforce required gender selection in UI
-    if (form.gender !== "male" && form.gender !== "female") {
-      setError(guestCopy.errors.genderRequired(perspective));
-      return;
-    }
     // Phone is optional now; no hard requirement in UI
 
     setSubmitting(true);
     try {
+      const { gender, ...formWithoutGender } = form;
       const payload: GuestSignupPayload = {
         // Always submit the latest selected roleId from props to avoid stale state
-        ...(form as Omit<GuestSignupPayload, "gender">),
-        gender: form.gender as "male" | "female",
+        ...formWithoutGender,
         roleId,
+        ...(gender ? { gender } : {}),
         ...(form.phone && form.phone.trim()
           ? { phone: normalizePhoneForSubmit(form.phone) }
           : {}),
@@ -192,9 +185,8 @@ export const GuestRegistrationForm: React.FC<Props> = ({
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white appearance-none cursor-pointer pl-12"
               value={form.gender || ""}
               onChange={update("gender")}
-              required
             >
-              <option value="" disabled>
+              <option value="">
                 {guestCopy.placeholders.gender(perspective)}
               </option>
               <option value="male">Male</option>

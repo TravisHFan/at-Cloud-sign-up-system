@@ -106,6 +106,7 @@ describe("RegistrationController", () => {
           email: "existing@example.com",
           password: "password123",
           confirmPassword: "password123",
+          gender: "male",
           acceptTerms: true,
         };
 
@@ -135,6 +136,7 @@ describe("RegistrationController", () => {
           email: "new@example.com",
           password: "password123",
           confirmPassword: "password123",
+          gender: "male",
           acceptTerms: true,
         };
 
@@ -164,6 +166,7 @@ describe("RegistrationController", () => {
           email: "test@example.com",
           password: "password123",
           confirmPassword: "password123",
+          gender: "male",
           acceptTerms: true,
           isAtCloudLeader: true,
           // roleInAtCloud is missing
@@ -186,12 +189,37 @@ describe("RegistrationController", () => {
         );
       });
 
+      it("should return 400 if gender is missing or invalid", async () => {
+        mockReq.body = {
+          username: "testuser",
+          email: "test@example.com",
+          password: "password123",
+          confirmPassword: "password123",
+          acceptTerms: true,
+        };
+
+        await RegistrationController.register(
+          mockReq as Request,
+          mockRes as Response
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(400);
+        expect(jsonMock).toHaveBeenCalledWith(
+          expect.objectContaining({
+            success: false,
+            message: "Gender must be either 'male' or 'female'",
+            statusCode: 400,
+          })
+        );
+      });
+
       it("should check for existing users case-insensitively", async () => {
         mockReq.body = {
           username: "testuser",
           email: "TEST@EXAMPLE.COM",
           password: "password123",
           confirmPassword: "password123",
+          gender: "male",
           acceptTerms: true,
         };
 
@@ -234,6 +262,7 @@ describe("RegistrationController", () => {
           confirmPassword: "password123",
           firstName: "John",
           lastName: "Doe",
+          gender: "male",
           acceptTerms: true,
         };
 
@@ -295,6 +324,7 @@ describe("RegistrationController", () => {
           email: "worker@example.com",
           password: "password123",
           confirmPassword: "password123",
+          gender: "male",
           isAtCloudLeader: true,
           roleInAtCloud: "IT Support",
           acceptTerms: true,
@@ -353,6 +383,7 @@ describe("RegistrationController", () => {
           email: "worker@example.com",
           password: "password123",
           confirmPassword: "password123",
+          gender: "male",
           isAtCloudLeader: true,
           roleInAtCloud: "IT Support",
           acceptTerms: true,
@@ -399,6 +430,7 @@ describe("RegistrationController", () => {
           email: "new@example.com",
           password: "password123",
           confirmPassword: "password123",
+          gender: "male",
           acceptTerms: true,
         };
 
@@ -443,6 +475,7 @@ describe("RegistrationController", () => {
           email: "new@example.com",
           password: "password123",
           confirmPassword: "password123",
+          gender: "male",
           acceptTerms: true,
         };
 
@@ -488,6 +521,7 @@ describe("RegistrationController", () => {
           email: "new@example.com",
           password: "password123",
           confirmPassword: "password123",
+          gender: "male",
           acceptTerms: true,
         };
 
@@ -533,6 +567,7 @@ describe("RegistrationController", () => {
           email: "duplicate@example.com",
           password: "password123",
           confirmPassword: "password123",
+          gender: "male",
           acceptTerms: true,
         };
 
@@ -570,6 +605,7 @@ describe("RegistrationController", () => {
           email: "new@example.com",
           password: "password123",
           confirmPassword: "password123",
+          gender: "male",
           acceptTerms: true,
         };
 
@@ -609,6 +645,7 @@ describe("RegistrationController", () => {
           email: "new@example.com",
           password: "password123",
           confirmPassword: "password123",
+          gender: "male",
           acceptTerms: true,
         };
 

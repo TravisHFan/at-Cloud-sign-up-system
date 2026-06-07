@@ -139,6 +139,8 @@ export const validateUserRegistration = [
     .withMessage("Last name is required and must be less than 50 characters"),
 
   body("gender")
+    .notEmpty()
+    .withMessage("Gender is required")
     .isIn(["male", "female"])
     .withMessage("Gender must be either 'male' or 'female'"),
 

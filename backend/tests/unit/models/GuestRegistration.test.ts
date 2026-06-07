@@ -60,11 +60,32 @@ describe("GuestRegistration Model", () => {
         expect(error.errors.eventId).toBeDefined();
         expect(error.errors.roleId).toBeDefined();
         expect(error.errors.fullName).toBeDefined();
-        expect(error.errors.gender).toBeDefined();
+        expect(error.errors.gender).toBeUndefined();
         expect(error.errors.email).toBeDefined();
         // phone is optional now; should not be part of mandatory field errors
         expect(error.errors.phone).toBeUndefined();
       }
+    });
+
+    it("should allow gender to be omitted", async () => {
+      const guestData = {
+        eventId: new mongoose.Types.ObjectId(),
+        roleId: "role123",
+        fullName: "Optional Gender",
+        email: "optional@example.com",
+        eventSnapshot: {
+          title: "Test Event",
+          date: new Date(),
+          location: "Test Location",
+          roleName: "Participant",
+        },
+      };
+
+      const guest = new GuestRegistration(guestData);
+      const savedGuest = await guest.save();
+
+      expect(savedGuest._id).toBeDefined();
+      expect(savedGuest.gender).toBeUndefined();
     });
 
     it("should validate gender enum", async () => {

@@ -40,7 +40,8 @@ export class ValidationRules {
         .withMessage("Last name must be between 1 and 50 characters"),
 
       body("gender")
-        .optional()
+        .notEmpty()
+        .withMessage("Gender is required")
         .isIn(["male", "female"])
         .withMessage("Gender must be either 'male' or 'female'"),
 

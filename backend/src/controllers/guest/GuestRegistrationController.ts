@@ -407,7 +407,7 @@ export class GuestRegistrationController {
             eventId: new mongoose.Types.ObjectId(eventId),
             roleId: roleIdStr,
             fullName: fullNameStr.trim(),
-            gender,
+            ...(gender === "male" || gender === "female" ? { gender } : {}),
             email: emailStr.toLowerCase().trim(),
             ...(phoneStr.trim() ? { phone: phoneStr.trim() } : {}),
             notes: notes?.trim(),

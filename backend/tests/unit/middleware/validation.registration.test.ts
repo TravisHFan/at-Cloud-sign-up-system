@@ -441,6 +441,20 @@ describe("User Registration Validation Rules", () => {
       expect(genderErrors.length).toBeGreaterThan(0);
     });
 
+    it("should reject missing gender", async () => {
+      const dataWithoutGender: Record<string, unknown> = { ...validUserData };
+      delete dataWithoutGender.gender;
+
+      const result = await runValidation(
+        validateUserRegistration,
+        dataWithoutGender,
+      );
+
+      const genderErrors = result.errors.filter((e) => e.path === "gender");
+      expect(genderErrors.length).toBeGreaterThan(0);
+      expect(genderErrors[0].msg).toContain("Gender is required");
+    });
+
     it("should reject gender with different case", async () => {
       const result = await runValidation(validateUserRegistration, {
         ...validUserData,

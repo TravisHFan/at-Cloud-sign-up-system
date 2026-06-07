@@ -408,6 +408,7 @@ describe("AuthController", () => {
           password: "TestPassword123!",
           confirmPassword: "TestPassword123!",
           isAtCloudLeader: true,
+          gender: "male" as const,
           // Missing roleInAtCloud
           acceptTerms: true,
         };
@@ -440,6 +441,7 @@ describe("AuthController", () => {
           email: "existing@example.com",
           password: "TestPassword123!",
           confirmPassword: "TestPassword123!",
+          gender: "male" as const,
           acceptTerms: true,
           isAtCloudLeader: false,
         };
@@ -473,6 +475,7 @@ describe("AuthController", () => {
           email: "new@example.com",
           password: "TestPassword123!",
           confirmPassword: "TestPassword123!",
+          gender: "male" as const,
           acceptTerms: true,
           isAtCloudLeader: false,
         };
@@ -509,6 +512,7 @@ describe("AuthController", () => {
           email: "test@example.com",
           password: "TestPassword123!",
           confirmPassword: "TestPassword123!",
+          gender: "male" as const,
           acceptTerms: true,
           isAtCloudLeader: false,
         };
@@ -554,6 +558,7 @@ describe("AuthController", () => {
           email: "test@example.com",
           password: "TestPassword123!",
           confirmPassword: "TestPassword123!",
+          gender: "male" as const,
           acceptTerms: true,
           isAtCloudLeader: false,
         };
@@ -598,6 +603,7 @@ describe("AuthController", () => {
           password: "TestPassword123!",
           confirmPassword: "TestPassword123!",
           isAtCloudLeader: true,
+          gender: "male" as const,
           roleInAtCloud: "Worship Leader",
           acceptTerms: true,
         };
@@ -644,6 +650,7 @@ describe("AuthController", () => {
           email: "test@example.com",
           password: "TestPassword123!",
           confirmPassword: "TestPassword123!",
+          gender: "male" as const,
           acceptTerms: true,
           isAtCloudLeader: false,
         };
@@ -689,6 +696,7 @@ describe("AuthController", () => {
           email: "test@example.com",
           password: "TestPassword123!",
           confirmPassword: "TestPassword123!",
+          gender: "male" as const,
           acceptTerms: true,
           isAtCloudLeader: false,
         };
