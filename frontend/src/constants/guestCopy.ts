@@ -14,7 +14,7 @@ export const guestCopy = {
     fullName: (p: Perspective) =>
       p === "inviter" ? "Guest's Full Name *" : "Your Full Name *",
     gender: (p: Perspective) =>
-      p === "inviter" ? "Guest's Gender *" : "Your Gender *",
+      p === "inviter" ? "Guest's Gender" : "Your Gender",
     email: (p: Perspective) =>
       p === "inviter" ? "Guest's Email Address *" : "Your Email Address *",
     phone: (p: Perspective) =>
@@ -26,7 +26,9 @@ export const guestCopy = {
     fullName: (p: Perspective) =>
       p === "inviter" ? "Enter the guest's full name" : "Enter your full name",
     gender: (p: Perspective) =>
-      p === "inviter" ? "Select the guest's gender" : "Select your gender",
+      p === "inviter"
+        ? "Select the guest's gender (optional)"
+        : "Select your gender (optional)",
     email: (p: Perspective) =>
       p === "inviter"
         ? "Enter the guest's email address"

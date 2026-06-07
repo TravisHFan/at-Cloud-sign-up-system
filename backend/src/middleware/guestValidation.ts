@@ -18,6 +18,7 @@ export const guestRegistrationValidation: ValidationChain[] = [
 
   // Gender validation
   body("gender")
+    .optional({ checkFalsy: true })
     .isIn(["male", "female"])
     .withMessage('Gender must be either "male" or "female"'),
 
@@ -117,7 +118,10 @@ export const sanitizeGuestInput = (data: unknown) => {
   const d = (data || {}) as GuestInput;
   return {
     fullName: typeof d.fullName === "string" ? d.fullName.trim() : d.fullName,
-    gender: typeof d.gender === "string" ? d.gender.toLowerCase() : d.gender,
+    gender:
+      typeof d.gender === "string"
+        ? d.gender.trim().toLowerCase() || undefined
+        : d.gender,
     email: typeof d.email === "string" ? d.email.toLowerCase().trim() : d.email,
     phone: typeof d.phone === "string" ? d.phone.trim() : d.phone,
     notes: typeof d.notes === "string" ? d.notes.trim() || undefined : d.notes,

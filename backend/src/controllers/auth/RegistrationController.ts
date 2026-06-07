@@ -57,6 +57,18 @@ export default class RegistrationController {
         return;
       }
 
+      if (gender !== "male" && gender !== "female") {
+        res
+          .status(400)
+          .json(
+            createErrorResponse(
+              "Gender must be either 'male' or 'female'",
+              400
+            )
+          );
+        return;
+      }
+
       // Check if user already exists
       // Note: Case-insensitive uniqueness is ultimately enforced by the
       // usernameLower unique index in the User model. The router currently

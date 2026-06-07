@@ -1301,7 +1301,7 @@ describe("ExportAnalyticsController - Comprehensive Coverage", () => {
   });
 
   describe("Date filtering parameters", () => {
-    it("should use default 6-month window when no dates provided", async () => {
+    it("should export all-time data when no dates provided", async () => {
       req.query = { format: "json" };
 
       await ExportAnalyticsController.exportAnalytics(
@@ -1310,8 +1310,9 @@ describe("ExportAnalyticsController - Comprehensive Coverage", () => {
       );
 
       const sentData = JSON.parse(sendMock.mock.calls[0][0] as string);
-      expect(sentData.meta.filteredFrom).toBeDefined();
-      expect(sentData.meta.filteredTo).toBeDefined();
+      expect(sentData.meta.scope).toBe("all");
+      expect(sentData.meta.filteredFrom).toBeNull();
+      expect(sentData.meta.filteredTo).toBeNull();
     });
 
     it("should respect custom from and to dates", async () => {
@@ -1346,7 +1347,7 @@ describe("ExportAnalyticsController - Comprehensive Coverage", () => {
       expect(sentData.meta.rowLimit).toBe(25000);
     });
 
-    it("should use soft default cap when maxRows is not provided", async () => {
+    it("should use the hard cap as the default when maxRows is not provided", async () => {
       req.query = { format: "json" };
 
       await ExportAnalyticsController.exportAnalytics(
@@ -1355,7 +1356,7 @@ describe("ExportAnalyticsController - Comprehensive Coverage", () => {
       );
 
       const sentData = JSON.parse(sendMock.mock.calls[0][0] as string);
-      expect(sentData.meta.rowLimit).toBe(5000);
+      expect(sentData.meta.rowLimit).toBe(25000);
     });
 
     it("should handle invalid maxRows gracefully", async () => {
@@ -1370,7 +1371,7 @@ describe("ExportAnalyticsController - Comprehensive Coverage", () => {
       );
 
       const sentData = JSON.parse(sendMock.mock.calls[0][0] as string);
-      expect(sentData.meta.rowLimit).toBe(5000); // Falls back to default
+      expect(sentData.meta.rowLimit).toBe(25000); // Falls back to default
     });
 
     it("should handle negative maxRows by using 0 or default", async () => {
@@ -1385,8 +1386,8 @@ describe("ExportAnalyticsController - Comprehensive Coverage", () => {
       );
 
       const sentData = JSON.parse(sendMock.mock.calls[0][0] as string);
-      // Math.max(0, -100) = 0, then || SOFT_DEFAULT_CAP = 5000
-      expect(sentData.meta.rowLimit).toBe(5000);
+      // Math.max(0, -100) = 0, then || DEFAULT_ROW_CAP = 25000
+      expect(sentData.meta.rowLimit).toBe(25000);
     });
 
     it("should respect valid custom maxRows within limits", async () => {
