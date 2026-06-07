@@ -16,8 +16,8 @@ This checklist is for the analytics export and gender contract changes. Keep eve
 - Prefer fixing shared fixtures and factories before touching many individual tests.
 - Run one test file at a time, or a small explicit list only when the files share the same setup and failure mode.
 - Avoid root `npm test`, backend `npm test`, frontend `npm test`, backend `npm run test:unit`, and backend `npm run test:integration` during this stabilization pass.
-- For backend unit tests, prefer `cd backend && npx vitest run <file> --testTimeout=60000`.
-- For backend integration tests, prefer `cd backend && VITEST_SCOPE=integration npx vitest run <file> --testTimeout=60000`.
+- For backend unit tests, prefer `cd backend && npx vitest run --config vitest.unit.config.ts <file> --testTimeout=60000`.
+- For backend integration tests, prefer `cd backend && VITEST_SCOPE=integration npx vitest run --config vitest.integration.config.ts <file> --testTimeout=60000`.
 - If local MongoDB only responds on `localhost`, set `MONGODB_TEST_URI=mongodb://localhost:27017/atcloud-signup-test`.
 - For frontend tests, prefer `cd frontend && npx vitest run <file> --testTimeout=60000`.
 
@@ -84,13 +84,14 @@ This checklist is for the analytics export and gender contract changes. Keep eve
 
 ## Phase 5: Speed Modernization
 
-- [ ] Split backend unit setup from integration DB setup so pure unit files do not pay DB setup/teardown cost.
+- [x] Split backend unit setup from integration DB setup so pure unit files do not pay DB setup/teardown cost.
 - [x] Skip global DB cleanup for pure unit runs that never opened Mongoose.
 - [ ] Move DB cleanup into explicit integration helpers instead of global teardown where possible.
-- [ ] Add small test-data builders for auth users, guests, analytics events, and exports.
+- [x] Add small test-data builders for auth users and DB-backed registrations.
+- [ ] Add small test-data builders for guests, analytics events, and exports.
 - [ ] Replace repeated API registration setup with helper functions where the test does not need to exercise registration itself.
 - [ ] Mark heavyweight integration/performance tests with clear scripts so day-to-day stabilization can skip them.
-- [ ] Keep Vitest file targeting documented in package scripts or docs so future fixes do not accidentally run everything.
+- [x] Keep Vitest file targeting documented in package scripts or docs so future fixes do not accidentally run everything.
 
 ## Completion Criteria
 
