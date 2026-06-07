@@ -15,7 +15,7 @@ export interface IGuestRegistration extends Document {
 
   // Guest Information
   fullName: string;
-  gender: "male" | "female";
+  gender?: "male" | "female";
   email: string;
   phone?: string;
 
@@ -103,8 +103,8 @@ const GuestRegistrationSchema: Schema = new Schema(
     },
     gender: {
       type: String,
-      required: true,
       enum: ["male", "female"],
+      default: undefined,
     },
     email: {
       type: String,

@@ -41,34 +41,55 @@ export default class ExportAnalyticsController {
         return;
       }
 
-      // Optional export constraints (sensible defaults)
+      // Optional export constraints.
       // Query params: from, to (ISO date), maxRows (number)
       const fromParam = req.query.from as string | undefined;
       const toParam = req.query.to as string | undefined;
       const maxRowsParam = req.query.maxRows as string | undefined;
 
-      const now = new Date();
-      const defaultFrom = new Date(now.getFullYear(), now.getMonth() - 6, 1); // last ~6 months by default
-      const fromDate = fromParam ? new Date(fromParam) : defaultFrom;
-      const toDate = toParam ? new Date(toParam) : now;
+      const parseOptionalDate = (value: string | undefined) => {
+        if (!value?.trim()) return undefined;
+        const date = new Date(value);
+        return Number.isFinite(date.getTime()) ? date : null;
+      };
+
+      const fromDate = parseOptionalDate(fromParam);
+      const toDate = parseOptionalDate(toParam);
+      if (fromDate === null || toDate === null) {
+        res.status(400).json({
+          success: false,
+          message: "Invalid date range. Use valid ISO dates for from and to.",
+        });
+        return;
+      }
+
       const MAX_ROWS_HARD_CAP = 25000; // absolute cap as safety net
-      const SOFT_DEFAULT_CAP = 5000; // default soft cap
+      const DEFAULT_ROW_CAP = MAX_ROWS_HARD_CAP;
       const maxRows = Math.min(
-        Math.max(0, Number(maxRowsParam ?? SOFT_DEFAULT_CAP)) ||
-          SOFT_DEFAULT_CAP,
+        Math.max(0, Number(maxRowsParam ?? DEFAULT_ROW_CAP)) ||
+          DEFAULT_ROW_CAP,
         MAX_ROWS_HARD_CAP,
       );
 
-      // Base filters
+      const createdAtRange: Record<string, Date> = {};
+      if (fromDate) createdAtRange.$gte = fromDate;
+      if (toDate) createdAtRange.$lte = toDate;
+      const createdAtFilter =
+        Object.keys(createdAtRange).length > 0
+          ? { createdAt: createdAtRange }
+          : {};
+
+      // Base filters. Keep the no-parameter export aligned with the dashboard's
+      // all-time overview counts; from/to intentionally opt into narrower exports.
       const userFilter = {
         isActive: true,
-        createdAt: { $gte: fromDate, $lte: toDate },
+        ...createdAtFilter,
       } as const;
       const eventFilter = {
-        createdAt: { $gte: fromDate, $lte: toDate },
+        ...createdAtFilter,
       } as const;
       const registrationFilter = {
-        createdAt: { $gte: fromDate, $lte: toDate },
+        ...createdAtFilter,
       } as const;
 
       const toIdString = (value: unknown): string => {
@@ -441,7 +462,7 @@ export default class ExportAnalyticsController {
             };
             const raw = await (modelAny.find
               ? modelAny
-                  .find({ createdAt: { $gte: fromDate, $lte: toDate } })
+                  .find(createdAtFilter)
                   .sort({ createdAt: -1 })
                   .limit(maxRows)
                   .lean()
@@ -555,8 +576,10 @@ export default class ExportAnalyticsController {
         }>,
         timestamp: new Date().toISOString(),
         meta: {
-          filteredFrom: fromDate.toISOString(),
-          filteredTo: toDate.toISOString(),
+          scope:
+            Object.keys(createdAtRange).length > 0 ? "date-filtered" : "all",
+          filteredFrom: fromDate?.toISOString() ?? null,
+          filteredTo: toDate?.toISOString() ?? null,
           rowLimit: maxRows,
         },
       };

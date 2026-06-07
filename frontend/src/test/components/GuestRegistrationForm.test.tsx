@@ -104,4 +104,31 @@ describe("GuestRegistrationForm", () => {
       expect.objectContaining({ roleId: "role3" })
     );
   });
+
+  it("allows submitting without gender", async () => {
+    (GuestApi.signup as any).mockResolvedValue({ registrationId: "r4" });
+    const onSuccess = vi.fn();
+    render(
+      <GuestRegistrationForm
+        eventId="e4"
+        roleId="role4"
+        perspective="inviter"
+        onSuccess={onSuccess}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText(/Guest's Full name/i), {
+      target: { value: "No Gender" },
+    });
+    fireEvent.change(screen.getByLabelText(/Guest's Email Address/i), {
+      target: { value: "nogender@example.com" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Register Guest/i }));
+
+    await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+    expect(GuestApi.signup).toHaveBeenCalledWith(
+      "e4",
+      expect.not.objectContaining({ gender: expect.any(String) })
+    );
+  });
 });
