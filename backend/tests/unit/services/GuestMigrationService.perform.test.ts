@@ -10,11 +10,16 @@ describe("GuestMigrationService.performGuestToUserMigration", () => {
     if (mongoose.connection.readyState === 0) {
       const uri =
         process.env.MONGODB_TEST_URI ||
-        "mongodb://127.0.0.1:27017/atcloud-signup-test";
+        "mongodb://localhost:27017/atcloud-signup-test";
+      const configuredFamily = Number(process.env.MONGODB_TEST_FAMILY);
+      const familyOption =
+        configuredFamily === 4 || configuredFamily === 6
+          ? { family: configuredFamily }
+          : {};
       await mongoose.connect(uri, {
         serverSelectionTimeoutMS: 2000,
         connectTimeoutMS: 2000,
-        family: 4,
+        ...familyOption,
       } as any);
     }
     await Promise.all([
@@ -35,6 +40,9 @@ describe("GuestMigrationService.performGuestToUserMigration", () => {
       username: `m_${Math.random().toString(36).slice(2, 8)}`,
       email: `x_${Math.random().toString(36).slice(2, 8)}@example.com`,
       password: "TestPass123!",
+      firstName: "Migrated",
+      lastName: "User",
+      gender: "female",
       isAtCloudLeader: false,
       acceptTerms: true,
     } as any);
