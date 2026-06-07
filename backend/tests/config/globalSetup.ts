@@ -25,11 +25,21 @@ export async function teardown() {
   log("Cleaning up test environment...");
 
   try {
+    const shouldRunDatabaseCleanup =
+      process.env.VITEST_SCOPE === "integration" ||
+      process.env.TEST_DB_CLEANUP === "1" ||
+      mongoose.connection.readyState !== 0;
+
+    if (!shouldRunDatabaseCleanup) {
+      log("Skipping database cleanup for non-DB test run");
+      return;
+    }
+
     // Connect to test database for cleanup
     const uri =
       process.env.MONGODB_TEST_URI ||
       process.env.MONGODB_URI ||
-      "mongodb://127.0.0.1:27017/atcloud-signup-test";
+      "mongodb://localhost:27017/atcloud-signup-test";
 
     // Safety check: only cleanup test databases
     if (!uri.includes("test")) {
@@ -39,8 +49,10 @@ export async function teardown() {
       return;
     }
 
-    await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });
-    log("Connected to test database for cleanup");
+    if (mongoose.connection.readyState !== 1) {
+      await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });
+      log("Connected to test database for cleanup");
+    }
 
     // Import and run safe cleanup (preserves real users)
     const { safeCleanupAllTestData } =
