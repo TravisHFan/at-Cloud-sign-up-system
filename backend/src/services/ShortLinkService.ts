@@ -3,7 +3,7 @@ import ShortLink, { IShortLink } from "../models/ShortLink";
 import Event from "../models/Event";
 import { generateUniqueShortKey } from "../utils/shortLinkKey";
 import { createLogger } from "./LoggerService";
-import { findUtcInstantFromLocal } from "../shared/time/timezoneSearch";
+import { findUtcInstantFromLocal } from "@atcloud/shared-time";
 import LruCache from "../utils/lru";
 import {
   shortLinkCacheHitCounter,

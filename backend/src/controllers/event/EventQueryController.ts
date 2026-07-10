@@ -6,14 +6,87 @@
  */
 
 import { Request, Response } from "express";
-import mongoose, { Types } from "mongoose";
+import mongoose from "mongoose";
 import { Event } from "../../models";
 import { ResponseBuilderService } from "../../services/ResponseBuilderService";
 import { CorrelatedLogger } from "../../services/CorrelatedLogger";
-import { CachePatterns } from "../../services";
+import { CachePatterns } from "../../services/infrastructure/CacheService";
 import { EventController } from "../eventController";
 
+const EVENT_LIST_PROJECTION = [
+  "title",
+  "type",
+  "date",
+  "endDate",
+  "time",
+  "endTime",
+  "timeZone",
+  "location",
+  "organizer",
+  "organizerDetails",
+  "hostedBy",
+  "format",
+  "roles",
+  "status",
+  "createdBy",
+  "createdAt",
+  "publish",
+  "publishedAt",
+  "publicSlug",
+  "youtubeUrl",
+  "programLabels",
+].join(" ");
+const EVENT_LIST_SORT_FIELDS = new Set([
+  "date",
+  "title",
+  "organizer",
+  "type",
+]);
+
+function applyQueryMethod(
+  value: unknown,
+  method: string,
+  ...args: unknown[]
+): unknown {
+  if (!value || typeof value !== "object") return value;
+  const candidate = (value as Record<string, unknown>)[method];
+  return typeof candidate === "function"
+    ? (candidate as (...methodArgs: unknown[]) => unknown).apply(value, args)
+    : value;
+}
+
 export class EventQueryController {
+  private static async queryEventListPage(
+    filter: Record<string, unknown>,
+    sort: Record<string, 1 | -1>,
+    skip: number,
+    limit: number,
+    useCaseInsensitiveCollation: boolean,
+  ): Promise<Array<{ _id: mongoose.Types.ObjectId }>> {
+    let query: unknown = Event.find(filter);
+    query = applyQueryMethod(query, "select", EVENT_LIST_PROJECTION);
+    query = applyQueryMethod(
+      query,
+      "populate",
+      "createdBy",
+      "username firstName lastName avatar role roleInAtCloud",
+    );
+    if (useCaseInsensitiveCollation) {
+      query = applyQueryMethod(query, "collation", {
+        locale: "en",
+        strength: 2,
+      });
+    }
+    query = applyQueryMethod(query, "sort", sort);
+    query = applyQueryMethod(query, "skip", skip);
+    query = applyQueryMethod(query, "limit", limit);
+    query = applyQueryMethod(query, "lean");
+
+    return ((await query) || []) as Array<{
+      _id: mongoose.Types.ObjectId;
+    }>;
+  }
+
   // Get all events with filtering and pagination
   static async getAllEvents(req: Request, res: Response): Promise<void> {
     try {
@@ -35,8 +108,16 @@ export class EventQueryController {
         publish,
       } = req.query;
 
-      const pageNumber = parseInt(page as string);
-      const limitNumber = parseInt(limit as string);
+      const requestedPage = Number.parseInt(String(page), 10);
+      const requestedLimit = Number.parseInt(String(limit), 10);
+      const pageNumber = requestedPage > 0 ? requestedPage : 1;
+      const limitNumber =
+        requestedLimit > 0 ? Math.min(requestedLimit, 100) : 10;
+      const requestedSortField = String(sortBy);
+      const primarySortField = EVENT_LIST_SORT_FIELDS.has(requestedSortField)
+        ? requestedSortField
+        : "date";
+      const primaryDirection = sortOrder === "desc" ? -1 : 1;
 
       // Create cache key based on query parameters
       const multiStatuses =
@@ -47,24 +128,14 @@ export class EventQueryController {
               .filter(Boolean)
           : undefined;
 
-      // NOTE: We split cache into (A) ordering key (list of matching event IDs + total count)
-      // and (B) page key (hydrated event objects for the specific page slice). This reduces
-      // redundant storage when users paginate through many pages with identical filters.
-      //
-      // Potential indexing (MongoDB) to support deterministic multi-field sorts efficiently:
-      //   1. { date: 1, time: 1, _id: 1 }
-      //   2. { title: 1, date: 1, time: 1, _id: 1 }
-      //   3. { organizer: 1, title: 1, date: 1, time: 1, _id: 1 }
-      // These mirror tie-breaker chains and allow covered sorts. If storage budget is tight,
-      // prefer compound indexes only for most frequently used primary sorts (from metrics).
       const baseFilterDescriptor = {
         status,
         statuses: multiStatuses,
         type,
         programId,
         search,
-        sortBy,
-        sortOrder,
+        sortBy: primarySortField,
+        sortOrder: primaryDirection === -1 ? "desc" : "asc",
         minParticipants,
         maxParticipants,
         category,
@@ -72,9 +143,6 @@ export class EventQueryController {
         endDate,
         publish,
       };
-      const orderingCacheKey = `events-ordering:${JSON.stringify(
-        baseFilterDescriptor,
-      )}`;
       const pageCacheKey = `events-list:${JSON.stringify({
         ...baseFilterDescriptor,
         page: pageNumber,
@@ -149,8 +217,6 @@ export class EventQueryController {
           //   - organizer: tie-break by title asc, then date asc, then time asc
           //   - type: tie-break by title asc, then date asc, then time asc
           const sort: Record<string, 1 | -1> = {};
-          const primarySortField = String(sortBy);
-          const primaryDirection = sortOrder === "desc" ? -1 : 1;
           sort[primarySortField] = primaryDirection;
           if (primarySortField === "date") {
             sort["time"] = primaryDirection; // same-direction to keep chronological grouping
@@ -169,197 +235,34 @@ export class EventQueryController {
             sort["date"] = 1;
             sort["time"] = 1;
           }
+          sort["_id"] = 1;
 
-          // If status filtering (single or multi) is requested, update statuses then apply filter
-          if (status || multiStatuses) {
-            await EventController.updateAllEventStatusesHelper();
-            if (multiStatuses) {
-              filter.status = { $in: multiStatuses } as { $in: string[] };
-            } else if (status) {
-              filter.status = status;
-            }
+          if (multiStatuses) {
+            filter.status = { $in: multiStatuses } as { $in: string[] };
+          } else if (status) {
+            filter.status = status;
           }
 
-          const isTestEnv =
-            process.env.VITEST === "true" || process.env.NODE_ENV === "test";
-          let totalEventsComputed: number;
-          let totalPagesComputed: number;
-          let events: unknown[] = [];
+          const useCaseInsensitiveCollation =
+            primarySortField === "title" ||
+            primarySortField === "organizer" ||
+            primarySortField === "type";
+          const [events, totalEvents] = await Promise.all([
+            EventQueryController.queryEventListPage(
+              filter,
+              sort,
+              skip,
+              limitNumber,
+              useCaseInsensitiveCollation,
+            ),
+            Event.countDocuments(filter),
+          ]);
+          const totalPages = Math.ceil(totalEvents / limitNumber);
 
-          if (!isTestEnv) {
-            // Ordering + slice hydration path (production)
-            type OrderingPayload = { ids: string[]; total: number };
-            const ordering =
-              await CachePatterns.getEventListingOrdering<OrderingPayload>(
-                orderingCacheKey,
-                async () => {
-                  let idResults: Array<{ _id: Types.ObjectId }> = [];
-                  try {
-                    const base = (
-                      Event as unknown as { find: (q: unknown) => unknown }
-                    ).find(filter) as unknown;
-                    if (
-                      base &&
-                      typeof (base as { populate?: unknown }).populate ===
-                        "function"
-                    ) {
-                      let chain = base as {
-                        sort?: unknown;
-                        select?: unknown;
-                        collation?: unknown;
-                      };
-                      if (
-                        primarySortField === "title" ||
-                        primarySortField === "organizer" ||
-                        primarySortField === "type"
-                      ) {
-                        if (
-                          typeof (chain as { collation?: unknown })
-                            .collation === "function"
-                        ) {
-                          chain = (
-                            chain as { collation: (c: unknown) => unknown }
-                          ).collation({
-                            locale: "en",
-                            strength: 2,
-                          }) as typeof chain;
-                        }
-                      }
-                      const s =
-                        typeof (chain as { sort?: unknown }).sort === "function"
-                          ? (chain as { sort: (s: unknown) => unknown }).sort(
-                              sort,
-                            )
-                          : chain;
-                      const sel =
-                        typeof (s as { select?: unknown }).select === "function"
-                          ? (s as { select: (p: string) => unknown }).select(
-                              "_id",
-                            )
-                          : s;
-                      idResults =
-                        (await (sel as Promise<
-                          Array<{ _id: Types.ObjectId }>
-                        >)) || [];
-                    }
-                  } catch {
-                    idResults = [];
-                  }
-                  return {
-                    ids: idResults.map((d) => d._id.toString()),
-                    total: idResults.length,
-                  };
-                },
-              );
-            totalEventsComputed = ordering.total;
-            totalPagesComputed = Math.ceil(totalEventsComputed / limitNumber);
-            const slice = ordering.ids.slice(skip, skip + limitNumber);
-            if (slice.length) {
-              try {
-                events = (await Event.find({ _id: { $in: slice } }).populate(
-                  "createdBy",
-                  "username firstName lastName avatar",
-                )) as unknown[];
-                const map = new Map(
-                  (events as Array<{ _id: Types.ObjectId }>).map((e) => [
-                    e._id.toString(),
-                    e,
-                  ]),
-                );
-                events = slice
-                  .map((id) => map.get(id))
-                  .filter(Boolean) as unknown[];
-              } catch {
-                events = [];
-              }
-            }
-          } else {
-            // Legacy single query path for test determinism
-            try {
-              const base = (
-                Event as unknown as { find: (q: unknown) => unknown }
-              ).find(filter) as unknown;
-              if (
-                base &&
-                typeof (base as { populate?: unknown }).populate === "function"
-              ) {
-                let chain = (
-                  base as {
-                    populate: (path: string, select: string) => unknown;
-                  }
-                ).populate("createdBy", "username firstName lastName avatar");
-                if (
-                  primarySortField === "title" ||
-                  primarySortField === "organizer" ||
-                  primarySortField === "type"
-                ) {
-                  if (
-                    typeof (chain as { collation?: unknown }).collation ===
-                    "function"
-                  ) {
-                    chain = (
-                      chain as { collation: (c: unknown) => unknown }
-                    ).collation({ locale: "en", strength: 2 });
-                  }
-                }
-                const s =
-                  typeof (chain as { sort?: unknown }).sort === "function"
-                    ? (chain as { sort: (s: unknown) => unknown }).sort(sort)
-                    : chain;
-                const sk =
-                  typeof (s as { skip?: unknown }).skip === "function"
-                    ? (s as { skip: (n: number) => unknown }).skip(skip)
-                    : s;
-                const li =
-                  typeof (sk as { limit?: unknown }).limit === "function"
-                    ? (
-                        sk as { limit: (n: number) => Promise<unknown[]> }
-                      ).limit(limitNumber)
-                    : (sk as Promise<unknown[]>);
-                events = (await (li as Promise<unknown[]>)) as unknown[];
-              } else {
-                events =
-                  ((await (base as Promise<unknown[]>)) as unknown[]) || [];
-              }
-            } catch {
-              events = [];
-            }
-            totalEventsComputed = await Event.countDocuments(filter);
-            totalPagesComputed = Math.ceil(totalEventsComputed / limitNumber);
-          }
-
-          const totalEvents = totalEventsComputed!;
-          const totalPages = totalPagesComputed!;
-
-          // If no status filter was applied, still update individual event statuses
-          if (!status && !multiStatuses) {
-            for (const event of events as Array<Record<string, unknown>>) {
-              await EventController.updateEventStatusIfNeeded(
-                event as unknown as {
-                  _id: Types.ObjectId;
-                  date: string;
-                  endDate?: string;
-                  time: string;
-                  endTime: string;
-                  status: string;
-                },
-              );
-            }
-          }
-
-          // FIX: Use ResponseBuilderService to include accurate registration counts
-          // This ensures frontend event cards show correct signup statistics
-          console.log(
-            `🔍 [getAllEvents] Building ${events.length} events with registration data`,
-          );
           const eventsWithRegistrations =
             await ResponseBuilderService.buildEventsWithRegistrations(
-              events as Array<{ _id: Types.ObjectId }>,
+              events,
             );
-
-          console.log(
-            `✅ [getAllEvents] Successfully built ${eventsWithRegistrations.length} events with registration counts`,
-          );
 
           return {
             events: eventsWithRegistrations,
@@ -404,27 +307,6 @@ export class EventQueryController {
         return;
       }
 
-      const event = await Event.findById(id).populate(
-        "createdBy",
-        "username firstName lastName avatar",
-      );
-
-      if (!event) {
-        res.status(404).json({
-          success: false,
-          message: "Event not found.",
-        });
-        return;
-      }
-
-      // Update event status based on current time
-      await EventController.updateEventStatusIfNeeded(event);
-
-      // FIX: Use ResponseBuilderService to include registration data
-      // This ensures frontend shows current registrations for each role
-      console.log(
-        `🔍 [getEventById] Building event data with registrations for event ${id}`,
-      );
       const viewerId = req.user
         ? EventController.toIdString(req.user._id)
         : undefined;
@@ -439,21 +321,10 @@ export class EventQueryController {
       if (!eventWithRegistrations) {
         res.status(404).json({
           success: false,
-          message: "Event not found or failed to build registration data.",
+          message: "Event not found.",
         });
         return;
       }
-
-      console.log(
-        `✅ [getEventById] Successfully built event data with ${eventWithRegistrations.roles.length} roles`,
-      );
-      eventWithRegistrations.roles.forEach((role, index) => {
-        console.log(
-          `   Role ${index + 1}: ${role.name} - ${role.currentCount}/${
-            role.maxParticipants
-          } registered`,
-        );
-      });
 
       res.status(200).json({
         success: true,

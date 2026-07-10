@@ -9,7 +9,7 @@ import {
 import { EmailService } from "../../services/infrastructure/EmailServiceFacade";
 import { socketService } from "../../services/infrastructure/SocketService";
 import mongoose from "mongoose";
-import { CachePatterns } from "../../services";
+import { CachePatterns } from "../../services/infrastructure/CacheService";
 import { createLogger } from "../../services/LoggerService";
 import { ResponseBuilderService } from "../../services/ResponseBuilderService";
 import { lockService } from "../../services/LockService";
@@ -18,7 +18,7 @@ import { CorrelatedLogger } from "../../services/CorrelatedLogger";
 import { createGuestInvitationDeclineToken } from "../../utils/guestInvitationDeclineToken";
 
 // Type definitions
-export type EventLike = {
+type EventLike = {
   _id?: mongoose.Types.ObjectId | string;
   title?: string;
   date?: unknown;
@@ -38,12 +38,6 @@ export type EventLike = {
   createdBy?: unknown;
   roles?: IEventRole[];
   registrationDeadline?: Date | string | null;
-};
-
-export type UserLike = {
-  _id?: mongoose.Types.ObjectId | string;
-  firstName?: string;
-  lastName?: string;
 };
 
 type UserModelLike = {
@@ -292,7 +286,13 @@ export class GuestRegistrationController {
           // Get occupancy via CapacityService (capacity should be enforced before rate limit and uniqueness)
           const occupancy = await CapacityService.getRoleOccupancy(
             eventId,
-            roleIdStr
+            roleIdStr,
+            {
+              capacity:
+                (eventRole as unknown as { maxParticipants?: unknown })
+                  .maxParticipants ??
+                (eventRole as unknown as { capacity?: unknown }).capacity,
+            },
           );
 
           if (CapacityService.isRoleFull(occupancy)) {

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import mongoose from "mongoose";
 import User from "../../../src/models/User";
 import Event from "../../../src/models/Event";
+import Program from "../../../src/models/Program";
 import Registration from "../../../src/models/Registration";
 import { ensureIntegrationDB } from "../setup/connect";
 
@@ -20,6 +21,7 @@ describe("Explain plans for analytics queries", () => {
       // Make sure indexes are built so explain uses IXSCAN where applicable
       await User.syncIndexes();
       await Event.syncIndexes();
+      await Program.syncIndexes();
       await Registration.syncIndexes();
     } catch (err) {
       // eslint-disable-next-line no-console
@@ -70,6 +72,55 @@ describe("Explain plans for analytics queries", () => {
     expect(planStr).toMatch(/IXSCAN/);
     expect(planStr).toMatch(/format|status|date/);
     expect(planStr).not.toMatch(/COLLSCAN/);
+  });
+
+  it("Event default pagination should use the stable status/date/time/id index without a blocking sort", async () => {
+    if (skipAll) return;
+    const plan = await (Event as any)
+      .find({ status: "upcoming" })
+      .sort({ date: 1, time: 1, _id: 1 })
+      .limit(10)
+      .explain("executionStats");
+    const planner =
+      plan?.queryPlanner || plan?.stages?.[0]?.$cursor?.queryPlanner;
+    const winningPlanStr = JSON.stringify(planner?.winningPlan);
+
+    expect(winningPlanStr).toMatch(/IXSCAN/);
+    expect(winningPlanStr).toMatch(/status_1_date_1_time_1__id_1/);
+    expect(winningPlanStr).not.toMatch(/COLLSCAN/);
+    expect(winningPlanStr).not.toMatch(/\"stage\":\"SORT\"/);
+  });
+
+  it("Program default pagination should use the stable createdAt/id index without a blocking sort", async () => {
+    if (skipAll) return;
+    const plan = await (Program as any)
+      .find({})
+      .sort({ createdAt: -1, _id: -1 })
+      .limit(20)
+      .explain("executionStats");
+    const planner =
+      plan?.queryPlanner || plan?.stages?.[0]?.$cursor?.queryPlanner;
+    const winningPlanStr = JSON.stringify(planner?.winningPlan);
+
+    expect(winningPlanStr).toMatch(/IXSCAN/);
+    expect(winningPlanStr).toMatch(/createdAt_-1__id_-1/);
+    expect(winningPlanStr).not.toMatch(/COLLSCAN/);
+    expect(winningPlanStr).not.toMatch(/\"stage\":\"SORT\"/);
+  });
+
+  it("User search should use the existing text index", async () => {
+    if (skipAll) return;
+    const plan = await (User as any)
+      .find({ isActive: true, $text: { $search: '\"search\"' } })
+      .limit(20)
+      .explain("executionStats");
+    const planner =
+      plan?.queryPlanner || plan?.stages?.[0]?.$cursor?.queryPlanner;
+    const winningPlanStr = JSON.stringify(planner?.winningPlan);
+
+    expect(winningPlanStr).toMatch(/TEXT_MATCH/);
+    expect(winningPlanStr).toMatch(/IXSCAN/);
+    expect(winningPlanStr).not.toMatch(/COLLSCAN/);
   });
 
   it("Registration recent activity should leverage createdAt/registrationDate indexes", async () => {

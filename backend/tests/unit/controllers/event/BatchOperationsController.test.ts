@@ -3,7 +3,7 @@ import { Request, Response } from "express";
 import { BatchOperationsController } from "../../../../src/controllers/event/BatchOperationsController";
 import { Event } from "../../../../src/models";
 import { EventController } from "../../../../src/controllers/eventController";
-import { CachePatterns } from "../../../../src/services";
+import { CachePatterns } from "../../../../src/services/infrastructure/CacheService";
 import mongoose from "mongoose";
 
 // Mock dependencies
@@ -21,7 +21,7 @@ vi.mock("../../../../src/controllers/eventController", () => ({
   },
 }));
 
-vi.mock("../../../../src/services", () => ({
+vi.mock("../../../../src/services/infrastructure/CacheService", () => ({
   CachePatterns: {
     invalidateEventCache: vi.fn(),
     invalidateAnalyticsCache: vi.fn(),
@@ -117,6 +117,61 @@ describe("BatchOperationsController", () => {
           message: "Updated 2 event statuses.",
           data: { updatedCount: 2 },
         });
+      });
+
+      it("should persist changed statuses in one bulk write", async () => {
+        const event1 = {
+          _id: new mongoose.Types.ObjectId(),
+          date: "2024-01-01",
+          time: "10:00",
+          endTime: "12:00",
+          status: "upcoming",
+        };
+        const event2 = {
+          _id: new mongoose.Types.ObjectId(),
+          date: "2024-01-02",
+          time: "10:00",
+          endTime: "12:00",
+          status: "upcoming",
+        };
+        const bulkWrite = vi.fn().mockResolvedValue({ modifiedCount: 2 });
+
+        vi.mocked(Event.find).mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            lean: vi.fn().mockResolvedValue([event1, event2]),
+          }),
+        } as any);
+        vi.mocked(EventController.getEventStatus).mockReturnValue("completed");
+        (Event as any).bulkWrite = bulkWrite;
+
+        try {
+          const updatedCount =
+            await BatchOperationsController.updateAllEventStatusesHelper();
+
+          expect(updatedCount).toBe(2);
+          expect(bulkWrite).toHaveBeenCalledOnce();
+          expect(bulkWrite).toHaveBeenCalledWith([
+            {
+              updateOne: {
+                filter: { _id: event1._id },
+                update: { $set: { status: "completed" } },
+              },
+            },
+            {
+              updateOne: {
+                filter: { _id: event2._id },
+                update: { $set: { status: "completed" } },
+              },
+            },
+          ]);
+          expect(Event.findByIdAndUpdate).not.toHaveBeenCalled();
+          expect(CachePatterns.invalidateEventCache).toHaveBeenCalledOnce();
+          expect(
+            CachePatterns.invalidateAnalyticsCache,
+          ).toHaveBeenCalledOnce();
+        } finally {
+          delete (Event as any).bulkWrite;
+        }
       });
 
       it("should skip events with unchanged status", async () => {

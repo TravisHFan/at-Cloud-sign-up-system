@@ -235,7 +235,7 @@ describe("Email Notifications API - Integration Tests", () => {
     await AuditLog.deleteMany({});
 
     if (openedLocal) {
-      await mongoose.connection.close();
+      // Shared integration harness owns connection lifecycle.
     }
   });
 

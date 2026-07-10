@@ -25,7 +25,7 @@ vi.mock("../../../../src/utils/roleUtils", () => ({
   },
 }));
 
-vi.mock("../../../../src/services", () => ({
+vi.mock("../../../../src/services/infrastructure/CacheService", () => ({
   CachePatterns: {
     getAnalyticsData: vi.fn(),
   },
@@ -40,7 +40,7 @@ vi.mock("../../../../src/services/CorrelatedLogger", () => ({
 }));
 
 import { hasPermission } from "../../../../src/utils/roleUtils";
-import { CachePatterns } from "../../../../src/services";
+import { CachePatterns } from "../../../../src/services/infrastructure/CacheService";
 import { User, Event, Registration } from "../../../../src/models";
 
 interface MockRequest {

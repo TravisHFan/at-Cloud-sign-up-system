@@ -56,7 +56,7 @@ describe("Public event guest 1-role limit", () => {
     await User.deleteMany({});
     await Event.deleteMany({});
     await GuestRegistration.deleteMany({});
-    await mongoose.connection.close();
+    // Shared integration harness owns connection lifecycle.
   });
 
   it("allows guest (email-only) to register for 1 role, blocks 2nd role", async () => {

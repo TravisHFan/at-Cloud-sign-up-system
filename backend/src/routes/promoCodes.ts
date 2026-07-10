@@ -1,5 +1,15 @@
 import { Router } from "express";
-import { PromoCodeController } from "../controllers/promoCodeController";
+import UserCodesController from "../controllers/promoCodes/UserCodesController";
+import ValidationController from "../controllers/promoCodes/ValidationController";
+import AdminListController from "../controllers/promoCodes/AdminListController";
+import UsageHistoryController from "../controllers/promoCodes/UsageHistoryController";
+import StaffCodeCreationController from "../controllers/promoCodes/StaffCodeCreationController";
+import GeneralCodeCreationController from "../controllers/promoCodes/GeneralCodeCreationController";
+import RewardCodeCreationController from "../controllers/promoCodes/RewardCodeCreationController";
+import BundleConfigController from "../controllers/promoCodes/BundleConfigController";
+import DeactivationController from "../controllers/promoCodes/DeactivationController";
+import ReactivationController from "../controllers/promoCodes/ReactivationController";
+import DeletionController from "../controllers/promoCodes/DeletionController";
 import { authenticate, requireAdmin } from "../middleware/auth";
 
 const router = Router();
@@ -16,14 +26,14 @@ router.use(authenticate);
  * Query params:
  * - status: 'all' | 'active' | 'expired' | 'used' (default: 'all')
  */
-router.get("/my-codes", PromoCodeController.getMyPromoCodes);
+router.get("/my-codes", UserCodesController.getMyPromoCodes);
 
 /**
  * Validate a promo code for a specific program
  * Body: { code: string, programId: string }
  * Returns: { valid: boolean, message: string, code?: PromoCode }
  */
-router.post("/validate", PromoCodeController.validatePromoCode);
+router.post("/validate", ValidationController.validatePromoCode);
 
 // ============================================================================
 // ADMIN ROUTES - Administrator access only
@@ -38,7 +48,7 @@ router.post("/validate", PromoCodeController.validatePromoCode);
  * - page: number (default: 1)
  * - limit: number (default: 20, max: 100)
  */
-router.get("/", requireAdmin, PromoCodeController.getAllPromoCodes);
+router.get("/", requireAdmin, AdminListController.getAllPromoCodes);
 
 /**
  * Get usage history for a specific promo code (admin only)
@@ -47,7 +57,7 @@ router.get("/", requireAdmin, PromoCodeController.getAllPromoCodes);
 router.get(
   "/:id/usage-history",
   requireAdmin,
-  PromoCodeController.getPromoCodeUsageHistory
+  UsageHistoryController.getPromoCodeUsageHistory
 );
 
 /**
@@ -59,7 +69,7 @@ router.get(
  *   expiresAt?: Date (optional expiration)
  * }
  */
-router.post("/staff", requireAdmin, PromoCodeController.createStaffCode);
+router.post("/staff", requireAdmin, StaffCodeCreationController.createStaffCode);
 
 /**
  * Create a general staff promo code (admin only)
@@ -75,12 +85,12 @@ router.post("/staff", requireAdmin, PromoCodeController.createStaffCode);
 router.post(
   "/general",
   requireAdmin,
-  PromoCodeController.createGeneralStaffCode
+  GeneralCodeCreationController.createGeneralStaffCode
 );
 router.post(
   "/staff/general",
   requireAdmin,
-  PromoCodeController.createGeneralStaffCode
+  GeneralCodeCreationController.createGeneralStaffCode
 );
 
 /**
@@ -93,21 +103,21 @@ router.post(
  * }
  * Note: Reward codes are similar to personal staff codes and require 10-100% discount
  */
-router.post("/reward", requireAdmin, PromoCodeController.createRewardCode);
+router.post("/reward", requireAdmin, RewardCodeCreationController.createRewardCode);
 
 /**
  * Get bundle discount configuration (admin only)
  * Returns: { enabled: boolean, discountAmount: number, expiryDays: number }
  * Reads from SystemConfig database model
  */
-router.get("/config", requireAdmin, PromoCodeController.getBundleConfig);
+router.get("/config", requireAdmin, BundleConfigController.getBundleConfig);
 
 /**
  * Update bundle discount configuration (admin only)
  * Body: { enabled: boolean, discountAmount: number, expiryDays: number }
  * Updates SystemConfig database model - changes take effect immediately
  */
-router.put("/config", requireAdmin, PromoCodeController.updateBundleConfig);
+router.put("/config", requireAdmin, BundleConfigController.updateBundleConfig);
 
 /**
  * Deactivate a promo code (admin only)
@@ -116,7 +126,7 @@ router.put("/config", requireAdmin, PromoCodeController.updateBundleConfig);
 router.put(
   "/:id/deactivate",
   requireAdmin,
-  PromoCodeController.deactivatePromoCode
+  DeactivationController.deactivatePromoCode
 );
 
 /**
@@ -126,7 +136,7 @@ router.put(
 router.put(
   "/:id/reactivate",
   requireAdmin,
-  PromoCodeController.reactivatePromoCode
+  ReactivationController.reactivatePromoCode
 );
 
 /**
@@ -134,6 +144,6 @@ router.put(
  * Permanently removes a promo code from the database
  * Use with caution - this action cannot be undone
  */
-router.delete("/:id", requireAdmin, PromoCodeController.deletePromoCode);
+router.delete("/:id", requireAdmin, DeletionController.deletePromoCode);
 
 export default router;

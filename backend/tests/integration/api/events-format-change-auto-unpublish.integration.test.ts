@@ -9,6 +9,7 @@ import {
   domainEvents,
   EVENT_AUTO_UNPUBLISHED,
 } from "../../../src/services/domainEvents";
+import { futureDateString } from "../../test-utils/eventTestHelpers";
 
 async function createAdminAndLogin() {
   const admin = {
@@ -52,7 +53,7 @@ describe("Auto-unpublish on format change introducing new missing necessary fiel
 
   afterAll(async () => {
     if (openedLocal && mongoose.connection.readyState !== 0) {
-      await mongoose.connection.close();
+      // Shared integration harness owns connection lifecycle.
     }
   });
 
@@ -65,6 +66,7 @@ describe("Auto-unpublish on format change introducing new missing necessary fiel
   }
 
   it("schedules unpublish when changing In-person -> Hybrid Participation without adding virtual fields", async () => {
+    const eventDate = futureDateString();
     const spy = vi
       .spyOn(
         EmailService as unknown as {
@@ -80,8 +82,8 @@ describe("Auto-unpublish on format change introducing new missing necessary fiel
       .send({
         title: "Format Change Auto Unpublish",
         type: "Webinar",
-        date: "2026-06-15",
-        endDate: "2026-06-15",
+        date: eventDate,
+        endDate: eventDate,
         time: "09:00",
         endTime: "10:00",
         location: "Room 1",

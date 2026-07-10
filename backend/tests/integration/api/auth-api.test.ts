@@ -605,8 +605,6 @@ describe("Authentication API Integration Tests", () => {
         process.env.NODE_ENV = originalEnv;
         process.env.ENABLE_RATE_LIMITING = originalRateLimit;
 
-        // Add grace period to ensure any background operations complete
-        await new Promise((resolve) => setTimeout(resolve, 100));
       }
     });
 

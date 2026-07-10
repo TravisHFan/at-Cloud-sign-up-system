@@ -5,7 +5,7 @@ import ReactivationController from "../../../../src/controllers/promoCodes/React
 
 // Mock dependencies
 vi.mock("../../../../src/models/PromoCode");
-vi.mock("../../../../src/services", () => ({
+vi.mock("../../../../src/services/infrastructure/EmailServiceFacade", () => ({
   EmailService: {
     sendPromoCodeReactivatedEmail: vi.fn().mockResolvedValue(undefined),
   },
@@ -17,7 +17,7 @@ vi.mock("../../../../src/controllers/unifiedMessageController", () => ({
 }));
 
 import PromoCode from "../../../../src/models/PromoCode";
-import { EmailService } from "../../../../src/services";
+import { EmailService } from "../../../../src/services/infrastructure/EmailServiceFacade";
 
 interface MockRequest {
   params: Record<string, string>;

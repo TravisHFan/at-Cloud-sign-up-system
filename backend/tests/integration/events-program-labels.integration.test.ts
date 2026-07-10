@@ -52,7 +52,7 @@ describe("Events with programLabels (many-to-many)", () => {
   });
 
   afterAll(async () => {
-    await mongoose.connection.close();
+    // Shared integration harness owns connection lifecycle.
   });
 
   beforeEach(async () => {

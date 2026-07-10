@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { CacheHelper } from "../../../../src/controllers/publicEvent/CacheHelper";
 import { socketService } from "../../../../src/services/infrastructure/SocketService";
 import { ResponseBuilderService } from "../../../../src/services/ResponseBuilderService";
-import { CachePatterns } from "../../../../src/services";
+import { CachePatterns } from "../../../../src/services/infrastructure/CacheService";
 import { CorrelatedLogger } from "../../../../src/services/CorrelatedLogger";
 
 // Mock all dependencies
@@ -18,7 +18,7 @@ vi.mock("../../../../src/services/ResponseBuilderService", () => ({
   },
 }));
 
-vi.mock("../../../../src/services", () => ({
+vi.mock("../../../../src/services/infrastructure/CacheService", () => ({
   CachePatterns: {
     invalidateEventCache: vi.fn(),
     invalidateAnalyticsCache: vi.fn(),

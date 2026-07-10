@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "declaration": true,
+    "outDir": "dist/cjs",
+    "rootDir": "time",
+    "strict": true,
+    "skipLibCheck": true
+  },
+  "include": ["time/**/*.ts"]
+}

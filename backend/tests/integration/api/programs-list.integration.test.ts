@@ -29,7 +29,7 @@ describe("Programs List API Integration Tests", () => {
     });
 
     afterAll(async () => {
-      await mongoose.disconnect();
+      // Shared integration harness owns connection lifecycle.
     });
 
     describe("Basic Listing", () => {
@@ -71,30 +71,29 @@ describe("Programs List API Integration Tests", () => {
       });
 
       it("should return programs sorted by createdAt descending", async () => {
-        // Create programs with slight delay to ensure ordering
+        // Use deterministic timestamps instead of wall-clock sleeps.
         program1 = await Program.create({
           title: "First Program",
           programType: "EMBA Mentor Circles",
           fullPriceTicket: 5000,
           createdBy,
+          createdAt: new Date("2026-01-01T00:00:00.000Z"),
         });
-
-        await new Promise((resolve) => setTimeout(resolve, 10));
 
         program2 = await Program.create({
           title: "Second Program",
           programType: "EMBA Mentor Circles",
           fullPriceTicket: 5000,
           createdBy,
+          createdAt: new Date("2026-01-02T00:00:00.000Z"),
         });
-
-        await new Promise((resolve) => setTimeout(resolve, 10));
 
         program3 = await Program.create({
           title: "Third Program",
           programType: "EMBA Mentor Circles",
           fullPriceTicket: 5000,
           createdBy,
+          createdAt: new Date("2026-01-03T00:00:00.000Z"),
         });
 
         const response = await request(app).get("/api/programs").expect(200);
@@ -388,7 +387,7 @@ describe("Programs List API Integration Tests", () => {
         expect(response.body.data[0].introduction).toBe("Test introduction");
       });
 
-      it("should handle large number of programs", async () => {
+      it("should support a bounded larger page", async () => {
         const programs = Array(50)
           .fill(null)
           .map((_, index) => ({
@@ -400,10 +399,45 @@ describe("Programs List API Integration Tests", () => {
 
         await Program.create(programs);
 
-        const response = await request(app).get("/api/programs").expect(200);
+        const response = await request(app)
+          .get("/api/programs")
+          .query({ limit: 100 })
+          .expect(200);
 
         expect(response.body.success).toBe(true);
         expect(response.body.data).toHaveLength(50);
+        expect(response.body.pagination).toMatchObject({
+          currentPage: 1,
+          limit: 100,
+          totalPrograms: 50,
+          totalPages: 1,
+        });
+      });
+
+      it("should paginate program listings with stable metadata", async () => {
+        await Program.create(
+          Array.from({ length: 25 }, (_, index) => ({
+            title: `Paged Program ${index + 1}`,
+            programType: "EMBA Mentor Circles",
+            fullPriceTicket: 5000,
+            createdBy,
+          })),
+        );
+
+        const response = await request(app)
+          .get("/api/programs")
+          .query({ page: 2, limit: 10 })
+          .expect(200);
+
+        expect(response.body.data).toHaveLength(10);
+        expect(response.body.pagination).toEqual({
+          currentPage: 2,
+          limit: 10,
+          totalPrograms: 25,
+          totalPages: 3,
+          hasNext: true,
+          hasPrev: true,
+        });
       });
 
       it("should handle undefined query parameters gracefully", async () => {

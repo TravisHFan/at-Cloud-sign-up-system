@@ -1,6 +1,16 @@
 import { Router, Request, Response } from "express";
-import { EventController } from "../controllers/eventController";
-import { GuestController } from "../controllers/guestController";
+import { EventQueryController } from "../controllers/event/EventQueryController";
+import { EventConflictController } from "../controllers/event/EventConflictController";
+import { BatchOperationsController } from "../controllers/event/BatchOperationsController";
+import { MaintenanceController } from "../controllers/event/MaintenanceController";
+import { CreationController } from "../controllers/event/CreationController";
+import { DeletionController } from "../controllers/event/DeletionController";
+import { PublishingController } from "../controllers/event/PublishingController";
+import { RegistrationController } from "../controllers/event/RegistrationController";
+import GuestRoleManagementController from "../controllers/guest/GuestRoleManagementController";
+import GuestUpdateController from "../controllers/guest/GuestUpdateController";
+import GuestCancellationController from "../controllers/guest/GuestCancellationController";
+import GuestManageLinkController from "../controllers/guest/GuestManageLinkController";
 import {
   authenticate,
   authenticateOptional,
@@ -31,9 +41,9 @@ import {
 const router = Router();
 
 // Public routes (no authentication required)
-router.get("/", searchLimiter, EventController.getAllEvents);
+router.get("/", searchLimiter, EventQueryController.getAllEvents);
 // Time conflict check (public for quick client validation; read-only)
-router.get("/check-conflict", EventController.checkTimeConflict);
+router.get("/check-conflict", EventConflictController.checkTimeConflict);
 
 // Download ICS calendar file for event (no authentication required)
 // IMPORTANT: This must come BEFORE /:id route to avoid route matching conflicts
@@ -116,7 +126,7 @@ router.get(
   authenticate,
   validateObjectId,
   handleValidationErrors,
-  EventController.hasRegistrations,
+  MaintenanceController.hasRegistrations,
 );
 
 router.get(
@@ -124,7 +134,7 @@ router.get(
   authenticateOptional,
   validateObjectId,
   handleValidationErrors,
-  EventController.getEventById,
+  EventQueryController.getEventById,
 );
 
 // Batch status update (can be called by admins or as a maintenance endpoint)
@@ -132,7 +142,7 @@ router.post(
   "/update-statuses",
   authenticate,
   requireLeader,
-  EventController.updateAllEventStatuses,
+  BatchOperationsController.updateAllEventStatuses,
 );
 
 // Batch signup count recalculation (can be called by admins or as a maintenance endpoint)
@@ -140,7 +150,7 @@ router.post(
   "/recalculate-signups",
   authenticate,
   requireLeader,
-  EventController.recalculateSignupCounts,
+  BatchOperationsController.recalculateSignupCounts,
 );
 
 // Event Purchase & Access Control Routes (paid events feature)
@@ -363,20 +373,20 @@ router.post(
   validateEventCreation,
   handleValidationErrors,
   authorizePermission(PERMISSIONS.CREATE_EVENT),
-  EventController.createEvent,
+  CreationController.createEvent,
 );
 router.put(
   "/:id",
   validateObjectId,
   handleValidationErrors,
-  EventController.updateEvent,
+  UpdateController.updateEvent,
 );
 router.delete(
   "/:id",
   validateObjectId,
   handleValidationErrors,
   authorizeEventManagement,
-  EventController.deleteEvent,
+  DeletionController.deleteEvent,
 );
 
 // Update YouTube URL for completed events
@@ -395,14 +405,14 @@ router.post(
   validateObjectId,
   handleValidationErrors,
   authorizeEventManagement,
-  EventController.publishEvent,
+  PublishingController.publishEvent,
 );
 router.post(
   "/:id/unpublish",
   validateObjectId,
   handleValidationErrors,
   authorizeEventManagement,
-  EventController.unpublishEvent,
+  PublishingController.unpublishEvent,
 );
 
 // Create (or fetch existing) short link for a published event (idempotent)
@@ -482,13 +492,13 @@ router.post(
   "/:id/register",
   validateObjectId,
   handleValidationErrors,
-  EventController.signUpForEvent,
+  RegistrationController.signUpForEvent,
 );
 router.post(
   "/:id/signup",
   validateObjectId,
   handleValidationErrors,
-  EventController.signUpForEvent,
+  RegistrationController.signUpForEvent,
 );
 
 // Workshop group topic update (auth required; permission checked inside controller)
@@ -496,13 +506,13 @@ router.post(
   "/:id/workshop/groups/:group/topic",
   validateObjectId,
   handleValidationErrors,
-  EventController.updateWorkshopGroupTopic,
+  RegistrationController.updateWorkshopGroupTopic,
 );
 router.post(
   "/:id/cancel",
   validateObjectId,
   handleValidationErrors,
-  EventController.cancelSignup,
+  RegistrationController.cancelSignup,
 );
 
 // Event management routes (for organizers and admins)
@@ -511,14 +521,14 @@ router.post(
   validateObjectId,
   handleValidationErrors,
   authorizeEventManagement,
-  EventController.removeUserFromRole,
+  RegistrationController.removeUserFromRole,
 );
 router.post(
   "/:id/manage/move-user",
   validateObjectId,
   handleValidationErrors,
   authorizeEventManagement,
-  EventController.moveUserBetweenRoles,
+  RegistrationController.moveUserBetweenRoles,
 );
 
 // Move guest between roles (organizers/admins)
@@ -527,7 +537,7 @@ router.post(
   validateObjectId,
   handleValidationErrors,
   authorizeEventManagement,
-  GuestController.moveGuestBetweenRoles,
+  GuestRoleManagementController.moveGuestBetweenRoles,
 );
 
 // Organizer/Admin: Update guest registration details for a specific event
@@ -538,7 +548,7 @@ router.put(
   guestUpdateValidation,
   handleValidationErrors,
   authorizeEventManagement,
-  GuestController.updateGuestRegistration,
+  GuestUpdateController.updateGuestRegistration,
 );
 
 // Organizer/Admin: Cancel a guest registration for a specific event
@@ -549,7 +559,7 @@ router.delete(
   guestCancellationValidation,
   handleValidationErrors,
   authorizeEventManagement,
-  GuestController.cancelGuestRegistration,
+  GuestCancellationController.cancelGuestRegistration,
 );
 
 // Organizer/Admin: Re-send manage link for a guest in a specific event
@@ -558,7 +568,7 @@ router.post(
   validateObjectId, // validates :id (eventId)
   handleValidationErrors,
   authorizeEventManagement,
-  GuestController.resendManageLink,
+  GuestManageLinkController.resendManageLink,
 );
 
 // Email all participants/guests (organizers/admins)
@@ -691,7 +701,7 @@ router.post(
   validateObjectId,
   handleValidationErrors,
   authorizeEventManagement,
-  EventController.assignUserToRole,
+  RegistrationController.assignUserToRole,
 );
 
 router.patch(
@@ -699,19 +709,19 @@ router.patch(
   validateObjectId,
   handleValidationErrors,
   authorizeEventManagement,
-  EventController.updateRegistrationAttendance,
+  RegistrationController.updateRegistrationAttendance,
 );
 
 // User's event routes
-router.get("/user/registered", EventController.getUserEvents);
-router.get("/user/created", EventController.getCreatedEvents);
+router.get("/user/registered", MaintenanceController.getUserEvents);
+router.get("/user/created", MaintenanceController.getCreatedEvents);
 
 // Event participants (for organizers and admins)
 router.get(
   "/:id/participants",
   validateObjectId,
   handleValidationErrors,
-  EventController.getEventParticipants,
+  MaintenanceController.getEventParticipants,
 );
 
 export default router;

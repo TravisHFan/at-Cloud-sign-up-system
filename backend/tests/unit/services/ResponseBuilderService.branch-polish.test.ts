@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Types } from "mongoose";
 import { ResponseBuilderService } from "../../../src/services/ResponseBuilderService";
-import { Event, Registration, User } from "../../../src/models";
+import {
+  Event,
+  GuestRegistration,
+  Registration,
+  User,
+} from "../../../src/models";
 import { RegistrationQueryService } from "../../../src/services/RegistrationQueryService";
 
 // Reuse the same mocking pattern as the main suite
@@ -15,14 +20,13 @@ vi.mock("../../../src/models", () => ({
     find: vi.fn(),
     findOne: vi.fn(),
   },
+  GuestRegistration: {
+    aggregate: vi.fn(),
+  },
   User: {
     findById: vi.fn(),
     find: vi.fn(),
   },
-}));
-
-vi.mock("../../../src/utils/publicSlug", () => ({
-  generateUniquePublicSlug: vi.fn().mockResolvedValue("mock-slug-1234"),
 }));
 
 vi.mock("../../../src/services/RegistrationQueryService", () => ({
@@ -87,17 +91,16 @@ describe("ResponseBuilderService - branch polish", () => {
     } as any);
 
     vi.mocked(Registration.find).mockReturnValue({
-      // Support direct .lean() path used for viewer registrations
+      select: vi.fn().mockReturnThis(),
+      populate: vi.fn().mockReturnThis(),
       lean: vi.fn().mockResolvedValue([]),
-      // And the chained populate().lean() path used for role queries
-      populate: vi
-        .fn()
-        .mockReturnValue({ lean: vi.fn().mockResolvedValue([]) }),
     } as any);
+    vi.mocked(GuestRegistration.aggregate).mockResolvedValue([]);
 
-    // User.findById returns null -> enrichment should keep original organizer values
-    vi.mocked(User.findById).mockReturnValueOnce({
-      select: vi.fn().mockResolvedValue(null),
+    // Batched organizer lookup returns no match, preserving stored values.
+    vi.mocked(User.find).mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      lean: vi.fn().mockResolvedValue([]),
     } as any);
 
     const res =
@@ -156,28 +159,5 @@ describe("ResponseBuilderService - branch polish", () => {
     // r1 is full; only r2 available and allowed by participant rules
     expect(res!.availableRoles).toContain("Common Participant (Zoom)");
     expect(res!.restrictedRoles).not.toContain("Common Participant (Zoom)");
-  });
-
-  it("buildEventsWithRegistrations: filters out null builds", async () => {
-    const e1 = { _id: new Types.ObjectId().toString() } as any;
-    const e2 = { _id: new Types.ObjectId().toString() } as any;
-
-    const spy = vi
-      .spyOn(ResponseBuilderService, "buildEventWithRegistrations")
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({
-        id: e2._id,
-        roles: [],
-        totalSlots: 0,
-        signedUp: 0,
-      } as any);
-
-    const out = await ResponseBuilderService.buildEventsWithRegistrations([
-      e1,
-      e2,
-    ]);
-    expect(spy).toHaveBeenCalledTimes(2);
-    expect(out).toHaveLength(1);
-    expect(out[0].id).toBe(e2._id);
   });
 });

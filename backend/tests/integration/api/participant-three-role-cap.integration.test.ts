@@ -111,7 +111,7 @@ describe("Participant three-role cap (policy update)", () => {
   afterAll(async () => {
     await User.deleteMany({});
     await Event.deleteMany({});
-    await mongoose.connection.close();
+    // Shared integration harness owns connection lifecycle.
   });
 
   it("allows 3 distinct role registrations then blocks the 4th", async () => {

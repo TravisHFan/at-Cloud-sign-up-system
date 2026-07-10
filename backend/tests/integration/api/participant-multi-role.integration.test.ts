@@ -134,7 +134,7 @@ describe("Participant multi-role capability (policy update)", () => {
   afterAll(async () => {
     await User.deleteMany({});
     await Event.deleteMany({});
-    await mongoose.connection.close();
+    // Shared integration harness owns connection lifecycle.
   });
 
   it("allows a Participant to register for two distinct roles", async () => {

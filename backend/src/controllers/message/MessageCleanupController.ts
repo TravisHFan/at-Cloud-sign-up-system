@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import Message from "../../models/Message";
-import { CachePatterns } from "../../services";
+import { CachePatterns } from "../../services/infrastructure/CacheService";
 
 /**
  * Message Cleanup Controller

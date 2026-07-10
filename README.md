@@ -6,7 +6,7 @@ Full-stack event and workshop sign-up platform (Node/Express + React/TypeScript)
 
 - Install dependencies: use the root script to install backend and frontend
 - Dev servers: backend on 5001, frontend on 5173 (proxy to backend)
-- Health checks: see `docs/DEV_HEALTH_CHECKS.md`
+- Health and monitor routes: see `docs/MONITOR_ROUTES.md`
 
 ## Development Setup Scripts
 
@@ -95,12 +95,11 @@ See `docs/TERMINOLOGY.md` for guidance and examples.
 
 ## Useful docs
 
-- Deployment guide: `DEPLOYMENT_GUIDE.md`
-- Deployment checklist: `DEPLOYMENT_CHECKLIST.md`
-- Dev health checks: `docs/DEV_HEALTH_CHECKS.md`
-- Test coverage roadmap: `docs/TEST_COVERAGE_ROADMAP.md`
-- Monitor routes: `docs/MONITOR_ROUTES.md`
-- Scheduler health: `GET /api/system/scheduler` (see DEPLOYMENT_GUIDE.md for `schedulerEnabled` flag)
+- Deployment guide: `docs/DEPLOYMENT_GUIDE.md`
+- Deployment checklist: `docs/DEPLOYMENT_CHECKLIST.md`
+- Health and monitor routes: `docs/MONITOR_ROUTES.md`
+- Codebase optimization roadmap: `docs/CODEBASE_OPTIMIZATION_TODO.md`
+- Scheduler health: `GET /api/system/scheduler` (see `docs/DEPLOYMENT_GUIDE.md` for the `schedulerEnabled` flag)
 
 ## Email configuration
 

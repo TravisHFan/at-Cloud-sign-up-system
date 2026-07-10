@@ -23,7 +23,7 @@ vi.mock("../../../src/models/GuestRegistration", () => ({
 }));
 
 // Mock timezone search to return predictable values
-vi.mock("../../../src/shared/time/timezoneSearch", () => ({
+vi.mock("@atcloud/shared-time", () => ({
   findUtcInstantFromLocal: vi.fn((params: { date: string; time: string }) => {
     // Return a mock Date for predictable testing
     return new Date(`${params.date}T${params.time}:00Z`);
@@ -431,7 +431,7 @@ describe("serializePublicEvent", () => {
     it("falls back to raw date/time when findUtcInstantFromLocal returns null", async () => {
       // Override the mock to return null for this test
       const { findUtcInstantFromLocal } = await import(
-        "../../../src/shared/time/timezoneSearch"
+        "@atcloud/shared-time"
       );
       vi.mocked(findUtcInstantFromLocal).mockReturnValue(null);
 

@@ -9,14 +9,8 @@ import { buildContentSecurityPolicy } from "./src/config/contentSecurityPolicy";
 // Read version from package.json
 import packageJson from "./package.json";
 
-function chunkNameFromPath(id: string, marker: string, prefix: string) {
-  const [, rest] = id.split(marker);
-  const firstSegment = rest?.split("/")[0]?.replace(/\.[jt]sx?$/, "");
-  return firstSegment ? `${prefix}-${firstSegment}` : prefix;
-}
-
-function isCommonJsHelper(id: string) {
-  return id.includes("commonjsHelpers");
+function isSharedBuildHelper(id: string) {
+  return id.includes("commonjsHelpers") || id.includes("vite/preload-helper");
 }
 
 // https://vitejs.dev/config/
@@ -52,10 +46,10 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         output: {
           manualChunks(id) {
-            // Keep Rollup's shared CommonJS interop helpers out of feature chunks.
-            // If a helper lands in a lazy/specialized vendor chunk, the browser can
-            // evaluate chunks in a cycle before React's namespace export is ready.
-            if (isCommonJsHelper(id)) {
+            // Keep shared build/runtime helpers out of feature chunks. If one lands
+            // in a lazy vendor chunk, it can pull that entire feature into startup
+            // or create an evaluation cycle before React's exports are ready.
+            if (isSharedBuildHelper(id)) {
               return "vendor";
             }
 
@@ -104,16 +98,6 @@ export default defineConfig(({ mode }) => {
                 return "payments-vendor";
               }
               return "vendor";
-            }
-
-            if (id.includes("/src/pages/")) {
-              return chunkNameFromPath(id, "/src/pages/", "page");
-            }
-            if (id.includes("/src/components/admin/")) {
-              return "admin-components";
-            }
-            if (id.includes("/src/components/analytics/")) {
-              return "analytics-components";
             }
           },
         },

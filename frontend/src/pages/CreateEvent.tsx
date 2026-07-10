@@ -39,8 +39,6 @@ interface Organizer {
   phone?: string; // Add phone field
 }
 
-// MentorsPicker component removed - no longer needed with mentorCircle removal
-
 export default function NewEvent() {
   const { currentUser } = useAuth();
   const notification = useToastReplacement();

@@ -375,8 +375,6 @@ export default function EditEvent() {
       }));
   }, [selectedOrganizers]);
 
-  // MentorsPicker is now a separate component to keep identity stable and avoid remount loops
-
   // Use refs to stabilize setValue/getValues access and prevent infinite re-renders
   const setValueRef = useRef(setValue);
   const getValuesRef = useRef(getValues);

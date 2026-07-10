@@ -78,7 +78,7 @@ vi.mock("../../../../src/services/infrastructure/SocketService", () => ({
   },
 }));
 
-vi.mock("../../../../src/services", () => ({
+vi.mock("../../../../src/services/infrastructure/CacheService", () => ({
   CachePatterns: {
     invalidateEventCache: vi.fn(),
     invalidateAnalyticsCache: vi.fn(),
@@ -149,7 +149,7 @@ import {
 } from "../../../../src/middleware/guestValidation";
 import { EmailService } from "../../../../src/services/infrastructure/EmailServiceFacade";
 import { socketService } from "../../../../src/services/infrastructure/SocketService";
-import { CachePatterns } from "../../../../src/services";
+import { CachePatterns } from "../../../../src/services/infrastructure/CacheService";
 import { ResponseBuilderService } from "../../../../src/services/ResponseBuilderService";
 
 describe("GuestRegistrationController", () => {

@@ -6,7 +6,7 @@
  */
 
 import { Router, Request, Response } from "express";
-import { lockService } from "../services";
+import { lockService } from "../services/LockService";
 import RequestMonitorService from "../middleware/RequestMonitorService";
 import EventReminderScheduler from "../services/EventReminderScheduler";
 import { authenticate, requireAdmin } from "../middleware/auth";

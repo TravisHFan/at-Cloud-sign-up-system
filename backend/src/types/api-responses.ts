@@ -5,6 +5,57 @@
  * These interfaces ensure consistency between backend and frontend
  */
 
+/** Lightweight role summary used by event-list cards. */
+export interface EventListRoleData {
+  id: string;
+  name: string;
+  description: string;
+  agenda?: string;
+  maxParticipants: number;
+  openToPublic?: boolean;
+  currentCount: number;
+  availableSpots: number;
+  isFull: boolean;
+  waitlistCount: number;
+  // Frontend compatibility without shipping participant records in list APIs.
+  currentSignups: [];
+}
+
+/**
+ * Event-list response contract. Detail-only content and participant records are
+ * deliberately excluded so list pages remain small and constant-query.
+ */
+export interface EventListItemData {
+  id: string;
+  title: string;
+  type: string;
+  date: string;
+  endDate: string;
+  time: string;
+  endTime: string;
+  timeZone?: string;
+  location: string;
+  organizer: string;
+  organizerDetails?: OrganizerDetail[];
+  hostedBy?: string;
+  format: string;
+  status: "upcoming" | "ongoing" | "completed" | "cancelled";
+  createdBy: UserBasicInfo;
+  createdAt: Date;
+  roles: EventListRoleData[];
+  totalCapacity: number;
+  totalRegistrations: number;
+  availableSpots: number;
+  totalSlots: number;
+  signedUp: number;
+  maxParticipants: number;
+  publish?: boolean;
+  publishedAt?: Date | null;
+  publicSlug?: string;
+  youtubeUrl?: string;
+  programLabels?: string[];
+}
+
 export interface EventWithRegistrationData {
   id: string;
   title: string;
@@ -148,7 +199,7 @@ export interface OrganizerDetail {
 export interface EventListResponse {
   success: boolean;
   data: {
-    events: EventWithRegistrationData[];
+    events: EventListItemData[];
     totalEvents: number;
     totalPages: number;
     currentPage: number;

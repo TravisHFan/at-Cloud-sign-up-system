@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { User, Event, Registration } from "../../models";
 import { hasPermission, PERMISSIONS } from "../../utils/roleUtils";
-import { CachePatterns } from "../../services";
+import { CachePatterns } from "../../services/infrastructure/CacheService";
 import { CorrelatedLogger } from "../../services/CorrelatedLogger";
 
 async function calculateGrowthRate(

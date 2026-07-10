@@ -1,6 +1,16 @@
 import { Router } from "express";
-import { ProfileController } from "../controllers/ProfileController";
-import { UserAdminController } from "../controllers/UserAdminController";
+import GetProfileController from "../controllers/profile/GetProfileController";
+import UpdateProfileController from "../controllers/profile/UpdateProfileController";
+import UploadAvatarController from "../controllers/profile/UploadAvatarController";
+import ChangePasswordController from "../controllers/profile/ChangePasswordController";
+import UserQueryController from "../controllers/user-admin/UserQueryController";
+import UserListingController from "../controllers/user-admin/UserListingController";
+import UserRoleController from "../controllers/user-admin/UserRoleController";
+import UserDeactivationController from "../controllers/user-admin/UserDeactivationController";
+import UserReactivationController from "../controllers/user-admin/UserReactivationController";
+import UserDeletionController from "../controllers/user-admin/UserDeletionController";
+import UserDeletionImpactController from "../controllers/user-admin/UserDeletionImpactController";
+import AdminProfileEditController from "../controllers/user-admin/AdminProfileEditController";
 import { UserAnalyticsController } from "../controllers/UserAnalyticsController";
 import {
   authenticate,
@@ -24,12 +34,12 @@ const router = Router();
 router.use(authenticate);
 
 // User profile routes (ProfileController)
-router.get("/profile", ProfileController.getProfile);
+router.get("/profile", GetProfileController.getProfile);
 router.put(
   "/profile",
   validateUserUpdate,
   handleValidationErrors,
-  ProfileController.updateProfile,
+  UpdateProfileController.updateProfile,
 );
 
 // Avatar upload route (ProfileController)
@@ -37,12 +47,12 @@ router.post(
   "/avatar",
   uploadLimiter,
   uploadAvatar,
-  ProfileController.uploadAvatar,
+  UploadAvatarController.uploadAvatar,
 );
 
 // Admin routes - Allow all authenticated users to view user list (community feature) (UserAdminController)
-router.get("/", UserAdminController.getAllUsers);
-router.get("/search", UserAdminController.getAllUsers); // Search endpoint (uses same logic as getAllUsers)
+router.get("/", UserListingController.getAllUsers);
+router.get("/search", UserListingController.getAllUsers);
 
 // Community stats - available to all authenticated users who can view the Community page
 router.get(
@@ -65,7 +75,7 @@ router.get(
   "/:id",
   validateObjectId,
   handleValidationErrors,
-  UserAdminController.getUserById,
+  UserQueryController.getUserById,
 );
 
 // Admin user management routes (UserAdminController)
@@ -74,28 +84,28 @@ router.put(
   validateObjectId,
   handleValidationErrors,
   requireAdmin,
-  UserAdminController.adminEditProfile,
+  AdminProfileEditController.adminEditProfile,
 );
 router.put(
   "/:id/role",
   validateObjectId,
   handleValidationErrors,
   requireAdmin,
-  UserAdminController.updateUserRole,
+  UserRoleController.updateUserRole,
 );
 router.put(
   "/:id/deactivate",
   validateObjectId,
   handleValidationErrors,
   requireLeader,
-  UserAdminController.deactivateUser,
+  UserDeactivationController.deactivateUser,
 );
 router.put(
   "/:id/reactivate",
   validateObjectId,
   handleValidationErrors,
   requireLeader,
-  UserAdminController.reactivateUser,
+  UserReactivationController.reactivateUser,
 );
 
 // Delete user impact analysis route (Super Admin only) (UserAdminController)
@@ -104,7 +114,7 @@ router.get(
   validateObjectId,
   handleValidationErrors,
   requireSuperAdmin,
-  UserAdminController.getUserDeletionImpact,
+  UserDeletionImpactController.getUserDeletionImpact,
 );
 
 // Delete user route (Super Admin only) (UserAdminController)
@@ -113,7 +123,7 @@ router.delete(
   validateObjectId,
   handleValidationErrors,
   requireSuperAdmin,
-  UserAdminController.deleteUser,
+  UserDeletionController.deleteUser,
 );
 
 // Password change route (ProfileController)
@@ -121,7 +131,7 @@ router.post(
   "/:id/change-password",
   validateObjectId,
   handleValidationErrors,
-  ProfileController.changePassword,
+  ChangePasswordController.changePassword,
 );
 
 export default router;

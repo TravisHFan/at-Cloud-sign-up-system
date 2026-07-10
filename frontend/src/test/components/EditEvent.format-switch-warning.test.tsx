@@ -168,7 +168,7 @@ describe("EditEvent format switch predictive warning", () => {
     const formatSelect = screen.getByLabelText(/Format/i) as HTMLSelectElement;
     fireEvent.change(formatSelect, { target: { value: "In-person" } });
 
-    await new Promise((r) => setTimeout(r, 50));
+    await Promise.resolve();
     expect(screen.queryByTestId("format-switch-warning")).toBeNull();
   });
 
@@ -191,7 +191,7 @@ describe("EditEvent format switch predictive warning", () => {
       target: { value: "Hybrid Participation" },
     });
 
-    await new Promise((r) => setTimeout(r, 50));
+    await Promise.resolve();
     expect(screen.queryByTestId("format-switch-warning")).toBeNull();
   });
 });

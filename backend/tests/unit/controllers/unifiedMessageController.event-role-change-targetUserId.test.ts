@@ -1,8 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { UnifiedMessageController } from "../../../src/controllers/unifiedMessageController";
-import { Message, User } from "../../../src/models";
+import TargetedSystemMessagesController from "../../../src/controllers/message/TargetedSystemMessagesController";
 import MessageModel from "../../../src/models/Message";
-import { socketService } from "../../../src/services/infrastructure/SocketService";
 
 // Mock the Message model using the same pattern as the main test file
 vi.mock("../../../src/models", () => ({
@@ -51,7 +49,7 @@ vi.mock("../../../src/models/Message", () => ({
 
 vi.mock("../../../src/services/infrastructure/SocketService");
 
-describe("UnifiedMessageController - event_role_change targetUserId", () => {
+describe("TargetedSystemMessagesController - event_role_change targetUserId", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -73,7 +71,7 @@ describe("UnifiedMessageController - event_role_change targetUserId", () => {
     (MessageModel as any).mockImplementation(() => mockMessage);
 
     // Call the method with single recipient
-    const result = await UnifiedMessageController.createTargetedSystemMessage(
+    const result = await TargetedSystemMessagesController.createTargetedSystemMessage(
       {
         title: "Test Event Role Change",
         content: "You have been assigned a new role",
@@ -105,7 +103,8 @@ describe("UnifiedMessageController - event_role_change targetUserId", () => {
     (MessageModel as any).mockImplementation(() => mockMessage);
 
     // Call the method with multiple recipients
-    const result = await UnifiedMessageController.createTargetedSystemMessage(
+    const result =
+      await TargetedSystemMessagesController.createTargetedSystemMessage(
       {
         title: "Test Event Role Change",
         content: "Multiple users have been updated",
@@ -140,7 +139,8 @@ describe("UnifiedMessageController - event_role_change targetUserId", () => {
     (MessageModel as any).mockImplementation(() => mockMessage);
 
     // Call the method with auth_level_change type (existing functionality)
-    const result = await UnifiedMessageController.createTargetedSystemMessage(
+    const result =
+      await TargetedSystemMessagesController.createTargetedSystemMessage(
       {
         title: "Test Auth Level Change",
         content: "Your authorization level has been updated",

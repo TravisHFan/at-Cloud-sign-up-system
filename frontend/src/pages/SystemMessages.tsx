@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useNotifications } from "../contexts/NotificationContext";
 import { useAuth } from "../hooks/useAuth";
 import { useAvatarUpdates } from "../hooks/useAvatarUpdates";
-import { socketService } from "../services/socketService";
 import { Icon } from "../components/common";
 import ConfirmationModal from "../components/common/ConfirmationModal";
 import AlertModal from "../components/common/AlertModal";
@@ -110,14 +109,6 @@ export default function SystemMessages() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [avatarUpdateCounter]);
-
-  // Connect to WebSocket for real-time updates
-  useEffect(() => {
-    const token = localStorage.getItem("authToken");
-    if (token) {
-      socketService.connect(token);
-    }
-  }, []);
 
   // Filter system messages - auth level changes only for current user, others for all
   const filteredSystemMessages = useMemo(

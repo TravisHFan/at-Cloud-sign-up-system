@@ -4,7 +4,6 @@ import { ReceiptAPI } from "../services/api/donations.api";
 import type { ReceiptData } from "../services/api/donations.api";
 import { formatCurrency } from "../utils/currency";
 import { formatDateToAmerican } from "../utils/eventStatsUtils";
-import html2pdf from "html2pdf.js";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 
 // Icons as inline SVG components
@@ -124,6 +123,7 @@ export default function DonationReceipt() {
     };
 
     try {
+      const { default: html2pdf } = await import("html2pdf.js");
       await html2pdf().set(opt).from(receiptRef.current).save();
     } catch (error) {
       console.error("Error generating PDF:", error);

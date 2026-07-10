@@ -57,25 +57,14 @@ export const deleteOldAvatarFile = async (
 
     const filePath = path.join(uploadsDir, filename);
 
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-      console.log(`Successfully deleted old avatar: ${filename}`);
-      log.info("Old avatar deleted", undefined, { filename, uploadsDir });
-      return true;
-    }
-
-    // File doesn't exist, consider it already cleaned up
-    log.debug(
-      "Old avatar file not found; treated as already cleaned up",
-      undefined,
-      {
-        filename,
-        uploadsDir,
-      }
-    );
-    return false;
+    await fs.promises.unlink(filePath);
+    log.info("Old avatar deleted", undefined, { filename, uploadsDir });
+    return true;
   } catch (error) {
-    console.error("Error deleting avatar file:", error);
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      // File doesn't exist, consider it already cleaned up.
+      return false;
+    }
     log.error("Error deleting avatar file", error as Error);
     return false;
   }
@@ -101,14 +90,12 @@ export const cleanupOldAvatar = async (
   }
 
   try {
-    console.log(`Cleaning up old avatar for user ${userId}: ${oldAvatarUrl}`);
     log.info("Cleaning up old avatar for user", undefined, {
       userId,
       oldAvatarUrl,
     });
     return await deleteOldAvatarFile(oldAvatarUrl);
   } catch (error) {
-    console.error(`Error cleaning up old avatar for user ${userId}:`, error);
     log.error(
       "Error cleaning up old avatar for user",
       error as Error,

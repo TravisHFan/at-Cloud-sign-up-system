@@ -3,6 +3,13 @@ import fs from "fs";
 import { describe, test, beforeEach, afterEach, expect, vi } from "vitest";
 import { getFileUrl, uploadAvatar } from "../../../src/middleware/upload";
 
+// Directory creation is asynchronous in production; complete it immediately
+// here so storage-path tests stay deterministic and never touch disk.
+vi.spyOn(fs, "mkdir").mockImplementation(((...args: unknown[]) => {
+  const callback = args.at(-1) as (error: NodeJS.ErrnoException | null) => void;
+  callback(null);
+}) as typeof fs.mkdir);
+
 // Capture options passed to multer to test storage and fileFilter logic
 const captured = vi.hoisted(() => ({ opts: {} as any }));
 

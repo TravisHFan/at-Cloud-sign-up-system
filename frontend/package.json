@@ -1,7 +1,7 @@
 {
   "name": "frontend",
   "private": true,
-  "version": "2.52.0",
+  "version": "2.53.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,8 +12,10 @@
     "verify": "npm run lint && npm run type-check",
     "test": "NODE_OPTIONS=--max-old-space-size=4096 vitest run",
     "test:watch": "NODE_OPTIONS=--max-old-space-size=4096 vitest --watch",
-    "test:verbose": "NODE_OPTIONS=--max-old-space-size=4096 vitest run --reporter=verbose",
-    "test:coverage": "vitest --coverage",
+    "test:verbose": "VITEST_VERBOSE_LOGS=true NODE_OPTIONS=--max-old-space-size=4096 vitest run --reporter=verbose",
+    "pretest:e2e": "npm --prefix .. run build --workspace=@atcloud/shared-time",
+    "test:e2e": "playwright test",
+    "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
     "type-check": "tsc -b --pretty false",
     "clean-install": "rm -rf node_modules && npm install",
@@ -21,6 +23,7 @@
     "check-deps": "npm ls --depth=0"
   },
   "dependencies": {
+    "@atcloud/shared-time": "file:../shared",
     "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "^5.1.1",
     "@stripe/stripe-js": "^8.0.0",
@@ -37,6 +40,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.29.0",
+    "@playwright/test": "^1.61.1",
     "@testing-library/jest-dom": "^6.6.4",
     "@testing-library/react": "^16.0.0",
     "@testing-library/user-event": "^14.6.1",

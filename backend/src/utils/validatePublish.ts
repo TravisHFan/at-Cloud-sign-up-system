@@ -53,7 +53,8 @@ const MIN_PURPOSE_LEN = 30;
 // Allow test suite / current codebase to continue functioning without
 // newly introduced strict validations breaking existing integration tests.
 // Set env PUBLISH_STRICT_VALIDATION=true to enforce the extended rules.
-const STRICT_VALIDATION = process.env.PUBLISH_STRICT_VALIDATION === "true";
+const strictValidationEnabled = (): boolean =>
+  process.env.PUBLISH_STRICT_VALIDATION === "true";
 
 /**
  * Validate whether an event satisfies publish requirements.
@@ -97,7 +98,7 @@ export function validateEventForPublish(
     });
   }
 
-  if (STRICT_VALIDATION) {
+  if (strictValidationEnabled()) {
     // Additional optional strict validations (description length, timezone, etc.)
     const purpose = (event.purpose || "").trim();
     if (purpose && purpose.length < MIN_PURPOSE_LEN) {

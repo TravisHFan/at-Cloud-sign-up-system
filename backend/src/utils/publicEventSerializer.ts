@@ -2,7 +2,7 @@ import { IEvent } from "../models/Event";
 import { ValidationUtils } from "./validationUtils";
 import Registration from "../models/Registration";
 import GuestRegistration from "../models/GuestRegistration";
-import { findUtcInstantFromLocal } from "../shared/time/timezoneSearch";
+import { findUtcInstantFromLocal } from "@atcloud/shared-time";
 
 export interface PublicEventRole {
   roleId: string;

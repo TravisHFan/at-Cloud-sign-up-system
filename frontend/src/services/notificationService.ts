@@ -1,62 +1,7 @@
-import type { ApiResponse } from "./api";
-import { API_BASE_URL } from "./api/common/config";
-import { handleSessionExpired } from "./session";
+import { BaseApiClient } from "./api/common";
 import type { Notification } from "../types/notification";
 
-class NotificationService {
-  private baseURL: string;
-
-  constructor(baseURL: string = API_BASE_URL) {
-    this.baseURL = baseURL;
-  }
-
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {},
-  ): Promise<ApiResponse<T>> {
-    const url = `${this.baseURL}${endpoint}`;
-
-    // Get auth token from localStorage
-    const token = localStorage.getItem("authToken");
-
-    const defaultHeaders: HeadersInit = {
-      "Content-Type": "application/json",
-    };
-
-    if (token) {
-      defaultHeaders.Authorization = `Bearer ${token}`;
-    }
-
-    const config: RequestInit = {
-      ...options,
-      headers: {
-        ...defaultHeaders,
-        ...options.headers,
-      },
-      credentials: "include",
-    };
-
-    try {
-      const response = await fetch(url, config);
-      const data = await response.json();
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          localStorage.removeItem("authToken");
-          handleSessionExpired();
-          // Return early - do NOT throw as SessionExpiredModal handles this
-          throw new Error("Session expired");
-        }
-        throw new Error(data.message || `HTTP ${response.status}`);
-      }
-
-      return data;
-    } catch (error) {
-      console.error("Notification API Request failed:", error);
-      throw error instanceof Error ? error : new Error("Network error");
-    }
-  }
-
+class NotificationService extends BaseApiClient {
   // Get user bell notifications (use NEW unified notifications endpoint)
   async getNotifications(): Promise<Notification[]> {
     type BackendCreator = {

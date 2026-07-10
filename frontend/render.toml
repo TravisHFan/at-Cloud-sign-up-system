@@ -1,8 +1,0 @@
-# Render Static Site Configuration
-# Ensures SPA routing works correctly by serving index.html for all routes
-
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-  force = false

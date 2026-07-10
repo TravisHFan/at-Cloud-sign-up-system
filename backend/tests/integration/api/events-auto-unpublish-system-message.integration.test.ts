@@ -5,6 +5,7 @@ import app from "../../../src/app";
 import User from "../../../src/models/User";
 import Event from "../../../src/models/Event";
 import Message from "../../../src/models/Message";
+import { futureDateString } from "../../test-utils/eventTestHelpers";
 
 async function createAdminAndLogin() {
   const admin = {
@@ -52,7 +53,7 @@ describe("Auto-unpublish system message emission", () => {
 
   afterAll(async () => {
     if (openedLocal && mongoose.connection.readyState !== 0) {
-      await mongoose.connection.close();
+      // Shared integration harness owns connection lifecycle.
     }
   });
 
@@ -65,14 +66,15 @@ describe("Auto-unpublish system message emission", () => {
   }
 
   it("creates exactly one system message on grace-period warning and none on subsequent benign edits", async () => {
+    const eventDate = futureDateString();
     const create = await request(app)
       .post("/api/events")
       .set("Authorization", `Bearer ${token}`)
       .send({
         title: "System Msg Auto Unpublish",
         type: "Webinar",
-        date: "2026-06-15",
-        endDate: "2026-06-15",
+        date: eventDate,
+        endDate: eventDate,
         time: "09:00",
         endTime: "10:00",
         location: "Online",

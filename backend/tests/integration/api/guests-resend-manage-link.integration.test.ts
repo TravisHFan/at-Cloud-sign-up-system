@@ -224,8 +224,5 @@ describe("Guests Admin Resend Manage Link API", () => {
       // Always restore spy, even if test fails
       spy.mockRestore();
     }
-
-    // Add a small delay to ensure any background operations complete
-    await new Promise((resolve) => setTimeout(resolve, 50));
   });
 });

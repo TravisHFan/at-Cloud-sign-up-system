@@ -1,7 +1,48 @@
 import { Request, Response } from "express";
 import { User } from "../../models";
 import { hasPermission, PERMISSIONS } from "../../utils/roleUtils";
-import { CachePatterns } from "../../services";
+import { CachePatterns } from "../../services/infrastructure/CacheService";
+import {
+  normalizeSearchText,
+  toLiteralTextSearch,
+} from "../../utils/search";
+
+const USER_LIST_PROJECTION = [
+  "username",
+  "email",
+  "phone",
+  "firstName",
+  "lastName",
+  "gender",
+  "avatar",
+  "homeAddress",
+  "isAtCloudLeader",
+  "roleInAtCloud",
+  "occupation",
+  "company",
+  "weeklyChurch",
+  "churchAddress",
+  "role",
+  "isActive",
+  "isVerified",
+  "emailNotifications",
+  "lastLogin",
+  "createdAt",
+  "updatedAt",
+].join(" ");
+const USER_SORT_FIELDS = new Set([
+  "createdAt",
+  "firstName",
+  "lastName",
+  "username",
+  "email",
+  "role",
+  "gender",
+  "isActive",
+  "isVerified",
+  "isAtCloudLeader",
+  "lastLogin",
+]);
 
 /**
  * UserListingController
@@ -80,17 +121,10 @@ export default class UserListingController {
       }
 
       // Search functionality - use regex for partial matching
-      if (search) {
-        const searchTerm = search as string;
-        // Use regex search for partial matches in key fields
-        filter.$or = [
-          { firstName: { $regex: searchTerm, $options: "i" } },
-          { lastName: { $regex: searchTerm, $options: "i" } },
-          { username: { $regex: searchTerm, $options: "i" } },
-          { email: { $regex: searchTerm, $options: "i" } },
-          { occupation: { $regex: searchTerm, $options: "i" } },
-          { company: { $regex: searchTerm, $options: "i" } },
-        ];
+      const normalizedSearch = normalizeSearchText(search);
+      const textSearch = toLiteralTextSearch(normalizedSearch);
+      if (textSearch) {
+        filter.$text = { $search: textSearch };
       }
 
       // Create cache key based on filter parameters
@@ -102,7 +136,7 @@ export default class UserListingController {
         isVerified,
         isAtCloudLeader,
         gender,
-        search,
+        search: normalizedSearch,
         sortBy,
         sortOrder,
       })}`;
@@ -111,9 +145,9 @@ export default class UserListingController {
       const cachedResult = await CachePatterns.getUserListing(
         cacheKey,
         async () => {
-          let users;
+          let usersPromise: Promise<unknown[]>;
 
-          // Special handling for role sorting - use aggregation pipeline
+          // Special handling for role sorting - use aggregation pipeline.
           if (sortBy === "role") {
             const pipeline = [
               // Match stage (equivalent to filter)
@@ -156,22 +190,32 @@ export default class UserListingController {
               { $limit: limitNumber },
             ];
 
-            users = await User.aggregate(pipeline);
+            usersPromise = User.aggregate(pipeline) as unknown as Promise<
+              unknown[]
+            >;
           } else {
             // Standard sorting for other fields
             const sort: Record<string, 1 | -1> = {};
-            sort[String(sortBy)] = sortOrder === "desc" ? -1 : 1;
+            const requestedSortField = String(sortBy);
+            const sortField = USER_SORT_FIELDS.has(requestedSortField)
+              ? requestedSortField
+              : "createdAt";
+            sort[sortField] = sortOrder === "desc" ? -1 : 1;
             // Add secondary sort by _id to ensure stable sorting
             sort["_id"] = 1;
 
-            users = await User.find(filter)
+            usersPromise = User.find(filter)
               .sort(sort)
               .skip(skip)
               .limit(limitNumber)
-              .select("-password -emailVerificationToken -passwordResetToken");
+              .select(USER_LIST_PROJECTION)
+              .lean() as unknown as Promise<unknown[]>;
           }
 
-          const totalUsers = await User.countDocuments(filter);
+          const [users, totalUsers] = await Promise.all([
+            usersPromise,
+            User.countDocuments(filter),
+          ]);
           const totalPages = Math.ceil(totalUsers / limitNumber);
 
           return {

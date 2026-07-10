@@ -48,7 +48,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (openedLocal && mongoose.connection.readyState !== 0) {
-    await mongoose.connection.close();
+    // Shared integration harness owns connection lifecycle.
   }
 });
 

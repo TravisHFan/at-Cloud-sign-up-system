@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { User } from "../../models";
 import { cleanupOldAvatar } from "../../utils/avatarCleanup";
 import { AutoEmailNotificationService } from "../../services/infrastructure/autoEmailNotificationService";
-import { CachePatterns } from "../../services";
+import { CachePatterns } from "../../services/infrastructure/CacheService";
 
 interface UpdateProfileRequest {
   username?: string;

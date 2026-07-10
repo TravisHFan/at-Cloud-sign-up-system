@@ -1,6 +1,6 @@
 import { socketService } from "../../services/infrastructure/SocketService";
 import { ResponseBuilderService } from "../../services/ResponseBuilderService";
-import { CachePatterns } from "../../services";
+import { CachePatterns } from "../../services/infrastructure/CacheService";
 import { CorrelatedLogger } from "../../services/CorrelatedLogger";
 
 interface RoleSnapshot {

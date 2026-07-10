@@ -1,39 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import request, { Response } from "supertest";
+import request from "supertest";
 import app from "../../src/app";
 import User from "../../src/models/User";
 import Message from "../../src/models/Message";
-
-/**
- * Helper to retry supertest requests on transient HTTP parse errors.
- * Flaky errors like "Parse Error: Expected HTTP/" occur under load.
- */
-async function withRetry<T>(
-  fn: () => Promise<T>,
-  maxAttempts = 3,
-  delayMs = 50,
-): Promise<T> {
-  let lastError: unknown;
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      return await fn();
-    } catch (error: unknown) {
-      lastError = error;
-      const msg = error instanceof Error ? error.message : String(error);
-      // Retry on HTTP parse errors (connection issues under load)
-      const isTransient =
-        msg.includes("Parse Error") ||
-        msg.includes("HPE_INVALID_CONSTANT") ||
-        msg.includes("socket hang up") ||
-        msg.includes("ECONNRESET");
-      if (!isTransient || attempt >= maxAttempts) {
-        throw error;
-      }
-      await new Promise((r) => setTimeout(r, delayMs * attempt));
-    }
-  }
-  throw lastError;
-}
 
 /**
  * Integration tests for targetRoles filtering in system messages
@@ -381,27 +350,23 @@ describe(
 
       it("should show Guest Expert message only to Guest Experts", async () => {
         // Create a message targeted to Guest Experts
-        const createRes = await withRetry(() =>
-          request(app)
-            .post("/api/notifications/system")
-            .set("Authorization", `Bearer ${superAdminToken}`)
-            .send({
-              title: "TR_Guest Expert Message",
-              content: "This message is for Guest Experts",
-              type: "announcement",
-              priority: "medium",
-              targetRoles: ["Guest Expert"],
-            }),
-        );
+        const createRes = await request(app)
+          .post("/api/notifications/system")
+          .set("Authorization", `Bearer ${superAdminToken}`)
+          .send({
+            title: "TR_Guest Expert Message",
+            content: "This message is for Guest Experts",
+            type: "announcement",
+            priority: "medium",
+            targetRoles: ["Guest Expert"],
+          });
 
         expect(createRes.status).toBe(201);
 
         // Guest Expert should see it
-        const guestExpertRes = await withRetry(() =>
-          request(app)
-            .get("/api/notifications/system")
-            .set("Authorization", `Bearer ${guestExpertToken}`),
-        );
+        const guestExpertRes = await request(app)
+          .get("/api/notifications/system")
+          .set("Authorization", `Bearer ${guestExpertToken}`);
 
         expect(guestExpertRes.status).toBe(200);
         const guestExpertMessages = guestExpertRes.body?.data?.messages || [];
@@ -412,11 +377,9 @@ describe(
         ).toBe(true);
 
         // Admin should NOT see it
-        const adminRes = await withRetry(() =>
-          request(app)
-            .get("/api/notifications/system")
-            .set("Authorization", `Bearer ${adminToken}`),
-        );
+        const adminRes = await request(app)
+          .get("/api/notifications/system")
+          .set("Authorization", `Bearer ${adminToken}`);
 
         expect(adminRes.status).toBe(200);
         const adminMessages = adminRes.body?.data?.messages || [];
@@ -425,11 +388,9 @@ describe(
         ).toBe(false);
 
         // Participant should NOT see it
-        const participantRes = await withRetry(() =>
-          request(app)
-            .get("/api/notifications/system")
-            .set("Authorization", `Bearer ${participantToken}`),
-        );
+        const participantRes = await request(app)
+          .get("/api/notifications/system")
+          .set("Authorization", `Bearer ${participantToken}`);
 
         expect(participantRes.status).toBe(200);
         const participantMessages = participantRes.body?.data?.messages || [];

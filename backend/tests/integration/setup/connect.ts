@@ -1,6 +1,35 @@
 import mongoose from "mongoose";
 
 let connecting: Promise<typeof mongoose> | null = null;
+let indexesReady = false;
+
+function getWorkerDatabaseUri(): string {
+  const configuredUri =
+    process.env.MONGODB_TEST_URI ||
+    process.env.MONGODB_URI ||
+    "mongodb://localhost:27017/atcloud-signup-test";
+
+  if (process.env.VITEST_DB_ISOLATION === "false") {
+    return configuredUri;
+  }
+
+  const [base, query] = configuredUri.split("?", 2);
+  const slashIndex = base.lastIndexOf("/");
+  const databaseName = base.slice(slashIndex + 1) || "atcloud-signup-test";
+  const runId = (process.env.VITEST_RUN_ID || String(process.ppid)).replace(
+    /[^a-zA-Z0-9_-]/g,
+    "-",
+  );
+  const workerId = (process.env.VITEST_POOL_ID || "1").replace(
+    /[^a-zA-Z0-9_-]/g,
+    "-",
+  );
+  const isolatedDatabase = `${databaseName}-${runId}-w${workerId}`;
+
+  return `${base.slice(0, slashIndex + 1)}${isolatedDatabase}${
+    query ? `?${query}` : ""
+  }`;
+}
 
 /**
  * Ensure a single shared MongoDB connection for integration tests.
@@ -23,10 +52,7 @@ export async function ensureIntegrationDB() {
     return;
   }
 
-  const uri =
-    process.env.MONGODB_TEST_URI ||
-    process.env.MONGODB_URI ||
-    "mongodb://localhost:27017/atcloud-signup-test";
+  const uri = getWorkerDatabaseUri();
   const configuredFamily = Number(process.env.MONGODB_TEST_FAMILY);
   const familyOption =
     configuredFamily === 4 || configuredFamily === 6
@@ -34,8 +60,8 @@ export async function ensureIntegrationDB() {
       : {};
 
   connecting = mongoose.connect(uri, {
-    maxPoolSize: 50, // Increased from default 10 to handle test suite load
-    minPoolSize: 5,
+    maxPoolSize: 10,
+    minPoolSize: 0,
     serverSelectionTimeoutMS: 10000,
     connectTimeoutMS: 10000,
     socketTimeoutMS: 45000,
@@ -50,45 +76,30 @@ export async function ensureIntegrationDB() {
   }
 }
 
-export async function closeIntegrationDB() {
-  if (mongoose.connection.readyState !== 0) {
-    await mongoose.connection.close();
+/**
+ * Clear a worker database between test files while retaining its indexes.
+ * Parallel workers never share a database, so this is the only broad cleanup
+ * required by the harness.
+ */
+export async function clearIntegrationDB() {
+  if (mongoose.connection.readyState !== 1) return;
+
+  const databaseName = mongoose.connection.db?.databaseName;
+  if (!databaseName?.includes("test")) {
+    throw new Error("Safety check: integration database name must include test");
   }
+
+  const collections = await mongoose.connection.db.collections();
+  await Promise.all(
+    collections.map((collection) => collection.deleteMany({})),
+  );
 }
 
-/**
- * Efficiently clean test database by dropping all collections at once.
- * This is faster and less strain on MongoDB than calling deleteMany() on each model.
- * Use this in global test teardown, not per-test cleanup.
- */
-export async function cleanTestDatabase() {
-  if (mongoose.connection.readyState !== 1) {
-    return;
-  }
+export async function ensureIntegrationIndexes() {
+  if (indexesReady) return;
 
-  try {
-    const collections = await mongoose.connection.db?.collections();
-    if (!collections || collections.length === 0) {
-      return;
-    }
-
-    // Drop all collections in parallel - faster than sequential deleteMany()
-    await Promise.all(
-      collections.map(async (collection) => {
-        try {
-          await collection.drop();
-        } catch (err: any) {
-          // Ignore "ns not found" errors (collection already dropped)
-          if (err.code !== 26) {
-            console.error(
-              `Failed to drop collection ${collection.collectionName}:`,
-              err.message
-            );
-          }
-        }
-      })
-    );
-  } catch (error) {
-    console.error("Failed to clean test database:", error);
-  }
+  await Promise.all(
+    mongoose.modelNames().map((modelName) => mongoose.model(modelName).init()),
+  );
+  indexesReady = true;
 }

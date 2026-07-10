@@ -1,12 +1,12 @@
 import { createLogger } from "../LoggerService";
 
-export interface TrioOperation {
+interface TrioOperation {
   type: "email" | "message" | "websocket";
   id: string;
   rollback: () => Promise<void>;
   metadata?: any;
 }
-export interface TrioTransactionState {
+interface TrioTransactionState {
   id: string;
   status: "pending" | "committed" | "rolled_back" | "failed";
   operations: TrioOperation[];
@@ -135,92 +135,5 @@ export class TrioTransaction {
     ]
       .filter(Boolean)
       .join("\n");
-  }
-}
-
-export class TrioTransactionManager {
-  private static activeTransactions = new Map<string, TrioTransaction>();
-  private static completedTransactions: TrioTransactionState[] = [];
-  private static maxHistorySize = 1000;
-  private static logger = createLogger("TrioTransactionManager");
-
-  static register(tx: TrioTransaction) {
-    const s = tx.getState();
-    this.activeTransactions.set(s.id, tx);
-    this.logger.debug(
-      `Registered transaction ${s.id} (${this.activeTransactions.size} active)`
-    );
-  }
-  static complete(tx: TrioTransaction) {
-    const s = tx.getState();
-    this.activeTransactions.delete(s.id);
-    this.completedTransactions.push(s);
-    if (this.completedTransactions.length > this.maxHistorySize) {
-      this.completedTransactions = this.completedTransactions.slice(
-        -this.maxHistorySize
-      );
-    }
-    this.logger.info(
-      `Completed transaction ${s.id} (${this.activeTransactions.size} active, ${this.completedTransactions.length} in history)`
-    );
-  }
-  static getActive(): TrioTransaction[] {
-    return Array.from(this.activeTransactions.values());
-  }
-  static history(limit?: number): TrioTransactionState[] {
-    const h = [...this.completedTransactions].reverse();
-    return limit ? h.slice(0, limit) : h;
-  }
-  static stats() {
-    const committed = this.completedTransactions.filter(
-      (t) => t.status === "committed"
-    ).length;
-    const rolled = this.completedTransactions.filter(
-      (t) => t.status === "rolled_back"
-    ).length;
-    const failed = this.completedTransactions.filter(
-      (t) => t.status === "failed"
-    ).length;
-    const durations = this.completedTransactions
-      .filter((t) => t.endTime)
-      .map((t) => (t.endTime as number) - t.startTime);
-    const avg = durations.length
-      ? durations.reduce((a, b) => a + b, 0) / durations.length
-      : 0;
-    return {
-      active: this.activeTransactions.size,
-      totalCompleted: this.completedTransactions.length,
-      committed,
-      rolledBack: rolled,
-      failed,
-      averageDuration: avg,
-    };
-  }
-  static cleanup(maxAge = 24 * 60 * 60 * 1000) {
-    const cutoff = Date.now() - maxAge;
-    const before = this.completedTransactions.length;
-    this.completedTransactions = this.completedTransactions.filter(
-      (t) => t.startTime > cutoff
-    );
-    const removed = before - this.completedTransactions.length;
-    if (removed) this.logger.info(`Cleaned up ${removed} old transactions`);
-    return removed;
-  }
-
-  // Legacy method name compatibility for tests
-  static registerTransaction(tx: TrioTransaction) {
-    return this.register(tx);
-  }
-  static completeTransaction(tx: TrioTransaction) {
-    return this.complete(tx);
-  }
-  static getActiveTransactions() {
-    return this.getActive();
-  }
-  static getTransactionHistory(limit?: number) {
-    return this.history(limit);
-  }
-  static getStatistics() {
-    return this.stats();
   }
 }

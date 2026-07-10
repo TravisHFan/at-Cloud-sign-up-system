@@ -52,7 +52,7 @@ vi.mock("../../../../src/services/infrastructure/EmailServiceFacade", () => ({
   },
 }));
 
-vi.mock("../../../../src/services", () => ({
+vi.mock("../../../../src/services/infrastructure/CacheService", () => ({
   CachePatterns: {
     invalidateUserCache: vi.fn().mockResolvedValue(undefined),
   },
@@ -63,7 +63,7 @@ import AuditLog from "../../../../src/models/AuditLog";
 import { hasPermission, ROLES } from "../../../../src/utils/roleUtils";
 import { socketService } from "../../../../src/services/infrastructure/SocketService";
 import { EmailService } from "../../../../src/services/infrastructure/EmailServiceFacade";
-import { CachePatterns } from "../../../../src/services";
+import { CachePatterns } from "../../../../src/services/infrastructure/CacheService";
 
 interface MockRequest {
   params: Record<string, string>;

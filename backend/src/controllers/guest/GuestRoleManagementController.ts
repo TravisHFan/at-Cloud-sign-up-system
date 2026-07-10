@@ -10,7 +10,7 @@ import { EmailService } from "../../services/infrastructure/EmailServiceFacade";
 import { socketService } from "../../services/infrastructure/SocketService";
 import { lockService } from "../../services/LockService";
 import { CapacityService } from "../../services/CapacityService";
-import { CachePatterns } from "../../services";
+import { CachePatterns } from "../../services/infrastructure/CacheService";
 import { ResponseBuilderService } from "../../services/ResponseBuilderService";
 
 // Local types
@@ -122,7 +122,13 @@ class GuestRoleManagementController {
           // Re-check capacity inside lock
           const occ = await CapacityService.getRoleOccupancy(
             event._id.toString(),
-            toRoleId
+            toRoleId,
+            {
+              capacity:
+                (targetRole as unknown as { maxParticipants?: unknown })
+                  .maxParticipants ??
+                (targetRole as unknown as { capacity?: unknown }).capacity,
+            },
           );
           if (CapacityService.isRoleFull(occ)) {
             return {

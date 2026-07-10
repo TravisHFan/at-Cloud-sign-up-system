@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import PromoCode from "../../models/PromoCode";
 import mongoose from "mongoose";
-import { EmailService } from "../../services";
+import { EmailService } from "../../services/infrastructure/EmailServiceFacade";
 
 export default class ReactivationController {
   /**

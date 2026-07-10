@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import mongoose from "mongoose";
 import { RegistrationQueryService } from "../../../src/services/RegistrationQueryService";
-import { CapacityService } from "../../../src/services/CapacityService";
 import {
   Registration,
   Event,
@@ -206,18 +205,12 @@ describe("RegistrationQueryService", () => {
       ];
 
       const mockEventQuery = {
+        select: vi.fn().mockReturnThis(),
         lean: vi.fn().mockResolvedValue(mockEvent),
       };
       vi.mocked(Event.findById).mockReturnValue(mockEventQuery as any);
-      // Use CapacityService to drive counts per role (users + guests)
-      const occSpy = vi.spyOn(CapacityService, "getRoleOccupancy");
-      occSpy.mockImplementation(async (_eventId: string, roleId: string) => {
-        if (roleId === "leader")
-          return { users: 1, guests: 0, total: 1, capacity: 2 } as any;
-        if (roleId === "member")
-          return { users: 5, guests: 0, total: 5, capacity: 10 } as any;
-        return { users: 0, guests: 0, total: 0, capacity: null } as any;
-      });
+      vi.mocked(Registration.aggregate).mockResolvedValue(mockCounts);
+      vi.mocked(GuestRegistration.aggregate).mockResolvedValue([]);
 
       const result = await RegistrationQueryService.getEventSignupCounts(
         mockEventId.toString(),
@@ -250,11 +243,40 @@ describe("RegistrationQueryService", () => {
       });
     });
 
+    it("should reuse loaded roles and batch user and guest counts", async () => {
+      const loadedEvent = {
+        roles: [
+          { id: "leader", name: "Leader", maxParticipants: 4 },
+          { id: "member", name: "Member", maxParticipants: 6 },
+        ],
+      };
+      vi.mocked(Registration.aggregate).mockResolvedValue([
+        { _id: "leader", count: 2 },
+      ]);
+      vi.mocked(GuestRegistration.aggregate).mockResolvedValue([
+        { _id: "leader", count: 1 },
+        { _id: "member", count: 2 },
+      ]);
+
+      const result = await RegistrationQueryService.getEventSignupCounts(
+        mockEventId.toString(),
+        loadedEvent,
+      );
+
+      expect(Event.findById).not.toHaveBeenCalled();
+      expect(Registration.aggregate).toHaveBeenCalledTimes(1);
+      expect(GuestRegistration.aggregate).toHaveBeenCalledTimes(1);
+      expect(result?.totalSignups).toBe(5);
+      expect(result?.roles.map((role) => role.currentCount)).toEqual([3, 2]);
+    });
+
     it("should return null when event does not exist", async () => {
       const mockEventQuery = {
+        select: vi.fn().mockReturnThis(),
         lean: vi.fn().mockResolvedValue(null),
       };
       vi.mocked(Event.findById).mockReturnValue(mockEventQuery as any);
+      vi.mocked(Registration.aggregate).mockResolvedValue([]);
 
       const result =
         await RegistrationQueryService.getEventSignupCounts("invalid-event-id");
@@ -264,9 +286,11 @@ describe("RegistrationQueryService", () => {
 
     it("should handle database errors gracefully", async () => {
       const mockEventQuery = {
+        select: vi.fn().mockReturnThis(),
         lean: vi.fn().mockRejectedValue(new Error("Database error")),
       };
       vi.mocked(Event.findById).mockReturnValue(mockEventQuery as any);
+      vi.mocked(Registration.aggregate).mockResolvedValue([]);
 
       const result = await RegistrationQueryService.getEventSignupCounts(
         mockEventId.toString(),
@@ -575,17 +599,11 @@ describe("RegistrationQueryService", () => {
     const guestCounts = [{ _id: "member", count: 2 }];
 
     vi.mocked(Event.findById).mockReturnValue({
+      select: vi.fn().mockReturnThis(),
       lean: vi.fn().mockResolvedValue(mockEvent),
     } as any);
-    // Mock occupancy to include guests for member role
-    const occSpy = vi.spyOn(CapacityService, "getRoleOccupancy");
-    occSpy.mockImplementation(async (_eventId: string, roleId: string) => {
-      if (roleId === "leader")
-        return { users: 1, guests: 0, total: 1, capacity: 2 } as any;
-      if (roleId === "member")
-        return { users: 1, guests: 2, total: 3, capacity: 3 } as any;
-      return { users: 0, guests: 0, total: 0, capacity: null } as any;
-    });
+    vi.mocked(Registration.aggregate).mockResolvedValue(userCounts);
+    vi.mocked(GuestRegistration.aggregate).mockResolvedValue(guestCounts);
 
     const result = await RegistrationQueryService.getEventSignupCounts(
       mockEventId.toString(),

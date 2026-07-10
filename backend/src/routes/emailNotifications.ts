@@ -1,5 +1,10 @@
 import { Router } from "express";
-import { EmailNotificationController } from "../controllers/emailNotificationController";
+import EventCreatedController from "../controllers/emailNotifications/EventCreatedController";
+import SystemAuthorizationChangeController from "../controllers/emailNotifications/SystemAuthorizationChangeController";
+import AtCloudRoleChangeController from "../controllers/emailNotifications/AtCloudRoleChangeController";
+import NewLeaderSignupController from "../controllers/emailNotifications/NewLeaderSignupController";
+import CoOrganizerAssignedController from "../controllers/emailNotifications/CoOrganizerAssignedController";
+import EventReminderController from "../controllers/emailNotifications/EventReminderController";
 import { authenticate } from "../middleware/auth";
 import EventReminderScheduler from "../services/EventReminderScheduler";
 
@@ -8,7 +13,7 @@ const router = Router();
 // Special test endpoint without authentication for debugging
 router.post(
   "/test-event-reminder",
-  EmailNotificationController.sendEventReminderNotification
+  EventReminderController.sendEventReminderNotification
 );
 
 // Apply authentication to all routes
@@ -17,33 +22,33 @@ router.use(authenticate);
 // Event creation notifications
 router.post(
   "/event-created",
-  EmailNotificationController.sendEventCreatedNotification
+  EventCreatedController.sendEventCreatedNotification
 );
 
 // Role change notifications
 router.post(
   "/system-authorization-change",
-  EmailNotificationController.sendSystemAuthorizationChangeNotification
+  SystemAuthorizationChangeController.sendSystemAuthorizationChangeNotification
 );
 router.post(
   "/atcloud-role-change",
-  EmailNotificationController.sendAtCloudRoleChangeNotification
+  AtCloudRoleChangeController.sendAtCloudRoleChangeNotification
 );
 
 // Admin notifications
 router.post(
   "/new-leader-signup",
-  EmailNotificationController.sendNewLeaderSignupNotification
+  NewLeaderSignupController.sendNewLeaderSignupNotification
 );
 
 // Event management notifications
 router.post(
   "/co-organizer-assigned",
-  EmailNotificationController.sendCoOrganizerAssignedNotification
+  CoOrganizerAssignedController.sendCoOrganizerAssignedNotification
 );
 router.post(
   "/event-reminder",
-  EmailNotificationController.sendEventReminderNotification
+  EventReminderController.sendEventReminderNotification
 );
 
 // Additional notifications (to be implemented)

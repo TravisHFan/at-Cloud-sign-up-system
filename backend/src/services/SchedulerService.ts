@@ -14,6 +14,7 @@ const logger = Logger.getInstance().child("SchedulerService");
  * - Message cleanup: Runs daily at 2:00 AM to remove old/deleted messages
  * - Promo code cleanup: Runs daily at 3:00 AM to remove old used/expired promo codes
  * - Pending purchase cleanup: Runs daily at 4:00 AM to remove stale pending purchases (>15 days)
+ * - Event status refresh: Runs every minute outside request paths
  *
  * Design:
  * - Simple setInterval-based scheduler (can be replaced with node-cron if needed)
@@ -57,6 +58,9 @@ export class SchedulerService {
 
     // Schedule auto-unpublish execution - runs every 15 minutes
     this.scheduleAutoUnpublishExecution();
+
+    // Keep persisted status filters current without mutating data during GETs.
+    this.scheduleEventStatusRefresh();
 
     logger.info("Scheduler started successfully");
   }
@@ -238,6 +242,40 @@ export class SchedulerService {
         error instanceof Error ? error : new Error(String(error))
       );
       // Don't throw - we want the scheduler to continue running
+    }
+  }
+
+  /** Refresh event statuses independently of list/detail requests. */
+  private static scheduleEventStatusRefresh(): void {
+    logger.info("Event status refresh scheduled: every minute");
+
+    const interval = setInterval(() => {
+      this.executeEventStatusRefresh();
+    }, 60 * 1000);
+    const initialTimeout = setTimeout(() => {
+      this.executeEventStatusRefresh();
+    }, 10 * 1000);
+
+    this.intervals.push(interval, initialTimeout);
+  }
+
+  private static async executeEventStatusRefresh(): Promise<void> {
+    try {
+      // Lazy loading avoids a controller/services initialization cycle.
+      const { BatchOperationsController } = await import(
+        "../controllers/event/BatchOperationsController"
+      );
+      const updatedCount =
+        await BatchOperationsController.updateAllEventStatusesHelper();
+
+      if (updatedCount > 0) {
+        logger.info(`Refreshed ${updatedCount} event statuses`);
+      }
+    } catch (error) {
+      logger.error(
+        "Failed to refresh event statuses",
+        error instanceof Error ? error : new Error(String(error)),
+      );
     }
   }
 

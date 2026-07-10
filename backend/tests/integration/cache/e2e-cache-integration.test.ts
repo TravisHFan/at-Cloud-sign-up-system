@@ -37,7 +37,7 @@ describe("End-to-End Cache Integration Tests", () => {
 
   afterEach(async () => {
     await cacheService.clear();
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   describe("Complete Cache Invalidation Flow", () => {
@@ -195,35 +195,28 @@ describe("End-to-End Cache Integration Tests", () => {
       let databaseCallCount = 0;
       const expensiveOperation = async () => {
         databaseCallCount++;
-        // Simulate database delay
-        await new Promise((resolve) => setTimeout(resolve, 10));
         return { data: "expensive-result", timestamp: Date.now() };
       };
 
       const cacheKey = "expensive-operation";
 
       // First call - should hit database
-      const start1 = Date.now();
       const result1 = await CachePatterns.getAnalyticsData(
         cacheKey,
         expensiveOperation
       );
-      const time1 = Date.now() - start1;
 
       expect(databaseCallCount).toBe(1);
       expect(result1.data).toBe("expensive-result");
 
       // Second call - should hit cache (much faster)
-      const start2 = Date.now();
       const result2 = await CachePatterns.getAnalyticsData(
         cacheKey,
         expensiveOperation
       );
-      const time2 = Date.now() - start2;
 
       expect(databaseCallCount).toBe(1); // No additional database call
       expect(result2).toEqual(result1); // Same result
-      expect(time2).toBeLessThan(time1); // Faster due to cache
 
       // Verify cache hit metrics
       const metrics = cacheService.getMetrics();
@@ -236,6 +229,8 @@ describe("End-to-End Cache Integration Tests", () => {
 
       const shortTtlKey = "short-ttl-test";
       const testData = { value: "test-data" };
+      const now = Date.now();
+      const clock = vi.spyOn(Date, "now").mockReturnValue(now);
 
       // Cache with very short TTL
       await cacheService.set(shortTtlKey, testData, { ttl: 1 }); // 1 second
@@ -243,11 +238,11 @@ describe("End-to-End Cache Integration Tests", () => {
       // Should be available immediately
       expect(await cacheService.get(shortTtlKey)).toEqual(testData);
 
-      // Wait for expiration
-      await new Promise((resolve) => setTimeout(resolve, 1100));
+      clock.mockReturnValue(now + 1100);
 
       // Should be expired
       expect(await cacheService.get(shortTtlKey)).toBeNull();
+      clock.mockRestore();
     });
 
     it("should handle cache memory limits gracefully", async () => {

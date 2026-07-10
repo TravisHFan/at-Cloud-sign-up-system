@@ -16,7 +16,7 @@ describe("GET /api/notifications/welcome-status - WelcomeMessageStatusController
   });
 
   afterAll(async () => {
-    await mongoose.disconnect();
+    // Shared integration harness owns connection lifecycle.
   });
 
   describe("Authentication", () => {

@@ -3,7 +3,7 @@ import Message from "../../models/Message";
 import type { IMessage } from "../../models/Message";
 import User from "../../models/User";
 import { socketService } from "../../services/infrastructure/SocketService";
-import { CachePatterns } from "../../services";
+import { CachePatterns } from "../../services/infrastructure/CacheService";
 
 // Minimal runtime shapes to reduce explicit any usage without changing behavior
 type UnreadCounts = {

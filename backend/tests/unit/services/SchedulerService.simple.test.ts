@@ -4,6 +4,7 @@ import { MessageCleanupService } from "../../../src/services/MessageCleanupServi
 import { PromoCodeCleanupService } from "../../../src/services/promoCodeCleanupService";
 import { PendingPurchaseCleanupService } from "../../../src/services/PendingPurchaseCleanupService";
 import { AutoUnpublishService } from "../../../src/services/event/AutoUnpublishService";
+import { BatchOperationsController } from "../../../src/controllers/event/BatchOperationsController";
 
 describe("SchedulerService - Simplified Tests", () => {
   const originalEnv = process.env.NODE_ENV;
@@ -172,6 +173,17 @@ describe("SchedulerService - Simplified Tests", () => {
     expect(consoleErrorSpy).toHaveBeenCalled();
     spy.mockRestore();
     consoleErrorSpy.mockRestore();
+  });
+
+  it("should refresh event statuses outside request handling", async () => {
+    const spy = vi
+      .spyOn(BatchOperationsController, "updateAllEventStatusesHelper")
+      .mockResolvedValue(3);
+
+    await (SchedulerService as any).executeEventStatusRefresh();
+
+    expect(spy).toHaveBeenCalledOnce();
+    spy.mockRestore();
   });
 
   it("should execute pending purchase cleanup", async () => {

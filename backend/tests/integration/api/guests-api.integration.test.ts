@@ -31,9 +31,6 @@ describe("Guests API Integration", () => {
     await Event.deleteMany({});
     await User.deleteMany({});
 
-    // Small delay to ensure cleanup is complete
-    await new Promise((resolve) => setTimeout(resolve, 10));
-
     // Create admin user and login
     const adminData = {
       username: "admin",

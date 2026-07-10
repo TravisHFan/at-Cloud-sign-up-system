@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { Types } from "mongoose";
 import Message from "../../models/Message";
 import { socketService } from "../../services/infrastructure/SocketService";
-import { CachePatterns } from "../../services";
+import { CachePatterns } from "../../services/infrastructure/CacheService";
 
 // Minimal runtime shapes to reduce explicit any usage without changing behavior
 type UnreadCounts = {

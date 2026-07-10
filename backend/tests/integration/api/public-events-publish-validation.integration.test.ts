@@ -26,7 +26,7 @@ describe("Public Events API - publish validation", () => {
   });
   afterAll(async () => {
     if (openedLocal && mongoose.connection.readyState !== 0) {
-      await mongoose.connection.close();
+      // Shared integration harness owns connection lifecycle.
     }
   });
   let adminToken: string;

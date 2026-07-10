@@ -28,6 +28,29 @@ module.exports = tseslint.config(
       "prefer-const": "error",
       "no-console": "off",
       "no-debugger": "error",
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              regex: "(^|/)(services|controllers)(/index)?$",
+              message:
+                "Import the owning service or controller module directly; aggregate barrels are retired.",
+            },
+            {
+              group: [
+                "**/controllers/authController",
+                "**/controllers/guestController",
+                "**/controllers/programController",
+                "**/controllers/promoCodeController",
+                "**/controllers/analyticsController",
+              ],
+              message:
+                "Compatibility controller facades are retired; route to the focused controller.",
+            },
+          ],
+        },
+      ],
     },
   },
   {
@@ -49,7 +72,10 @@ module.exports = tseslint.config(
       "@typescript-eslint/no-this-alias": "warn",
       "@typescript-eslint/no-namespace": "warn",
       "@typescript-eslint/no-var-requires": "off",
-      "@typescript-eslint/ban-types": "warn",
+      "@typescript-eslint/no-require-imports": "warn",
+      "@typescript-eslint/no-unsafe-function-type": "warn",
+      "@typescript-eslint/no-unused-expressions": "warn",
+      "@typescript-eslint/triple-slash-reference": "warn",
     },
   },
   {

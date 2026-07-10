@@ -7,7 +7,7 @@ import Message from "../../../src/models/Message";
 import User from "../../../src/models/User";
 import { TokenService } from "../../../src/middleware/auth";
 
-describe("POST /api/notifications/cleanup - LegacyMessageCleanupController", () => {
+describe("POST /api/notifications/cleanup - MessageCleanupController", () => {
   beforeAll(async () => {
     await ensureIntegrationDB();
   });
@@ -18,7 +18,7 @@ describe("POST /api/notifications/cleanup - LegacyMessageCleanupController", () 
   });
 
   afterAll(async () => {
-    await mongoose.disconnect();
+    // Shared integration harness owns connection lifecycle.
   });
 
   describe("Authentication", () => {
