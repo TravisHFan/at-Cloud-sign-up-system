@@ -654,9 +654,6 @@ describe("PublicEventsList", () => {
       const searchInput = screen.getByPlaceholderText("Search events...");
       await user.type(searchInput, "workshop");
 
-      // Wait for debounce
-      await new Promise((resolve) => setTimeout(resolve, 400));
-
       const select = screen.getByRole("combobox");
       await user.selectOptions(select, "Effective Communication Workshop");
 
@@ -690,9 +687,6 @@ describe("PublicEventsList", () => {
 
       const select = screen.getByRole("combobox");
       await user.selectOptions(select, "Conference");
-
-      // Wait for debounce
-      await new Promise((resolve) => setTimeout(resolve, 400));
 
       await user.selectOptions(select, "");
 

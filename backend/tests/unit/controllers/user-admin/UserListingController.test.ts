@@ -18,7 +18,7 @@ vi.mock("../../../../src/utils/roleUtils", () => ({
   },
 }));
 
-vi.mock("../../../../src/services", () => ({
+vi.mock("../../../../src/services/infrastructure/CacheService", () => ({
   CachePatterns: {
     getUserListing: vi.fn(),
   },
@@ -26,7 +26,7 @@ vi.mock("../../../../src/services", () => ({
 
 import { User } from "../../../../src/models";
 import { hasPermission } from "../../../../src/utils/roleUtils";
-import { CachePatterns } from "../../../../src/services";
+import { CachePatterns } from "../../../../src/services/infrastructure/CacheService";
 
 interface MockRequest {
   query: Record<string, string | undefined>;
@@ -152,7 +152,9 @@ describe("UserListingController", () => {
           sort: vi.fn().mockReturnValue({
             skip: vi.fn().mockReturnValue({
               limit: vi.fn().mockReturnValue({
-                select: vi.fn().mockResolvedValue([]),
+                select: vi.fn().mockReturnValue({
+                  lean: vi.fn().mockResolvedValue([]),
+                }),
               }),
             }),
           }),

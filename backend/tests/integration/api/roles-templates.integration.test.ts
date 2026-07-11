@@ -142,7 +142,7 @@ describe("Roles Templates API Integration Tests", () => {
   afterAll(async () => {
     await RolesTemplate.deleteMany({});
     await User.deleteMany({});
-    await mongoose.connection.close();
+    // Shared integration harness owns connection lifecycle.
   });
 
   describe("GET /api/roles-templates", () => {

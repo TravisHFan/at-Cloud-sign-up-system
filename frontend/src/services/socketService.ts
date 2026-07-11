@@ -1,14 +1,13 @@
-import { io, Socket } from "socket.io-client";
+import { io, type Socket } from "socket.io-client";
 import type { EventUpdate, ConnectedPayload } from "../types/realtime";
 import { resolveSocketURL } from "../config/apiUrl";
 
-// For WebSocket connection, we need the base server URL, not the API path
-const SOCKET_URL = resolveSocketURL(
+const DEFAULT_SOCKET_URL = resolveSocketURL(
   import.meta.env.VITE_API_URL,
   import.meta.env.VITE_SOCKET_URL,
 );
 
-interface UserUpdateData {
+export interface UserUpdateData {
   userId: string;
   type: "role_changed" | "status_changed" | "deleted" | "profile_edited";
   user: {
@@ -24,331 +23,317 @@ interface UserUpdateData {
   timestamp?: string;
 }
 
-interface SocketEventHandlers {
-  event_update?: (data: EventUpdate) => void;
-  connected?: (data: ConnectedPayload) => void;
-  user_update?: (data: UserUpdateData) => void;
+export interface SocketEventHandlers {
+  event_update: (data: EventUpdate) => void;
+  connected: (data: ConnectedPayload) => void;
+  user_update: (data: UserUpdateData) => void;
+  connect: () => void;
+  disconnect: (reason: string) => void;
 }
 
-class SocketServiceFrontend {
-  private socket: Socket | null = null;
-  private eventHandlers: SocketEventHandlers = {};
-  private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
-  private reconnectDelay = 1000;
+type StoredSocketHandler = (data: never) => void;
+
+/**
+ * Owns the browser's single authenticated Socket.IO connection.
+ *
+ * Components subscribe through this service (or `useSocket`) instead of
+ * creating sockets themselves. Subscriptions survive a token-driven socket
+ * replacement, while rooms and the connection are reference counted so one
+ * consumer cannot tear down another consumer's realtime state.
+ */
+export class SocketServiceFrontend {
+  private socketInstance: Socket | null = null;
   private currentToken: string | null = null;
+  private currentUrl: string | null = null;
   private isConnecting = false;
-  private pendingRoomJoins: Set<string> = new Set(); // Track pending room joins
-  private joinedRooms: Set<string> = new Set(); // Track successfully joined rooms
-  private cleanupScheduled = false; // Prevent duplicate cleanup calls
+  private consumerCount = 0;
+  private disconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly eventHandlers = new Map<
+    string,
+    Set<StoredSocketHandler>
+  >();
+  private readonly socketDispatchers = new Map<
+    string,
+    (data: unknown) => void
+  >();
+  private readonly roomSubscribers = new Map<string, number>();
+  private readonly joinedRooms = new Set<string>();
+  private readonly recentEventUpdates = new Map<string, number>();
 
-  /**
-   * Wait for socket to be connected
-   */
-  private async waitForConnection(maxWaitTime = 5000): Promise<boolean> {
-    if (this.socket?.connected) {
-      return true;
+  /** Create or reuse the shared connection without claiming ownership. */
+  connect(token: string, url = DEFAULT_SOCKET_URL): Socket {
+    const canReuse =
+      this.socketInstance &&
+      this.currentToken === token &&
+      this.currentUrl === url;
+
+    if (canReuse && this.socketInstance) {
+      if (!this.socketInstance.connected && !this.socketInstance.active) {
+        this.isConnecting = true;
+        this.socketInstance.connect();
+      }
+      return this.socketInstance;
     }
 
-    return new Promise((resolve) => {
-      const startTime = Date.now();
-      const checkConnection = () => {
-        if (this.socket?.connected) {
-          resolve(true);
-        } else if (Date.now() - startTime > maxWaitTime) {
-          console.warn("📡 Socket connection timeout");
-          resolve(false);
-        } else {
-          setTimeout(checkConnection, 100);
-        }
-      };
-      checkConnection();
-    });
-  }
-
-  /**
-   * Initialize socket connection with authentication
-   */
-  connect(token: string): void {
-    // If we're already connecting or connected with the same token, don't reconnect
-    if (
-      this.isConnecting ||
-      (this.socket?.connected && this.currentToken === token)
-    ) {
-      console.log(
-        "📡 Socket already connected or connecting, skipping reconnection",
-      );
-      return;
-    }
-
-    // Clean up any existing socket properly
-    this.disconnect();
-
-    this.isConnecting = true;
+    this.destroySocket();
     this.currentToken = token;
+    this.currentUrl = url;
+    this.isConnecting = true;
 
-    console.log("📡 Initializing new socket connection to:", SOCKET_URL);
-
-    // Add a small delay to avoid rapid reconnections in React StrictMode
-    setTimeout(() => {
-      if (!this.isConnecting) return; // Connection was cancelled
-
-      this.socket = io(SOCKET_URL, {
-        auth: {
-          token,
-        },
-        transports: ["websocket", "polling"],
-        timeout: 20000,
-        forceNew: true, // Force new connection to avoid stale socket reuse
-        autoConnect: true,
-        reconnection: true,
-        reconnectionDelay: 1000,
-        reconnectionAttempts: 5,
-      });
-
-      this.setupEventListeners();
-    }, 50); // Small delay to avoid rapid reconnections
-  }
-
-  /**
-   * Disconnect socket
-   */
-  disconnect(): void {
-    if (this.cleanupScheduled) return; // Prevent duplicate cleanup
-    this.cleanupScheduled = true;
-
-    console.log("📡 Disconnecting socket service");
-
-    if (this.socket) {
-      // Leave all joined rooms before disconnecting
-      this.joinedRooms.forEach((eventId) => {
-        if (this.socket?.connected) {
-          this.socket.emit("leave_event_room", eventId);
-          console.log(`📡 Left event room during cleanup: ${eventId}`);
-        }
-      });
-
-      this.socket.removeAllListeners();
-      this.socket.disconnect();
-      this.socket = null;
-    }
-
-    this.eventHandlers = {};
-    this.reconnectAttempts = 0;
-    this.currentToken = null;
-    this.isConnecting = false;
-    this.pendingRoomJoins.clear();
-    this.joinedRooms.clear();
-
-    // Reset cleanup flag after a brief delay
-    setTimeout(() => {
-      this.cleanupScheduled = false;
-    }, 100);
-  }
-
-  /**
-   * Set up core socket event listeners
-   */
-  private setupEventListeners(): void {
-    if (!this.socket) return;
-
-    this.socket.on("connect", () => {
-      console.log("📡 Socket connected successfully");
-      this.reconnectAttempts = 0;
-      this.isConnecting = false;
-
-      // Join any pending rooms
-      this.pendingRoomJoins.forEach((eventId) => {
-        console.log(`📡 Joining pending event room: ${eventId}`);
-        this.socket?.emit("join_event_room", eventId);
-        this.joinedRooms.add(eventId); // Track joined rooms
-      });
-      this.pendingRoomJoins.clear();
+    const socket = io(url, {
+      auth: { token },
+      transports: ["websocket", "polling"],
+      withCredentials: true,
+      timeout: 20000,
+      autoConnect: true,
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,
     });
 
-    this.socket.on("disconnect", (reason) => {
-      console.log("📡 Socket disconnected:", reason);
-      this.isConnecting = false;
+    this.socketInstance = socket;
+    this.attachCoreListeners(socket);
+    this.eventHandlers.forEach((_handlers, event) => {
+      this.attachDispatcher(event);
+    });
 
-      // Clear joined rooms on disconnect since we're no longer in them
+    return socket;
+  }
+
+  /**
+   * Claim the shared connection for a mounted consumer.
+   * The returned cleanup releases that claim and disconnects only after the
+   * final consumer is gone. The zero-delay grace period absorbs StrictMode's
+   * development-only mount/cleanup/remount cycle.
+   */
+  acquire(token: string, url = DEFAULT_SOCKET_URL): () => void {
+    if (this.disconnectTimer) {
+      clearTimeout(this.disconnectTimer);
+      this.disconnectTimer = null;
+    }
+
+    this.consumerCount += 1;
+    this.connect(token, url);
+    let released = false;
+
+    return () => {
+      if (released) return;
+      released = true;
+      this.consumerCount = Math.max(0, this.consumerCount - 1);
+
+      if (this.consumerCount === 0) {
+        this.disconnectTimer = setTimeout(() => {
+          this.disconnectTimer = null;
+          if (this.consumerCount === 0) this.disconnect();
+        }, 0);
+      }
+    };
+  }
+
+  /** Disconnect the shared socket and clear room ownership. */
+  disconnect(): void {
+    if (this.disconnectTimer) {
+      clearTimeout(this.disconnectTimer);
+      this.disconnectTimer = null;
+    }
+
+    this.destroySocket();
+    this.currentToken = null;
+    this.currentUrl = null;
+    this.isConnecting = false;
+    this.consumerCount = 0;
+    this.roomSubscribers.clear();
+    this.joinedRooms.clear();
+    this.recentEventUpdates.clear();
+  }
+
+  private destroySocket(): void {
+    const socket = this.socketInstance;
+    if (!socket) return;
+
+    this.joinedRooms.forEach((eventId) => {
+      if (socket.connected) socket.emit("leave_event_room", eventId);
+    });
+
+    socket.disconnect();
+    socket.removeAllListeners();
+    this.socketInstance = null;
+    this.socketDispatchers.clear();
+    this.joinedRooms.clear();
+  }
+
+  private attachCoreListeners(socket: Socket): void {
+    socket.on("connect", () => {
+      if (socket !== this.socketInstance) return;
+      this.isConnecting = false;
       this.joinedRooms.clear();
 
-      if (reason === "io server disconnect") {
-        // Server initiated disconnect, don't reconnect
-        this.currentToken = null;
-        return;
-      }
-      this.handleReconnect();
-    });
-
-    this.socket.on("connect_error", (error) => {
-      console.error("📡 Socket connection error:", error.message);
-      this.isConnecting = false;
-
-      // Handle specific "Invalid namespace" error
-      if (error.message && error.message.includes("Invalid namespace")) {
-        console.error(
-          "Invalid namespace error detected - this may be a development issue",
-        );
-        // Don't attempt reconnection for namespace errors as they indicate a configuration issue
-        return;
-      }
-
-      this.handleReconnect();
-    });
-
-    // Handle authentication errors
-    this.socket.on("auth_error", (error) => {
-      console.error("🔌 Socket authentication error:", error);
-      this.disconnect();
-    });
-
-    // Handle event updates
-    this.socket.on("event_update", (data: EventUpdate) => {
-      console.log("📡 Received event update:", data);
-      if (this.eventHandlers.event_update) {
-        this.eventHandlers.event_update(data);
-      }
-    });
-
-    // Handle user updates (avatar changes, profile edits, etc.)
-    this.socket.on("user_update", (data: UserUpdateData) => {
-      console.log("📡 Received user update:", data);
-      if (this.eventHandlers.user_update) {
-        this.eventHandlers.user_update(data);
-      }
-    });
-
-    // Handle connection confirmation
-    this.socket.on("connected", (data: ConnectedPayload) => {
-      console.log("📡 Socket connection confirmed:", data);
-      if (this.eventHandlers.connected) {
-        this.eventHandlers.connected(data);
-      }
-    });
-  }
-
-  /**
-   * Handle reconnection logic
-   */
-  private handleReconnect(): void {
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error("🔌 Max reconnection attempts reached");
-      return;
-    }
-
-    this.reconnectAttempts++;
-    const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
-
-    setTimeout(() => {
-      console.log(
-        `🔌 Attempting reconnection ${this.reconnectAttempts}/${this.maxReconnectAttempts}...`,
-      );
-      this.socket?.connect();
-    }, delay);
-  }
-
-  /**
-   * Join an event room for real-time updates
-   */
-  async joinEventRoom(eventId: string): Promise<void> {
-    // Don't join if already in this room
-    if (this.joinedRooms.has(eventId)) {
-      // Silently skip if already joined (common in React StrictMode)
-      return;
-    }
-
-    if (this.socket?.connected) {
-      this.socket.emit("join_event_room", eventId);
-      this.joinedRooms.add(eventId);
-      console.log(`📡 Joined event room: ${eventId}`);
-    } else if (this.socket && this.isConnecting) {
-      // Socket is connecting, add to pending joins
-      this.pendingRoomJoins.add(eventId);
-      console.log(`📡 Queued event room join: ${eventId} (socket connecting)`);
-    } else {
-      // Try to wait for connection
-      const connected = await this.waitForConnection();
-      if (connected && !this.joinedRooms.has(eventId)) {
-        this.socket?.emit("join_event_room", eventId);
+      this.roomSubscribers.forEach((count, eventId) => {
+        if (count <= 0) return;
+        socket.emit("join_event_room", eventId);
         this.joinedRooms.add(eventId);
-        console.log(`📡 Joined event room: ${eventId}`);
-      } else if (!connected) {
-        console.warn(
-          `📡 Cannot join event room ${eventId} - socket not connected`,
-        );
+      });
+    });
+
+    socket.on("disconnect", () => {
+      if (socket !== this.socketInstance) return;
+      this.joinedRooms.clear();
+      this.isConnecting = socket.active;
+    });
+
+    socket.on("connect_error", (error) => {
+      if (socket !== this.socketInstance) return;
+      this.isConnecting = socket.active;
+      if (import.meta.env.DEV) {
+        console.error("Socket connection error:", error.message);
       }
+    });
+
+    socket.on("auth_error", (error) => {
+      if (import.meta.env.DEV) {
+        console.error("Socket authentication error:", error);
+      }
+      if (socket === this.socketInstance) this.disconnect();
+    });
+  }
+
+  private attachDispatcher(event: string): void {
+    const socket = this.socketInstance;
+    const handlers = this.eventHandlers.get(event);
+    if (!socket || !handlers?.size || this.socketDispatchers.has(event)) return;
+
+    const dispatcher = (data: unknown) => {
+      if (event === "event_update" && this.isDuplicateEventUpdate(data)) {
+        return;
+      }
+
+      Array.from(this.eventHandlers.get(event) ?? []).forEach((handler) => {
+        handler(data as never);
+      });
+    };
+
+    this.socketDispatchers.set(event, dispatcher);
+    socket.on(event, dispatcher);
+  }
+
+  private detachDispatcher(event: string): void {
+    const dispatcher = this.socketDispatchers.get(event);
+    if (dispatcher && this.socketInstance) {
+      this.socketInstance.off(event, dispatcher);
     }
+    this.socketDispatchers.delete(event);
   }
 
   /**
-   * Leave an event room
+   * The backend currently broadcasts an event update globally and to its room.
+   * Both copies have the same event id, update type, and timestamp. Collapse
+   * that identical pair without suppressing separately timestamped updates.
    */
+  private isDuplicateEventUpdate(data: unknown): boolean {
+    if (!data || typeof data !== "object") return false;
+    const update = data as Partial<EventUpdate>;
+    if (!update.eventId || !update.updateType || !update.timestamp) return false;
+
+    const key = `${update.eventId}:${update.updateType}:${update.timestamp}`;
+    const now = Date.now();
+    const previous = this.recentEventUpdates.get(key);
+    this.recentEventUpdates.set(key, now);
+
+    if (this.recentEventUpdates.size > 200) {
+      this.recentEventUpdates.forEach((seenAt, seenKey) => {
+        if (now - seenAt > 5000) this.recentEventUpdates.delete(seenKey);
+      });
+    }
+
+    return previous !== undefined && now - previous <= 5000;
+  }
+
+  /** Join once for the first consumer and retain the room for later consumers. */
+  async joinEventRoom(eventId: string): Promise<void> {
+    const currentCount = this.roomSubscribers.get(eventId) ?? 0;
+    this.roomSubscribers.set(eventId, currentCount + 1);
+    if (currentCount > 0) return;
+
+    if (this.socketInstance?.connected) {
+      this.socketInstance.emit("join_event_room", eventId);
+      this.joinedRooms.add(eventId);
+    }
+  }
+
+  /** Leave only when the final consumer of this room releases it. */
   leaveEventRoom(eventId: string): void {
-    // Only attempt to leave if we were actually in the room
-    if (!this.joinedRooms.has(eventId)) {
-      // Silently skip if not in room (common in React StrictMode cleanup)
+    const currentCount = this.roomSubscribers.get(eventId) ?? 0;
+    if (currentCount <= 0) return;
+
+    if (currentCount > 1) {
+      this.roomSubscribers.set(eventId, currentCount - 1);
       return;
     }
 
-    if (this.socket?.connected) {
-      this.socket.emit("leave_event_room", eventId);
-      this.joinedRooms.delete(eventId);
-      console.log(`📡 Left event room: ${eventId}`);
-    } else {
-      // Remove from tracking even if socket is disconnected
-      this.joinedRooms.delete(eventId);
-      console.log(
-        `📡 Removed ${eventId} from joined rooms (socket disconnected)`,
-      );
+    this.roomSubscribers.delete(eventId);
+    if (this.socketInstance?.connected && this.joinedRooms.has(eventId)) {
+      this.socketInstance.emit("leave_event_room", eventId);
     }
-
-    // Also remove from pending joins if it's there
-    this.pendingRoomJoins.delete(eventId);
+    this.joinedRooms.delete(eventId);
   }
 
-  /**
-   * Register event handler
-   */
   on<K extends keyof SocketEventHandlers>(
     event: K,
     handler: SocketEventHandlers[K],
-  ): void {
-    this.eventHandlers[event] = handler;
+  ): () => void;
+  on<T>(event: string, handler: (data: T) => void): () => void;
+  on(event: string, handler: StoredSocketHandler): () => void {
+    const handlers = this.eventHandlers.get(event) ?? new Set();
+    handlers.add(handler);
+    this.eventHandlers.set(event, handlers);
+    this.attachDispatcher(event);
+    return () => this.off(event, handler);
   }
 
-  /**
-   * Remove event handler
-   */
-  off(event: keyof SocketEventHandlers): void {
-    delete this.eventHandlers[event];
+  off<K extends keyof SocketEventHandlers>(
+    event: K,
+    handler?: SocketEventHandlers[K],
+  ): void;
+  off<T>(event: string, handler?: (data: T) => void): void;
+  off(event: string, handler?: StoredSocketHandler): void {
+    const handlers = this.eventHandlers.get(event);
+    if (!handlers) return;
+
+    if (handler) handlers.delete(handler);
+    else handlers.clear();
+
+    if (handlers.size === 0) {
+      this.eventHandlers.delete(event);
+      this.detachDispatcher(event);
+    }
   }
 
-  /**
-   * Check if socket is connected
-   */
+  get socket(): Socket | null {
+    return this.socketInstance;
+  }
+
   get isConnected(): boolean {
-    return this.socket?.connected || false;
+    return this.socketInstance?.connected ?? false;
   }
 
-  /**
-   * Get current connection status
-   */
   get connectionStatus(): {
     connected: boolean;
     connecting: boolean;
+    consumers: number;
     joinedRooms: string[];
     pendingRooms: string[];
   } {
     return {
-      connected: this.socket?.connected || false,
+      connected: this.isConnected,
       connecting: this.isConnecting,
+      consumers: this.consumerCount,
       joinedRooms: Array.from(this.joinedRooms),
-      pendingRooms: Array.from(this.pendingRoomJoins),
+      pendingRooms: Array.from(this.roomSubscribers.keys()).filter(
+        (eventId) => !this.joinedRooms.has(eventId),
+      ),
     };
   }
 }
 
-// Export singleton instance
 export const socketService = new SocketServiceFrontend();
-export type { EventUpdate, SocketEventHandlers, UserUpdateData };
+export type { EventUpdate };

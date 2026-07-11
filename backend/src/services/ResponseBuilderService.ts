@@ -5,10 +5,9 @@
  * Part of Phase 2 Migration: Frontend Integration
  */
 
-import { Event, Registration, User } from "../models";
+import { Event, GuestRegistration, Registration, User } from "../models";
 import { Types } from "mongoose";
 import { createLogger } from "./LoggerService";
-import { generateUniquePublicSlug } from "../utils/publicSlug";
 import { RegistrationQueryService } from "./RegistrationQueryService";
 import {
   EventWithRegistrationData,
@@ -17,7 +16,9 @@ import {
   UserBasicInfo,
   AnalyticsEventData,
   OrganizerDetail,
+  EventListItemData,
 } from "../types/api-responses";
+import { deriveEventStatus } from "../utils/event/eventStatus";
 
 export type EventRole = {
   id: string;
@@ -25,6 +26,7 @@ export type EventRole = {
   description?: string;
   maxParticipants: number;
   maxSignups?: number;
+  agenda?: string;
   // Whether this role is visible & registerable on the public (unauthenticated) event page
   openToPublic?: boolean;
 };
@@ -73,6 +75,15 @@ type EventLean = {
   createdAt?: Date;
   updatedAt?: Date;
   status?: string;
+  publish?: boolean;
+  publishedAt?: Date | null;
+  publicSlug?: string;
+  programLabels?: Types.ObjectId[];
+};
+
+type OccupancyAggregateRow = {
+  _id: { eventId: Types.ObjectId | string; roleId: string };
+  count: number;
 };
 
 type RegLean = {
@@ -83,6 +94,17 @@ type RegLean = {
   status?: string;
   attendanceConfirmed?: boolean;
   createdAt?: Date;
+};
+
+type PopulatedRegistration = Omit<RegLean, "userId"> & {
+  userId: (LeanUser & { _id: Types.ObjectId }) | null;
+  notes?: string;
+  specialRequirements?: string;
+};
+
+type RoleCountRow = {
+  _id: string;
+  count: number;
 };
 
 // Minimal input shape for analytics event builder
@@ -106,7 +128,35 @@ export type AnalyticsEventInput = {
 export class ResponseBuilderService {
   private static logger = createLogger("ResponseBuilderService");
 
-  private static getRegistrationCreatedTime(registration: RegLean): number {
+  private static getReadStatus(event: {
+    status?: string;
+    date?: string;
+    endDate?: string;
+    time?: string;
+    endTime?: string;
+    timeZone?: string;
+  }): "upcoming" | "ongoing" | "completed" | "cancelled" {
+    if (event.status === "cancelled") return "cancelled";
+
+    if (typeof event.date === "string" && typeof event.time === "string") {
+      return deriveEventStatus(
+        event.date,
+        typeof event.endDate === "string" ? event.endDate : event.date,
+        event.time,
+        typeof event.endTime === "string" ? event.endTime : event.time,
+        event.timeZone,
+      );
+    }
+
+    return event.status === "ongoing" || event.status === "completed"
+      ? event.status
+      : "upcoming";
+  }
+
+  private static getRegistrationCreatedTime(registration: {
+    _id: Types.ObjectId;
+    createdAt?: Date;
+  }): number {
     if (registration.createdAt) {
       return new Date(registration.createdAt).getTime();
     }
@@ -114,7 +164,9 @@ export class ResponseBuilderService {
     return registration._id.getTimestamp().getTime();
   }
 
-  private static sortRegistrationsByCreatedTime<T extends RegLean>(
+  private static sortRegistrationsByCreatedTime<
+    T extends { _id: Types.ObjectId; createdAt?: Date },
+  >(
     registrations: T[],
   ): T[] {
     return [...registrations].sort((left, right) => {
@@ -140,27 +192,45 @@ export class ResponseBuilderService {
       return [];
     }
 
-    return Promise.all(
-      organizerDetails.map(async (organizer) => {
-        if ((organizer as { userId?: string }).userId) {
-          // Get fresh contact info from User collection
-          const user = await User.findById(
-            (organizer as { userId: string }).userId,
-          ).select("email phone firstName lastName avatar");
-          if (user) {
-            return {
-              ...organizer,
-              email: user.email, // Always fresh from User collection
-              phone: user.phone || "Phone not provided", // Always fresh
-              name: `${user.firstName} ${user.lastName}`, // Ensure name is current
-              avatar: user.avatar || (organizer as { avatar?: string }).avatar, // Use latest avatar
-            };
-          }
-        }
-        // If no userId or user not found, return stored data
-        return organizer;
-      }),
+    const organizerUserIds = [
+      ...new Set(
+        organizerDetails
+          .map((organizer) => organizer.userId?.toString())
+          .filter(
+            (userId): userId is string =>
+              typeof userId === "string" && Types.ObjectId.isValid(userId),
+          ),
+      ),
+    ];
+    if (organizerUserIds.length === 0) return organizerDetails;
+
+    const users = (await User.find({ _id: { $in: organizerUserIds } })
+      .select("email phone firstName lastName avatar")
+      .lean()) as Array<{
+      _id: Types.ObjectId;
+      email?: string;
+      phone?: string;
+      firstName?: string;
+      lastName?: string;
+      avatar?: string;
+    }>;
+    const usersById = new Map(
+      users.map((user) => [user._id.toString(), user]),
     );
+
+    return organizerDetails.map((organizer) => {
+      const userId = organizer.userId?.toString();
+      const user = userId ? usersById.get(userId) : undefined;
+      if (!user) return organizer;
+
+      return {
+        ...organizer,
+        email: user.email,
+        phone: user.phone || "Phone not provided",
+        name: `${user.firstName || ""} ${user.lastName || ""}`.trim(),
+        avatar: user.avatar || (organizer as { avatar?: string }).avatar,
+      };
+    });
   }
 
   /**
@@ -189,13 +259,42 @@ export class ResponseBuilderService {
         return null;
       }
 
-      // Get event signup counts
-      const eventSignupCounts =
-        await RegistrationQueryService.getEventSignupCounts(eventId);
+      const registrationQuery = Registration.find({ eventId: event._id })
+        .select(
+          "_id userId eventId roleId status attendanceConfirmed notes specialRequirements createdAt",
+        )
+        .populate({
+          path: "userId",
+          select:
+            "username firstName lastName email phone avatar gender systemAuthorizationLevel roleInAtCloud role",
+        })
+        .lean();
+      const [eventRegistrations, guestCounts, freshOrganizerDetails] =
+        await Promise.all([
+          registrationQuery as unknown as Promise<PopulatedRegistration[]>,
+          GuestRegistration.aggregate<RoleCountRow>([
+            { $match: { eventId: event._id, status: "active" } },
+            { $group: { _id: "$roleId", count: { $sum: 1 } } },
+          ]),
+          ResponseBuilderService.populateFreshOrganizerContacts(
+            event.organizerDetails || [],
+          ),
+        ]);
 
-      if (!eventSignupCounts) {
-        return null;
+      const sortedRegistrations =
+        ResponseBuilderService.sortRegistrationsByCreatedTime(
+          eventRegistrations || [],
+        );
+      const registrationsByRole = new Map<string, PopulatedRegistration[]>();
+      for (const registration of sortedRegistrations) {
+        const roleRegistrations =
+          registrationsByRole.get(registration.roleId) || [];
+        roleRegistrations.push(registration);
+        registrationsByRole.set(registration.roleId, roleRegistrations);
       }
+      const guestCountByRole = new Map(
+        guestCounts.map((row) => [row._id, Number(row.count || 0)]),
+      );
 
       // Determine if viewer can see all contact info (admin, event creator, or registered)
       const isAdmin =
@@ -205,12 +304,12 @@ export class ResponseBuilderService {
       )?._id?.toString();
       const isEventCreator = viewerId && eventCreatorId === viewerId;
 
-      // Determine viewer's group letters if applicable (for workshop privacy)
-      // FIX: Support users registered in multiple groups by finding ALL their groups
-      const viewerRegistrations = (await Registration.find({
-        eventId: event._id,
-        userId: viewerId,
-      }).lean()) as unknown as Array<{ roleId: string }>;
+      const viewerRegistrations = viewerId
+        ? sortedRegistrations.filter(
+            (registration) =>
+              registration.userId?._id.toString() === viewerId,
+          )
+        : [];
       const isRegistered = viewerRegistrations.length > 0;
 
       // Simplified visibility: admins, event creator, or ANY registered user can see ALL contacts
@@ -218,152 +317,101 @@ export class ResponseBuilderService {
       // Viewer can see mentor contacts if they're admin, event creator, or registered
       const canViewMentorContacts = canViewAllContacts;
 
-      const viewerGroupLetters: string[] = [];
-
-      if (event.type === "Effective Communication Workshop") {
-        for (const viewerReg of viewerRegistrations) {
-          // Find the role that this registration belongs to
-          const roleForViewer = event.roles.find(
-            (role: EventRole) => role.id === viewerReg.roleId,
-          );
-          if (roleForViewer) {
-            // Extract group letter from role name using CONSISTENT regex
-            const roleGroupMatch = roleForViewer.name.match(/Group ([A-F])/);
-            if (roleGroupMatch) {
-              const roleGroupLetter = roleGroupMatch[1];
-              if (!viewerGroupLetters.includes(roleGroupLetter)) {
-                viewerGroupLetters.push(roleGroupLetter);
-              }
-            }
-          }
-        }
-      }
-
       // Build roles with registration data and privacy-aware contact info
-      const rolesWithRegistrations: EventRoleWithCounts[] = await Promise.all(
-        event.roles.map(async (role: EventRole) => {
-          const registrations: RegistrationWithUser[] = [];
+      const rolesWithRegistrations: EventRoleWithCounts[] = (
+        event.roles || []
+      ).map((role: EventRole) => {
+        const registrations: RegistrationWithUser[] = [];
+        const roleRegistrations = registrationsByRole.get(role.id) || [];
 
-          // Get registrations for this role
-          const roleRegistrations =
-            ResponseBuilderService.sortRegistrationsByCreatedTime(
-              (await Registration.find({
-                eventId: event._id,
-                roleId: role.id,
-              })
-                .populate({
-                  path: "userId",
-                  select:
-                    "username firstName lastName email phone avatar gender systemAuthorizationLevel roleInAtCloud role",
-                })
-                .lean()) as unknown as Array<
-                RegLean & {
-                  userId: {
-                    _id: Types.ObjectId;
-                    username: string;
-                    firstName: string;
-                    lastName: string;
-                    email?: string;
-                    phone?: string;
-                    avatar?: string;
-                    gender?: "male" | "female";
-                    systemAuthorizationLevel?: string;
-                    roleInAtCloud?: string;
-                    role?: string;
-                  };
-                }
-              >,
-            );
+        // Transform each registration with privacy logic
+        for (const reg of roleRegistrations) {
+          if (!reg.userId) continue;
+          let showContact = false;
+          let email = "";
+          let phone = "";
 
-          // Transform each registration with privacy logic
-          for (const reg of roleRegistrations) {
-            let showContact = false;
-            let email = "";
-            let phone = "";
-
-            // Show contact information only to:
-            // 1. Admins (Super Admin, Administrator)
-            // 2. Event creator (organizer)
-            // 3. The user themselves (viewing their own registration)
-            const isOwnRegistration =
-              viewerId && reg.userId._id.toString() === viewerId;
-            if (canViewAllContacts || isOwnRegistration) {
-              showContact = true;
-              email = reg.userId.email || "";
-              phone = reg.userId.phone || "";
-            }
-
-            registrations.push({
-              id: reg._id.toString(),
-              userId: reg.userId._id.toString(),
-              eventId: reg.eventId.toString(),
-              roleId: reg.roleId,
-              status: (reg.status ?? "active") as
-                | "active"
-                | "waitlisted"
-                | "attended"
-                | "no_show",
-              attendanceConfirmed: reg.attendanceConfirmed === true,
-              // Include participant-provided metadata
-              notes: (reg as { notes?: string }).notes,
-              specialRequirements: (reg as { specialRequirements?: string })
-                .specialRequirements,
-              user: {
-                id: reg.userId._id.toString(),
-                username: reg.userId.username,
-                firstName: reg.userId.firstName,
-                lastName: reg.userId.lastName,
-                email: showContact ? email : "",
-                phone: showContact ? phone : undefined,
-                avatar: reg.userId.avatar,
-                gender: reg.userId.gender,
-                systemAuthorizationLevel:
-                  reg.userId.systemAuthorizationLevel || "Participant",
-                roleInAtCloud: reg.userId.roleInAtCloud || "",
-                role:
-                  reg.userId.role || reg.userId.systemAuthorizationLevel || "",
-              },
-              registeredAt: reg.createdAt || new Date(),
-              eventSnapshot: {
-                eventTitle: event.title,
-                eventDate: event.date,
-                eventTime: event.time,
-                roleName: role.name,
-                roleDescription: role.description || "",
-              },
-            });
+          // Show contact information only to:
+          // 1. Admins (Super Admin, Administrator)
+          // 2. Event creator (organizer)
+          // 3. The user themselves (viewing their own registration)
+          const isOwnRegistration =
+            viewerId && reg.userId._id.toString() === viewerId;
+          if (canViewAllContacts || isOwnRegistration) {
+            showContact = true;
+            email = reg.userId.email || "";
+            phone = reg.userId.phone || "";
           }
 
-          const signupCount =
-            eventSignupCounts.roles.find((r) => r.roleId === role.id)
-              ?.currentCount || 0;
-          const maxParticipants = role.maxParticipants || role.maxSignups || 0;
-          const availableSpots = Math.max(0, maxParticipants - signupCount);
+          registrations.push({
+            id: reg._id.toString(),
+            userId: reg.userId._id.toString(),
+            eventId: reg.eventId.toString(),
+            roleId: reg.roleId,
+            status: (reg.status ?? "active") as
+              | "active"
+              | "waitlisted"
+              | "attended"
+              | "no_show",
+            attendanceConfirmed: reg.attendanceConfirmed === true,
+            // Include participant-provided metadata
+            notes: reg.notes,
+            specialRequirements: reg.specialRequirements,
+            user: {
+              id: reg.userId._id.toString(),
+              username: reg.userId.username,
+              firstName: reg.userId.firstName,
+              lastName: reg.userId.lastName,
+              email: showContact ? email : "",
+              phone: showContact ? phone : undefined,
+              avatar: reg.userId.avatar,
+              gender: reg.userId.gender,
+              systemAuthorizationLevel:
+                reg.userId.systemAuthorizationLevel || "Participant",
+              roleInAtCloud: reg.userId.roleInAtCloud || "",
+              role:
+                reg.userId.role || reg.userId.systemAuthorizationLevel || "",
+            },
+            registeredAt: reg.createdAt || new Date(),
+            eventSnapshot: {
+              eventTitle: event.title,
+              eventDate: event.date,
+              eventTime: event.time,
+              roleName: role.name,
+              roleDescription: role.description || "",
+            },
+          });
+        }
 
-          return {
-            id: role.id,
-            name: role.name,
-            description: role.description || "",
-            agenda: (role as { agenda?: string }).agenda,
-            maxParticipants: maxParticipants,
-            // Surface openToPublic so create/update responses reflect current flag state
-            openToPublic:
-              (role as { openToPublic?: boolean }).openToPublic === true,
-            currentCount: signupCount,
-            currentSignups: signupCount,
-            availableSpots: availableSpots,
-            isFull: signupCount >= maxParticipants,
-            waitlistCount: 0,
-            registrations,
-          };
-        }),
+        const signupCount =
+          roleRegistrations.length + (guestCountByRole.get(role.id) || 0);
+        const maxParticipants = role.maxParticipants || role.maxSignups || 0;
+        const availableSpots = Math.max(0, maxParticipants - signupCount);
+
+        return {
+          id: role.id,
+          name: role.name,
+          description: role.description || "",
+          agenda: role.agenda,
+          maxParticipants: maxParticipants,
+          // Surface openToPublic so create/update responses reflect current flag state
+          openToPublic:
+            (role as { openToPublic?: boolean }).openToPublic === true,
+          currentCount: signupCount,
+          availableSpots: availableSpots,
+          isFull: signupCount >= maxParticipants,
+          waitlistCount: 0,
+          registrations,
+        };
+      });
+      const totalSlots = rolesWithRegistrations.reduce(
+        (total, role) => total + role.maxParticipants,
+        0,
       );
-
-      // Populate fresh organizer contact information
-      const freshOrganizerDetails =
-        await ResponseBuilderService.populateFreshOrganizerContacts(
-          event.organizerDetails || [],
-        );
+      const totalSignups = rolesWithRegistrations.reduce(
+        (total, role) => total + role.currentCount,
+        0,
+      );
 
       // Build pricing object
       const pricingData = (
@@ -445,29 +493,21 @@ export class ResponseBuilderService {
         workshopGroupTopics: event.workshopGroupTopics || {},
         organizerDetails: freshOrganizerDetails as unknown as OrganizerDetail[],
         roles: rolesWithRegistrations,
-        totalCapacity: event.roles.reduce(
-          (total: number, r: EventRole) => total + r.maxParticipants,
-          0,
-        ),
-        totalRegistrations: eventSignupCounts.totalSignups,
-        availableSpots:
-          eventSignupCounts.totalSlots - eventSignupCounts.totalSignups,
-        totalSlots: event.roles.reduce(
-          (total: number, r: EventRole) => total + r.maxParticipants,
-          0,
-        ),
-        signedUp: eventSignupCounts.totalSignups,
-        maxParticipants: eventSignupCounts.totalSlots,
+        totalCapacity: totalSlots,
+        totalRegistrations: totalSignups,
+        availableSpots: Math.max(0, totalSlots - totalSignups),
+        totalSlots,
+        signedUp: totalSignups,
+        maxParticipants: totalSlots,
         // Provide full organizer info to frontend (email/phone shown on Organizer card)
         createdBy: ResponseBuilderService.buildUserBasicInfo(event.createdBy),
         createdAt: event.createdAt || new Date(0),
         updatedAt: event.updatedAt || new Date(0),
-        status: (event.status ||
-          "upcoming") as EventWithRegistrationData["status"],
+        status: ResponseBuilderService.getReadStatus(event),
         // Publish metadata (needed for organizer UI to persist state across refresh)
         publish: (event as { publish?: boolean }).publish === true,
         publishedAt: (event as { publishedAt?: Date }).publishedAt || null,
-        publicSlug: await ResponseBuilderService.ensurePublicSlug(event),
+        publicSlug: event.publicSlug,
         autoUnpublishedAt:
           (event as { autoUnpublishedAt?: Date | null }).autoUnpublishedAt ||
           null,
@@ -493,53 +533,116 @@ export class ResponseBuilderService {
   }
 
   /**
-   * Lazy slug generation: if an event has no publicSlug, generate and persist one.
-   * Covers pre-existing events created before slug-at-creation was added.
-   */
-  private static async ensurePublicSlug(event: {
-    _id?: Types.ObjectId;
-    title?: string;
-    publicSlug?: string;
-  }): Promise<string | undefined> {
-    if (event.publicSlug) return event.publicSlug;
-    if (!event.title || !event._id) return undefined;
-    try {
-      const slug = await generateUniquePublicSlug(event.title);
-      await Event.updateOne({ _id: event._id }, { $set: { publicSlug: slug } });
-      return slug;
-    } catch (err) {
-      ResponseBuilderService.logger.error(
-        "Failed to lazy-generate publicSlug",
-        err as Error,
-      );
-      return undefined;
-    }
-  }
-
-  /**
-   * Builds multiple events with registration data
-   * Used for events listing API responses
+   * Builds lightweight event-list DTOs with batched user and guest occupancy.
+   * The query count is constant for a page: one registration aggregation and
+   * one guest aggregation, regardless of the number of events or roles.
    */
   static async buildEventsWithRegistrations(
-    events: Array<{ _id: Types.ObjectId }>,
-  ): Promise<EventWithRegistrationData[]> {
+    events: Array<{ _id: Types.ObjectId } & Partial<EventLean>>,
+  ): Promise<EventListItemData[]> {
     if (!events || events.length === 0) {
       return [];
     }
 
-    const eventsWithRegistrations = await Promise.all(
-      events.map((event) =>
-        ResponseBuilderService.buildEventWithRegistrations(
-          event._id.toString(),
-        ),
-      ),
-    );
+    const eventIds = events.map((event) => event._id);
+    const [registrationCounts, guestCounts] = await Promise.all([
+      Registration.aggregate<OccupancyAggregateRow>([
+        { $match: { eventId: { $in: eventIds } } },
+        {
+          $group: {
+            _id: { eventId: "$eventId", roleId: "$roleId" },
+            count: { $sum: 1 },
+          },
+        },
+      ]),
+      GuestRegistration.aggregate<OccupancyAggregateRow>([
+        { $match: { eventId: { $in: eventIds }, status: "active" } },
+        {
+          $group: {
+            _id: { eventId: "$eventId", roleId: "$roleId" },
+            count: { $sum: 1 },
+          },
+        },
+      ]),
+    ]);
 
-    return eventsWithRegistrations.filter(
-      (
-        event: EventWithRegistrationData | null,
-      ): event is EventWithRegistrationData => event !== null,
-    );
+    const occupancyByRole = new Map<string, number>();
+    const addCounts = (rows: OccupancyAggregateRow[]) => {
+      rows.forEach((row) => {
+        const key = `${row._id.eventId.toString()}:${row._id.roleId}`;
+        occupancyByRole.set(
+          key,
+          (occupancyByRole.get(key) ?? 0) + Number(row.count || 0),
+        );
+      });
+    };
+    addCounts(registrationCounts);
+    addCounts(guestCounts);
+
+    return events.map((eventInput) => {
+      const event = eventInput as EventLean;
+      const eventId = event._id.toString();
+      const roles = (event.roles || []).map((role) => {
+        const currentCount = occupancyByRole.get(`${eventId}:${role.id}`) ?? 0;
+        const maxParticipants = role.maxParticipants || role.maxSignups || 0;
+        return {
+          id: role.id,
+          name: role.name,
+          description: role.description || "",
+          agenda: (role as { agenda?: string }).agenda,
+          maxParticipants,
+          openToPublic: role.openToPublic === true,
+          currentCount,
+          availableSpots: Math.max(0, maxParticipants - currentCount),
+          isFull: currentCount >= maxParticipants,
+          waitlistCount: 0,
+          currentSignups: [] as [],
+        };
+      });
+      const totalSlots = roles.reduce(
+        (total, role) => total + role.maxParticipants,
+        0,
+      );
+      const signedUp = roles.reduce(
+        (total, role) => total + role.currentCount,
+        0,
+      );
+      const status = ResponseBuilderService.getReadStatus(event);
+
+      return {
+        id: eventId,
+        title: event.title,
+        type: event.type || "",
+        date: event.date,
+        endDate: event.endDate || event.date,
+        time: event.time,
+        endTime: event.endTime || event.time,
+        timeZone: event.timeZone,
+        location: event.location || "",
+        organizer: event.organizer || "",
+        organizerDetails:
+          (event.organizerDetails as unknown as OrganizerDetail[]) || [],
+        hostedBy: event.hostedBy,
+        format: event.format || "",
+        status,
+        createdBy: ResponseBuilderService.buildUserBasicInfo(
+          event.createdBy || ({ id: "" } as { id: string }),
+        ),
+        createdAt: event.createdAt || new Date(0),
+        roles,
+        totalCapacity: totalSlots,
+        totalRegistrations: signedUp,
+        availableSpots: Math.max(0, totalSlots - signedUp),
+        totalSlots,
+        signedUp,
+        maxParticipants: totalSlots,
+        publish: event.publish === true,
+        publishedAt: event.publishedAt || null,
+        publicSlug: event.publicSlug,
+        youtubeUrl: event.youtubeUrl,
+        programLabels: (event.programLabels || []).map((id) => id.toString()),
+      };
+    });
   }
 
   /**

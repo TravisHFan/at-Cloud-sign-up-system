@@ -23,7 +23,7 @@ describe("Programs Retrieval API Integration Tests", () => {
   });
 
   afterAll(async () => {
-    await mongoose.disconnect();
+    // Shared integration harness owns connection lifecycle.
   });
 
   describe("GET /api/programs/:id", () => {

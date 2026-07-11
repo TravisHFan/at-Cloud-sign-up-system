@@ -202,9 +202,9 @@ describe("Bug Fix: Edit Event with empty userId in organizerDetails", () => {
     mockedEventService.getEvent.mockResolvedValue({
       id: "event-456",
       title: "Another Event",
-      type: "Workshop",
+      type: "Webinar",
       format: "Online",
-      date: "2026-06-15",
+      date: "2027-06-15",
       time: "14:00",
       endTime: "16:00",
       location: "Online",

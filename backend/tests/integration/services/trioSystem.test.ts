@@ -378,8 +378,7 @@ describe("Trio System Integration", () => {
         // Expected to fail
       }
 
-      // Assert - Wait a moment for metrics to update
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      // Metrics are updated synchronously with the completed trio promises.
       const metrics = TrioNotificationService.getMetrics();
       expect(metrics.totalRequests).toBeGreaterThanOrEqual(3);
       expect(metrics.successfulTrios).toBeGreaterThanOrEqual(2);

@@ -34,7 +34,7 @@ describe("Public Event Capacity - Includes Guests", () => {
   });
 
   afterAll(async () => {
-    await mongoose.connection.close();
+    // Shared integration harness owns connection lifecycle.
   });
 
   beforeEach(async () => {

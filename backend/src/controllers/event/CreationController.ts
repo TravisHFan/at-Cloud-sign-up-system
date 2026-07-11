@@ -26,25 +26,24 @@
  *    - Handles format-specific validation (In-person/Online/Hybrid)
  *    - Ensures required fields are present and properly formatted
  *
- * 2. EventConflictDetectionService (89 lines)
- *    - Detects time overlaps with existing events
- *    - Handles timezone-aware conflict checking
- *    - Provides detailed conflict information for error responses
- *
- * 3. EventRolePreparationService (123 lines)
+ * 2. EventRolePreparationService (123 lines)
  *    - Validates and prepares event roles
  *    - Calculates total slots across all roles
  *    - Ensures role data integrity (names, descriptions, max participants)
  *
- * 4. EventOrganizerDataService (111 lines)
+ * 3. EventOrganizerDataService (111 lines)
  *    - Processes organizer details with placeholder pattern
  *    - Handles contact information (phone/email) privacy
  *    - Ensures consistent organizer data structure
  *
- * 5. EventProgramLinkageService (186 lines)
+ * 4. EventProgramLinkageService (186 lines)
  *    - Validates program labels and permissions
  *    - Establishes bidirectional event-program relationships
  *    - Handles program ownership and access control
+ *
+ * 5. CoOrganizerProgramAccessService
+ *    - Validates co-organizer access to linked programs
+ *    - Prevents unauthorized program/event associations
  *
  * 6. RecurringEventGenerationService (420 lines)
  *    - Generates recurring event series (every-two-weeks, monthly, every-two-months)
@@ -76,7 +75,7 @@ import {
   Purchase,
 } from "../../models";
 import { PERMISSIONS, hasPermission } from "../../utils/roleUtils";
-import { CachePatterns } from "../../services";
+import { CachePatterns } from "../../services/infrastructure/CacheService";
 import { ResponseBuilderService } from "../../services/ResponseBuilderService";
 import { CorrelatedLogger } from "../../services/CorrelatedLogger";
 import { Logger } from "../../services/LoggerService";
@@ -88,6 +87,7 @@ import { RecurringEventGenerationService } from "../../services/event/RecurringE
 import { EventCreationNotificationService } from "../../services/event/EventCreationNotificationService";
 import { CoOrganizerProgramAccessService } from "../../services/event/CoOrganizerProgramAccessService";
 import { generateUniquePublicSlug } from "../../utils/publicSlug";
+import { toIdString } from "../../utils/idUtils";
 
 // Initialize logger
 const logger = Logger.getInstance().child("CreationController");
@@ -145,7 +145,7 @@ export class CreationController {
    * ORCHESTRATION STEPS:
    * 1. Authentication & Permission Validation
    * 2. Field Normalization & Validation (EventFieldNormalizationService)
-   * 3. Conflict Detection (EventConflictDetectionService)
+   * 3. Time Overlap Policy & Pricing Validation
    * 4. Role Preparation (EventRolePreparationService)
    * 5. Organizer Data Processing (EventOrganizerDataService)
    * 6. Program Linkage Validation (EventProgramLinkageService)
@@ -414,8 +414,7 @@ export class CreationController {
       const event = await createAndSaveEvent(eventData);
 
       // Build recurring series if requested
-      const { EventController } = await import("../eventController");
-      let createdSeriesIds: string[] = [EventController.toIdString(event._id)];
+      let createdSeriesIds: string[] = [toIdString(event._id)];
       const validFrequencies = [
         "weekly",
         "biweekly",
@@ -483,7 +482,7 @@ export class CreationController {
                   recurrenceMode: recurring!.recurrenceMode,
                 }
               : undefined,
-            EventController.toIdString,
+            toIdString,
           );
         } catch (notificationError) {
           console.error(
@@ -500,7 +499,7 @@ export class CreationController {
         await EventCreationNotificationService.sendCoOrganizerNotifications(
           event,
           req.user!,
-          EventController.toIdString,
+          toIdString,
         );
       } catch (coOrgError) {
         console.error("Failed to send co-organizer notifications:", coOrgError);
@@ -512,7 +511,7 @@ export class CreationController {
       // ========================================
       // Invalidate event-related caches since new event was created
       await CachePatterns.invalidateEventCache(
-        EventController.toIdString(event._id),
+        toIdString(event._id),
       );
       await CachePatterns.invalidateAnalyticsCache();
 
@@ -521,8 +520,8 @@ export class CreationController {
       try {
         populatedEvent =
           await ResponseBuilderService.buildEventWithRegistrations(
-            EventController.toIdString(event._id),
-            req.user ? EventController.toIdString(req.user._id) : undefined,
+            toIdString(event._id),
+            req.user ? toIdString(req.user._id) : undefined,
             (req.user as { role?: string } | undefined)?.role,
           );
       } catch (populationError) {

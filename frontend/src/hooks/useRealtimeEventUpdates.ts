@@ -156,26 +156,13 @@ export function useRealtimeEventUpdates({
     if (!token || !eventId) return;
 
     let isComponentMounted = true; // Track component mount state
-
-    const initializeSocket = async () => {
-      // Only proceed if component is still mounted
-      if (!isComponentMounted) return;
-
-      // Connect to socket service (only if not already connected)
-      socketService.connect(token);
-
-      // Join event room for real-time updates (now async)
-      await socketService.joinEventRoom(eventId);
-    };
-
-    initializeSocket();
+    socketService.connect(token);
+    void socketService.joinEventRoom(eventId);
 
     // Handle event updates with current values
     const handleEventUpdate = async (updateData: EventUpdate) => {
       // Early return if component unmounted or wrong event
       if (!isComponentMounted || updateData.eventId !== eventId) return;
-
-      console.log("📡 Real-time event update received:", updateData);
 
       // Keep admin guest list in sync on guest events without full refetch
       if (
@@ -686,11 +673,8 @@ export function useRealtimeEventUpdates({
     // Cleanup on unmount
     return () => {
       isComponentMounted = false; // Mark component as unmounted
-      socketService.off("event_update");
-      // Use setTimeout to ensure cleanup happens after React StrictMode double cleanup
-      setTimeout(() => {
-        socketService.leaveEventRoom(eventId);
-      }, 0);
+      socketService.off("event_update", handleEventUpdate);
+      socketService.leaveEventRoom(eventId);
     };
   }, [eventId, currentUserId, locationPathname, setEvent, setGuestsByRole]); // notification handled via ref to avoid unstable deps
 }

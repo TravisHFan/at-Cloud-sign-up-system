@@ -20,7 +20,7 @@ import { socketService } from "../infrastructure/SocketService";
 import { NOTIFICATION_CONFIG } from "../../config/notificationConfig";
 import { NotificationErrorHandler } from "./NotificationErrorHandler";
 // Adjusted path: shared utilities copied under backend/src/shared
-import { findUtcInstantFromLocal } from "../../shared/time/timezoneSearch";
+import { findUtcInstantFromLocal } from "@atcloud/shared-time";
 import { TrioTransaction } from "./TrioTransaction";
 import { Logger } from "../LoggerService";
 

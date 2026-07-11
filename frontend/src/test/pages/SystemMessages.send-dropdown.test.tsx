@@ -49,9 +49,12 @@ vi.mock("../../services/api", () => ({
 // Mock socket service
 vi.mock("../../services/socketService", () => ({
   socketService: {
+    socket: null,
+    isConnected: false,
     connect: vi.fn(),
+    acquire: vi.fn(() => vi.fn()),
     disconnect: vi.fn(),
-    on: vi.fn(),
+    on: vi.fn(() => vi.fn()),
     off: vi.fn(),
     emit: vi.fn(),
   },

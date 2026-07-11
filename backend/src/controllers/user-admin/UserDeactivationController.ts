@@ -10,7 +10,7 @@ import {
 import { socketService } from "../../services/infrastructure/SocketService";
 import { AutoEmailNotificationService } from "../../services/infrastructure/autoEmailNotificationService";
 import { EmailService } from "../../services/infrastructure/EmailServiceFacade";
-import { CachePatterns } from "../../services";
+import { CachePatterns } from "../../services/infrastructure/CacheService";
 
 /**
  * UserDeactivationController

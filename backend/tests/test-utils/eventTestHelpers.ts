@@ -25,6 +25,12 @@ export interface BuildEventPayloadOptions {
   overrides?: Record<string, any>; // escape hatch for any additional ad-hoc fields
 }
 
+export function futureDateString(daysFromNow = 30): string {
+  const date = new Date();
+  date.setUTCDate(date.getUTCDate() + daysFromNow);
+  return date.toISOString().slice(0, 10);
+}
+
 /**
  * Builds a valid base event creation payload with sensible defaults.
  * Consumers can pass partial overrides. Roles array can be overridden but must

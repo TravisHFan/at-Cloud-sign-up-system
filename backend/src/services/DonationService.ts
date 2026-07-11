@@ -10,6 +10,7 @@ import User from "../models/User";
 import { addWeeks, addMonths, addYears } from "date-fns";
 import mongoose from "mongoose";
 import { ValidationError, NotFoundError } from "../utils/errors";
+import { normalizeSearchText, toLiteralTextSearch } from "../utils/search";
 
 interface CreateDonationParams {
   userId: string;
@@ -584,22 +585,21 @@ class DonationService {
     // Build search query - search both donations and transactions
     let searchQuery: Record<string, unknown> = {};
     if (search) {
-      const searchRegex = { $regex: search, $options: "i" };
+      const normalizedSearch = normalizeSearchText(search);
+      if (normalizedSearch) {
+        // Get user IDs through the existing User text index.
+        const matchingUsers = await User.find({
+          $text: { $search: toLiteralTextSearch(normalizedSearch) },
+        })
+          .select("_id")
+          .lean();
 
-      // Get user IDs that match search
-      const matchingUsers = await User.find({
-        $or: [
-          { firstName: searchRegex },
-          { lastName: searchRegex },
-          { email: searchRegex },
-        ],
-      }).select("_id");
+        const userIds = matchingUsers.map((u) => u._id);
 
-      const userIds = matchingUsers.map((u) => u._id);
-
-      searchQuery = {
-        userId: { $in: userIds },
-      };
+        searchQuery = {
+          userId: { $in: userIds },
+        };
+      }
     }
 
     // Combine filters

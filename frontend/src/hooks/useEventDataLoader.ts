@@ -147,6 +147,8 @@ export function useEventDataLoader({
   onError,
   onNavigate,
 }: UseEventDataLoaderParams) {
+  const currentUserId = currentUser?.id;
+  const currentUserRole = currentUser?.role;
   const [loading, setLoading] = useState(true);
   const [programs, setPrograms] = useState<
     Array<{ id: string; title: string; programType: string }>
@@ -375,15 +377,15 @@ export function useEventDataLoader({
           }));
 
           const isAdmin =
-            currentUser?.role === "Super Admin" ||
-            currentUser?.role === "Administrator";
+            currentUserRole === "Super Admin" ||
+            currentUserRole === "Administrator";
 
           // For non-admin users, only show programs they can manage from this
           // editor. Leaders keep existing broad access; other roles must be
           // mentors or class reps.
-          if (currentUser && !isAdmin) {
+          if (currentUserId && !isAdmin) {
             const accessiblePrograms: typeof filteredList = [];
-            const isLeader = currentUser.role === "Leader";
+            const isLeader = currentUserRole === "Leader";
 
             for (const program of filteredList) {
               // Check 1: Is program free?
@@ -394,7 +396,7 @@ export function useEventDataLoader({
 
               // Check 2: Is user a mentor of this program?
               const isMentor = program.mentors?.some(
-                (m) => m.userId === currentUser.id
+                (m) => m.userId === currentUserId
               );
               if (isMentor) {
                 accessiblePrograms.push(program);
@@ -404,7 +406,7 @@ export function useEventDataLoader({
               // Check 3: Is user an admin-enrolled class rep?
               const isAdminEnrolledClassRep =
                 program.adminEnrollments?.classReps?.some(
-                  (classRepId) => classRepId === currentUser.id
+                  (classRepId) => classRepId === currentUserId
                 ) ?? false;
               if (isAdminEnrolledClassRep) {
                 accessiblePrograms.push(program);
@@ -454,7 +456,7 @@ export function useEventDataLoader({
     return () => {
       cancelled = true;
     };
-  }, [currentUser]);
+  }, [currentUserId, currentUserRole]);
 
   return {
     loading,

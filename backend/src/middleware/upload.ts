@@ -46,13 +46,6 @@ const getUploadBasePath = (): string => {
 const getUploadDirectory = (subdirectory: "avatars" | "images"): string =>
   normalizeUploadBasePath(path.join(getUploadBasePath(), subdirectory));
 
-// Ensure upload directories exist
-const ensureDirectoryExists = (dirPath: string): void => {
-  if (!fs.existsSync(dirPath)) {
-    fs.mkdirSync(dirPath, { recursive: true });
-  }
-};
-
 // Configure storage
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -68,13 +61,11 @@ const storage = multer.diskStorage({
       return;
     }
 
-    // Ensure the directory exists
-    try {
-      ensureDirectoryExists(uploadPath);
-      cb(null, uploadPath);
-    } catch (error) {
-      cb(error as Error, "");
-    }
+    // Avoid blocking the event loop on upload requests. Recursive mkdir is
+    // idempotent when the directory already exists.
+    fs.mkdir(uploadPath, { recursive: true }, (error) => {
+      cb(error, error ? "" : uploadPath);
+    });
   },
   filename: (req, file, cb) => {
     // Generate unique filename

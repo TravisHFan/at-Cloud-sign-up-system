@@ -12,7 +12,6 @@ import {
 } from "../services/api";
 import type { EventData } from "../types/event";
 import { useAvatarUpdates } from "../hooks/useAvatarUpdates";
-import { socketService } from "../services/socketService";
 import { useAuth } from "../contexts/AuthContext";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import { ProgramParticipants } from "../components/program/ProgramParticipants";
@@ -290,14 +289,6 @@ export default function ProgramDetail({
       cancelled = true;
     };
   }, [id, currentUser, enrollmentRefreshKey]);
-
-  // Connect to WebSocket for real-time updates
-  useEffect(() => {
-    const token = localStorage.getItem("authToken");
-    if (token) {
-      socketService.connect(token);
-    }
-  }, []);
 
   // Keep URL query in sync with state (page, sort)
   useEffect(() => {

@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { GuestRegistration, Registration, Event, IEventRole } from "../models";
+import { GuestRegistration, Registration } from "../models";
 
 export interface RoleOccupancy {
   users: number;
@@ -8,81 +8,74 @@ export interface RoleOccupancy {
   capacity: number | null; // null if capacity cannot be determined
 }
 
+export interface RoleOccupancyOptions {
+  includeGuests?: boolean;
+  /** Capacity from an Event role that the caller has already loaded. */
+  capacity?: unknown;
+}
+
 export class CapacityService {
   /**
    * Returns current occupancy for the given event role.
-   * Counts users and active guests; derives capacity from role.maxParticipants (fallback: role.capacity).
+   * Counts users and active guests; capacity comes from role data the caller
+   * has already loaded.
    */
   static async getRoleOccupancy(
     eventId: string,
     roleId: string,
-    options?: { includeGuests?: boolean }
+    options: RoleOccupancyOptions = {},
   ): Promise<RoleOccupancy> {
-    let users = 0;
-    let guests = 0;
-    let capacity: number | null = null;
+    const normalizeCount = (value: unknown): number =>
+      Number.isFinite(Number(value))
+        ? Number(value)
+        : Number.parseInt(String(value ?? 0), 10) || 0;
+    const eventIdFilter = mongoose.Types.ObjectId.isValid(eventId)
+      ? new mongoose.Types.ObjectId(eventId)
+      : eventId;
+    const includeGuests = options.includeGuests !== false;
 
-    try {
-      const eventIdFilter = mongoose.Types.ObjectId.isValid(eventId)
-        ? new mongoose.Types.ObjectId(eventId)
-        : eventId; // allow string IDs in tests/mocks
-      // Prefer the typed countDocuments; fall back defensively if tests stub a custom method
-      const rawUserCount = await (
-        Registration as unknown as {
-          countDocuments: (filter: unknown) => Promise<unknown>;
+    const [users, guests] = await Promise.all([
+      (async () => {
+        try {
+          const rawUserCount = await (
+            Registration as unknown as {
+              countDocuments: (filter: unknown) => Promise<unknown>;
+            }
+          ).countDocuments({ eventId: eventIdFilter, roleId });
+          return normalizeCount(rawUserCount);
+        } catch {
+          return 0;
         }
-      ).countDocuments({
-        eventId: eventIdFilter,
-        roleId,
-      });
-      users = Number.isFinite(Number(rawUserCount))
-        ? Number(rawUserCount)
-        : Number.parseInt(String(rawUserCount ?? 0), 10) || 0;
-    } catch {
-      users = 0;
-    }
-    const includeGuests = options?.includeGuests !== false; // default true
-    if (includeGuests) {
-      try {
+      })(),
+      (async () => {
+        if (!includeGuests) return 0;
+
         const guestEventId = mongoose.Types.ObjectId.isValid(eventId)
           ? new mongoose.Types.ObjectId(eventId).toString()
           : eventId;
-        const rawGuestCount = await (
-          GuestRegistration as unknown as {
-            countActiveRegistrations: (
-              eventId: string,
-              roleId: string
-            ) => Promise<unknown>;
-          }
-        ).countActiveRegistrations(guestEventId, roleId);
-        guests = Number.isFinite(Number(rawGuestCount))
-          ? Number(rawGuestCount)
-          : Number.parseInt(String(rawGuestCount ?? 0), 10) || 0;
-      } catch {
-        guests = 0;
-      }
-    } else {
-      guests = 0;
-    }
+        try {
+          const rawGuestCount = await (
+            GuestRegistration as unknown as {
+              countActiveRegistrations: (
+                eventId: string,
+                roleId: string,
+              ) => Promise<unknown>;
+            }
+          ).countActiveRegistrations(guestEventId, roleId);
+          return normalizeCount(rawGuestCount);
+        } catch {
+          return 0;
+        }
+      })(),
+    ]);
 
-    try {
-      const evt = await Event.findById(eventId);
-      const role: IEventRole | undefined = (evt?.roles || []).find(
-        (r: IEventRole) => r.id === roleId
-      );
-      const raw = role
-        ? (role as unknown as { maxParticipants?: unknown }).maxParticipants ??
-          (role as unknown as { capacity?: unknown }).capacity
-        : undefined;
-      capacity = Number.isFinite(Number(raw))
-        ? Number(raw)
-        : Number.parseInt(String(raw ?? NaN), 10);
-      if (!Number.isFinite(capacity as number)) capacity = null;
-    } catch {
-      capacity = null;
-    }
+    const rawCapacity = options.capacity;
+    const parsedCapacity = Number.isFinite(Number(rawCapacity))
+      ? Number(rawCapacity)
+      : Number.parseInt(String(rawCapacity ?? Number.NaN), 10);
+    const capacity = Number.isFinite(parsedCapacity) ? parsedCapacity : null;
 
-    return { users, guests, total: Number(users) + Number(guests), capacity };
+    return { users, guests, total: users + guests, capacity };
   }
 
   /** Returns true when capacity is defined and total >= capacity. */

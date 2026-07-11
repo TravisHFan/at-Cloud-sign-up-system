@@ -35,15 +35,25 @@ export function FormField<
   disabled = false,
   helperText,
 }: FormFieldProps<TForm>) {
+  const errorId = `${name}-error`;
+  const helperId = `${name}-helper`;
+  const hasError = Boolean((errors as Record<string, unknown>)[name]);
+
   return (
     <div className={className}>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
+      <label
+        htmlFor={name}
+        className="block text-sm font-medium text-gray-700 mb-2"
+      >
         {label} {required && <span className="text-red-500">*</span>}
       </label>
       <input
         {...register(name as unknown as Parameters<typeof register>[0])}
+        id={name}
         type={type}
         disabled={disabled}
+        aria-invalid={hasError}
+        aria-describedby={hasError ? errorId : helperText ? helperId : undefined}
         className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
           disabled ? "bg-gray-50 text-gray-500 cursor-not-allowed" : "bg-white"
         } ${
@@ -54,11 +64,13 @@ export function FormField<
         placeholder={placeholder}
       />
       {helperText && !(errors as Record<string, unknown>)[name] && (
-        <p className="mt-1 text-sm text-gray-500">{helperText}</p>
+        <p id={helperId} className="mt-1 text-sm text-gray-500">
+          {helperText}
+        </p>
       )}
       {typeof (errors as Record<string, { message?: unknown }>)[name]
         ?.message === "string" && (
-        <p className="mt-1 text-sm text-red-600">
+        <p id={errorId} className="mt-1 text-sm text-red-600">
           {
             (errors as Record<string, { message?: unknown }>)[name]
               ?.message as string
@@ -90,15 +102,25 @@ export function TextareaField<
   helperText,
   rows = 3,
 }: TextareaFieldProps<TForm>) {
+  const errorId = `${name}-error`;
+  const helperId = `${name}-helper`;
+  const hasError = Boolean((errors as Record<string, unknown>)[name]);
+
   return (
     <div className={className}>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
+      <label
+        htmlFor={name}
+        className="block text-sm font-medium text-gray-700 mb-2"
+      >
         {label} {required && <span className="text-red-500">*</span>}
       </label>
       <textarea
         {...register(name as unknown as Parameters<typeof register>[0])}
+        id={name}
         rows={rows}
         disabled={disabled}
+        aria-invalid={hasError}
+        aria-describedby={hasError ? errorId : helperText ? helperId : undefined}
         className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors resize-vertical ${
           disabled ? "bg-gray-50 text-gray-500 cursor-not-allowed" : "bg-white"
         } ${
@@ -109,11 +131,13 @@ export function TextareaField<
         placeholder={placeholder}
       />
       {helperText && !(errors as Record<string, unknown>)[name] && (
-        <p className="mt-1 text-sm text-gray-500">{helperText}</p>
+        <p id={helperId} className="mt-1 text-sm text-gray-500">
+          {helperText}
+        </p>
       )}
       {typeof (errors as Record<string, { message?: unknown }>)[name]
         ?.message === "string" && (
-        <p className="mt-1 text-sm text-red-600">
+        <p id={errorId} className="mt-1 text-sm text-red-600">
           {
             (errors as Record<string, { message?: unknown }>)[name]
               ?.message as string
@@ -151,15 +175,25 @@ export function SelectField<
   options,
 }: SelectFieldProps<TForm>) {
   const hasEmptyOption = options.some((o) => o.value === "");
+  const errorId = `${name}-error`;
+  const helperId = `${name}-helper`;
+  const hasError = Boolean(errors[name]);
+
   return (
     <div className={className}>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
+      <label
+        htmlFor={name}
+        className="block text-sm font-medium text-gray-700 mb-2"
+      >
         {label} {required && <span className="text-red-500">*</span>}
       </label>
       <select
         {...register(name as unknown as Parameters<typeof register>[0])}
+        id={name}
         disabled={disabled}
         required={required}
+        aria-invalid={hasError}
+        aria-describedby={hasError ? errorId : helperText ? helperId : undefined}
         className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors invalid:text-gray-400 ${
           disabled ? "bg-gray-50 text-gray-500 cursor-not-allowed" : "bg-white"
         } ${
@@ -180,10 +214,14 @@ export function SelectField<
         ))}
       </select>
       {helperText && !errors[name] && (
-        <p className="mt-1 text-sm text-gray-500">{helperText}</p>
+        <p id={helperId} className="mt-1 text-sm text-gray-500">
+          {helperText}
+        </p>
       )}
       {typeof errors[name]?.message === "string" && (
-        <p className="mt-1 text-sm text-red-600">{errors[name]?.message}</p>
+        <p id={errorId} className="mt-1 text-sm text-red-600">
+          {errors[name]?.message}
+        </p>
       )}
     </div>
   );

@@ -298,3 +298,5 @@ export const guestsService = {
   submitGuestDecline: (token: string, reason?: string) =>
     guestsApiClient.submitGuestDecline(token, reason),
 };
+
+export const guestService = guestsService;

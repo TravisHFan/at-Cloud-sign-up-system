@@ -18,7 +18,7 @@ describe("GET /api/notifications/unread-counts - UnreadCountsController", () => 
   });
 
   afterAll(async () => {
-    await mongoose.disconnect();
+    // Shared integration harness owns connection lifecycle.
   });
 
   describe("Authentication", () => {

@@ -1,4 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
+import { installDefaultFetchMock } from "../fixtures/defaultFetch";
+
+installDefaultFetchMock();
 import { render, screen } from "@testing-library/react";
 import EventDetail from "../../pages/EventDetail";
 

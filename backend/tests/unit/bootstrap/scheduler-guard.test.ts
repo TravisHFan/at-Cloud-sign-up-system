@@ -31,6 +31,14 @@ vi.mock("../../../src/app", () => ({ default: {} as any }));
 
 vi.mock("../../../src/config/swagger", () => ({ setupSwagger: vi.fn() }));
 
+vi.mock("../../../src/models", () => ({
+  SystemConfig: { initializeDefaults: vi.fn().mockResolvedValue(undefined) },
+}));
+
+vi.mock("../../../src/services/LockService", () => ({
+  lockService: { constructor: { name: "TestLockService" } },
+}));
+
 vi.mock("../../../src/services/infrastructure/SocketService", () => ({
   socketService: { initialize: mockInitialize },
 }));

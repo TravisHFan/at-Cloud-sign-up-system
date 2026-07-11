@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import ResetPassword from "../../pages/ResetPassword";
 import { authService } from "../../services/api";
+import { createDeferred } from "../fixtures/deferred";
 
 vi.mock("../../services/api", () => ({
   authService: {
@@ -254,15 +255,8 @@ describe("ResetPassword page", () => {
 
     it("shows loading state during submission", async () => {
       const user = userEvent.setup();
-      vi.mocked(authService.resetPassword).mockImplementation(
-        () =>
-          new Promise((resolve) =>
-            setTimeout(
-              () => resolve({ success: true, message: "Success" } as any),
-              100
-            )
-          )
-      );
+      const reset = createDeferred<any>();
+      vi.mocked(authService.resetPassword).mockReturnValue(reset.promise);
 
       renderWithRouter();
 
@@ -560,9 +554,6 @@ describe("ResetPassword page", () => {
       await user.type(confirmPasswordInput, "DifferentPassword123!");
       await user.click(submitButton);
 
-      // Wait a bit for potential validation
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
       // Should not submit if passwords don't match
       expect(authService.resetPassword).not.toHaveBeenCalled();
     });
@@ -591,8 +582,6 @@ describe("ResetPassword page", () => {
       await user.type(newPasswordInput, "weak");
       await user.type(confirmPasswordInput, "weak");
       await user.click(submitButton);
-
-      await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Should not submit with weak password
       expect(authService.resetPassword).not.toHaveBeenCalled();

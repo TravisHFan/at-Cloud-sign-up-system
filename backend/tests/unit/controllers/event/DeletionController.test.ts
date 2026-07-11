@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { Request, Response } from "express";
 import { DeletionController } from "../../../../src/controllers/event/DeletionController";
 import { Event, Registration } from "../../../../src/models";
-import { EventCascadeService } from "../../../../src/services";
+import { EventCascadeService } from "../../../../src/services/EventCascadeService";
 import AuditLog from "../../../../src/models/AuditLog";
 
 // Mock dependencies
@@ -18,7 +18,7 @@ vi.mock("../../../../src/models", () => ({
   },
 }));
 
-vi.mock("../../../../src/services", () => ({
+vi.mock("../../../../src/services/EventCascadeService", () => ({
   EventCascadeService: {
     deleteEventFully: vi.fn(),
   },

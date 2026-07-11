@@ -17,7 +17,7 @@ import { UnifiedMessageController } from "../unifiedMessageController";
 import { Logger } from "../../services/LoggerService";
 import { CorrelatedLogger } from "../../services/CorrelatedLogger";
 import { DeletionController } from "./DeletionController";
-import { CachePatterns } from "../../services";
+import { CachePatterns } from "../../services/infrastructure/CacheService";
 import { formatActorDisplay } from "../../utils/systemMessageFormatUtils";
 import AuditLog from "../../models/AuditLog";
 import { toInstantFromWallClock } from "../../utils/event/timezoneUtils";

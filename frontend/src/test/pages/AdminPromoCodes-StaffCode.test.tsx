@@ -444,9 +444,6 @@ describe("AdminPromoCodes - Staff Code Creation (Minimal Test)", () => {
       { timeout: 2000 },
     );
 
-    // Wait a bit to see if user appears (it might not if validation works)
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
     // Try to submit if user is selected
     const allButtons = screen.queryAllByRole("button", {
       name: /create staff code/i,
@@ -458,8 +455,6 @@ describe("AdminPromoCodes - Staff Code Creation (Minimal Test)", () => {
     if (generateButton && !generateButton.hasAttribute("disabled")) {
       await user.click(generateButton);
 
-      // Wait to see if API was called
-      await new Promise((resolve) => setTimeout(resolve, 500));
     }
 
     expect(api.apiClient.createStaffPromoCode).not.toHaveBeenCalled();

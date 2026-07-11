@@ -25,7 +25,7 @@ describe("PUT /api/programs/:id - Authorization Tests", () => {
   });
 
   afterAll(async () => {
-    await mongoose.connection.close();
+    // Shared integration harness owns connection lifecycle.
   });
 
   beforeEach(async () => {
@@ -161,34 +161,14 @@ describe("PUT /api/programs/:id - Authorization Tests", () => {
         fullPriceTicket: 2000,
       };
 
-      // Retry logic to handle intermittent "Parse Error: Expected HTTP/" under load
-      let response;
-      let attempts = 0;
-      const maxAttempts = 3;
+      const response = await request(app)
+        .put(`/api/programs/${programWithoutMentor._id}`)
+        .set("Authorization", `Bearer ${token}`)
+        .send(updatedData);
 
-      while (attempts < maxAttempts) {
-        try {
-          response = await request(app)
-            .put(`/api/programs/${programWithoutMentor._id}`)
-            .set("Authorization", `Bearer ${token}`)
-            .send(updatedData);
-          break; // Success, exit retry loop
-        } catch (error: any) {
-          attempts++;
-          if (
-            attempts >= maxAttempts ||
-            !error.message?.includes("Parse Error")
-          ) {
-            throw error; // Re-throw if max attempts reached or different error
-          }
-          // Wait 100ms before retry
-          await new Promise((resolve) => setTimeout(resolve, 100));
-        }
-      }
-
-      expect(response!.status).toBe(403);
-      expect(response!.body.success).toBe(false);
-      expect(response!.body.message).toBe(
+      expect(response.status).toBe(403);
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe(
         "You do not have permission to edit this program. Only Administrators, the program creator, assigned mentors, and class reps can edit programs.",
       );
 

@@ -100,7 +100,7 @@ describe("Webhook Middleware Integration Tests", () => {
   });
 
   afterAll(async () => {
-    await mongoose.connection.close();
+    // Shared integration harness owns connection lifecycle.
     vi.restoreAllMocks();
   });
 

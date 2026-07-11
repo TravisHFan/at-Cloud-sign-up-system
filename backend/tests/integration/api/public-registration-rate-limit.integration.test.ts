@@ -26,7 +26,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (openedLocal && mongoose.connection.readyState !== 0) {
-    await mongoose.connection.close();
+    // Shared integration harness owns connection lifecycle.
   }
 });
 
@@ -73,8 +73,6 @@ describe("Public registration rate limiting", () => {
         // (kept inline vs console.log for lean output; assertion message carries iteration)
         expect(res.body.success, `iteration=${i} expected success`).toBe(true);
       }
-      // Slight pacing to avoid micro-burst edge timing issues in CI
-      await new Promise((r) => setTimeout(r, 5));
     }
 
     // 4th attempt with same email should 429
@@ -112,7 +110,6 @@ describe("Public registration rate limiting", () => {
       if (!res.body.success) {
         expect(res.body.success, `iteration=${i} expected success`).toBe(true);
       }
-      await new Promise((r) => setTimeout(r, 5));
     }
 
     const blocked = await request(app)

@@ -7,6 +7,11 @@
 import { Request, Response } from "express";
 import { PromoCode, User } from "../../models";
 import { PopulatedUser, PopulatedProgram } from "./types";
+import {
+  escapeRegex,
+  normalizeSearchText,
+  toLiteralTextSearch,
+} from "../../utils/search";
 
 export default class AdminListController {
   /**
@@ -47,16 +52,14 @@ export default class AdminListController {
 
       // Search by code or owner
       if (search && search.trim()) {
-        const searchRegex = new RegExp(search.trim(), "i");
+        const normalizedSearch = normalizeSearchText(search);
+        const searchRegex = new RegExp(escapeRegex(normalizedSearch), "i");
         // Try to find user by name or email
         const users = await User.find({
-          $or: [
-            { username: searchRegex },
-            { email: searchRegex },
-            { firstName: searchRegex },
-            { lastName: searchRegex },
-          ],
-        }).select("_id");
+          $text: { $search: toLiteralTextSearch(normalizedSearch) },
+        })
+          .select("_id")
+          .lean();
 
         const userIds = users.map((u) => u._id);
 

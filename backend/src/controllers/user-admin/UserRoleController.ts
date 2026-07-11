@@ -3,7 +3,7 @@ import { User } from "../../models";
 import { RoleUtils, hasPermission, PERMISSIONS } from "../../utils/roleUtils";
 import { socketService } from "../../services/infrastructure/SocketService";
 import { AutoEmailNotificationService } from "../../services/infrastructure/autoEmailNotificationService";
-import { CachePatterns } from "../../services";
+import { CachePatterns } from "../../services/infrastructure/CacheService";
 
 /**
  * UserRoleController

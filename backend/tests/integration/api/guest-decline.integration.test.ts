@@ -176,7 +176,7 @@ describe("Guest Invitation Decline API Integration Tests", () => {
   });
 
   afterAll(async () => {
-    await mongoose.connection.close();
+    // Shared integration harness owns connection lifecycle.
   });
 
   describe("GET /api/guest/decline/:token - Get Decline Token Info", () => {

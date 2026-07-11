@@ -1,0 +1,29 @@
+{
+  "name": "@atcloud/shared-time",
+  "version": "1.0.0",
+  "private": true,
+  "main": "dist/cjs/timezoneSearch.js",
+  "module": "dist/esm/timezoneSearch.mjs",
+  "types": "dist/cjs/timezoneSearch.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/cjs/timezoneSearch.d.ts",
+      "import": "./dist/esm/timezoneSearch.mjs",
+      "require": "./dist/cjs/timezoneSearch.js",
+      "default": "./dist/cjs/timezoneSearch.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "npm run clean && npm run build:cjs && npm run build:esm",
+    "build:cjs": "tsc -p tsconfig.json",
+    "build:esm": "tsc -p tsconfig.esm.json && mv dist/esm/timezoneSearch.js dist/esm/timezoneSearch.mjs",
+    "prepare": "npm run build"
+  },
+  "devDependencies": {
+    "typescript": "~5.8.3"
+  }
+}

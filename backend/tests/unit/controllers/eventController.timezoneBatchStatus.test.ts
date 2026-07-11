@@ -10,16 +10,16 @@ vi.mock("../../../src/models", () => {
   };
 });
 
-vi.mock("../../../src/services", () => ({
+vi.mock("../../../src/services/infrastructure/CacheService", () => ({
   CachePatterns: {
     invalidateEventCache: vi.fn(),
     invalidateAnalyticsCache: vi.fn(),
   },
 }));
 
-import { EventController } from "../../../src/controllers/eventController";
+import { BatchOperationsController } from "../../../src/controllers/event/BatchOperationsController";
 import { Event } from "../../../src/models";
-import { CachePatterns } from "../../../src/services";
+import { CachePatterns } from "../../../src/services/infrastructure/CacheService";
 
 // Helper to build a mock ObjectId-like value (string works for our expectation usage)
 const mockId = "507f1f77bcf86cd799439011"; // valid hex length 24
@@ -83,9 +83,8 @@ describe("updateAllEventStatusesHelper timezone regression", () => {
     );
 
     // Act
-    const updatedCount = await (
-      EventController as any
-    ).updateAllEventStatusesHelper();
+    const updatedCount =
+      await BatchOperationsController.updateAllEventStatusesHelper();
 
     // Assert
     expect(updatedCount).toBe(1); // It should perform an update because stored was 'upcoming' but should now be 'ongoing'

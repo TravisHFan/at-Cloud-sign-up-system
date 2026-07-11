@@ -3,8 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import type { LoginFormData } from "../schemas/loginSchema";
 import { useAuth } from "./useAuth";
-import { emailNotificationService } from "../utils/emailNotificationService";
-import { findUserByEmail } from "../data/mockUserData";
+import { authService } from "../services/api";
 import {
   canSendVerificationEmail,
   markVerificationEmailSent,
@@ -130,16 +129,6 @@ export function useLogin() {
 
   const handleResendVerification = async (email: string) => {
     try {
-      // Check if user exists in the system
-      const user = findUserByEmail(email);
-      if (!user) {
-        notification.error("No account found with this email address.", {
-          title: "Account Not Found",
-          autoCloseDelay: 4000,
-        });
-        return;
-      }
-
       // Check cooldown period to prevent spam
       if (!canSendVerificationEmail(email)) {
         const remainingTime = getRemainingCooldown(email, "verification");
@@ -155,19 +144,7 @@ export function useLogin() {
         return;
       }
 
-      // Check if email is already verified (in real implementation)
-      // For demo purposes, we'll skip this check
-
-      // Generate new verification token
-      const verificationToken = `valid_${Math.random()
-        .toString(36)
-        .substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
-
-      await emailNotificationService.sendEmailVerification(
-        email,
-        user.firstName, // Use actual user's first name
-        verificationToken,
-      );
+      await authService.resendVerification(email);
 
       // Mark email as sent for cooldown tracking
       markVerificationEmailSent(email);

@@ -39,6 +39,7 @@ describe("CacheService", () => {
   afterEach(async () => {
     // Clean up
     await testCache.shutdown();
+    vi.restoreAllMocks();
   });
 
   describe("Basic Cache Operations", () => {
@@ -114,11 +115,13 @@ describe("CacheService", () => {
 
   describe("TTL and Expiration", () => {
     it("should respect custom TTL values", async () => {
+      const now = Date.now();
+      const clock = vi.spyOn(Date, "now").mockReturnValue(now);
+
       // Act
       await testCache.set("short-lived", "value", { ttl: 1 }); // 1 second
 
-      // Wait for expiration
-      await new Promise((resolve) => setTimeout(resolve, 1100));
+      clock.mockReturnValue(now + 1_001);
 
       const result = await testCache.get("short-lived");
 
@@ -149,11 +152,13 @@ describe("CacheService", () => {
     });
 
     it("should cleanup expired entries automatically", async () => {
+      const now = Date.now();
+      const clock = vi.spyOn(Date, "now").mockReturnValue(now);
+
       // Arrange
       await testCache.set("auto-expire", "value", { ttl: 1 });
 
-      // Wait for expiration
-      await new Promise((resolve) => setTimeout(resolve, 1100));
+      clock.mockReturnValue(now + 1_001);
 
       // Manually trigger cleanup by trying to get the value
       const result = await testCache.get("auto-expire");

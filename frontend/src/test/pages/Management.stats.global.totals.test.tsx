@@ -86,7 +86,15 @@ vi.mock("../../services/api", async () => {
 
 // Silence socket usage if any child component references it
 vi.mock("../../services/socketService", () => ({
-  default: { connect: vi.fn(), disconnect: vi.fn(), on: vi.fn(), off: vi.fn() },
+  socketService: {
+    socket: null,
+    isConnected: false,
+    connect: vi.fn(),
+    acquire: vi.fn(() => vi.fn()),
+    disconnect: vi.fn(),
+    on: vi.fn(() => vi.fn()),
+    off: vi.fn(),
+  },
 }));
 
 const renderWithProviders = (ui: React.ReactElement) =>

@@ -7,7 +7,7 @@
 import { Request, Response } from "express";
 import { User } from "../../models";
 import { EmailService } from "../../services/infrastructure/EmailServiceFacade";
-import { CachePatterns } from "../../services";
+import { CachePatterns } from "../../services/infrastructure/CacheService";
 import { UnifiedMessageController } from "../unifiedMessageController";
 import { UserDocLike, toIdString } from "./types";
 

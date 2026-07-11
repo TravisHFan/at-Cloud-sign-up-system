@@ -1,6 +1,4 @@
 import { Request, Response, NextFunction } from "express";
-import fs from "fs";
-import path from "path";
 import { CorrelatedLogger } from "../services/CorrelatedLogger";
 import { Logger } from "../services/LoggerService";
 
@@ -13,7 +11,6 @@ interface RequestStats {
   timestamp: number;
   responseTime?: number;
   statusCode?: number;
-  errorMessage?: string;
 }
 
 interface EndpointMetrics {
@@ -26,37 +23,45 @@ interface EndpointMetrics {
   userAgents: Set<string>;
 }
 
+interface MinuteBucket {
+  count: number;
+  errorCount: number;
+  uniqueIPs: Set<string>;
+  userAgents: Set<string>;
+}
+
+const MAX_RECENT_REQUESTS = 5_000;
+const MAX_ENDPOINTS = 250;
+const MAX_UNIQUE_VALUES = 100;
+const MAX_USER_AGENT_LENGTH = 160;
+const MINUTE_MS = 60_000;
+const HOUR_MS = 60 * MINUTE_MS;
+
 class RequestMonitorService {
   private static instance: RequestMonitorService;
   private requestStats: RequestStats[] = [];
-  private endpointMetrics: Map<string, EndpointMetrics> = new Map();
-  // Keep references to timers so they can be skipped in tests or cleared in future
+  private requestBuckets = new Map<number, MinuteBucket>();
+  private endpointMetrics = new Map<string, EndpointMetrics>();
   private cleanupInterval?: NodeJS.Timeout;
   private alertInterval?: NodeJS.Timeout;
   private log = Logger.getInstance().child("RequestMonitor");
   private alertThresholds = {
-    requestsPerMinute: 1000, // Alert if more than 1000 requests per minute
-    requestsPerSecond: 50, // Alert if more than 50 requests per second
-    duplicateRequestsFromSameIP: 100, // Alert if same IP makes 100+ requests in 1 minute
-    suspiciousUserAgent: 20, // Alert if same user agent makes 20+ requests in 1 minute
+    requestsPerMinute: 1000,
+    requestsPerSecond: 50,
+    duplicateRequestsFromSameIP: 100,
+    suspiciousUserAgent: 20,
   };
-  private logFile = path.join(process.cwd(), "request-monitor.log");
-  private alertFile = path.join(process.cwd(), "request-alerts.log");
 
   private constructor() {
-    // In test runs, avoid background intervals that keep the event loop alive
-    if (process.env.NODE_ENV === "test") {
-      return;
-    }
+    if (process.env.NODE_ENV === "test") return;
 
-    // Clean up old stats every 5 minutes to prevent memory bloat
     this.cleanupInterval = setInterval(
       () => this.cleanupOldStats(),
-      5 * 60 * 1000
+      5 * MINUTE_MS,
     );
-
-    // Generate alerts every minute
-    this.alertInterval = setInterval(() => this.checkForAlerts(), 60 * 1000);
+    this.alertInterval = setInterval(() => this.checkForAlerts(), MINUTE_MS);
+    this.cleanupInterval.unref();
+    this.alertInterval.unref();
   }
 
   public static getInstance(): RequestMonitorService {
@@ -69,156 +74,159 @@ class RequestMonitorService {
   public middleware() {
     return (req: Request, res: Response, next: NextFunction) => {
       const startTime = Date.now();
-      const correlationId =
-        req.correlationId || Math.random().toString(36).substr(2, 9);
-
-      // Create a correlated logger for this request lifecycle
-      const clog = CorrelatedLogger.fromRequest(req, "RequestMonitor");
-
-      // Helper to normalize legacy API versioning and redundant segments
-      const normalizePath = (p: string): string => {
-        let out = p;
-        // Replace legacy '/api/v1' with '/api'
-        out = out.replace(/\/api\/v1\b/, "/api");
-        // Collapse accidental duplicate '/api/api'
-        out = out.replace(/\/api\/api\b/, "/api");
-        // Remove duplicate slashes
-        out = out.replace(/\/{2,}/g, "/");
-        return out;
-      };
-
-      // Log the incoming request
+      const endpointPath = this.normalizePath(req.path);
       const requestStat: RequestStats = {
-        endpoint: `${req.method} ${normalizePath(req.path)}`,
+        endpoint: `${req.method} ${endpointPath}`,
         method: req.method,
-        userAgent: req.get("User-Agent") || "Unknown",
+        userAgent: (req.get("User-Agent") || "Unknown").slice(
+          0,
+          MAX_USER_AGENT_LENGTH,
+        ),
         ip: this.getClientIP(req),
         userId: (req as unknown as { user?: { id?: string } }).user?.id,
         timestamp: startTime,
       };
 
-      // Store request
-      this.requestStats.push(requestStat);
+      this.recordRequest(requestStat);
+      const correlatedLog = CorrelatedLogger.fromRequest(req, "RequestMonitor");
+      let finalized = false;
+      const finalize = () => {
+        if (finalized) return;
+        finalized = true;
+        requestStat.responseTime = Date.now() - startTime;
+        requestStat.statusCode = res.statusCode;
+        this.updateEndpointMetrics(requestStat);
 
-      // Log to console for immediate monitoring
-      console.log(
-        `[${new Date().toISOString()}] [${correlationId}] ${
-          req.method
-        } ${normalizePath(req.path)} - IP: ${
-          requestStat.ip
-        } - UserAgent: ${requestStat.userAgent.substring(0, 50)}...`
-      );
-
-      // Also emit a structured "start" log with correlation context
-      clog.debug("Request start", "HTTP", {
-        method: req.method,
-        path: normalizePath(req.path),
-        ip: requestStat.ip,
-        userAgent: requestStat.userAgent,
-        userId: requestStat.userId,
-      });
-
-      // Safely capture response details without overriding res.end in production
-      const anyRes = res as unknown as {
-        on?: (event: string, listener: () => void) => void;
-        end?: (...args: unknown[]) => unknown;
-        statusCode: number;
+        try {
+          correlatedLog.logRequest(
+            req.method,
+            endpointPath,
+            res.statusCode,
+            requestStat.responseTime,
+            { userId: requestStat.userId },
+          );
+        } catch {
+          // Monitoring must never interfere with a response.
+        }
       };
 
-      if (typeof anyRes.on === "function") {
-        anyRes.on("finish", () => {
-          const responseTime = Date.now() - startTime;
-          requestStat.responseTime = responseTime;
-          requestStat.statusCode = res.statusCode;
-
-          // Update endpoint metrics
-          RequestMonitorService.getInstance().updateEndpointMetrics(
-            requestStat
-          );
-
-          // Log completion
-          console.log(
-            `[${new Date().toISOString()}] [${correlationId}] ${
-              req.method
-            } ${normalizePath(req.path)} - ${
-              res.statusCode
-            } - ${responseTime}ms`
-          );
-
-          // Structured completion log
-          clog.logRequest(
-            req.method,
-            normalizePath(req.path),
-            res.statusCode,
-            responseTime,
-            {
-              userId: requestStat.userId,
-            }
-          );
-        });
-      } else if (typeof anyRes.end === "function") {
-        // Test/mock fallback: wrap res.end to capture completion
-        const originalEnd = anyRes.end.bind(res);
-        anyRes.end = (...args: unknown[]) => {
-          const responseTime = Date.now() - startTime;
-          requestStat.responseTime = responseTime;
-          requestStat.statusCode = res.statusCode;
-
-          RequestMonitorService.getInstance().updateEndpointMetrics(
-            requestStat
-          );
-
-          console.log(
-            `[${new Date().toISOString()}] [${correlationId}] ${
-              req.method
-            } ${normalizePath(req.path)} - ${
-              res.statusCode
-            } - ${responseTime}ms`
-          );
-
-          clog.logRequest(
-            req.method,
-            normalizePath(req.path),
-            res.statusCode,
-            responseTime,
-            {
-              userId: requestStat.userId,
-            }
-          );
-
+      const responseWithEvents = res as unknown as {
+        once?: (event: string, listener: () => void) => void;
+        on?: (event: string, listener: () => void) => void;
+        end?: (...args: unknown[]) => unknown;
+      };
+      if (typeof responseWithEvents.once === "function") {
+        responseWithEvents.once("finish", finalize);
+      } else if (typeof responseWithEvents.on === "function") {
+        responseWithEvents.on("finish", finalize);
+      } else if (typeof responseWithEvents.end === "function") {
+        const originalEnd = responseWithEvents.end.bind(res);
+        responseWithEvents.end = (...args: unknown[]) => {
+          finalize();
           return originalEnd(...args);
         };
       } else {
-        // Last-resort fallback for extremely minimal mocks: schedule a tick
-        setImmediate(() => {
-          const responseTime = Date.now() - startTime;
-          requestStat.responseTime = responseTime;
-          requestStat.statusCode = res.statusCode;
-          RequestMonitorService.getInstance().updateEndpointMetrics(
-            requestStat
-          );
-        });
+        setImmediate(finalize);
       }
 
       next();
     };
   }
 
+  private normalizePath(rawPath: string): string {
+    let normalized = (rawPath || "/").split("?", 1)[0];
+    normalized = normalized.replace(/\/api\/v1\b/, "/api");
+    normalized = normalized.replace(/\/api\/api\b/, "/api");
+    normalized = normalized.replace(/\/{2,}/g, "/");
+    normalized = normalized.replace(
+      /\/[0-9a-f]{24}(?=\/|$)/gi,
+      "/:id",
+    );
+    normalized = normalized.replace(
+      /\/[0-9a-f]{8}-[0-9a-f-]{27,}(?=\/|$)/gi,
+      "/:id",
+    );
+    normalized = normalized.replace(/\/\d+(?=\/|$)/g, "/:id");
+    normalized = normalized.replace(
+      /^(\/api\/public\/events)\/[^/]+/,
+      "$1/:slug",
+    );
+    normalized = normalized.replace(/^\/s\/[^/]+/, "/s/:key");
+    normalized = normalized.replace(
+      /(\/manage|\/decline|\/verify|\/reset-password)\/[^/]+/,
+      "$1/:token",
+    );
+    return normalized;
+  }
+
   private getClientIP(req: Request): string {
+    const forwarded = req.headers["x-forwarded-for"];
+    const forwardedValue = Array.isArray(forwarded) ? forwarded[0] : forwarded;
     return (
-      (req.headers["x-forwarded-for"] as string) ||
-      (req.headers["x-real-ip"] as string) ||
-      req.connection.remoteAddress ||
-      req.socket.remoteAddress ||
+      forwardedValue?.split(",", 1)[0].trim() ||
+      (req.headers["x-real-ip"] as string | undefined) ||
+      req.socket?.remoteAddress ||
+      req.connection?.remoteAddress ||
       "unknown"
     );
   }
 
-  private updateEndpointMetrics(requestStat: RequestStats) {
-    const key = requestStat.endpoint;
+  private recordRequest(requestStat: RequestStats): void {
+    if (this.requestStats.length >= MAX_RECENT_REQUESTS) {
+      this.requestStats.splice(0, Math.min(250, this.requestStats.length));
+    }
+    this.requestStats.push(requestStat);
 
-    if (!this.endpointMetrics.has(key)) {
-      this.endpointMetrics.set(key, {
+    const minute = Math.floor(requestStat.timestamp / MINUTE_MS);
+    let bucket = this.requestBuckets.get(minute);
+    if (!bucket) {
+      bucket = {
+        count: 0,
+        errorCount: 0,
+        uniqueIPs: new Set(),
+        userAgents: new Set(),
+      };
+      this.requestBuckets.set(minute, bucket);
+    }
+    bucket.count += 1;
+    this.addBounded(bucket.uniqueIPs, requestStat.ip);
+    this.addBounded(bucket.userAgents, requestStat.userAgent);
+    this.cleanupBuckets(minute);
+  }
+
+  private addBounded(target: Set<string>, value: string): void {
+    if (target.has(value) || target.size < MAX_UNIQUE_VALUES) {
+      target.add(value);
+    }
+  }
+
+  private isCountedError(requestStat: RequestStats): boolean {
+    if (!requestStat.statusCode || requestStat.statusCode < 400) return false;
+    const isAuthEndpoint = requestStat.endpoint.includes("/auth/");
+    const isExpectedAuthFailure =
+      requestStat.statusCode === 401 || requestStat.statusCode === 403;
+    return !(isAuthEndpoint && isExpectedAuthFailure);
+  }
+
+  private updateEndpointMetrics(requestStat: RequestStats): void {
+    let key = requestStat.endpoint;
+    if (!this.endpointMetrics.has(key) && this.endpointMetrics.size >= MAX_ENDPOINTS) {
+      key = `${requestStat.method} /:other`;
+      if (!this.endpointMetrics.has(key)) {
+        const oldestKey = [...this.endpointMetrics.entries()].reduce(
+          (oldest, entry) =>
+            !oldest || entry[1].lastAccessed < oldest[1].lastAccessed
+              ? entry
+              : oldest,
+          undefined as [string, EndpointMetrics] | undefined,
+        )?.[0];
+        if (oldestKey) this.endpointMetrics.delete(oldestKey);
+      }
+    }
+
+    let metrics = this.endpointMetrics.get(key);
+    if (!metrics) {
+      metrics = {
         count: 0,
         totalResponseTime: 0,
         averageResponseTime: 0,
@@ -226,336 +234,268 @@ class RequestMonitorService {
         lastAccessed: 0,
         uniqueIPs: new Set(),
         userAgents: new Set(),
-      });
+      };
+      this.endpointMetrics.set(key, metrics);
     }
 
-    const metrics = this.endpointMetrics.get(key)!;
-    metrics.count++;
+    metrics.count += 1;
     metrics.lastAccessed = requestStat.timestamp;
-    metrics.uniqueIPs.add(requestStat.ip);
-    metrics.userAgents.add(requestStat.userAgent);
-
-    if (requestStat.responseTime) {
+    this.addBounded(metrics.uniqueIPs, requestStat.ip);
+    this.addBounded(metrics.userAgents, requestStat.userAgent);
+    if (requestStat.responseTime !== undefined) {
       metrics.totalResponseTime += requestStat.responseTime;
       metrics.averageResponseTime = metrics.totalResponseTime / metrics.count;
     }
 
-    // Count errors, but exclude expected authentication failures
-    if (requestStat.statusCode && requestStat.statusCode >= 400) {
-      // Don't count 401 (Unauthorized) or 403 (Forbidden) as errors for auth endpoints
-      // These are expected responses when checking authentication status or permissions
-      const isAuthEndpoint = requestStat.endpoint.includes("/auth/");
-      const isAuthFailure =
-        requestStat.statusCode === 401 || requestStat.statusCode === 403;
-
-      if (!(isAuthEndpoint && isAuthFailure)) {
-        metrics.errorCount++;
-      }
-    }
-  }
-
-  private cleanupOldStats() {
-    const oneHourAgo = Date.now() - 60 * 60 * 1000;
-    const oldCount = this.requestStats.length;
-    this.requestStats = this.requestStats.filter(
-      (stat) => stat.timestamp > oneHourAgo
-    );
-
-    if (oldCount > this.requestStats.length) {
-      console.log(
-        `[REQUEST-MONITOR] Cleaned up ${
-          oldCount - this.requestStats.length
-        } old request stats`
+    if (this.isCountedError(requestStat)) {
+      metrics.errorCount += 1;
+      const bucket = this.requestBuckets.get(
+        Math.floor(requestStat.timestamp / MINUTE_MS),
       );
+      if (bucket) bucket.errorCount += 1;
     }
   }
 
-  private checkForAlerts() {
-    const now = Date.now();
-    const oneMinuteAgo = now - 60 * 1000;
-    const oneSecondAgo = now - 1 * 1000;
+  private cleanupBuckets(currentMinute: number): void {
+    for (const minute of this.requestBuckets.keys()) {
+      if (minute < currentMinute - 60) this.requestBuckets.delete(minute);
+    }
+  }
 
+  private cleanupOldStats(): void {
+    const oneHourAgo = Date.now() - HOUR_MS;
+    this.requestStats = this.requestStats.filter(
+      (stat) => stat.timestamp > oneHourAgo,
+    );
+    this.cleanupBuckets(Math.floor(Date.now() / MINUTE_MS));
+  }
+
+  private checkForAlerts(): void {
+    const now = Date.now();
     const recentRequests = this.requestStats.filter(
-      (stat) => stat.timestamp > oneMinuteAgo
+      (stat) => stat.timestamp > now - MINUTE_MS,
     );
     const veryRecentRequests = this.requestStats.filter(
-      (stat) => stat.timestamp > oneSecondAgo
+      (stat) => stat.timestamp > now - 1000,
     );
 
-    // Check for high request rate
     if (recentRequests.length > this.alertThresholds.requestsPerMinute) {
       this.logAlert(
-        `HIGH_REQUEST_RATE`,
-        `${recentRequests.length} requests in the last minute (threshold: ${this.alertThresholds.requestsPerMinute})`
+        "HIGH_REQUEST_RATE",
+        `${recentRequests.length} requests in the last minute`,
       );
     }
-
     if (veryRecentRequests.length > this.alertThresholds.requestsPerSecond) {
       this.logAlert(
-        `VERY_HIGH_REQUEST_RATE`,
-        `${veryRecentRequests.length} requests in the last second (threshold: ${this.alertThresholds.requestsPerSecond})`
+        "VERY_HIGH_REQUEST_RATE",
+        `${veryRecentRequests.length} requests in the last second`,
       );
     }
 
-    // Check for duplicate requests from same IP
-    const ipCounts = new Map<string, number>();
-    recentRequests.forEach((req) => {
-      ipCounts.set(req.ip, (ipCounts.get(req.ip) || 0) + 1);
-    });
-
-    ipCounts.forEach((count, ip) => {
-      if (count > this.alertThresholds.duplicateRequestsFromSameIP) {
-        this.logAlert(
-          `SUSPICIOUS_IP_ACTIVITY`,
-          `IP ${ip} made ${count} requests in the last minute (threshold: ${this.alertThresholds.duplicateRequestsFromSameIP})`
-        );
-      }
-    });
-
-    // Check for suspicious user agent activity
-    const userAgentCounts = new Map<string, number>();
-    recentRequests.forEach((req) => {
-      userAgentCounts.set(
-        req.userAgent,
-        (userAgentCounts.get(req.userAgent) || 0) + 1
-      );
-    });
-
-    userAgentCounts.forEach((count, userAgent) => {
-      if (count > this.alertThresholds.suspiciousUserAgent) {
-        this.logAlert(
-          `SUSPICIOUS_USER_AGENT`,
-          `User Agent "${userAgent.substring(
-            0,
-            100
-          )}..." made ${count} requests in the last minute (threshold: ${
-            this.alertThresholds.suspiciousUserAgent
-          })`
-        );
-      }
-    });
+    this.alertOnDimension(
+      recentRequests,
+      (request) => request.ip,
+      this.alertThresholds.duplicateRequestsFromSameIP,
+      "SUSPICIOUS_IP_ACTIVITY",
+    );
+    this.alertOnDimension(
+      recentRequests,
+      (request) => request.userAgent,
+      this.alertThresholds.suspiciousUserAgent,
+      "SUSPICIOUS_USER_AGENT",
+    );
   }
 
-  private logAlert(type: string, message: string) {
-    const alertMessage = `[${new Date().toISOString()}] [${type}] ${message}`;
-    console.error(`🚨 ALERT: ${alertMessage}`);
+  private alertOnDimension(
+    requests: RequestStats[],
+    getKey: (request: RequestStats) => string,
+    threshold: number,
+    type: string,
+  ): void {
+    const counts = new Map<string, number>();
+    for (const request of requests) {
+      const key = getKey(request);
+      counts.set(key, (counts.get(key) || 0) + 1);
+    }
+    for (const [key, count] of counts) {
+      if (count > threshold) {
+        this.logAlert(type, `${key.slice(0, 100)}: ${count} requests`);
+      }
+    }
+  }
 
-    // Write to alert file
-    fs.appendFileSync(this.alertFile, alertMessage + "\n");
-
-    // Also emit a structured alert log (kept lightweight and PII-safe)
+  private logAlert(type: string, message: string): void {
+    // Structured logging is asynchronous/non-blocking from this service's
+    // perspective and replaces synchronous request-alert file appends.
     this.log.warn("Request monitor alert", "Ops", { type, message });
   }
 
   public getStats() {
     const now = Date.now();
-    const oneHourAgo = now - 60 * 60 * 1000;
-    const oneMinuteAgo = now - 60 * 1000;
-
+    const oneHourAgo = now - HOUR_MS;
+    const oneMinuteAgo = now - MINUTE_MS;
     const recentRequests = this.requestStats.filter(
-      (stat) => stat.timestamp > oneHourAgo
+      (stat) => stat.timestamp > oneHourAgo,
     );
-    const veryRecentRequests = this.requestStats.filter(
-      (stat) => stat.timestamp > oneMinuteAgo
+    const lastMinuteRequests = recentRequests.filter(
+      (stat) => stat.timestamp > oneMinuteAgo,
     );
 
-    // PII-safe global uniqueness and error counters (windowed to last hour)
-    const uniqueIPsSet = new Set<string>();
-    const uniqueUserAgentsSet = new Set<string>();
-    let errorsLastHour = 0;
-
-    for (const r of recentRequests) {
-      uniqueIPsSet.add(r.ip);
-      uniqueUserAgentsSet.add(r.userAgent);
-
-      if (r.statusCode && r.statusCode >= 400) {
-        const isAuthEndpoint = r.endpoint.includes("/auth/");
-        const isAuthFailure = r.statusCode === 401 || r.statusCode === 403;
-        if (!(isAuthEndpoint && isAuthFailure)) {
-          errorsLastHour++;
-        }
+    const firstMinute = Math.floor(oneHourAgo / MINUTE_MS);
+    const hourBuckets = [...this.requestBuckets.entries()].filter(
+      ([minute]) => minute >= firstMinute,
+    );
+    const totalRequestsLastHour = hourBuckets.reduce(
+      (total, [, bucket]) => total + bucket.count,
+      0,
+    );
+    const errorsLastHour = hourBuckets.reduce(
+      (total, [, bucket]) => total + bucket.errorCount,
+      0,
+    );
+    const uniqueIPs = new Set<string>();
+    const uniqueUserAgents = new Set<string>();
+    for (const [, bucket] of hourBuckets) {
+      for (const ip of bucket.uniqueIPs) this.addBounded(uniqueIPs, ip);
+      for (const agent of bucket.userAgents) {
+        this.addBounded(uniqueUserAgents, agent);
       }
     }
-    const errorRateLastHour =
-      recentRequests.length > 0
-        ? Math.round((errorsLastHour / recentRequests.length) * 1000) / 1000
-        : 0;
 
-    // Aggregate endpoint metrics by normalized endpoint to merge any legacy /v1 traces
-    const normalizeEndpointString = (endpoint: string): string => {
-      const spaceIdx = endpoint.indexOf(" ");
-      const method = spaceIdx > 0 ? endpoint.slice(0, spaceIdx) : "GET";
-      const path = spaceIdx > 0 ? endpoint.slice(spaceIdx + 1) : endpoint;
-      // Reuse same normalization rules as middleware
-      let p = path.replace(/\/api\/v1\b/, "/api");
-      p = p.replace(/\/api\/api\b/, "/api");
-      p = p.replace(/\/{2,}/g, "/");
-      return `${method} ${p}`;
-    };
-
-    const aggregated = new Map<
-      string,
-      {
-        count: number;
-        totalResponseTime: number;
-        errorCount: number;
-        uniqueIPs: Set<string>;
-        userAgents: Set<string>;
-      }
-    >();
-
-    for (const [endpoint, metrics] of this.endpointMetrics.entries()) {
-      const norm = normalizeEndpointString(endpoint);
-      if (!aggregated.has(norm)) {
-        aggregated.set(norm, {
-          count: 0,
-          totalResponseTime: 0,
-          errorCount: 0,
-          uniqueIPs: new Set<string>(),
-          userAgents: new Set<string>(),
-        });
-      }
-      const agg = aggregated.get(norm)!;
-      agg.count += metrics.count;
-      agg.totalResponseTime += metrics.totalResponseTime;
-      agg.errorCount += metrics.errorCount;
-      // Merge sets
-      metrics.uniqueIPs.forEach((ip) => agg.uniqueIPs.add(ip));
-      metrics.userAgents.forEach((ua) => agg.userAgents.add(ua));
-    }
+    const endpointMetrics = [...this.endpointMetrics.entries()]
+      .map(([endpoint, metrics]) => ({
+        endpoint: this.normalizeEndpoint(endpoint),
+        count: metrics.count,
+        averageResponseTime: Math.round(metrics.averageResponseTime),
+        errorCount: metrics.errorCount,
+        uniqueIPs: metrics.uniqueIPs.size,
+        uniqueUserAgents: metrics.userAgents.size,
+      }))
+      .sort((left, right) => right.count - left.count);
 
     return {
-      totalRequestsLastHour: recentRequests.length,
-      totalRequestsLastMinute: veryRecentRequests.length,
-      requestsPerSecond: Math.round(veryRecentRequests.length / 60),
-      // Global uniqueness + error counters (PII-safe aggregates)
-      globalUniqueIPsLastHour: uniqueIPsSet.size,
-      globalUniqueUserAgentsLastHour: uniqueUserAgentsSet.size,
+      totalRequestsLastHour,
+      totalRequestsLastMinute: lastMinuteRequests.length,
+      requestsPerSecond: Math.round(lastMinuteRequests.length / 60),
+      globalUniqueIPsLastHour: uniqueIPs.size,
+      globalUniqueUserAgentsLastHour: uniqueUserAgents.size,
       errorsLastHour,
-      errorRateLastHour,
-      endpointMetrics: Array.from(aggregated.entries())
-        .map(([endpoint, metrics]) => ({
-          endpoint,
-          count: metrics.count,
-          averageResponseTime: Math.round(
-            metrics.count > 0 ? metrics.totalResponseTime / metrics.count : 0
-          ),
-          errorCount: metrics.errorCount,
-          uniqueIPs: metrics.uniqueIPs.size,
-          uniqueUserAgents: metrics.userAgents.size,
-        }))
-        .sort((a, b) => b.count - a.count),
-      topIPs: this.getTopIPs(recentRequests),
-      topUserAgents: this.getTopUserAgents(recentRequests),
-      suspiciousPatterns: this.detectSuspiciousPatterns(
-        recentRequests.map((r) => ({
-          ...r,
-          // Normalize endpoint on the fly for pattern detection
-          endpoint: normalizeEndpointString(r.endpoint),
-        }))
+      errorRateLastHour:
+        totalRequestsLastHour > 0
+          ? Math.round((errorsLastHour / totalRequestsLastHour) * 1000) / 1000
+          : 0,
+      endpointMetrics: this.mergeEndpointMetrics(endpointMetrics),
+      topIPs: this.getTopValues(recentRequests, (request) => request.ip).map(
+        ([ip, count]) => ({ ip, count }),
       ),
+      topUserAgents: this.getTopValues(
+        recentRequests,
+        (request) => request.userAgent,
+      ).map(([userAgent, count]) => ({ userAgent, count })),
+      suspiciousPatterns: this.detectSuspiciousPatterns(recentRequests),
+      limits: {
+        recentRequests: MAX_RECENT_REQUESTS,
+        endpoints: MAX_ENDPOINTS,
+        uniqueValuesPerMetric: MAX_UNIQUE_VALUES,
+      },
     };
   }
 
-  private getTopIPs(requests: RequestStats[]) {
-    const ipCounts = new Map<string, number>();
-    requests.forEach((req) => {
-      ipCounts.set(req.ip, (ipCounts.get(req.ip) || 0) + 1);
-    });
-
-    return Array.from(ipCounts.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .map(([ip, count]) => ({ ip, count }));
+  private normalizeEndpoint(endpoint: string): string {
+    const separator = endpoint.indexOf(" ");
+    const method = separator > 0 ? endpoint.slice(0, separator) : "GET";
+    const path = separator > 0 ? endpoint.slice(separator + 1) : endpoint;
+    return `${method} ${this.normalizePath(path)}`;
   }
 
-  private getTopUserAgents(requests: RequestStats[]) {
-    const userAgentCounts = new Map<string, number>();
-    requests.forEach((req) => {
-      userAgentCounts.set(
-        req.userAgent,
-        (userAgentCounts.get(req.userAgent) || 0) + 1
+  private mergeEndpointMetrics<
+    T extends {
+      endpoint: string;
+      count: number;
+      averageResponseTime: number;
+      errorCount: number;
+      uniqueIPs: number;
+      uniqueUserAgents: number;
+    },
+  >(metrics: T[]): T[] {
+    const merged = new Map<string, T>();
+    for (const metric of metrics) {
+      const current = merged.get(metric.endpoint);
+      if (!current) {
+        merged.set(metric.endpoint, { ...metric });
+        continue;
+      }
+      const totalCount = current.count + metric.count;
+      current.averageResponseTime = Math.round(
+        (current.averageResponseTime * current.count +
+          metric.averageResponseTime * metric.count) /
+          totalCount,
       );
-    });
+      current.count = totalCount;
+      current.errorCount += metric.errorCount;
+      current.uniqueIPs = Math.min(
+        MAX_UNIQUE_VALUES,
+        current.uniqueIPs + metric.uniqueIPs,
+      );
+      current.uniqueUserAgents = Math.min(
+        MAX_UNIQUE_VALUES,
+        current.uniqueUserAgents + metric.uniqueUserAgents,
+      );
+    }
+    return [...merged.values()].sort((left, right) => right.count - left.count);
+  }
 
-    return Array.from(userAgentCounts.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .map(([userAgent, count]) => ({
-        userAgent: userAgent.substring(0, 100),
-        count,
-      }));
+  private getTopValues(
+    requests: RequestStats[],
+    getKey: (request: RequestStats) => string,
+  ): Array<[string, number]> {
+    const counts = new Map<string, number>();
+    for (const request of requests) {
+      const key = getKey(request);
+      counts.set(key, (counts.get(key) || 0) + 1);
+    }
+    return [...counts.entries()]
+      .sort((left, right) => right[1] - left[1])
+      .slice(0, 10);
   }
 
   private detectSuspiciousPatterns(
-    requests: RequestStats[]
+    requests: RequestStats[],
   ): Array<{ type: string; description: string; severity: string }> {
-    const patterns: Array<{
-      type: string;
-      description: string;
-      severity: string;
-    }> = [];
+    const endpointCounts = new Map<string, number>();
+    for (const request of requests) {
+      endpointCounts.set(
+        request.endpoint,
+        (endpointCounts.get(request.endpoint) || 0) + 1,
+      );
+    }
 
-    // Detect potential polling loops
-    const pathCounts = new Map<string, number>();
-    requests.forEach((req) => {
-      pathCounts.set(req.endpoint, (pathCounts.get(req.endpoint) || 0) + 1);
-    });
-
-    pathCounts.forEach((count, path) => {
-      if (count > 100) {
-        // More than 100 requests to same endpoint in an hour
-        patterns.push({
-          type: "POTENTIAL_POLLING_LOOP",
-          description: `Endpoint ${path} received ${count} requests in the last hour`,
-          severity: count > 500 ? "HIGH" : "MEDIUM",
-        });
-      }
-    });
-
-    return patterns;
+    return [...endpointCounts.entries()]
+      .filter(([, count]) => count > 100)
+      .map(([endpoint, count]) => ({
+        type: "POTENTIAL_POLLING_LOOP",
+        description: `Endpoint ${endpoint} received ${count} requests in the retained window`,
+        severity: count > 500 ? "HIGH" : "MEDIUM",
+      }));
   }
 
-  public emergencyDisableRateLimit() {
-    console.error(
-      "🚨 EMERGENCY: Rate limiting disabled due to abnormal traffic patterns!"
-    );
+  public emergencyDisableRateLimit(): void {
     process.env.ENABLE_RATE_LIMITING = "false";
-
-    // Log this emergency action
-    const emergencyMessage = `[${new Date().toISOString()}] EMERGENCY: Rate limiting disabled due to abnormal traffic patterns`;
-    fs.appendFileSync(this.alertFile, emergencyMessage + "\n");
-
-    // Structured log
     this.log.error("Rate limiting emergency disabled", undefined, "Ops", {
       enableRateLimiting: false,
     });
   }
 
-  public emergencyEnableRateLimit() {
-    console.log(
-      "✅ RECOVERY: Rate limiting re-enabled after emergency disable"
-    );
+  public emergencyEnableRateLimit(): void {
     process.env.ENABLE_RATE_LIMITING = "true";
-
-    // Log this recovery action
-    const recoveryMessage = `[${new Date().toISOString()}] RECOVERY: Rate limiting re-enabled after emergency disable`;
-    fs.appendFileSync(this.alertFile, recoveryMessage + "\n");
-
-    // Structured log
     this.log.info("Rate limiting re-enabled after emergency", "Ops", {
       enableRateLimiting: true,
     });
   }
 
   public getRateLimitingStatus() {
-    return {
-      enabled: process.env.ENABLE_RATE_LIMITING !== "false",
-      status:
-        process.env.ENABLE_RATE_LIMITING !== "false"
-          ? "enabled"
-          : "emergency_disabled",
-    };
+    const enabled = process.env.ENABLE_RATE_LIMITING !== "false";
+    return { enabled, status: enabled ? "enabled" : "emergency_disabled" };
   }
 }
 

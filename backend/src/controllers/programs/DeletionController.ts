@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import mongoose from "mongoose";
 import { Event, Program } from "../../models";
 import AuditLog from "../../models/AuditLog";
-import { EventCascadeService } from "../../services";
+import { EventCascadeService } from "../../services/EventCascadeService";
 import { RoleUtils } from "../../utils/roleUtils";
 
 export default class DeletionController {

@@ -41,7 +41,7 @@ vi.mock("../../../../src/controllers/unifiedMessageController", () => ({
   },
 }));
 
-vi.mock("../../../../src/services", () => ({
+vi.mock("../../../../src/services/infrastructure/CacheService", () => ({
   CachePatterns: {
     invalidateUserCache: vi.fn(),
   },
@@ -82,7 +82,7 @@ vi.mock("../../../../src/utils/responseHelper", () => ({
 import { User } from "../../../../src/models";
 import AuditLog from "../../../../src/models/AuditLog";
 import { lockService } from "../../../../src/services/LockService";
-import { CachePatterns } from "../../../../src/services";
+import { CachePatterns } from "../../../../src/services/infrastructure/CacheService";
 import { ResponseHelper } from "../../../../src/utils/responseHelper";
 
 interface MockRequest {

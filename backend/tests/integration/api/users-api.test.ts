@@ -744,9 +744,6 @@ describe("Users API Integration Tests", () => {
 
       expect(oldPasswordResponse.body.success).toBe(false);
 
-      // Add a small delay to ensure password change is committed
-      await new Promise((resolve) => setTimeout(resolve, 200));
-
       // Verify can login with new password
       const loginResponse = await request(app)
         .post("/api/auth/login")

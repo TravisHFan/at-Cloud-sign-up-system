@@ -36,7 +36,7 @@ vi.mock("../../../../src/services/infrastructure/SocketService", () => ({
   },
 }));
 
-vi.mock("../../../../src/services", () => ({
+vi.mock("../../../../src/services/infrastructure/CacheService", () => ({
   CachePatterns: {
     invalidateUserCache: vi.fn(),
   },
@@ -46,7 +46,7 @@ import { User } from "../../../../src/models";
 import AuditLog from "../../../../src/models/AuditLog";
 import { cleanupOldAvatar } from "../../../../src/utils/avatarCleanup";
 import { socketService } from "../../../../src/services/infrastructure/SocketService";
-import { CachePatterns } from "../../../../src/services";
+import { CachePatterns } from "../../../../src/services/infrastructure/CacheService";
 
 interface MockRequest {
   params: Record<string, string>;

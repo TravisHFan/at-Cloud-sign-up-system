@@ -85,7 +85,7 @@ vi.mock("../../../../src/services/ResponseBuilderService", () => ({
   },
 }));
 
-vi.mock("../../../../src/services", () => ({
+vi.mock("../../../../src/services/infrastructure/CacheService", () => ({
   CachePatterns: {
     invalidateEvent: vi.fn(),
     invalidateEventCache: vi.fn(),
@@ -116,7 +116,7 @@ vi.mock("../../../../src/models/AuditLog", () => ({
 
 import { Event, Registration, User } from "../../../../src/models";
 import { ResponseBuilderService } from "../../../../src/services/ResponseBuilderService";
-import { CachePatterns } from "../../../../src/services";
+import { CachePatterns } from "../../../../src/services/infrastructure/CacheService";
 import { socketService } from "../../../../src/services/infrastructure/SocketService";
 
 describe("RegistrationController", () => {
@@ -1055,7 +1055,7 @@ describe("RegistrationController", () => {
         await import("../../../../src/services/infrastructure/SocketService");
       const { ResponseBuilderService } =
         await import("../../../../src/services/ResponseBuilderService");
-      const { CachePatterns } = await import("../../../../src/services");
+      const { CachePatterns } = await import("../../../../src/services/infrastructure/CacheService");
 
       req.params = { id: "507f1f77bcf86cd799439011" };
       req.body = { roleId: "role-123" };
@@ -1178,7 +1178,7 @@ describe("RegistrationController", () => {
         await import("../../../../src/services/infrastructure/SocketService");
       const { ResponseBuilderService } =
         await import("../../../../src/services/ResponseBuilderService");
-      const { CachePatterns } = await import("../../../../src/services");
+      const { CachePatterns } = await import("../../../../src/services/infrastructure/CacheService");
       const { TrioNotificationService } =
         await import("../../../../src/services/notifications/TrioNotificationService");
 
@@ -1315,7 +1315,7 @@ describe("RegistrationController", () => {
         await import("../../../../src/services/infrastructure/SocketService");
       const { ResponseBuilderService } =
         await import("../../../../src/services/ResponseBuilderService");
-      const { CachePatterns } = await import("../../../../src/services");
+      const { CachePatterns } = await import("../../../../src/services/infrastructure/CacheService");
       const { TrioNotificationService } =
         await import("../../../../src/services/notifications/TrioNotificationService");
 
@@ -1707,7 +1707,7 @@ describe("RegistrationController", () => {
         await import("../../../../src/services/infrastructure/SocketService");
       const { ResponseBuilderService } =
         await import("../../../../src/services/ResponseBuilderService");
-      const { CachePatterns } = await import("../../../../src/services");
+      const { CachePatterns } = await import("../../../../src/services/infrastructure/CacheService");
 
       req.params = { id: "507f1f77bcf86cd799439011", group: "A" };
       req.body = { topic: "New Topic for Group A" };
@@ -1776,7 +1776,7 @@ describe("RegistrationController", () => {
     it("should allow event creator to update group topic", async () => {
       const { ResponseBuilderService } =
         await import("../../../../src/services/ResponseBuilderService");
-      const { CachePatterns } = await import("../../../../src/services");
+      const { CachePatterns } = await import("../../../../src/services/infrastructure/CacheService");
       const { socketService } =
         await import("../../../../src/services/infrastructure/SocketService");
 
@@ -1857,7 +1857,7 @@ describe("RegistrationController", () => {
       const { Registration } = await import("../../../../src/models");
       const { ResponseBuilderService } =
         await import("../../../../src/services/ResponseBuilderService");
-      const { CachePatterns } = await import("../../../../src/services");
+      const { CachePatterns } = await import("../../../../src/services/infrastructure/CacheService");
       const { socketService } =
         await import("../../../../src/services/infrastructure/SocketService");
 

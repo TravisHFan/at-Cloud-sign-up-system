@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import {
   Routes,
   Route,
@@ -9,68 +10,88 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { NotificationProvider } from "./contexts/NotificationContext";
 import { NotificationProvider as NotificationModalProvider } from "./contexts/NotificationModalContext";
 import ProtectedRoute from "./components/common/ProtectedRoute";
-import Home from "./pages/Home";
-import SignUp from "./pages/SignUp";
-import Login from "./pages/Login";
-import CheckEmail from "./pages/CheckEmail";
-import EmailVerification from "./pages/EmailVerification";
-import Welcome from "./pages/Welcome";
-import UpcomingEvents from "./pages/UpcomingEvents";
-import PassedEvents from "./pages/PassedEvents";
-import MyEvents from "./pages/MyEvents";
-import PublishedEvents from "./pages/PublishedEvents";
-import Programs from "./pages/Programs";
-import EMBAProgram from "./pages/EMBAProgram";
-import ProgramDetail from "./pages/ProgramDetail";
-import EnrollProgram from "./pages/EnrollProgram";
-import PurchaseSuccess from "./pages/PurchaseSuccess";
-import PurchaseCancel from "./pages/PurchaseCancel";
-import PurchaseHistory from "./pages/PurchaseHistory";
-import PurchaseReceipt from "./pages/PurchaseReceipt";
-import AnnualMemberships from "./pages/AnnualMemberships";
-import AnnualMembershipDetail from "./pages/AnnualMembershipDetail";
-import AnnualMembershipForm from "./pages/AnnualMembershipForm";
-import IncomeHistory from "./pages/IncomeHistory";
-import CreateNewProgram from "./pages/CreateNewProgram";
-import EditProgram from "./pages/EditProgram";
-import CreateEvent from "./pages/CreateEvent";
-import Management from "./pages/Management";
-import Profile from "./pages/Profile";
-import UserProfile from "./pages/UserProfile";
-import RequestPasswordChange from "./pages/RequestPasswordChange";
-import CompletePasswordChange from "./pages/CompletePasswordChange";
-import ResetPassword from "./pages/ResetPassword";
-import SystemMessages from "./pages/SystemMessages";
-import Analytics from "./pages/Analytics";
-import SystemMonitor from "./pages/SystemMonitor";
-import EditEvent from "./pages/EditEvent";
-import Feedback from "./pages/Feedback";
-import AuditLogs from "./pages/AuditLogs";
-import DashboardLayout from "./layouts/DashboardLayout";
-import EventDetailAccessRoute from "./components/EventDetail/EventDetailAccessRoute";
-import GetInvolved from "./pages/GetInvolved";
-import GuestRegistration from "./pages/GuestRegistration.tsx";
-import GuestConfirmation from "./pages/GuestConfirmation.tsx";
-import GuestManage from "./pages/GuestManage.tsx";
-import AssignmentRejection from "./pages/AssignmentRejection";
-import GuestDecline from "./pages/GuestDecline";
-import PublicEvent from "./pages/PublicEvent";
-import PublicEventsList from "./pages/PublicEventsList";
-import ShortLinkRedirect from "./pages/ShortLinkRedirect";
-import ConfigureRolesTemplates from "./pages/ConfigureRolesTemplates";
-import CreateRolesTemplate from "./pages/CreateRolesTemplate";
-import EditRolesTemplate from "./pages/EditRolesTemplate";
-import ViewRolesTemplate from "./pages/ViewRolesTemplate";
-import MyPromoCodes from "./pages/MyPromoCodes";
-import AdminPromoCodes from "./pages/AdminPromoCodes";
-import PromoCodeDetail from "./pages/PromoCodeDetail";
-import DonationPage from "./pages/DonationPage";
-import DonationReceipt from "./pages/DonationReceipt";
-import RefundRequestApproval from "./pages/RefundRequestApproval";
-import RefundRequestDecision from "./pages/RefundRequestDecision";
 import SessionExpiredModal from "./components/common/SessionExpiredModal";
-import EventPurchase from "./pages/EventPurchase";
-import EventPurchaseSuccess from "./pages/EventPurchaseSuccess";
+import LoadingSpinner from "./components/common/LoadingSpinner";
+
+const Home = lazy(() => import("./pages/Home"));
+const SignUp = lazy(() => import("./pages/SignUp"));
+const Login = lazy(() => import("./pages/Login"));
+const CheckEmail = lazy(() => import("./pages/CheckEmail"));
+const EmailVerification = lazy(() => import("./pages/EmailVerification"));
+const Welcome = lazy(() => import("./pages/Welcome"));
+const UpcomingEvents = lazy(() => import("./pages/UpcomingEvents"));
+const PassedEvents = lazy(() => import("./pages/PassedEvents"));
+const MyEvents = lazy(() => import("./pages/MyEvents"));
+const PublishedEvents = lazy(() => import("./pages/PublishedEvents"));
+const Programs = lazy(() => import("./pages/Programs"));
+const EMBAProgram = lazy(() => import("./pages/EMBAProgram"));
+const ProgramDetail = lazy(() => import("./pages/ProgramDetail"));
+const EnrollProgram = lazy(() => import("./pages/EnrollProgram"));
+const PurchaseSuccess = lazy(() => import("./pages/PurchaseSuccess"));
+const PurchaseCancel = lazy(() => import("./pages/PurchaseCancel"));
+const PurchaseHistory = lazy(() => import("./pages/PurchaseHistory"));
+const PurchaseReceipt = lazy(() => import("./pages/PurchaseReceipt"));
+const AnnualMemberships = lazy(() => import("./pages/AnnualMemberships"));
+const AnnualMembershipDetail = lazy(
+  () => import("./pages/AnnualMembershipDetail"),
+);
+const AnnualMembershipForm = lazy(
+  () => import("./pages/AnnualMembershipForm"),
+);
+const IncomeHistory = lazy(() => import("./pages/IncomeHistory"));
+const CreateNewProgram = lazy(() => import("./pages/CreateNewProgram"));
+const EditProgram = lazy(() => import("./pages/EditProgram"));
+const CreateEvent = lazy(() => import("./pages/CreateEvent"));
+const Management = lazy(() => import("./pages/Management"));
+const Profile = lazy(() => import("./pages/Profile"));
+const UserProfile = lazy(() => import("./pages/UserProfile"));
+const RequestPasswordChange = lazy(
+  () => import("./pages/RequestPasswordChange"),
+);
+const CompletePasswordChange = lazy(
+  () => import("./pages/CompletePasswordChange"),
+);
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const SystemMessages = lazy(() => import("./pages/SystemMessages"));
+const Analytics = lazy(() => import("./pages/Analytics"));
+const SystemMonitor = lazy(() => import("./pages/SystemMonitor"));
+const EditEvent = lazy(() => import("./pages/EditEvent"));
+const Feedback = lazy(() => import("./pages/Feedback"));
+const AuditLogs = lazy(() => import("./pages/AuditLogs"));
+const DashboardLayout = lazy(() => import("./layouts/DashboardLayout"));
+const EventDetailAccessRoute = lazy(
+  () => import("./components/EventDetail/EventDetailAccessRoute"),
+);
+const GetInvolved = lazy(() => import("./pages/GetInvolved"));
+const GuestRegistration = lazy(() => import("./pages/GuestRegistration"));
+const GuestConfirmation = lazy(() => import("./pages/GuestConfirmation"));
+const GuestManage = lazy(() => import("./pages/GuestManage"));
+const AssignmentRejection = lazy(() => import("./pages/AssignmentRejection"));
+const GuestDecline = lazy(() => import("./pages/GuestDecline"));
+const PublicEvent = lazy(() => import("./pages/PublicEvent"));
+const PublicEventsList = lazy(() => import("./pages/PublicEventsList"));
+const ShortLinkRedirect = lazy(() => import("./pages/ShortLinkRedirect"));
+const ConfigureRolesTemplates = lazy(
+  () => import("./pages/ConfigureRolesTemplates"),
+);
+const CreateRolesTemplate = lazy(() => import("./pages/CreateRolesTemplate"));
+const EditRolesTemplate = lazy(() => import("./pages/EditRolesTemplate"));
+const ViewRolesTemplate = lazy(() => import("./pages/ViewRolesTemplate"));
+const MyPromoCodes = lazy(() => import("./pages/MyPromoCodes"));
+const AdminPromoCodes = lazy(() => import("./pages/AdminPromoCodes"));
+const PromoCodeDetail = lazy(() => import("./pages/PromoCodeDetail"));
+const DonationPage = lazy(() => import("./pages/DonationPage"));
+const DonationReceipt = lazy(() => import("./pages/DonationReceipt"));
+const RefundRequestApproval = lazy(
+  () => import("./pages/RefundRequestApproval"),
+);
+const RefundRequestDecision = lazy(
+  () => import("./pages/RefundRequestDecision"),
+);
+const EventPurchase = lazy(() => import("./pages/EventPurchase"));
+const EventPurchaseSuccess = lazy(
+  () => import("./pages/EventPurchaseSuccess"),
+);
 
 /** Redirect legacy /pr/:id to /dashboard/programs/:id */
 function PrRedirect() {
@@ -95,7 +116,8 @@ function App() {
       <NotificationModalProvider>
         <NotificationProvider>
           <SessionExpiredModal />
-          <Routes>
+          <Suspense fallback={<LoadingSpinner size="lg" />}>
+            <Routes>
             <Route path="/" element={<RootRoute />} />
             <Route path="/signup" element={<SignUp />} />
             <Route path="/login" element={<Login />} />
@@ -422,7 +444,8 @@ function App() {
             <Route path="/pr/:id" element={<PrRedirect />} />
             {/* SPA fallback for short link resolution (dev / proxy safety) */}
             <Route path="/s/:key" element={<ShortLinkRedirect />} />
-          </Routes>
+            </Routes>
+          </Suspense>
         </NotificationProvider>
       </NotificationModalProvider>
     </AuthProvider>

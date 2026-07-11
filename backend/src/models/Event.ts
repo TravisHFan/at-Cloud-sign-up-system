@@ -628,7 +628,9 @@ eventSchema.index({ format: 1 });
 eventSchema.index({ createdAt: -1 });
 
 // Compound indexes
-eventSchema.index({ status: 1, date: 1 });
+// Supports the default event-list filter and stable pagination without an
+// in-memory sort. `_id` is the final unique tie-breaker across pages.
+eventSchema.index({ status: 1, date: 1, time: 1, _id: 1 });
 eventSchema.index({ createdBy: 1, status: 1 });
 eventSchema.index({ status: 1, format: 1, date: 1 });
 eventSchema.index({ format: 1, status: 1 });

@@ -1,10 +1,63 @@
 import { Request, Response } from "express";
 import { User, Event } from "../models";
 import { hasPermission, PERMISSIONS } from "../utils/roleUtils";
-import { CachePatterns } from "../services";
+import { CachePatterns } from "../services/infrastructure/CacheService";
 import { createLogger } from "../services/LoggerService";
+import {
+  escapeRegex,
+  normalizeSearchText,
+  toLiteralTextSearch,
+} from "../utils/search";
 
 const log = createLogger("SearchController");
+const PUBLIC_USER_FIELDS =
+  "username firstName lastName avatar role isAtCloudLeader weeklyChurch";
+const SENSITIVE_USER_FIELDS = [
+  PUBLIC_USER_FIELDS,
+  "email",
+  "phone",
+  "gender",
+  "homeAddress",
+  "roleInAtCloud",
+  "occupation",
+  "company",
+  "churchAddress",
+  "isActive",
+  "isVerified",
+  "emailNotifications",
+  "lastLogin",
+  "createdAt",
+  "updatedAt",
+].join(" ");
+const EVENT_SEARCH_FIELDS = [
+  "title",
+  "description",
+  "location",
+  "organizer",
+  "purpose",
+  "type",
+  "format",
+  "date",
+  "endDate",
+  "time",
+  "endTime",
+  "status",
+  "flyerUrl",
+  "publicSlug",
+  "createdAt",
+].join(" ");
+
+function getPagination(req: Request, defaultLimit: number) {
+  const requestedPage = Number.parseInt(String(req.query.page ?? "1"), 10);
+  const requestedLimit = Number.parseInt(
+    String(req.query.limit ?? defaultLimit),
+    10,
+  );
+  const page = requestedPage > 0 ? requestedPage : 1;
+  const limit =
+    requestedLimit > 0 ? Math.min(requestedLimit, 100) : defaultLimit;
+  return { page, limit, skip: (page - 1) * limit };
+}
 
 export class SearchController {
   // Search users
@@ -19,11 +72,11 @@ export class SearchController {
       }
 
       const { q: query } = req.query;
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
-      const skip = (page - 1) * limit;
+      const { page, limit, skip } = getPagination(req, 20);
 
-      if (!query || typeof query !== "string") {
+      const normalizedQuery = normalizeSearchText(query);
+      const textSearch = toLiteralTextSearch(normalizedQuery);
+      if (!textSearch) {
         res.status(400).json({
           success: false,
           message: "Search query is required.",
@@ -34,15 +87,7 @@ export class SearchController {
       // Build search criteria
       const searchCriteria: Record<string, unknown> = {
         isActive: true,
-        $or: [
-          { username: { $regex: query, $options: "i" } },
-          { firstName: { $regex: query, $options: "i" } },
-          { lastName: { $regex: query, $options: "i" } },
-          { email: { $regex: query, $options: "i" } },
-          { weeklyChurch: { $regex: query, $options: "i" } },
-          { occupation: { $regex: query, $options: "i" } },
-          { company: { $regex: query, $options: "i" } },
-        ],
+        $text: { $search: textSearch },
       };
 
       // Add filters
@@ -53,8 +98,9 @@ export class SearchController {
         searchCriteria.isAtCloudLeader = req.query.isAtCloudLeader === "true";
       }
       if (req.query.weeklyChurch) {
+        const weeklyChurch = normalizeSearchText(req.query.weeklyChurch);
         searchCriteria.weeklyChurch = {
-          $regex: req.query.weeklyChurch,
+          $regex: escapeRegex(weeklyChurch),
           $options: "i",
         };
       }
@@ -66,12 +112,12 @@ export class SearchController {
       );
 
       const selectFields = canViewSensitive
-        ? "-password"
-        : "username firstName lastName avatar role isAtCloudLeader weeklyChurch";
+        ? SENSITIVE_USER_FIELDS
+        : PUBLIC_USER_FIELDS;
 
       // Create cache key based on search parameters
       const cacheKey = `search-users-${JSON.stringify({
-        query,
+        query: normalizedQuery,
         page,
         limit,
         role: req.query.role,
@@ -87,7 +133,7 @@ export class SearchController {
           const [users, totalUsers] = await Promise.all([
             User.find(searchCriteria)
               .select(selectFields)
-              .sort({ firstName: 1, lastName: 1 })
+              .sort({ firstName: 1, lastName: 1, _id: 1 })
               .limit(limit)
               .skip(skip)
               .lean(),
@@ -165,11 +211,10 @@ export class SearchController {
       }
 
       const { q: query } = req.query;
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
-      const skip = (page - 1) * limit;
+      const { page, limit, skip } = getPagination(req, 20);
 
-      if (!query || typeof query !== "string") {
+      const normalizedQuery = normalizeSearchText(query);
+      if (!normalizedQuery) {
         res.status(400).json({
           success: false,
           message: "Search query is required.",
@@ -178,14 +223,18 @@ export class SearchController {
       }
 
       // Build search criteria
+      const searchRegex = {
+        $regex: escapeRegex(normalizedQuery),
+        $options: "i",
+      };
       const searchCriteria: Record<string, unknown> = {
         $or: [
-          { title: { $regex: query, $options: "i" } },
-          { description: { $regex: query, $options: "i" } },
-          { location: { $regex: query, $options: "i" } },
-          { organizer: { $regex: query, $options: "i" } },
-          { purpose: { $regex: query, $options: "i" } },
-          { type: { $regex: query, $options: "i" } },
+          { title: searchRegex },
+          { description: searchRegex },
+          { location: searchRegex },
+          { organizer: searchRegex },
+          { purpose: searchRegex },
+          { type: searchRegex },
         ],
       };
 
@@ -197,11 +246,11 @@ export class SearchController {
         searchCriteria.format = req.query.format;
       }
       if (req.query.status) {
-        const now = new Date();
+        const today = new Date().toISOString().slice(0, 10);
         if (req.query.status === "upcoming") {
-          searchCriteria.date = { $gte: now };
+          searchCriteria.date = { $gte: today };
         } else if (req.query.status === "past") {
-          searchCriteria.date = { $lt: now };
+          searchCriteria.date = { $lt: today };
         }
       }
       if (req.query.dateFrom) {
@@ -209,7 +258,7 @@ export class SearchController {
           typeof searchCriteria.date === "object" && searchCriteria.date != null
             ? (searchCriteria.date as Record<string, unknown>)
             : {};
-        dateFilter.$gte = new Date(req.query.dateFrom as string);
+        dateFilter.$gte = String(req.query.dateFrom).slice(0, 10);
         searchCriteria.date = dateFilter;
       }
       if (req.query.dateTo) {
@@ -217,13 +266,13 @@ export class SearchController {
           typeof searchCriteria.date === "object" && searchCriteria.date != null
             ? (searchCriteria.date as Record<string, unknown>)
             : {};
-        dateFilter.$lte = new Date(req.query.dateTo as string);
+        dateFilter.$lte = String(req.query.dateTo).slice(0, 10);
         searchCriteria.date = dateFilter;
       }
 
       // Create cache key based on search parameters
       const cacheKey = `search-events-${JSON.stringify({
-        query,
+        query: normalizedQuery,
         page,
         limit,
         type: req.query.type,
@@ -239,7 +288,8 @@ export class SearchController {
         async () => {
           const [events, totalEvents] = await Promise.all([
             Event.find(searchCriteria)
-              .sort({ date: -1 })
+              .select(EVENT_SEARCH_FIELDS)
+              .sort({ date: -1, time: -1, _id: -1 })
               .limit(limit)
               .skip(skip)
               .lean(),
@@ -319,9 +369,11 @@ export class SearchController {
       }
 
       const { q: query } = req.query;
-      const limit = parseInt(req.query.limit as string) || 10;
+      const { limit } = getPagination(req, 10);
 
-      if (!query || typeof query !== "string") {
+      const normalizedQuery = normalizeSearchText(query);
+      const textSearch = toLiteralTextSearch(normalizedQuery);
+      if (!textSearch) {
         res.status(400).json({
           success: false,
           message: "Search query is required.",
@@ -332,22 +384,21 @@ export class SearchController {
       // Search users
       const userSearchCriteria = {
         isActive: true,
-        $or: [
-          { username: { $regex: query, $options: "i" } },
-          { firstName: { $regex: query, $options: "i" } },
-          { lastName: { $regex: query, $options: "i" } },
-          { weeklyChurch: { $regex: query, $options: "i" } },
-        ],
+        $text: { $search: textSearch },
       };
 
       // Search events
+      const eventSearchRegex = {
+        $regex: escapeRegex(normalizedQuery),
+        $options: "i",
+      };
       const eventSearchCriteria = {
         $or: [
-          { title: { $regex: query, $options: "i" } },
-          { description: { $regex: query, $options: "i" } },
-          { location: { $regex: query, $options: "i" } },
-          { organizer: { $regex: query, $options: "i" } },
-          { type: { $regex: query, $options: "i" } },
+          { title: eventSearchRegex },
+          { description: eventSearchRegex },
+          { location: eventSearchRegex },
+          { organizer: eventSearchRegex },
+          { type: eventSearchRegex },
         ],
       };
 
@@ -356,15 +407,20 @@ export class SearchController {
         PERMISSIONS.VIEW_USER_PROFILES
       );
       const userSelectFields = canViewSensitive
-        ? "-password"
-        : "username firstName lastName avatar role isAtCloudLeader weeklyChurch";
+        ? SENSITIVE_USER_FIELDS
+        : PUBLIC_USER_FIELDS;
 
       const [users, events] = await Promise.all([
         User.find(userSearchCriteria)
           .select(userSelectFields)
+          .sort({ firstName: 1, lastName: 1, _id: 1 })
           .limit(limit)
           .lean(),
-        Event.find(eventSearchCriteria).limit(limit).lean(),
+        Event.find(eventSearchCriteria)
+          .select(EVENT_SEARCH_FIELDS)
+          .sort({ date: -1, time: -1, _id: -1 })
+          .limit(limit)
+          .lean(),
       ]);
 
       // Transform _id to id for frontend compatibility (lean() bypasses toJSON transform)

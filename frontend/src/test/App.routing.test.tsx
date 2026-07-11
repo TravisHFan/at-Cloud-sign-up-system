@@ -14,30 +14,35 @@ const renderWithRouter = (initialEntries: string[]) => {
 };
 
 describe("App routing", () => {
-  it("renders public home route without crashing", () => {
+  it("renders public home route without crashing", async () => {
     renderWithRouter(["/"]);
-    // Home page shows the marketing hero; assert on stable heading text
-    expect(document.body.innerHTML.toLowerCase()).toContain(
-      "welcome to @cloud",
-    );
+    expect(await screen.findByText("Welcome to @Cloud")).toBeInTheDocument();
   });
 
-  it("wires guest registration route", () => {
+  it("wires guest registration route", async () => {
     renderWithRouter(["/guest-register/event-123"]);
-    // We only assert that something rendered; concrete text is covered elsewhere
-    expect(document.body.innerHTML.length).toBeGreaterThan(0);
+    expect(await screen.findByText("Invalid Access")).toBeInTheDocument();
   });
 
-  it("wires dashboard nested route for programs", () => {
-    // We just verify the dashboard programs tree renders without crashing
+  it("wires dashboard nested route for programs", async () => {
+    localStorage.removeItem("authToken");
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, data: [] }),
+    } as Response);
+
     renderWithRouter(["/dashboard/programs"]);
-    expect(document.body.innerHTML.length).toBeGreaterThan(0);
+    expect(
+      await screen.findByRole("heading", { name: "Other Programs" }),
+    ).toBeInTheDocument();
+
+    fetchSpy.mockRestore();
   });
 
-  it("renders login page for /login route", () => {
+  it("renders login page for /login route", async () => {
+    localStorage.removeItem("authToken");
     renderWithRouter(["/login"]);
-    // Assert on the visible login heading text
-    expect(screen.getByText(/Login to @Cloud/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Login to @Cloud/i)).toBeInTheDocument();
   });
 
   it("renders email verification from root query token", async () => {
@@ -49,7 +54,9 @@ describe("App routing", () => {
 
     renderWithRouter(["/?verifyEmailToken=query-token"]);
 
-    expect(screen.getByText(/email verification/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/email verification/i),
+    ).toBeInTheDocument();
 
     await waitFor(() => {
       expect(fetchSpy).toHaveBeenCalledWith(
@@ -70,8 +77,9 @@ describe("App routing", () => {
     } as Response);
 
     renderWithRouter(["/dashboard"]);
-    // /dashboard is now guest-accessible; it should render the layout, not redirect to login
-    expect(document.body.innerHTML.length).toBeGreaterThan(0);
+    expect(
+      await screen.findByRole("heading", { name: "EMBA Program" }),
+    ).toBeInTheDocument();
 
     fetchSpy.mockRestore();
   });

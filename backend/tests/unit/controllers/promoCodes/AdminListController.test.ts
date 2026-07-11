@@ -394,7 +394,9 @@ describe("AdminListController", () => {
 
         const mockUserId = new mongoose.Types.ObjectId();
         vi.mocked(User.find).mockReturnValue({
-          select: vi.fn().mockResolvedValue([{ _id: mockUserId }]),
+          select: vi.fn().mockReturnValue({
+            lean: vi.fn().mockResolvedValue([{ _id: mockUserId }]),
+          }),
         } as any);
 
         mockReq.query.search = "test";
@@ -405,12 +407,7 @@ describe("AdminListController", () => {
         );
 
         expect(User.find).toHaveBeenCalledWith({
-          $or: [
-            { username: expect.any(RegExp) },
-            { email: expect.any(RegExp) },
-            { firstName: expect.any(RegExp) },
-            { lastName: expect.any(RegExp) },
-          ],
+          $text: { $search: '\"test\"' },
         });
 
         expect(PromoCode.find).toHaveBeenCalledWith(

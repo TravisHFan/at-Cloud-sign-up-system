@@ -8,6 +8,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import { createDeferred } from "../fixtures/deferred";
 
 // Mock Auth context
 vi.mock("../../contexts/AuthContext", () => ({
@@ -449,19 +450,11 @@ describe("IncomeHistory Component", () => {
 
   describe("Loading and Error States", () => {
     it("displays loading spinner initially", async () => {
-      mockGetAllPurchases.mockImplementation(
-        () =>
-          new Promise((resolve) => {
-            setTimeout(
-              () =>
-                resolve({
-                  purchases: mockPurchases,
-                  pagination: mockPagination,
-                }),
-              100
-            );
-          })
-      );
+      const purchases = createDeferred<{
+        purchases: typeof mockPurchases;
+        pagination: typeof mockPagination;
+      }>();
+      mockGetAllPurchases.mockReturnValue(purchases.promise);
 
       const { default: IncomeHistory } = await import(
         "../../pages/IncomeHistory"

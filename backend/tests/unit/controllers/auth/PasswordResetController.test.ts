@@ -3,13 +3,13 @@ import { Request, Response } from "express";
 import PasswordResetController from "../../../../src/controllers/auth/PasswordResetController";
 import { User } from "../../../../src/models";
 import { EmailService } from "../../../../src/services/infrastructure/EmailServiceFacade";
-import { CachePatterns } from "../../../../src/services";
+import { CachePatterns } from "../../../../src/services/infrastructure/CacheService";
 import { UnifiedMessageController } from "../../../../src/controllers/unifiedMessageController";
 
 vi.mock("../../../../src/models");
 vi.mock("../../../../src/services/infrastructure/EmailServiceFacade");
-vi.mock("../../../../src/services", async () => {
-  const actual = await vi.importActual("../../../../src/services");
+vi.mock("../../../../src/services/infrastructure/CacheService", async () => {
+  const actual = await vi.importActual("../../../../src/services/infrastructure/CacheService");
   return {
     ...actual,
     CachePatterns: {

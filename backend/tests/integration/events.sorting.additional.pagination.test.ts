@@ -36,7 +36,7 @@ describe("Events Global Sorting + Pagination (extended)", () => {
   });
 
   afterAll(async () => {
-    await mongoose.connection.close();
+    // Shared integration harness owns connection lifecycle.
   });
 
   beforeEach(async () => {

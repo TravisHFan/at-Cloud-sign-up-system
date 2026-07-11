@@ -1,5 +1,6 @@
 import { Router } from "express";
-import { PurchaseController } from "../../controllers/purchaseController";
+import PurchaseAdminController from "../../controllers/purchase/PurchaseAdminController";
+import PurchaseStatsController from "../../controllers/purchase/PurchaseStatsController";
 import { authenticate, requireAdmin } from "../../middleware/auth";
 
 const router = Router();
@@ -17,12 +18,12 @@ router.use(requireAdmin);
  * - search: string (search by user name, email, program name, order number)
  * - status: 'all' | 'pending' | 'completed' | 'failed' | 'refunded' (default: all)
  */
-router.get("/", PurchaseController.getAllPurchasesAdmin);
+router.get("/", PurchaseAdminController.getAllPurchasesAdmin);
 
 /**
  * Get payment statistics for admin dashboard
  * GET /api/admin/purchases/stats
  */
-router.get("/stats", PurchaseController.getPaymentStats);
+router.get("/stats", PurchaseStatsController.getPaymentStats);
 
 export default router;

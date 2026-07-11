@@ -5,7 +5,7 @@ import mongoose from "mongoose";
 
 describe("Auth Username Validation (Option C)", () => {
   afterAll(async () => {
-    await mongoose.connection.close();
+    // Shared integration harness owns connection lifecycle.
   });
 
   const baseUser = {

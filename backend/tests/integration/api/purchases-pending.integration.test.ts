@@ -94,7 +94,7 @@ describe("Pending Purchases Integration Tests", () => {
   });
 
   afterAll(async () => {
-    await mongoose.connection.close();
+    // Shared integration harness owns connection lifecycle.
   });
 
   describe("GET /api/purchases/my-pending-purchases", () => {

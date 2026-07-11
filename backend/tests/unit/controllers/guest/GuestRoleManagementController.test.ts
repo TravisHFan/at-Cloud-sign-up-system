@@ -26,7 +26,7 @@ vi.mock("../../../../src/services/CapacityService", () => ({
   },
 }));
 
-vi.mock("../../../../src/services", () => ({
+vi.mock("../../../../src/services/infrastructure/CacheService", () => ({
   CachePatterns: {
     invalidateEventCache: vi.fn(),
     invalidateAnalyticsCache: vi.fn(),
@@ -63,7 +63,7 @@ vi.mock("../../../../src/services/LoggerService", () => ({
 import { GuestRegistration, Event } from "../../../../src/models";
 import { lockService } from "../../../../src/services/LockService";
 import { CapacityService } from "../../../../src/services/CapacityService";
-import { CachePatterns } from "../../../../src/services";
+import { CachePatterns } from "../../../../src/services/infrastructure/CacheService";
 import { ResponseBuilderService } from "../../../../src/services/ResponseBuilderService";
 import { EmailService } from "../../../../src/services/infrastructure/EmailServiceFacade";
 import { socketService } from "../../../../src/services/infrastructure/SocketService";

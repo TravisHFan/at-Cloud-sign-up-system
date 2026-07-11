@@ -4,7 +4,7 @@ import {
   formatViewerLocalTime,
   formatViewerLocalDateTime,
   type LocalDateTimeSpec,
-} from "../../../../src/shared/time/timezoneSearch";
+} from "@atcloud/shared-time";
 
 describe("timezoneSearch", () => {
   describe("findUtcInstantFromLocal", () => {

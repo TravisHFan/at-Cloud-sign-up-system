@@ -198,7 +198,7 @@ describe("Purchase API Integration Tests", () => {
     await User.deleteMany({});
     await Program.deleteMany({});
     await Purchase.deleteMany({});
-    await mongoose.connection.close();
+    // Shared integration harness owns connection lifecycle.
   });
 
   describe("POST /api/purchases/create-checkout-session", () => {

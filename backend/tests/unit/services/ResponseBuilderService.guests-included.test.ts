@@ -1,23 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Types } from "mongoose";
 import { ResponseBuilderService } from "../../../src/services/ResponseBuilderService";
-import { Event, Registration } from "../../../src/models";
-import { RegistrationQueryService } from "../../../src/services/RegistrationQueryService";
+import { Event, GuestRegistration, Registration } from "../../../src/models";
 
 vi.mock("../../../src/models", () => ({
   Event: { findById: vi.fn(), updateOne: vi.fn() },
   Registration: { find: vi.fn() },
-  User: { findById: vi.fn() },
-}));
-
-vi.mock("../../../src/utils/publicSlug", () => ({
-  generateUniquePublicSlug: vi.fn().mockResolvedValue("mock-slug-1234"),
-}));
-
-vi.mock("../../../src/services/RegistrationQueryService", () => ({
-  RegistrationQueryService: {
-    getEventSignupCounts: vi.fn(),
-  },
+  GuestRegistration: { aggregate: vi.fn() },
+  User: { findById: vi.fn(), find: vi.fn() },
 }));
 
 describe("ResponseBuilderService - guests included in signedUp", () => {
@@ -52,29 +42,25 @@ describe("ResponseBuilderService - guests included in signedUp", () => {
     } as any);
 
     vi.mocked(Registration.find).mockReturnValue({
-      lean: vi.fn().mockResolvedValue([]),
-      populate: vi
-        .fn()
-        .mockReturnValue({ lean: vi.fn().mockResolvedValue([]) }),
-    } as any);
-
-    // Simulate counts: users=1, guests=1 -> totalSignups=2
-    vi.mocked(RegistrationQueryService.getEventSignupCounts).mockResolvedValue({
-      eventId: eventId.toString(),
-      totalSignups: 2,
-      totalSlots: 3,
-      roles: [
+      select: vi.fn().mockReturnThis(),
+      populate: vi.fn().mockReturnThis(),
+      lean: vi.fn().mockResolvedValue([
         {
-          roleId: roleId,
-          roleName: "Volunteer",
-          maxParticipants: 3,
-          currentCount: 2,
-          availableSpots: 1,
-          isFull: false,
-          waitlistCount: 0,
+          _id: new Types.ObjectId(),
+          eventId,
+          roleId,
+          userId: {
+            _id: new Types.ObjectId(),
+            username: "member",
+            firstName: "Member",
+            lastName: "One",
+          },
         },
-      ],
+      ]),
     } as any);
+    vi.mocked(GuestRegistration.aggregate).mockResolvedValue([
+      { _id: roleId, count: 1 },
+    ] as any);
 
     const res = await ResponseBuilderService.buildEventWithRegistrations(
       eventId.toString(),

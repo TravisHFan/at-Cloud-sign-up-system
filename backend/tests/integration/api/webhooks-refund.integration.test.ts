@@ -183,7 +183,7 @@ describe("Refund Webhook Integration Tests", () => {
   });
 
   afterAll(async () => {
-    await mongoose.connection.close();
+    // Shared integration harness owns connection lifecycle.
   });
 
   describe("POST /api/webhooks/stripe - charge.refund.updated: succeeded", () => {

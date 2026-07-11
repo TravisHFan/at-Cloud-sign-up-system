@@ -1,7 +1,6 @@
 import type { EventData } from "../types/event";
 import { eventService, guestService } from "../services/api";
 import { apiFetch } from "../lib/apiClient";
-import * as XLSX from "xlsx";
 
 export interface EventActionsResult {
   handleDownloadCalendar: () => Promise<void>;
@@ -149,22 +148,13 @@ export function useEventActions({
       // Continue with export even if guests fetch fails
     }
 
-    // Create workbook
-    const wb = XLSX.utils.book_new();
-
-    // Add signups worksheet if there are signups
-    if (signupData.length > 0) {
-      const signupsWs = XLSX.utils.json_to_sheet(signupData);
-      XLSX.utils.book_append_sheet(wb, signupsWs, "Event Signups");
-    }
-
     // For paid events, fetch and add purchases tab
-    let purchaseCount = 0;
+    let purchaseData: Array<Record<string, string>> = [];
     if (event.pricing?.isFree === false) {
       try {
         const purchasesResult = await eventService.getEventPurchases(event.id);
         if (purchasesResult.purchases.length > 0) {
-          const purchaseData = purchasesResult.purchases.map((p) => ({
+          purchaseData = purchasesResult.purchases.map((p) => ({
             Name: p.name,
             Email: p.email,
             "Payment Date": new Date(p.paymentDate).toLocaleString(),
@@ -172,16 +162,14 @@ export function useEventActions({
             "Promo Code": p.promoCode || "",
             "Order Number": p.orderNumber,
           }));
-
-          const purchasesWs = XLSX.utils.json_to_sheet(purchaseData);
-          XLSX.utils.book_append_sheet(wb, purchasesWs, "Ticket Purchases");
-          purchaseCount = purchasesResult.purchases.length;
         }
       } catch (err) {
         console.error("Failed to fetch purchases for export:", err);
         // Continue with export even if purchases fetch fails
       }
     }
+
+    const purchaseCount = purchaseData.length;
 
     // Check if we have any data to export
     if (signupData.length === 0 && purchaseCount === 0) {
@@ -195,6 +183,27 @@ export function useEventActions({
       return;
     }
 
+    const XLSX = await import("xlsx");
+    const workbook = XLSX.utils.book_new();
+
+    if (signupData.length > 0) {
+      const signupsWorksheet = XLSX.utils.json_to_sheet(signupData);
+      XLSX.utils.book_append_sheet(
+        workbook,
+        signupsWorksheet,
+        "Event Signups",
+      );
+    }
+
+    if (purchaseData.length > 0) {
+      const purchasesWorksheet = XLSX.utils.json_to_sheet(purchaseData);
+      XLSX.utils.book_append_sheet(
+        workbook,
+        purchasesWorksheet,
+        "Ticket Purchases",
+      );
+    }
+
     // Generate filename with current date
     const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
     const filename = `${event.title.replace(
@@ -203,7 +212,7 @@ export function useEventActions({
     )}_signups_${today}.xlsx`;
 
     // Write and download the file
-    XLSX.writeFile(wb, filename);
+    XLSX.writeFile(workbook, filename);
 
     // Build success message
     const parts: string[] = [];

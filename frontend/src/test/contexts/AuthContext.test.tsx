@@ -14,6 +14,7 @@ import {
 } from "../../contexts/AuthContext";
 import { authService } from "../../services/api";
 import * as welcomeMessageService from "../../utils/welcomeMessageService";
+import { createDeferred } from "../fixtures/deferred";
 
 // Mock dependencies
 vi.mock("../../services/api", () => ({
@@ -342,10 +343,8 @@ describe("AuthContext", () => {
         user: mockUser,
       };
 
-      vi.mocked(authService.login).mockImplementation(
-        () =>
-          new Promise((resolve) => setTimeout(() => resolve(authResponse), 100))
-      );
+      const login = createDeferred<typeof authResponse>();
+      vi.mocked(authService.login).mockReturnValue(login.promise);
 
       const { result } = renderHook(() => useAuth(), {
         wrapper: AuthProvider,
@@ -367,6 +366,7 @@ describe("AuthContext", () => {
       expect(result.current.isLoading).toBe(true);
 
       await act(async () => {
+        login.resolve(authResponse);
         await loginPromise;
       });
 

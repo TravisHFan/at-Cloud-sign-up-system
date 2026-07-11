@@ -3,15 +3,15 @@ import { Request, Response } from "express";
 import PasswordChangeController from "../../../../src/controllers/auth/PasswordChangeController";
 import { User } from "../../../../src/models";
 import { EmailService } from "../../../../src/services/infrastructure/EmailServiceFacade";
-import { CachePatterns } from "../../../../src/services";
+import { CachePatterns } from "../../../../src/services/infrastructure/CacheService";
 import { UnifiedMessageController } from "../../../../src/controllers/unifiedMessageController";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
 vi.mock("../../../../src/models");
 vi.mock("../../../../src/services/infrastructure/EmailServiceFacade");
-vi.mock("../../../../src/services", async () => {
-  const actual = await vi.importActual("../../../../src/services");
+vi.mock("../../../../src/services/infrastructure/CacheService", async () => {
+  const actual = await vi.importActual("../../../../src/services/infrastructure/CacheService");
   return {
     ...actual,
     CachePatterns: {

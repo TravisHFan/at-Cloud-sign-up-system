@@ -9,7 +9,7 @@ import EventReminderScheduler from "./services/EventReminderScheduler";
 import MaintenanceScheduler from "./services/MaintenanceScheduler";
 import { SchedulerService } from "./services/SchedulerService";
 import app from "./app";
-import { lockService } from "./services";
+import { lockService } from "./services/LockService";
 import { createLogger } from "./services/LoggerService";
 import { SystemConfig } from "./models"; // Import SystemConfig for initialization
 

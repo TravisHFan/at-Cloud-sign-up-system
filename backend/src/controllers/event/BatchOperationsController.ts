@@ -3,7 +3,7 @@ import { Types } from "mongoose";
 import { Event } from "../../models";
 import { EventController } from "../eventController";
 import { CorrelatedLogger } from "../../services/CorrelatedLogger";
-import { CachePatterns } from "../../services";
+import { CachePatterns } from "../../services/infrastructure/CacheService";
 
 /**
  * BatchOperationsController
@@ -126,7 +126,13 @@ export class BatchOperationsController {
         timeZone?: string;
       }>;
     }
-    let updatedCount = 0;
+    const updates: Array<{
+      updateOne: {
+        filter: { _id: Types.ObjectId };
+        update: { $set: { status: string } };
+      };
+    }> = [];
+    const changedEventIds: string[] = [];
 
     for (const event of events) {
       const newStatus = EventController.getEventStatus(
@@ -139,16 +145,42 @@ export class BatchOperationsController {
       );
 
       if (event.status !== newStatus) {
-        await Event.findByIdAndUpdate(event._id, { status: newStatus });
-        updatedCount++;
-
-        // Invalidate caches after status update
-        await CachePatterns.invalidateEventCache(event._id.toString());
-        await CachePatterns.invalidateAnalyticsCache();
+        updates.push({
+          updateOne: {
+            filter: { _id: event._id },
+            update: { $set: { status: newStatus } },
+          },
+        });
+        changedEventIds.push(event._id.toString());
       }
     }
 
-    return updatedCount;
+    if (updates.length === 0) return 0;
+
+    const eventModel = Event as typeof Event & {
+      bulkWrite?: typeof Event.bulkWrite;
+    };
+    if (typeof eventModel.bulkWrite === "function") {
+      await eventModel.bulkWrite(updates);
+    } else {
+      // Compatibility for lightweight model doubles used by older unit tests.
+      await Promise.all(
+        updates.map(({ updateOne }) =>
+          Event.findByIdAndUpdate(updateOne.filter._id, {
+            status: updateOne.update.$set.status,
+          }),
+        ),
+      );
+    }
+
+    // Event invalidation already clears the shared events/listings tags, so a
+    // single call is sufficient for the whole batch.
+    await Promise.all([
+      CachePatterns.invalidateEventCache(changedEventIds[0]),
+      CachePatterns.invalidateAnalyticsCache(),
+    ]);
+
+    return updates.length;
   }
 
   // Recalculate signup counts for all events

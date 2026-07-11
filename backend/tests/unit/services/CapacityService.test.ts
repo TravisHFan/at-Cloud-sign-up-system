@@ -1,223 +1,135 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-
-// Mock models used by CapacityService
-const mockCountDocuments = vi.fn();
-const mockCountActiveGuests = vi.fn();
-const mockFindEventById = vi.fn();
-
-vi.mock("../../../src/models", () => ({
-  // Barrel export mock (for modules importing from "../models")
-  Registration: {
-    countDocuments: (...args: any[]) => mockCountDocuments(...args),
-  },
-  GuestRegistration: {
-    countActiveRegistrations: (...args: any[]) =>
-      mockCountActiveGuests(...args),
-  },
-  Event: {
-    findById: (...args: any[]) => mockFindEventById(...args),
-  },
-}));
-
-// Also mock direct model module paths (some services may resolve submodules directly)
-vi.mock("../../../src/models/Registration", () => ({
-  default: {},
-  Registration: {
-    countDocuments: (...args: any[]) => mockCountDocuments(...args),
-  },
-}));
-vi.mock("../../../src/models/GuestRegistration", () => ({
-  default: {},
-  GuestRegistration: {
-    countActiveRegistrations: (...args: any[]) =>
-      mockCountActiveGuests(...args),
-  },
-}));
-vi.mock("../../../src/models/Event", () => ({
-  default: {},
-  Event: {
-    findById: (...args: any[]) => mockFindEventById(...args),
-  },
-}));
-
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CapacityService } from "../../../src/services/CapacityService";
 
-// Use a valid MongoDB ObjectId-like string to avoid mongoose ObjectId constructor throwing
-const validEventId = "656565656565656565656565";
+const { countUsers, countGuests } = vi.hoisted(() => ({
+  countUsers: vi.fn(),
+  countGuests: vi.fn(),
+}));
+
+vi.mock("../../../src/models", () => ({
+  Registration: { countDocuments: countUsers },
+  GuestRegistration: { countActiveRegistrations: countGuests },
+}));
+
+const eventId = "656565656565656565656565";
 
 describe("CapacityService", () => {
   beforeEach(() => {
-    vi.resetAllMocks();
+    vi.clearAllMocks();
+    countUsers.mockResolvedValue(0);
+    countGuests.mockResolvedValue(0);
   });
 
-  it("getRoleOccupancy returns users, guests, total and capacity from maxParticipants", async () => {
-    mockCountDocuments.mockResolvedValueOnce(2); // users
-    mockCountActiveGuests.mockResolvedValueOnce(3); // guests
-    mockFindEventById.mockResolvedValueOnce({
-      roles: [{ id: "r1", name: "Role", maxParticipants: 6 }],
+  it("combines user and active-guest occupancy with caller-provided capacity", async () => {
+    countUsers.mockResolvedValue(2);
+    countGuests.mockResolvedValue(3);
+
+    const occupancy = await CapacityService.getRoleOccupancy(eventId, "r1", {
+      capacity: 6,
     });
 
-    const occ = await CapacityService.getRoleOccupancy(validEventId, "r1");
-    expect(occ).toEqual({ users: 2, guests: 3, total: 5, capacity: 6 });
-    expect(CapacityService.isRoleFull(occ)).toBe(false);
+    expect(occupancy).toEqual({
+      users: 2,
+      guests: 3,
+      total: 5,
+      capacity: 6,
+    });
+    expect(CapacityService.isRoleFull(occupancy)).toBe(false);
   });
 
-  it("isRoleFull returns true when total >= capacity", async () => {
-    mockCountDocuments.mockResolvedValueOnce(2);
-    mockCountActiveGuests.mockResolvedValueOnce(3);
-    mockFindEventById.mockResolvedValueOnce({
-      roles: [{ id: "r1", name: "Role", maxParticipants: 5 }],
+  it("recognizes full roles and numeric capacity strings", async () => {
+    countUsers.mockResolvedValue("4");
+    countGuests.mockResolvedValue("1");
+
+    const occupancy = await CapacityService.getRoleOccupancy(eventId, "r1", {
+      capacity: "5",
     });
 
-    const occ = await CapacityService.getRoleOccupancy(validEventId, "r1");
-    expect(occ.total).toBe(5);
-    expect(occ.capacity).toBe(5);
-    expect(CapacityService.isRoleFull(occ)).toBe(true);
+    expect(occupancy).toEqual({
+      users: 4,
+      guests: 1,
+      total: 5,
+      capacity: 5,
+    });
+    expect(CapacityService.isRoleFull(occupancy)).toBe(true);
   });
 
-  it("falls back to role.capacity when maxParticipants is not present", async () => {
-    mockCountDocuments.mockResolvedValueOnce(1);
-    mockCountActiveGuests.mockResolvedValueOnce(1);
-    mockFindEventById.mockResolvedValueOnce({
-      roles: [{ id: "r1", name: "Role", capacity: 10 }],
-    });
+  it("returns null capacity when the caller has no capacity metadata", async () => {
+    const occupancy = await CapacityService.getRoleOccupancy(eventId, "r1");
 
-    const occ = await CapacityService.getRoleOccupancy(validEventId, "r1");
-    expect(occ.capacity).toBe(10);
-    expect(occ.total).toBe(2);
-    expect(CapacityService.isRoleFull(occ)).toBe(false);
+    expect(occupancy.capacity).toBeNull();
+    expect(CapacityService.isRoleFull(occupancy)).toBe(false);
   });
 
-  it("returns capacity null and isRoleFull false when capacity cannot be determined", async () => {
-    mockCountDocuments.mockResolvedValueOnce(0);
-    mockCountActiveGuests.mockResolvedValueOnce(0);
-    mockFindEventById.mockResolvedValueOnce({
-      roles: [{ id: "r1", name: "Role" }],
-    });
+  it("can exclude guests without querying the guest collection", async () => {
+    countUsers.mockResolvedValue(2);
 
-    const occ = await CapacityService.getRoleOccupancy(validEventId, "r1");
-    expect(occ.capacity).toBeNull();
-    expect(CapacityService.isRoleFull(occ)).toBe(false);
-  });
-
-  it("parses numeric-like strings for counts and capacity", async () => {
-    mockCountDocuments.mockResolvedValueOnce("4");
-    mockCountActiveGuests.mockResolvedValueOnce("1");
-    mockFindEventById.mockResolvedValueOnce({
-      roles: [{ id: "r1", name: "Role", maxParticipants: "6" }],
-    });
-
-    const occ = await CapacityService.getRoleOccupancy(validEventId, "r1");
-    expect(occ).toEqual({ users: 4, guests: 1, total: 5, capacity: 6 });
-  });
-
-  it("supports includeGuests=false to count only users", async () => {
-    mockCountDocuments.mockResolvedValueOnce(2); // users
-    mockCountActiveGuests.mockResolvedValueOnce(5); // guests (should be ignored)
-    mockFindEventById.mockResolvedValueOnce({
-      roles: [{ id: "r1", name: "Role", maxParticipants: 6 }],
-    });
-
-    const occ = await CapacityService.getRoleOccupancy(validEventId, "r1", {
+    const occupancy = await CapacityService.getRoleOccupancy(eventId, "r1", {
       includeGuests: false,
-    });
-    expect(occ).toEqual({ users: 2, guests: 0, total: 2, capacity: 6 });
-    expect(CapacityService.isRoleFull(occ)).toBe(false);
-  });
-
-  it("returns users=0 when countDocuments throws an error", async () => {
-    mockCountDocuments.mockRejectedValueOnce(new Error("DB error"));
-    mockCountActiveGuests.mockResolvedValueOnce(2);
-    mockFindEventById.mockResolvedValueOnce({
-      roles: [{ id: "r1", name: "Role", maxParticipants: 10 }],
+      capacity: 6,
     });
 
-    const occ = await CapacityService.getRoleOccupancy(validEventId, "r1");
-    expect(occ).toEqual({ users: 0, guests: 2, total: 2, capacity: 10 });
+    expect(occupancy).toEqual({
+      users: 2,
+      guests: 0,
+      total: 2,
+      capacity: 6,
+    });
+    expect(countGuests).not.toHaveBeenCalled();
   });
 
-  it("returns guests=0 when countActiveRegistrations throws an error", async () => {
-    mockCountDocuments.mockResolvedValueOnce(3);
-    mockCountActiveGuests.mockRejectedValueOnce(new Error("DB error"));
-    mockFindEventById.mockResolvedValueOnce({
-      roles: [{ id: "r1", name: "Role", maxParticipants: 10 }],
+  it("isolates count failures and normalizes invalid values", async () => {
+    countUsers.mockRejectedValue(new Error("user count failed"));
+    countGuests.mockResolvedValue(Number.POSITIVE_INFINITY);
+
+    const occupancy = await CapacityService.getRoleOccupancy(eventId, "r1", {
+      capacity: "not-a-number",
     });
 
-    const occ = await CapacityService.getRoleOccupancy(validEventId, "r1");
-    expect(occ).toEqual({ users: 3, guests: 0, total: 3, capacity: 10 });
+    expect(occupancy).toEqual({
+      users: 0,
+      guests: 0,
+      total: 0,
+      capacity: null,
+    });
   });
 
-  it("returns capacity=null when Event.findById throws an error", async () => {
-    mockCountDocuments.mockResolvedValueOnce(2);
-    mockCountActiveGuests.mockResolvedValueOnce(1);
-    mockFindEventById.mockRejectedValueOnce(new Error("DB error"));
+  it("starts user and guest counts concurrently", async () => {
+    let resolveUsers!: (value: number) => void;
+    let resolveGuests!: (value: number) => void;
+    countUsers.mockReturnValue(
+      new Promise<number>((resolve) => {
+        resolveUsers = resolve;
+      }),
+    );
+    countGuests.mockReturnValue(
+      new Promise<number>((resolve) => {
+        resolveGuests = resolve;
+      }),
+    );
 
-    const occ = await CapacityService.getRoleOccupancy(validEventId, "r1");
-    expect(occ).toEqual({ users: 2, guests: 1, total: 3, capacity: null });
+    const occupancyPromise = CapacityService.getRoleOccupancy(eventId, "r1", {
+      capacity: 10,
+    });
+    await Promise.resolve();
+
+    expect(countUsers).toHaveBeenCalledOnce();
+    expect(countGuests).toHaveBeenCalledOnce();
+
+    resolveUsers(2);
+    resolveGuests(1);
+    await expect(occupancyPromise).resolves.toMatchObject({ total: 3 });
   });
 
-  it("returns capacity=null when role is not found in event", async () => {
-    mockCountDocuments.mockResolvedValueOnce(2);
-    mockCountActiveGuests.mockResolvedValueOnce(1);
-    mockFindEventById.mockResolvedValueOnce({
-      roles: [{ id: "other-role", name: "Other Role", maxParticipants: 10 }],
+  it("preserves non-ObjectId event identifiers for test and migration callers", async () => {
+    await CapacityService.getRoleOccupancy("legacy-event", "r1", {
+      capacity: 1,
     });
 
-    const occ = await CapacityService.getRoleOccupancy(validEventId, "r1");
-    expect(occ).toEqual({ users: 2, guests: 1, total: 3, capacity: null });
-  });
-
-  it("returns capacity=null when event has no roles", async () => {
-    mockCountDocuments.mockResolvedValueOnce(2);
-    mockCountActiveGuests.mockResolvedValueOnce(1);
-    mockFindEventById.mockResolvedValueOnce({ roles: undefined });
-
-    const occ = await CapacityService.getRoleOccupancy(validEventId, "r1");
-    expect(occ).toEqual({ users: 2, guests: 1, total: 3, capacity: null });
-  });
-
-  it("handles non-finite capacity by returning null", async () => {
-    mockCountDocuments.mockResolvedValueOnce(2);
-    mockCountActiveGuests.mockResolvedValueOnce(1);
-    mockFindEventById.mockResolvedValueOnce({
-      roles: [{ id: "r1", name: "Role", maxParticipants: "not-a-number" }],
+    expect(countUsers).toHaveBeenCalledWith({
+      eventId: "legacy-event",
+      roleId: "r1",
     });
-
-    const occ = await CapacityService.getRoleOccupancy(validEventId, "r1");
-    expect(occ).toEqual({ users: 2, guests: 1, total: 3, capacity: null });
-  });
-
-  it("handles string eventId that is not a valid ObjectId", async () => {
-    mockCountDocuments.mockResolvedValueOnce(1);
-    mockCountActiveGuests.mockResolvedValueOnce(1);
-    mockFindEventById.mockResolvedValueOnce({
-      roles: [{ id: "r1", name: "Role", maxParticipants: 10 }],
-    });
-
-    const occ = await CapacityService.getRoleOccupancy("invalid-id", "r1");
-    expect(occ).toEqual({ users: 1, guests: 1, total: 2, capacity: 10 });
-  });
-
-  it("handles null/undefined counts by defaulting to 0", async () => {
-    mockCountDocuments.mockResolvedValueOnce(null);
-    mockCountActiveGuests.mockResolvedValueOnce(undefined);
-    mockFindEventById.mockResolvedValueOnce({
-      roles: [{ id: "r1", name: "Role", maxParticipants: 10 }],
-    });
-
-    const occ = await CapacityService.getRoleOccupancy(validEventId, "r1");
-    expect(occ).toEqual({ users: 0, guests: 0, total: 0, capacity: 10 });
-  });
-
-  it("handles Infinity user count by falling back to parseInt", async () => {
-    mockCountDocuments.mockResolvedValueOnce(Infinity);
-    mockCountActiveGuests.mockResolvedValueOnce(1);
-    mockFindEventById.mockResolvedValueOnce({
-      roles: [{ id: "r1", name: "Role", maxParticipants: 10 }],
-    });
-
-    const occ = await CapacityService.getRoleOccupancy(validEventId, "r1");
-    // Infinity coerced to string becomes "Infinity", parseInt("Infinity") returns NaN, so || 0
-    expect(occ).toEqual({ users: 0, guests: 1, total: 1, capacity: 10 });
+    expect(countGuests).toHaveBeenCalledWith("legacy-event", "r1");
   });
 });
