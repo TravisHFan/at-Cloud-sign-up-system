@@ -3,6 +3,9 @@
   "private": true,
   "version": "2.53.0",
   "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build && cp dist/index.html dist/404.html && cp static.json dist/static.json && cp public/_redirects dist/_redirects",

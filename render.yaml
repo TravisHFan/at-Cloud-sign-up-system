@@ -3,7 +3,7 @@ services:
     name: atcloud-backend
     env: node
     plan: starter
-    buildCommand: npm install && npm run build
+    buildCommand: npm ci && npm run build
     startCommand: npm start
     healthCheckPath: /api/health
     autoDeploy: false
@@ -32,7 +32,7 @@ services:
     name: atcloud-frontend
     env: static
     plan: starter
-    buildCommand: npm install && npm run build
+    buildCommand: npm ci && npm run build
     staticPublishPath: ./dist
     pullRequestPreviewsEnabled: false
     autoDeploy: false
