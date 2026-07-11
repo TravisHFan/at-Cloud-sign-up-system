@@ -56,7 +56,7 @@ describe("Program Participants API", () => {
   });
 
   afterAll(async () => {
-    await mongoose.connection.close();
+    // Shared integration harness owns connection lifecycle.
   });
 
   beforeEach(async () => {

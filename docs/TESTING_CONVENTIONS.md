@@ -1,8 +1,27 @@
-# Testing Conventions — Route and Controller Tests
+# Testing Conventions
 
-**Last Updated**: 2025-10-08
+**Last Updated**: 2026-07-10
 
-This document establishes conventions for Express route tests to keep them fast, stable, and readable.
+This document establishes conventions that keep the test tiers fast, stable,
+and readable. Product-risk ownership is defined in
+`TEST_PROTECTION_MATRIX.md`.
+
+## Tier selection
+
+- Put pure functions, mocked controllers, services, and serializers in
+  `backend/tests/unit`.
+- Put DB-free Express and Supertest behavior in
+  `backend/tests/http-contract`.
+- Put persistence and cross-model behavior in `backend/tests/integration`.
+- Put seeded query-plan and runtime assertions in
+  `backend/tests/integration/perf`; they run through the dedicated performance
+  command, not the normal integration command.
+- Put real browser journeys in `frontend/e2e` and run them with Playwright.
+
+Tests must not open or close the shared Mongoose connection. The integration
+harness assigns an isolated database to each worker, connects lazily once, and
+clears collections between files. Test files should clean only data they need
+to reset within a file.
 
 ---
 
@@ -180,6 +199,18 @@ expect(response.text).toContain("Type,Count");
 
 ---
 
+## Coverage policy
+
+Backend coverage is measured once across the complete DB-free unit and HTTP
+contract tier (`npm run test:coverage` in `backend/`). Measuring those tiers in
+separate processes under-counts route modules and must not be used as the
+global gate. Database coverage writes to its own directory and is diagnostic.
+
+Frontend coverage counts the production application broadly. Its current
+thresholds are a measured non-regression baseline, not a claim that every page
+is adequately protected; raise them as critical browser/component contracts
+are added rather than excluding untested features.
+
 ## Benefits of This Convention
 
 1. **Reliability**: Eliminates HTTP framing parse errors in Supertest
@@ -201,5 +232,5 @@ expect(response.text).toContain("Type,Count");
 
 ## Related Documentation
 
-- `TEST_COVERAGE_ROADMAP.md` - Test strategy and coverage goals
+- `CODEBASE_OPTIMIZATION_TODO.md` - Active test-suite modernization roadmap
 - Backend test suite: `/backend/tests/`

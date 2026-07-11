@@ -7,7 +7,15 @@
  * 3. The checkout.session.completed + invoice.payment_succeeded flow works properly
  */
 
-import { describe, it, expect, beforeAll, beforeEach, afterEach } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  beforeEach,
+  afterEach,
+  vi,
+} from "vitest";
 import Stripe from "stripe";
 import mongoose from "mongoose";
 import { ensureIntegrationDB } from "../setup/connect";
@@ -15,6 +23,15 @@ import Donation from "../../../src/models/Donation";
 import DonationTransaction from "../../../src/models/DonationTransaction";
 import User from "../../../src/models/User";
 import DonationWebhookController from "../../../src/controllers/donations/DonationWebhookController";
+
+vi.mock("../../../src/services/stripeService", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../../src/services/stripeService")>();
+  return {
+    ...actual,
+    getPaymentIntent: vi.fn().mockResolvedValue({ latest_charge: null }),
+  };
+});
 
 describe("Donation Webhook - Subscription Flow Integration", () => {
   let testUserId: mongoose.Types.ObjectId;

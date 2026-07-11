@@ -41,7 +41,10 @@ describe("RegistrationQueryService - additional branches", () => {
       ],
     };
 
-    const mockEventQuery = { lean: vi.fn().mockResolvedValue(mockEvent) };
+    const mockEventQuery = {
+      select: vi.fn().mockReturnThis(),
+      lean: vi.fn().mockResolvedValue(mockEvent),
+    };
     vi.mocked(Event.findById).mockReturnValue(mockEventQuery as any);
     vi.mocked(Registration.aggregate).mockResolvedValue([]);
     vi.mocked(GuestRegistration.aggregate).mockResolvedValue([]);

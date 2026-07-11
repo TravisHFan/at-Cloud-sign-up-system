@@ -1,6 +1,6 @@
 import { IEvent, IEventRole } from "../models/Event";
 import crypto from "crypto";
-import { findUtcInstantFromLocal } from "../shared/time/timezoneSearch";
+import { findUtcInstantFromLocal } from "@atcloud/shared-time";
 
 const MAX_ICS_LINE_BYTES = 75;
 

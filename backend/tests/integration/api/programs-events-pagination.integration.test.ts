@@ -26,7 +26,7 @@ describe("GET /api/programs/:id/events (paged)", () => {
   });
 
   afterAll(async () => {
-    await mongoose.connection.close();
+    // Shared integration harness owns connection lifecycle.
   });
 
   beforeEach(async () => {

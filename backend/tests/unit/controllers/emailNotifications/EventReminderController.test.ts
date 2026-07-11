@@ -22,7 +22,7 @@ vi.mock("../../../../src/controllers/unifiedMessageController", () => ({
   },
 }));
 
-vi.mock("../../../../src/services", () => ({
+vi.mock("../../../../src/services/infrastructure/CacheService", () => ({
   CachePatterns: {
     invalidateEventCache: vi.fn(),
   },
@@ -51,7 +51,7 @@ vi.mock("../../../../src/services/LoggerService", () => ({
 import { EmailService } from "../../../../src/services/infrastructure/EmailServiceFacade";
 import { EmailRecipientUtils } from "../../../../src/utils/emailRecipientUtils";
 import { UnifiedMessageController } from "../../../../src/controllers/unifiedMessageController";
-import { CachePatterns } from "../../../../src/services";
+import { CachePatterns } from "../../../../src/services/infrastructure/CacheService";
 
 interface MockRequest {
   user?: {

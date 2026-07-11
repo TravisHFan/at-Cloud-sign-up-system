@@ -4,13 +4,13 @@ import mongoose from "mongoose";
 import DeletionController from "../../../../src/controllers/programs/DeletionController";
 import { Event, Program } from "../../../../src/models";
 import AuditLog from "../../../../src/models/AuditLog";
-import { EventCascadeService } from "../../../../src/services";
+import { EventCascadeService } from "../../../../src/services/EventCascadeService";
 import { RoleUtils } from "../../../../src/utils/roleUtils";
 
 // Mock dependencies
 vi.mock("../../../../src/models");
 vi.mock("../../../../src/models/AuditLog");
-vi.mock("../../../../src/services");
+vi.mock("../../../../src/services/EventCascadeService");
 vi.mock("../../../../src/utils/roleUtils");
 
 interface MockRequest extends Partial<Request> {

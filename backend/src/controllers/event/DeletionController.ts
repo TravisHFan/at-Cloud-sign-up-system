@@ -4,7 +4,7 @@ import { Event, Registration } from "../../models";
 import { PERMISSIONS, hasPermission } from "../../utils/roleUtils";
 import { CorrelatedLogger } from "../../services/CorrelatedLogger";
 import { Logger } from "../../services/LoggerService";
-import { EventCascadeService } from "../../services";
+import { EventCascadeService } from "../../services/EventCascadeService";
 import AuditLog from "../../models/AuditLog";
 import { EventController } from "../eventController";
 

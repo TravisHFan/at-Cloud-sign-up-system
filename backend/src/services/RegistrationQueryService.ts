@@ -7,7 +7,7 @@
 
 import mongoose from "mongoose";
 import { createLogger } from "./LoggerService";
-import { Registration, Event, User } from "../models";
+import { GuestRegistration, Registration, Event, User } from "../models";
 import { CapacityService } from "./CapacityService";
 
 type EventRole = {
@@ -35,6 +35,11 @@ type EventLean = {
   updatedAt?: Date;
   status?: string;
   workshopGroupTopics?: Record<string, unknown>;
+};
+
+type RoleCountRow = {
+  _id: string;
+  count: number;
 };
 
 export interface RoleAvailability {
@@ -90,7 +95,9 @@ export class RegistrationQueryService {
       if (!role) return null;
 
       // Centralized occupancy: users + active guests via CapacityService
-      const occ = await CapacityService.getRoleOccupancy(eventId, roleId);
+      const occ = await CapacityService.getRoleOccupancy(eventId, roleId, {
+        capacity: role.maxParticipants,
+      });
       const combinedCount = occ.total;
 
       // Since we removed status complexity, waitlist is always 0
@@ -118,35 +125,57 @@ export class RegistrationQueryService {
 
    */
   static async getEventSignupCounts(
-    eventId: string
+    eventId: string,
+    loadedEvent?: Pick<EventLean, "roles">,
   ): Promise<EventSignupCounts | null> {
     try {
-      // Get event with roles
-      const event = (await Event.findById(eventId).lean()) as EventLean | null;
+      const eventIdFilter = mongoose.Types.ObjectId.isValid(eventId)
+        ? new mongoose.Types.ObjectId(eventId)
+        : eventId;
+      const eventPromise = loadedEvent
+        ? Promise.resolve(loadedEvent)
+        : (Event.findById(eventId)
+            .select("roles")
+            .lean() as Promise<Pick<EventLean, "roles"> | null>);
+
+      const [event, userCounts, guestCounts] = await Promise.all([
+        eventPromise,
+        Registration.aggregate<RoleCountRow>([
+          { $match: { eventId: eventIdFilter } },
+          { $group: { _id: "$roleId", count: { $sum: 1 } } },
+        ]),
+        GuestRegistration.aggregate<RoleCountRow>([
+          { $match: { eventId: eventIdFilter, status: "active" } },
+          { $group: { _id: "$roleId", count: { $sum: 1 } } },
+        ]),
+      ]);
+
       if (!event) return null;
 
-      // Build role availability array using centralized CapacityService (users + guests)
-      const roles: RoleAvailability[] = await Promise.all(
-        (event.roles || []).map(async (role: EventRole) => {
-          const occ = await CapacityService.getRoleOccupancy(eventId, role.id, {
-            includeGuests: true, // explicit for clarity
-          });
-          const currentCount = occ.total;
-          const availableSpots = Math.max(
-            0,
-            role.maxParticipants - currentCount
-          );
+      const countsByRole = new Map<string, number>();
+      for (const row of [...userCounts, ...guestCounts]) {
+        countsByRole.set(
+          row._id,
+          (countsByRole.get(row._id) ?? 0) + Number(row.count || 0),
+        );
+      }
 
+      const roles: RoleAvailability[] = (event.roles || []).map(
+        (role: EventRole) => {
+          const currentCount = countsByRole.get(role.id) ?? 0;
           return {
             roleId: role.id,
             roleName: role.name,
             maxParticipants: role.maxParticipants,
             currentCount,
-            availableSpots,
+            availableSpots: Math.max(
+              0,
+              role.maxParticipants - currentCount,
+            ),
             isFull: currentCount >= role.maxParticipants,
-            waitlistCount: 0, // No waitlist since we removed status complexity
-          } as RoleAvailability;
-        })
+            waitlistCount: 0,
+          };
+        },
       );
 
       const totalSignups = roles.reduce(

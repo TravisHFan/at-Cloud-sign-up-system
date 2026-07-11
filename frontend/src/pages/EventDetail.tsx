@@ -54,14 +54,12 @@ export default function EventDetail() {
     currentUser?.id || "550e8400-e29b-41d4-a716-446655440000";
   const currentUserRole = currentUser?.role || "Super Admin";
 
-  // Use custom hook for event data fetching and WebSocket updates
+  // Use custom hook for initial event data fetching
   const { event, setEvent, loading, guestsByRole, setGuestsByRole } =
     useEventData({
       id,
-      currentUserId,
       navigate,
       notificationRef,
-      locationPathname: location.pathname,
     });
 
   // Publishing UI state

@@ -10,6 +10,9 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import EventDetail from "../../pages/EventDetail";
 import { NotificationProvider } from "../../contexts/NotificationModalContext";
 import { GuestApi } from "../../services/guestApi";
+import { installDefaultFetchMock } from "../fixtures/defaultFetch";
+
+installDefaultFetchMock();
 
 // Mock extracted EventDetail components (except EventRolesSection and EventModals which contain guest UI and modals)
 vi.mock("../../components/EventDetail/WorkshopGroupsSection", () => ({
@@ -250,7 +253,6 @@ describe("EventDetail - Re-send manage link", () => {
     });
     fireEvent.click(cancelBtn);
 
-    await new Promise((r) => setTimeout(r, 50));
     expect(GuestApi.resendManageLink).not.toHaveBeenCalled();
   });
 

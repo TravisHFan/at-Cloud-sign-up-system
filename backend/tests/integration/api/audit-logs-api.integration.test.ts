@@ -199,7 +199,7 @@ describe("GET /api/audit-logs - Audit Logs API", () => {
   afterAll(async () => {
     // Close connection if we opened it
     if (openedLocal && mongoose.connection.readyState !== 0) {
-      await mongoose.connection.close();
+      // Shared integration harness owns connection lifecycle.
     }
   });
 

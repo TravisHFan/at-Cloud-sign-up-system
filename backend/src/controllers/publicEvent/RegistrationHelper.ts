@@ -12,6 +12,7 @@ interface RoleSnapshot {
   description?: string;
   openToPublic?: boolean;
   capacity?: number;
+  maxParticipants?: number;
 }
 
 interface EventData {
@@ -65,7 +66,8 @@ export class RegistrationHelper {
         // Occupancy BEFORE (for capacityBefore + early duplicate idempotency semantics)
         const occBefore = await CapacityService.getRoleOccupancy(
           event._id.toString(),
-          roleId
+          roleId,
+          { capacity: targetRole.maxParticipants ?? targetRole.capacity },
         );
         capacityBefore = occBefore.total;
 
@@ -142,7 +144,8 @@ export class RegistrationHelper {
           // Double-check capacity under lock again (race)
           const occBeforeSave = await CapacityService.getRoleOccupancy(
             event._id.toString(),
-            roleId
+            roleId,
+            { capacity: targetRole.maxParticipants ?? targetRole.capacity },
           );
           if (CapacityService.isRoleFull(occBeforeSave)) {
             throw new Error("Role at full capacity");
@@ -181,7 +184,8 @@ export class RegistrationHelper {
           // Guest creation path
           const occBeforeGuest = await CapacityService.getRoleOccupancy(
             event._id.toString(),
-            roleId
+            roleId,
+            { capacity: targetRole.maxParticipants ?? targetRole.capacity },
           );
           if (CapacityService.isRoleFull(occBeforeGuest)) {
             throw new Error("Role at full capacity");
@@ -215,7 +219,8 @@ export class RegistrationHelper {
         // Recompute occupancy AFTER creation (only when something was created)
         const occAfter = await CapacityService.getRoleOccupancy(
           event._id.toString(),
-          roleId
+          roleId,
+          { capacity: targetRole.maxParticipants ?? targetRole.capacity },
         );
         capacityAfter = occAfter.total;
         if (event.save) {

@@ -96,7 +96,7 @@ describe("Donation API Integration Tests", () => {
     await Donation.deleteMany({});
     await DonationTransaction.deleteMany({});
     // Close connection after cleanup
-    await mongoose.connection.close();
+    // Shared integration harness owns connection lifecycle.
     vi.restoreAllMocks();
   });
 

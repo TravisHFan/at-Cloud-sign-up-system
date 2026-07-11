@@ -1127,7 +1127,9 @@ describe("DonationService", () => {
       // Mock User.find for search
       const User = await import("../../../src/models/User");
       (User.default as any).find = vi.fn().mockReturnValue({
-        select: vi.fn().mockResolvedValue([{ _id: new Types.ObjectId() }]),
+        select: vi.fn().mockReturnValue({
+          lean: vi.fn().mockResolvedValue([{ _id: new Types.ObjectId() }]),
+        }),
       });
 
       const DonationTransaction =
@@ -1152,11 +1154,7 @@ describe("DonationService", () => {
 
       // Verify that User.find was called with search criteria
       expect((User.default as any).find).toHaveBeenCalledWith({
-        $or: [
-          { firstName: { $regex: "john", $options: "i" } },
-          { lastName: { $regex: "john", $options: "i" } },
-          { email: { $regex: "john", $options: "i" } },
-        ],
+        $text: { $search: '\"john\"' },
       });
     });
 

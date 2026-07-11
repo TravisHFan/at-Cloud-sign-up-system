@@ -82,3 +82,5 @@ export const rolesTemplatesService = {
   deleteRolesTemplate: (id: string) =>
     rolesTemplatesApiClient.deleteRolesTemplate(id),
 };
+
+export const roleTemplateService = rolesTemplatesService;

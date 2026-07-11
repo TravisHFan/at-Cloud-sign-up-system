@@ -40,10 +40,13 @@ vi.mock("../../services/api", () => ({
 // Mock the socketService
 vi.mock("../../services/socketService", () => ({
   socketService: {
+    socket: null,
+    isConnected: false,
     connect: vi.fn(),
+    acquire: vi.fn(() => vi.fn()),
     joinEventRoom: vi.fn(async () => {}),
     leaveEventRoom: vi.fn(),
-    on: vi.fn(),
+    on: vi.fn(() => vi.fn()),
     off: vi.fn(),
   },
 }));

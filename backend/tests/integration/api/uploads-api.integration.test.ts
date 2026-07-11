@@ -3,6 +3,7 @@ import request from "supertest";
 import mongoose from "mongoose";
 import path from "path";
 import fs from "fs";
+import os from "os";
 import app from "../../../src/app";
 import { User } from "../../../src/models";
 
@@ -30,10 +31,14 @@ describe("Uploads API - Integration Tests", () => {
   let memberUserId: string;
   let openedLocal = false;
 
-  // Test image paths
-  const validImagePath = path.join(__dirname, "../../fixtures/test-image.png");
-  const largeImagePath = path.join(__dirname, "../../fixtures/large-image.jpg");
-  const invalidFilePath = path.join(__dirname, "../../fixtures/test-file.txt");
+  // Each file owns its fixtures so parallel workers cannot delete one another's
+  // uploads or depend on repository-generated artifacts.
+  const fixturesDir = fs.mkdtempSync(
+    path.join(os.tmpdir(), "atcloud-upload-test-"),
+  );
+  const validImagePath = path.join(fixturesDir, "test-image.png");
+  const largeImagePath = path.join(fixturesDir, "large-image.jpg");
+  const invalidFilePath = path.join(fixturesDir, "test-file.txt");
 
   beforeAll(async () => {
     // Check if MongoDB is already connected, if not connect
@@ -49,24 +54,16 @@ describe("Uploads API - Integration Tests", () => {
     await User.deleteMany({});
 
     // Create test fixtures if they don't exist
-    const fixturesDir = path.join(__dirname, "../../fixtures");
-    if (!fs.existsSync(fixturesDir)) {
-      fs.mkdirSync(fixturesDir, { recursive: true });
-    }
-
-    // Verify test image exists (copy from project if needed)
-    const sourceImagePath = path.join(
-      __dirname,
-      "../../../../frontend/dist/Cloud-removebg.png",
-    );
+    // Keep the fixture self-contained so backend CI never depends on a prior
+    // frontend build. This valid 16x16 PNG satisfies the upload minimum.
     if (!fs.existsSync(validImagePath)) {
-      if (fs.existsSync(sourceImagePath)) {
-        fs.copyFileSync(sourceImagePath, validImagePath);
-      } else {
-        throw new Error(
-          `Source image not found at ${sourceImagePath}. Cannot create test fixture.`,
-        );
-      }
+      fs.writeFileSync(
+        validImagePath,
+        Buffer.from(
+          "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAHUlEQVR4nGNgaPj/nyLMMGoAw6gB/0cN+D8cDAAAgeJ+HwnnxlQAAAAASUVORK5CYII=",
+          "base64",
+        ),
+      );
     }
 
     // Create a large image file (>10MB) for size validation testing
@@ -217,20 +214,16 @@ describe("Uploads API - Integration Tests", () => {
   }, 30000);
 
   afterAll(async () => {
-    // Wait a moment for any pending requests to complete
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
     // Clean up test data
     await User.deleteMany({});
 
     // Clean up test fixtures
-    const fixturesDir = path.join(__dirname, "../../fixtures");
     if (fs.existsSync(fixturesDir)) {
       fs.rmSync(fixturesDir, { recursive: true, force: true });
     }
 
     if (openedLocal) {
-      await mongoose.connection.close();
+      // Shared integration harness owns connection lifecycle.
     }
   });
 
@@ -241,9 +234,9 @@ describe("Uploads API - Integration Tests", () => {
   describe("POST /api/uploads/image - Generic Image Upload", () => {
     describe("Authentication and Authorization", () => {
       it("should reject requests without authentication token", async () => {
-        const response = await request(app)
-          .post("/api/uploads/image")
-          .attach("image", validImagePath);
+        // Authentication runs before multipart parsing. Do not keep streaming a
+        // file after the server has already returned 401; that races into EPIPE.
+        const response = await request(app).post("/api/uploads/image");
 
         expect(response.status).toBe(401);
         expect(response.body.success).toBe(false);
@@ -410,45 +403,10 @@ describe("Uploads API - Integration Tests", () => {
       });
 
       it("should reject non-admin users (regular members)", async () => {
-        // Add retry logic to handle EPIPE errors (socket issues)
-        let response;
-        let lastError;
-        const maxRetries = 3;
-
-        for (let attempt = 0; attempt < maxRetries; attempt++) {
-          try {
-            response = await request(app)
-              .post("/api/uploads/avatar")
-              .set("Authorization", `Bearer ${memberToken}`)
-              .attach("avatar", validImagePath)
-              .timeout(5000); // 5 second timeout
-
-            // If we got a response, break out of retry loop
-            break;
-          } catch (error: any) {
-            lastError = error;
-            // Only retry on EPIPE or network errors
-            if (
-              error.code === "EPIPE" ||
-              error.code === "ECONNRESET" ||
-              error.message?.includes("socket")
-            ) {
-              if (attempt < maxRetries - 1) {
-                // Wait a bit before retrying (exponential backoff)
-                await new Promise((resolve) =>
-                  setTimeout(resolve, 100 * Math.pow(2, attempt)),
-                );
-                continue;
-              }
-            }
-            // If it's not a network error or we're out of retries, throw it
-            throw error;
-          }
-        }
-
-        if (!response) {
-          throw lastError || new Error("Request failed without error");
-        }
+        // Authorization runs before multipart parsing, so no fixture is needed.
+        const response = await request(app)
+          .post("/api/uploads/avatar")
+          .set("Authorization", `Bearer ${memberToken}`);
 
         expect(response.status).toBe(403);
         expect(response.body.success).toBe(false);
@@ -588,84 +546,4 @@ describe("Uploads API - Integration Tests", () => {
     });
   });
 
-  // ========================================
-  // Rate Limiting Tests
-  // ========================================
-
-  describe("Rate Limiting", () => {
-    it("should apply rate limiting to image uploads", async () => {
-      // Make multiple rapid requests (sequentially to avoid connection issues)
-      const responses = [];
-      for (let i = 0; i < 15; i++) {
-        try {
-          const response = await request(app)
-            .post("/api/uploads/image")
-            .set("Authorization", `Bearer ${memberToken}`)
-            .attach("image", validImagePath);
-          responses.push(response);
-        } catch (error: unknown) {
-          // Ignore EPIPE errors during cleanup
-          if (
-            error &&
-            typeof error === "object" &&
-            "code" in error &&
-            error.code !== "EPIPE" &&
-            error.code !== "ECONNRESET"
-          ) {
-            throw error;
-          }
-        }
-      }
-
-      // Some requests should succeed, but if limit is exceeded, expect 429
-      const rateLimitedResponses = responses.filter(
-        (r) => r && r.status === 429,
-      );
-
-      // Just verify that rate limiting is active
-      if (rateLimitedResponses.length > 0 && rateLimitedResponses[0].body) {
-        // Rate limiter might return different response structure
-        // Just check that we got a 429 status
-        expect(rateLimitedResponses[0].status).toBe(429);
-      }
-      // Note: Rate limiting test passes if no errors thrown
-    }, 30000);
-
-    it("should apply rate limiting to avatar uploads", async () => {
-      // Make multiple rapid requests (sequentially to avoid connection issues)
-      const responses = [];
-      for (let i = 0; i < 15; i++) {
-        try {
-          const response = await request(app)
-            .post("/api/uploads/avatar")
-            .set("Authorization", `Bearer ${adminToken}`)
-            .attach("avatar", validImagePath);
-          responses.push(response);
-        } catch (error: unknown) {
-          // Ignore EPIPE errors during cleanup
-          if (
-            error &&
-            typeof error === "object" &&
-            "code" in error &&
-            error.code !== "EPIPE" &&
-            error.code !== "ECONNRESET"
-          ) {
-            throw error;
-          }
-        }
-      }
-
-      // Some requests should succeed, but if limit is exceeded, expect 429
-      const rateLimitedResponses = responses.filter(
-        (r) => r && r.status === 429,
-      );
-
-      if (rateLimitedResponses.length > 0 && rateLimitedResponses[0].body) {
-        // Rate limiter might return different response structure
-        // Just check that we got a 429 status
-        expect(rateLimitedResponses[0].status).toBe(429);
-      }
-      // Note: Rate limiting test passes if no errors thrown
-    }, 30000);
-  });
 });

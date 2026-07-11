@@ -161,14 +161,6 @@ describe("PublicEvent registration form", () => {
 
     fireEvent.click(roleButton);
 
-    // Attempt multiple flush cycles (covers environments where other suites altered task scheduling)
-    for (let i = 0; i < 4 && scrollSpy.mock.calls.length === 0; i++) {
-      // microtask flush
-      await Promise.resolve();
-      // macrotask flush
-      await new Promise((r) => setTimeout(r, 0));
-    }
-
     // Soft assertion: primary UX requirement is that section receives focus.
     await waitFor(() => {
       expect(document.activeElement).toBe(registerSection);

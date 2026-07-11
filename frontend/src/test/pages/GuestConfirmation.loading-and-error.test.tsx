@@ -3,6 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import GuestConfirmation from "../../pages/GuestConfirmation";
 import { apiClient } from "../../services/api";
+import { createDeferred } from "../fixtures/deferred";
 
 vi.mock("../../services/api", () => ({
   apiClient: {
@@ -40,24 +41,22 @@ describe("GuestConfirmation loading and error states", () => {
   };
 
   it("shows loading indicator while fetching organizer details", async () => {
-    mockedGetEvent.mockResolvedValueOnce(
-      new Promise((resolve) =>
-        setTimeout(
-          () =>
-            resolve({
-              id: "evt-1",
-              title: "Test Event",
-              organizerDetails: [],
-            }),
-          50
-        )
-      )
-    );
+    const event = createDeferred<{
+      id: string;
+      title: string;
+      organizerDetails: never[];
+    }>();
+    mockedGetEvent.mockReturnValueOnce(event.promise);
 
     renderWithState();
 
     // Loading text appears before details
     expect(screen.getByText(/loading organizer details/i)).toBeInTheDocument();
+    event.resolve({
+      id: "evt-1",
+      title: "Test Event",
+      organizerDetails: [],
+    });
 
     await waitFor(() => {
       expect(

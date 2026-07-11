@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import PopulateFromTemplateModal from "../../../../src/components/rolesTemplate/PopulateFromTemplateModal";
 import type { RolesTemplate } from "../../../../src/types/rolesTemplate";
+import { createDeferred } from "../../fixtures/deferred";
 
 // Mock API services using factory function to avoid hoisting issues
 vi.mock("../../../../src/services/api", async () => {
@@ -387,11 +388,10 @@ describe("PopulateFromTemplateModal", () => {
   });
 
   it("displays loading state while fetching templates", async () => {
+    const templates = createDeferred<RolesTemplate[]>();
     vi.mocked(
-      roleTemplateService.getRolesTemplatesByEventType
-    ).mockImplementation(
-      () => new Promise((resolve) => setTimeout(() => resolve([]), 100))
-    );
+      roleTemplateService.getRolesTemplatesByEventType,
+    ).mockReturnValue(templates.promise);
 
     render(
       <PopulateFromTemplateModal
@@ -403,6 +403,7 @@ describe("PopulateFromTemplateModal", () => {
     );
 
     expect(screen.getByText(/Loading/i)).toBeInTheDocument();
+    templates.resolve([]);
 
     await waitFor(() => {
       expect(screen.queryByText(/Loading/i)).toBeNull();

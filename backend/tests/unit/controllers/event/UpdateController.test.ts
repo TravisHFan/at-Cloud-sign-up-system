@@ -114,7 +114,7 @@ vi.mock(
   }),
 );
 
-vi.mock("../../../../src/services", () => ({
+vi.mock("../../../../src/services/infrastructure/CacheService", () => ({
   CachePatterns: {
     invalidateEventCache: vi.fn(),
     invalidateAnalyticsCache: vi.fn(),
@@ -160,7 +160,7 @@ import { AutoUnpublishService } from "../../../../src/services/event/AutoUnpubli
 import { CoOrganizerNotificationService } from "../../../../src/services/event/CoOrganizerNotificationService";
 import { ParticipantNotificationService } from "../../../../src/services/event/ParticipantNotificationService";
 import { ResponseBuilderService } from "../../../../src/services/ResponseBuilderService";
-import { CachePatterns } from "../../../../src/services";
+import { CachePatterns } from "../../../../src/services/infrastructure/CacheService";
 
 import AuditLog from "../../../../src/models/AuditLog";
 import Program from "../../../../src/models/Program";

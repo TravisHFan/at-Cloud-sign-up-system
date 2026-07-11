@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Types } from "mongoose";
 import { ResponseBuilderService } from "../../../src/services/ResponseBuilderService";
-import { Event, Registration, User } from "../../../src/models";
+import {
+  Event,
+  GuestRegistration,
+  Registration,
+  User,
+} from "../../../src/models";
 import { RegistrationQueryService } from "../../../src/services/RegistrationQueryService";
 import { withSilencedConsole } from "../../test-utils/silenceConsole";
 
@@ -15,16 +20,15 @@ vi.mock("../../../src/models", () => ({
   Registration: {
     find: vi.fn(),
     findOne: vi.fn(),
+    aggregate: vi.fn(),
+  },
+  GuestRegistration: {
+    aggregate: vi.fn(),
   },
   User: {
     findById: vi.fn(),
     find: vi.fn(),
   },
-}));
-
-// Mock publicSlug utility (lazy slug generation in ResponseBuilderService)
-vi.mock("../../../src/utils/publicSlug", () => ({
-  generateUniquePublicSlug: vi.fn().mockResolvedValue("mock-slug-1234"),
 }));
 
 // Mock RegistrationQueryService
@@ -38,14 +42,36 @@ vi.mock("../../../src/services/RegistrationQueryService", () => ({
 }));
 
 describe("ResponseBuilderService", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   // Test ObjectIds
   const eventId = new Types.ObjectId().toString();
   const userId = new Types.ObjectId().toString();
   const roleId = new Types.ObjectId().toString();
+
+  const mockRegistrationQuery = (registrations: unknown[]) => {
+    const query = {
+      select: vi.fn().mockReturnThis(),
+      populate: vi.fn().mockReturnThis(),
+      lean: vi.fn().mockResolvedValue(registrations),
+    };
+    vi.mocked(Registration.find).mockReturnValue(query as any);
+    return query;
+  };
+
+  const mockOrganizerQuery = (users: unknown[]) => {
+    const query = {
+      select: vi.fn().mockReturnThis(),
+      lean: vi.fn().mockResolvedValue(users),
+    };
+    vi.mocked(User.find).mockReturnValue(query as any);
+    return query;
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockRegistrationQuery([]);
+    mockOrganizerQuery([]);
+    vi.mocked(GuestRegistration.aggregate).mockResolvedValue([]);
+  });
 
   describe("buildEventWithRegistrations", () => {
     it("enriches organizer contacts when userId is present and leaves others unchanged", async () => {
@@ -88,43 +114,16 @@ describe("ResponseBuilderService", () => {
         }),
       } as any);
 
-      vi.mocked(
-        RegistrationQueryService.getEventSignupCounts,
-      ).mockResolvedValue({
-        eventId,
-        totalSignups: 0,
-        totalSlots: 10,
-        roles: [
-          {
-            roleId,
-            roleName: "Volunteer",
-            maxParticipants: 10,
-            currentCount: 0,
-            availableSpots: 10,
-            isFull: false,
-            waitlistCount: 0,
-          },
-        ],
-      } as any);
-
-      vi.mocked(Registration.find).mockReturnValue({
-        // Support both direct .lean() and chained populate().lean()
-        lean: vi.fn().mockResolvedValue([]),
-        populate: vi.fn().mockReturnValue({
-          lean: vi.fn().mockResolvedValue([]),
-        }),
-      } as any);
-
-      // Fresh contact for the first organizer
-      vi.mocked(User.findById).mockReturnValueOnce({
-        select: vi.fn().mockResolvedValue({
+      mockOrganizerQuery([
+        {
+          _id: organizerUserId,
           email: "new@x.com",
           phone: "123",
           firstName: "New",
           lastName: "Name",
           avatar: "a.png",
-        }),
-      } as any);
+        },
+      ]);
 
       const result =
         await ResponseBuilderService.buildEventWithRegistrations(eventId);
@@ -135,6 +134,8 @@ describe("ResponseBuilderService", () => {
       expect(orgs[0].phone).toBe("123");
       // Second organizer had no userId and should remain unchanged
       expect(orgs[1].email).toBe("keep@x.com");
+      expect(User.find).toHaveBeenCalledOnce();
+      expect(User.findById).not.toHaveBeenCalled();
     });
     it("should build complete event with registration data successfully", async () => {
       // Mock event data
@@ -170,24 +171,6 @@ describe("ResponseBuilderService", () => {
         },
       };
 
-      // Mock RegistrationQueryService response
-      const mockEventSignupCounts = {
-        eventId: eventId,
-        totalSignups: 5,
-        totalSlots: 10,
-        roles: [
-          {
-            roleId: roleId,
-            roleName: "Volunteer",
-            maxParticipants: 10,
-            currentCount: 5,
-            availableSpots: 5,
-            isFull: false,
-            waitlistCount: 0,
-          },
-        ],
-      };
-
       // Mock registrations
       const mockRegistrations = [
         {
@@ -219,17 +202,10 @@ describe("ResponseBuilderService", () => {
         }),
       } as any);
 
-      vi.mocked(
-        RegistrationQueryService.getEventSignupCounts,
-      ).mockResolvedValue(mockEventSignupCounts);
-
-      vi.mocked(Registration.find).mockReturnValue({
-        // Support both direct .lean() and chained populate().lean()
-        lean: vi.fn().mockResolvedValue(mockRegistrations),
-        populate: vi.fn().mockReturnValue({
-          lean: vi.fn().mockResolvedValue(mockRegistrations),
-        }),
-      } as any);
+      mockRegistrationQuery(mockRegistrations);
+      vi.mocked(GuestRegistration.aggregate).mockResolvedValue([
+        { _id: roleId, count: 4 },
+      ] as any);
 
       const result =
         await ResponseBuilderService.buildEventWithRegistrations(eventId);
@@ -310,31 +286,7 @@ describe("ResponseBuilderService", () => {
         }),
       } as any);
 
-      vi.mocked(
-        RegistrationQueryService.getEventSignupCounts,
-      ).mockResolvedValue({
-        eventId,
-        totalSignups: 2,
-        totalSlots: 10,
-        roles: [
-          {
-            roleId,
-            roleName: "Participant",
-            maxParticipants: 10,
-            currentCount: 2,
-            availableSpots: 8,
-            isFull: false,
-            waitlistCount: 0,
-          },
-        ],
-      } as any);
-
-      vi.mocked(Registration.find).mockReturnValue({
-        lean: vi.fn().mockResolvedValue([]),
-        populate: vi.fn().mockReturnValue({
-          lean: vi.fn().mockResolvedValue(mockRegistrations),
-        }),
-      } as any);
+      mockRegistrationQuery(mockRegistrations);
 
       const result =
         await ResponseBuilderService.buildEventWithRegistrations(eventId);
@@ -360,12 +312,41 @@ describe("ResponseBuilderService", () => {
       expect(Event.findById).toHaveBeenCalledWith(eventId);
     });
 
-    it("should return null when event signup counts are not available", async () => {
+    it("keeps detail query count constant across roles and organizers", async () => {
+      const secondRoleId = new Types.ObjectId().toString();
+      const firstOrganizerId = new Types.ObjectId();
+      const secondOrganizerId = new Types.ObjectId();
       const mockEvent = {
         _id: eventId,
-        title: "Test Event",
-        roles: [],
-        createdBy: { username: "organizer" },
+        title: "Constant Query Event",
+        date: "2099-01-01",
+        time: "10:00",
+        endTime: "11:00",
+        roles: [
+          { id: roleId, name: "Attendee", maxParticipants: 5 },
+          { id: secondRoleId, name: "Volunteer", maxParticipants: 4 },
+        ],
+        organizerDetails: [
+          { userId: firstOrganizerId, email: "old-1@example.com" },
+          { userId: secondOrganizerId, email: "old-2@example.com" },
+        ],
+        createdBy: {
+          _id: userId,
+          username: "organizer",
+          firstName: "Event",
+          lastName: "Owner",
+        },
+      };
+      const registration = {
+        _id: new Types.ObjectId(),
+        eventId,
+        roleId,
+        userId: {
+          _id: new Types.ObjectId(),
+          username: "participant",
+          firstName: "Pat",
+          lastName: "One",
+        },
       };
 
       vi.mocked(Event.findById).mockReturnValue({
@@ -373,15 +354,39 @@ describe("ResponseBuilderService", () => {
           lean: vi.fn().mockResolvedValue(mockEvent),
         }),
       } as any);
-
-      vi.mocked(
-        RegistrationQueryService.getEventSignupCounts,
-      ).mockResolvedValue(null);
+      const registrationQuery = mockRegistrationQuery([registration]);
+      vi.mocked(GuestRegistration.aggregate).mockResolvedValue([
+        { _id: secondRoleId, count: 2 },
+      ] as any);
+      mockOrganizerQuery([
+        {
+          _id: firstOrganizerId,
+          email: "fresh-1@example.com",
+          firstName: "First",
+          lastName: "Organizer",
+        },
+        {
+          _id: secondOrganizerId,
+          email: "fresh-2@example.com",
+          firstName: "Second",
+          lastName: "Organizer",
+        },
+      ]);
 
       const result =
         await ResponseBuilderService.buildEventWithRegistrations(eventId);
 
-      expect(result).toBeNull();
+      expect(result).toMatchObject({ signedUp: 3, totalSlots: 9 });
+      expect(result!.roles.map((role) => role.currentCount)).toEqual([1, 2]);
+      expect(Event.findById).toHaveBeenCalledOnce();
+      expect(Registration.find).toHaveBeenCalledOnce();
+      expect(registrationQuery.select).toHaveBeenCalledOnce();
+      expect(GuestRegistration.aggregate).toHaveBeenCalledOnce();
+      expect(User.find).toHaveBeenCalledOnce();
+      expect(
+        RegistrationQueryService.getEventSignupCounts,
+      ).not.toHaveBeenCalled();
+      expect(Event.updateOne).not.toHaveBeenCalled();
     });
 
     it("should handle database errors gracefully", async () => {
@@ -400,68 +405,123 @@ describe("ResponseBuilderService", () => {
   });
 
   describe("buildEventsWithRegistrations", () => {
-    it("should build multiple events with registration data", async () => {
-      const event1Id = new Types.ObjectId().toString();
-      const event2Id = new Types.ObjectId().toString();
+    it("builds page summaries with one user and one guest aggregation", async () => {
+      const event1Id = new Types.ObjectId();
+      const event2Id = new Types.ObjectId();
 
       const mockEvents = [
         {
           _id: event1Id,
           title: "Event 1",
-          roles: [],
-          createdBy: { username: "organizer1" },
+          date: "2099-01-01",
+          time: "10:00",
+          endTime: "11:00",
+          roles: [
+            {
+              id: "attendee",
+              name: "Attendee",
+              maxParticipants: 5,
+            },
+          ],
+          createdBy: {
+            _id: new Types.ObjectId(),
+            username: "organizer1",
+            firstName: "One",
+            lastName: "Organizer",
+          },
         },
         {
           _id: event2Id,
           title: "Event 2",
-          roles: [],
-          createdBy: { username: "organizer2" },
+          date: "2099-01-02",
+          time: "10:00",
+          endTime: "11:00",
+          roles: [
+            {
+              id: "volunteer",
+              name: "Volunteer",
+              maxParticipants: 4,
+            },
+          ],
+          createdBy: {
+            _id: new Types.ObjectId(),
+            username: "organizer2",
+            firstName: "Two",
+            lastName: "Organizer",
+          },
         },
       ];
 
-      // We need to mock the individual buildEventWithRegistrations calls
-      vi.spyOn(ResponseBuilderService, "buildEventWithRegistrations")
-        .mockResolvedValueOnce({
-          id: event1Id,
-          title: "Event 1",
-          roles: [],
-          totalRegistrations: 5,
-          totalCapacity: 10,
-          availableSpots: 5,
-          totalSlots: 10,
-          signedUp: 5,
-        } as any)
-        .mockResolvedValueOnce({
-          id: event2Id,
-          title: "Event 2",
-          roles: [],
-          totalRegistrations: 3,
-          totalCapacity: 10,
-          availableSpots: 7,
-          totalSlots: 10,
-          signedUp: 3,
-        } as any);
+      vi.mocked(Registration.aggregate).mockResolvedValue([
+        {
+          _id: { eventId: event1Id, roleId: "attendee" },
+          count: 2,
+        },
+        {
+          _id: { eventId: event2Id, roleId: "volunteer" },
+          count: 1,
+        },
+      ] as any);
+      vi.mocked(GuestRegistration.aggregate).mockResolvedValue([
+        {
+          _id: { eventId: event1Id, roleId: "attendee" },
+          count: 1,
+        },
+        {
+          _id: { eventId: event2Id, roleId: "volunteer" },
+          count: 2,
+        },
+      ] as any);
 
       const result =
-        await ResponseBuilderService.buildEventsWithRegistrations(mockEvents);
+        await ResponseBuilderService.buildEventsWithRegistrations(
+          mockEvents as any,
+        );
 
       expect(result).toHaveLength(2);
-      expect(result[0].title).toBe("Event 1");
-      expect(result[1].title).toBe("Event 2");
+      expect(Registration.aggregate).toHaveBeenCalledOnce();
+      expect(GuestRegistration.aggregate).toHaveBeenCalledOnce();
+      expect(result[0]).toMatchObject({
+        id: event1Id.toString(),
+        signedUp: 3,
+        totalSlots: 5,
+        availableSpots: 2,
+        status: "upcoming",
+      });
+      expect(result[0].roles[0]).toMatchObject({
+        currentCount: 3,
+        currentSignups: [],
+      });
+      expect(result[1]).toMatchObject({
+        id: event2Id.toString(),
+        signedUp: 3,
+        totalSlots: 4,
+        availableSpots: 1,
+      });
+      expect(Event.findById).not.toHaveBeenCalled();
     });
 
-    it("should handle database errors gracefully", async () => {
-      const mockEvents = [{ _id: eventId, title: "Test Event" }];
-
-      vi.spyOn(
-        ResponseBuilderService,
-        "buildEventWithRegistrations",
-      ).mockResolvedValue(null);
-
-      const result =
-        await ResponseBuilderService.buildEventsWithRegistrations(mockEvents);
+    it("returns immediately for an empty page", async () => {
+      const result = await ResponseBuilderService.buildEventsWithRegistrations(
+        [],
+      );
 
       expect(result).toEqual([]);
+      expect(Registration.aggregate).not.toHaveBeenCalled();
+      expect(GuestRegistration.aggregate).not.toHaveBeenCalled();
+    });
+
+    it("surfaces aggregate failures to the controller", async () => {
+      vi.mocked(Registration.aggregate).mockRejectedValue(
+        new Error("aggregate failed"),
+      );
+      vi.mocked(GuestRegistration.aggregate).mockResolvedValue([]);
+
+      await expect(
+        ResponseBuilderService.buildEventsWithRegistrations([
+          { _id: new Types.ObjectId() },
+        ]),
+      ).rejects.toThrow("aggregate failed");
     });
   });
 

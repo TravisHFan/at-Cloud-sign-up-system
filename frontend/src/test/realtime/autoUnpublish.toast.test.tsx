@@ -2,6 +2,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { render, waitFor } from "@testing-library/react";
 import EventDetail from "../../pages/EventDetail";
+import { installDefaultFetchMock } from "../fixtures/defaultFetch";
+
+installDefaultFetchMock();
 
 // Toast spies
 const toasts = vi.hoisted(() => ({
@@ -161,7 +164,7 @@ describe("EventDetail realtime auto-unpublish toast", () => {
       timestamp: new Date().toISOString(),
     });
 
-    await new Promise((r) => setTimeout(r, 50));
+    await waitFor(() => expect(getEventMock).toHaveBeenCalledTimes(3));
     expect(toasts.warning).toHaveBeenCalledTimes(1); // still only one
   });
 });

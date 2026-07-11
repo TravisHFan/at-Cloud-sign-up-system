@@ -58,12 +58,6 @@ vi.mock(
   }),
 );
 
-vi.mock("../../../../src/services/event/EventConflictDetectionService", () => ({
-  EventConflictDetectionService: {
-    checkConflicts: vi.fn(() => Promise.resolve({ hasConflict: false })),
-  },
-}));
-
 vi.mock("../../../../src/utils/event/eventValidation", () => ({
   validatePricing: vi.fn(() => ({ valid: true })),
 }));

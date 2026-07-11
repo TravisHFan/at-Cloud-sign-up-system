@@ -1,9 +1,8 @@
 /**
  * Central export file for all API services
  *
- * This file re-exports all service modules and provides a single import point
- * for the frontend application. Also provides backward compatibility with legacy
- * imports using singular names (e.g., fileService instead of filesService).
+ * This file is a side-effect-free public API surface. Compatibility names live
+ * beside their owning service instead of being reconstructed here.
  */
 
 // Export common types and config
@@ -31,42 +30,6 @@ export * from "./assignments.api";
 export * from "./donations.api";
 export * from "./refundRequests.api";
 export * from "./annualMemberships.api";
-
-// Import services for backward compatibility exports
-import { authService } from "./auth.api";
-import { guestsService } from "./guests.api";
-import { publicEventsService } from "./publicEvents.api";
-import { eventsService } from "./events.api";
-import { rolesTemplatesService } from "./rolesTemplates.api";
-import { programsService } from "./programs.api";
-import { purchasesService } from "./purchases.api";
-import { promoCodesService } from "./promoCodes.api";
-import { usersService } from "./users.api";
-import { filesService } from "./files.api";
-import { notificationsService } from "./notifications.api";
-import { systemMessagesService } from "./systemMessages.api";
-import { messagesService } from "./messages.api";
-import { analyticsService } from "./analytics.api";
-import { refundRequestsService } from "./refundRequests.api";
-import { annualMembershipsService } from "./annualMemberships.api";
-
-// Backward compatibility: export services with legacy singular names
-export { authService }; // Export authService directly since it has no singular alternative
-export const fileService = filesService;
-export const eventService = eventsService;
-export const userService = usersService;
-export const notificationService = notificationsService;
-export const purchaseService = purchasesService;
-export const programService = programsService;
-export const promoCodeService = promoCodesService;
-export const guestService = guestsService;
-export const publicEventService = publicEventsService;
-export const roleTemplateService = rolesTemplatesService;
-export const systemMessageService = systemMessagesService;
-export const messageService = messagesService;
-export const analyticService = analyticsService;
-export const refundRequestService = refundRequestsService;
-export const annualMembershipService = annualMembershipsService;
 
 // Export full ApiClient for backward compatibility with code that uses apiClient instance
 export { apiClient, ApiClient } from "./apiClient";

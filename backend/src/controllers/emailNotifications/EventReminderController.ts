@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 import { EmailService } from "../../services/infrastructure/EmailServiceFacade";
 import { EmailRecipientUtils } from "../../utils/emailRecipientUtils";
 import { UnifiedMessageController } from "../unifiedMessageController";
-import { CachePatterns } from "../../services";
+import { CachePatterns } from "../../services/infrastructure/CacheService";
 import { CorrelatedLogger } from "../../services/CorrelatedLogger";
 import type { EventReminderRequest } from "./types";
 

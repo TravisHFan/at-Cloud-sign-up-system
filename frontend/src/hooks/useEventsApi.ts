@@ -92,21 +92,29 @@ export function useEvents({
                 name: role.name,
                 description: role.description,
                 maxParticipants: role.maxParticipants,
-                currentSignups: role.currentSignups || [],
+                currentSignups: Array.isArray(role.currentSignups)
+                  ? role.currentSignups
+                  : [],
               })),
-              // Calculate legacy properties for backward compatibility
               signedUp:
-                (event.roles || []).reduce(
-                  (total: number, role: EventRole) =>
-                    total + (role.currentSignups?.length || 0),
-                  0,
-                ) || 0,
+                typeof event.signedUp === "number"
+                  ? event.signedUp
+                  : (event.roles || []).reduce(
+                      (total: number, role: EventRole) =>
+                        total +
+                        (Array.isArray(role.currentSignups)
+                          ? role.currentSignups.length
+                          : 0),
+                      0,
+                    ),
               totalSlots:
-                (event.roles || []).reduce(
-                  (total: number, role: EventRole) =>
-                    total + (role.maxParticipants || 0),
-                  0,
-                ) || 0,
+                typeof event.totalSlots === "number"
+                  ? event.totalSlots
+                  : (event.roles || []).reduce(
+                      (total: number, role: EventRole) =>
+                        total + (role.maxParticipants || 0),
+                      0,
+                    ),
               createdBy: (event as EventData).createdBy || event.organizer,
               createdAt: event.createdAt,
               isHybrid: event.isHybrid,
@@ -223,21 +231,29 @@ export function useEvent(eventId: string) {
           description: role.description,
           agenda: (role as unknown as { agenda?: string }).agenda,
           maxParticipants: role.maxParticipants,
-          currentSignups: role.currentSignups || [],
+          currentSignups: Array.isArray(role.currentSignups)
+            ? role.currentSignups
+            : [],
         })),
-        // Calculate legacy properties for backward compatibility
         signedUp:
-          (response.roles || []).reduce(
-            (total: number, role: EventRole) =>
-              total + (role.currentSignups?.length || 0),
-            0,
-          ) || 0,
+          typeof response.signedUp === "number"
+            ? response.signedUp
+            : (response.roles || []).reduce(
+                (total: number, role: EventRole) =>
+                  total +
+                  (Array.isArray(role.currentSignups)
+                    ? role.currentSignups.length
+                    : 0),
+                0,
+              ),
         totalSlots:
-          (response.roles || []).reduce(
-            (total: number, role: EventRole) =>
-              total + (role.maxParticipants || 0),
-            0,
-          ) || 0,
+          typeof response.totalSlots === "number"
+            ? response.totalSlots
+            : (response.roles || []).reduce(
+                (total: number, role: EventRole) =>
+                  total + (role.maxParticipants || 0),
+                0,
+              ),
         createdBy: response.createdBy || response.organizer,
         createdAt: response.createdAt,
         isHybrid: response.isHybrid,
@@ -423,19 +439,25 @@ export function useCreatedEvents() {
             format: event.format,
             disclaimer: event.disclaimer,
             roles: event.roles || [],
-            // Calculate legacy properties for backward compatibility
             signedUp:
-              (event.roles || []).reduce(
-                (total: number, role: EventRole) =>
-                  total + (role.currentSignups?.length || 0),
-                0,
-              ) || 0,
+              typeof event.signedUp === "number"
+                ? event.signedUp
+                : (event.roles || []).reduce(
+                    (total: number, role: EventRole) =>
+                      total +
+                      (Array.isArray(role.currentSignups)
+                        ? role.currentSignups.length
+                        : 0),
+                    0,
+                  ),
             totalSlots:
-              (event.roles || []).reduce(
-                (total: number, role: EventRole) =>
-                  total + (role.maxParticipants || 0),
-                0,
-              ) || 0,
+              typeof event.totalSlots === "number"
+                ? event.totalSlots
+                : (event.roles || []).reduce(
+                    (total: number, role: EventRole) =>
+                      total + (role.maxParticipants || 0),
+                    0,
+                  ),
             createdBy: event.createdBy || event.organizer,
             createdAt: event.createdAt,
             isHybrid: event.isHybrid,

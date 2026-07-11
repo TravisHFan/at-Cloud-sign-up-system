@@ -4,7 +4,10 @@ import mongoose from "mongoose";
 import app from "../../../src/app";
 import User from "../../../src/models/User";
 import Event from "../../../src/models/Event";
-import { publishFieldsForFormat } from "../../test-utils/eventTestHelpers";
+import {
+  futureDateString,
+  publishFieldsForFormat,
+} from "../../test-utils/eventTestHelpers";
 import { assertMissingFields422 } from "../../test-utils/assertions";
 
 describe("Publish necessary fields enforcement", () => {
@@ -47,19 +50,20 @@ describe("Publish necessary fields enforcement", () => {
 
   afterAll(async () => {
     if (openedLocal && mongoose.connection.readyState !== 0) {
-      await mongoose.connection.close();
+      // Shared integration harness owns connection lifecycle.
     }
   });
 
   it("fails with 422 for Online missing virtual fields", async () => {
+    const eventDate = futureDateString();
     const create = await request(app)
       .post("/api/events")
       .set("Authorization", `Bearer ${token}`)
       .send({
         title: "Online Missing Virtual",
         type: "Webinar",
-        date: "2026-06-15",
-        endDate: "2026-06-15",
+        date: eventDate,
+        endDate: eventDate,
         time: "09:00",
         endTime: "10:00",
         // Use helper then strip necessary fields to simulate omission
@@ -89,14 +93,15 @@ describe("Publish necessary fields enforcement", () => {
   });
 
   it("succeeds for Online when all virtual fields present", async () => {
+    const eventDate = futureDateString();
     const create = await request(app)
       .post("/api/events")
       .set("Authorization", `Bearer ${token}`)
       .send({
         title: "Online Complete",
         type: "Webinar",
-        date: "2026-06-15",
-        endDate: "2026-06-15",
+        date: eventDate,
+        endDate: eventDate,
         time: "09:00",
         endTime: "10:00",
         ...publishFieldsForFormat("Online", "complete"),
@@ -122,6 +127,7 @@ describe("Publish necessary fields enforcement", () => {
   });
 
   it("fails with 422 for In-person missing location", async () => {
+    const eventDate = futureDateString();
     // Create with a valid location first (creation likely enforces non-empty)
     const create = await request(app)
       .post("/api/events")
@@ -129,8 +135,8 @@ describe("Publish necessary fields enforcement", () => {
       .send({
         title: "In Person Missing Location",
         type: "Webinar",
-        date: "2026-06-15",
-        endDate: "2026-06-15",
+        date: eventDate,
+        endDate: eventDate,
         time: "09:00",
         endTime: "10:00",
         ...publishFieldsForFormat("In-person", "inperson"),
@@ -156,14 +162,15 @@ describe("Publish necessary fields enforcement", () => {
   });
 
   it("fails with 422 for Hybrid missing subset of necessary fields", async () => {
+    const eventDate = futureDateString(31);
     const create = await request(app)
       .post("/api/events")
       .set("Authorization", `Bearer ${token}`)
       .send({
         title: "Hybrid Partial",
         type: "Conference",
-        date: "2026-06-16",
-        endDate: "2026-06-16",
+        date: eventDate,
+        endDate: eventDate,
         time: "09:00",
         endTime: "10:00",
         ...publishFieldsForFormat("Hybrid Participation", "hybrid"),

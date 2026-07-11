@@ -74,13 +74,7 @@ export function useAvatarUpdates(
   );
 
   useEffect(() => {
-    // Register listener for user_update events
-    socketService.on("user_update", handleAvatarUpdate);
-
-    return () => {
-      // Cleanup listener on unmount
-      socketService.off("user_update");
-    };
+    return socketService.on("user_update", handleAvatarUpdate);
   }, [handleAvatarUpdate]);
 
   return updateCounter;

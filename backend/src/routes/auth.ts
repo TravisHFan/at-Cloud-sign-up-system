@@ -1,5 +1,12 @@
 import { Router } from "express";
-import { AuthController } from "../controllers/authController";
+import RegistrationController from "../controllers/auth/RegistrationController";
+import LoginController from "../controllers/auth/LoginController";
+import TokenController from "../controllers/auth/TokenController";
+import EmailVerificationController from "../controllers/auth/EmailVerificationController";
+import PasswordResetController from "../controllers/auth/PasswordResetController";
+import PasswordChangeController from "../controllers/auth/PasswordChangeController";
+import LogoutController from "../controllers/auth/LogoutController";
+import ProfileController from "../controllers/auth/ProfileController";
 import type { Request, Response, NextFunction } from "express";
 import {
   authenticate,
@@ -35,46 +42,49 @@ router.post(
   normalizeUsername,
   validateUserRegistration,
   validateError,
-  AuthController.register
+  RegistrationController.register
 );
-router.post("/login", validateUserLogin, validateError, AuthController.login);
-router.post("/refresh-token", AuthController.refreshToken);
+router.post("/login", validateUserLogin, validateError, LoginController.login);
+router.post("/refresh-token", TokenController.refreshToken);
 router.get(
   "/verify-email/:token",
   verifyEmailToken,
-  AuthController.verifyEmail
+  EmailVerificationController.verifyEmail
 );
 router.post(
   "/resend-verification",
   validateForgotPassword,
   validateError,
-  AuthController.resendVerification
+  EmailVerificationController.resendVerification
 );
 router.post(
   "/forgot-password",
   validateForgotPassword,
   validateError,
-  AuthController.forgotPassword
+  PasswordResetController.forgotPassword
 );
 router.post(
   "/reset-password",
   verifyPasswordResetToken,
   validateResetPassword,
   validateError,
-  AuthController.resetPassword
+  PasswordResetController.resetPassword
 );
 router.post(
   "/complete-password-change/:token",
-  AuthController.completePasswordChange
+  PasswordChangeController.completePasswordChange
 );
 
 // Protected routes (authentication required)
 router.use(authenticate); // All routes below require authentication
 
-router.post("/logout", AuthController.logout);
-router.get("/profile", AuthController.getProfile);
+router.post("/logout", LogoutController.logout);
+router.get("/profile", ProfileController.getProfile);
 
 // Secure password change routes
-router.post("/request-password-change", AuthController.requestPasswordChange);
+router.post(
+  "/request-password-change",
+  PasswordChangeController.requestPasswordChange,
+);
 
 export default router;

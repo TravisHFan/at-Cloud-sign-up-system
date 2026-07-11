@@ -30,18 +30,7 @@ process.env.MONGODB_TEST_URI =
   "mongodb://localhost:27017/atcloud-signup-test";
 process.env.EMAIL_SERVICE_ENABLED = "false"; // Disable real emails in tests
 process.env.FRONTEND_URL = "http://localhost:5173";
-
-// Keep backend test output focused by default.
-// Set VITEST_VERBOSE_LOGS=true to inspect console.log/info/debug locally.
-const quiet =
-  process.env.VITEST_VERBOSE_LOGS !== "true" &&
-  process.env.VITEST_SILENT !== "false";
-if (quiet) {
-  const noop = () => {};
-  // eslint-disable-next-line no-console
-  console.log = noop as any;
-  // eslint-disable-next-line no-console
-  console.info = noop as any;
-  // eslint-disable-next-line no-console
-  console.debug = noop as any;
-}
+// Test files run in isolated module graphs while sharing one worker database.
+// Pin schema options that would otherwise depend on whether dotenv happened to
+// load before a model import, which can create conflicting indexes per file.
+process.env.AUDIT_LOG_TTL_FALLBACK_DAYS = "730";

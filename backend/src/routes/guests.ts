@@ -1,5 +1,14 @@
 import { Router } from "express";
-import { GuestController } from "../controllers/guestController";
+import { GuestRegistrationController } from "../controllers/guest/GuestRegistrationController";
+import GuestListController from "../controllers/guest/GuestListController";
+import GuestRetrievalController from "../controllers/guest/GuestRetrievalController";
+import GuestUpdateController from "../controllers/guest/GuestUpdateController";
+import GuestCancellationController from "../controllers/guest/GuestCancellationController";
+import GuestManageLinkController from "../controllers/guest/GuestManageLinkController";
+import GuestTokenRetrievalController from "../controllers/guest/GuestTokenRetrievalController";
+import GuestTokenUpdateController from "../controllers/guest/GuestTokenUpdateController";
+import GuestTokenCancellationController from "../controllers/guest/GuestTokenCancellationController";
+import GuestDeclineController from "../controllers/guest/GuestDeclineController";
 import {
   guestRegistrationValidation,
   guestUpdateValidation,
@@ -33,7 +42,7 @@ router.post(
   sanitizeGuestBody,
   guestRegistrationValidation,
   handleValidationErrors,
-  GuestController.registerGuest
+  GuestRegistrationController.registerGuest
 );
 
 // Get guest registrations for an event
@@ -42,12 +51,12 @@ router.post(
 router.get(
   "/:eventId/guests",
   authenticateOptional,
-  GuestController.getEventGuests
+  GuestListController.getEventGuests
 );
 
 // Get guest registration by ID (for email links)
 // GET /api/guest-registrations/:id
-router.get("/guest-registrations/:id", GuestController.getGuestRegistration);
+router.get("/guest-registrations/:id", GuestRetrievalController.getGuestRegistration);
 
 // Update guest registration details (for self-service via email links)
 // PUT /api/guest-registrations/:id
@@ -58,7 +67,7 @@ router.put(
   sanitizeGuestBody,
   guestUpdateValidation,
   handleValidationErrors,
-  GuestController.updateGuestRegistration
+  GuestUpdateController.updateGuestRegistration
 );
 
 // Cancel a guest registration
@@ -70,7 +79,7 @@ router.delete(
   sanitizeCancellationBody,
   guestCancellationValidation,
   handleValidationErrors,
-  GuestController.cancelGuestRegistration
+  GuestCancellationController.cancelGuestRegistration
 );
 
 // Re-send manage link (regenerate token + email) for a guest (Admin only)
@@ -79,31 +88,31 @@ router.post(
   "/guest-registrations/:id/resend-manage-link",
   authenticate,
   requireAdmin,
-  GuestController.resendManageLink
+  GuestManageLinkController.resendManageLink
 );
 
 // Token-based self-service management (no auth)
 // GET /api/guest/manage/:token
-router.get("/guest/manage/:token", GuestController.getGuestByToken);
+router.get("/guest/manage/:token", GuestTokenRetrievalController.getGuestByToken);
 // PUT /api/guest/manage/:token
 router.put(
   "/guest/manage/:token",
   sanitizeGuestBody,
   guestUpdateValidation,
-  GuestController.updateByToken
+  GuestTokenUpdateController.updateByToken
 );
 // DELETE /api/guest/manage/:token
 router.delete(
   "/guest/manage/:token",
   sanitizeCancellationBody,
   guestCancellationValidation,
-  GuestController.cancelByToken
+  GuestTokenCancellationController.cancelByToken
 );
 
 // Guest invitation decline (token-based, no auth)
 // GET /api/guest/decline/:token
-router.get("/guest/decline/:token", GuestController.getDeclineTokenInfo);
+router.get("/guest/decline/:token", GuestDeclineController.getDeclineTokenInfo);
 // POST /api/guest/decline/:token { reason? }
-router.post("/guest/decline/:token", GuestController.submitDecline);
+router.post("/guest/decline/:token", GuestDeclineController.submitDecline);
 
 export default router;

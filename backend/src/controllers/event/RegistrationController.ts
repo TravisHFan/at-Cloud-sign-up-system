@@ -8,7 +8,7 @@ import { socketService } from "../../services/infrastructure/SocketService";
 import { EmailService } from "../../services/infrastructure/EmailServiceFacade";
 import { TrioNotificationService } from "../../services/notifications/TrioNotificationService";
 import { ResponseBuilderService } from "../../services/ResponseBuilderService";
-import { CachePatterns } from "../../services";
+import { CachePatterns } from "../../services/infrastructure/CacheService";
 import { createRoleAssignmentRejectionToken } from "../../utils/roleAssignmentRejectionToken";
 import { EventController } from "../eventController";
 import AuditLog from "../../models/AuditLog";

@@ -14,6 +14,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import PurchaseHistory from "../pages/PurchaseHistory";
+import { createDeferred } from "./fixtures/deferred";
 
 // Mock the API service module
 vi.mock("../services/api", async () => {
@@ -875,12 +876,8 @@ describe("PurchaseHistory - Refund UI", () => {
       );
 
       // Make the refund call take some time
-      (purchaseService.initiateRefund as any).mockImplementation(
-        () =>
-          new Promise((resolve) =>
-            setTimeout(() => resolve({ success: true }), 100)
-          )
-      );
+      const refund = createDeferred<{ success: boolean }>();
+      (purchaseService.initiateRefund as any).mockReturnValue(refund.promise);
 
       renderWithRouter(<PurchaseHistory />);
 

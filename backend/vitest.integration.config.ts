@@ -1,53 +1,38 @@
 /// <reference types="vitest" />
 import { defineConfig } from "vitest/config";
+import {
+  backendCoverage,
+  backendSetupFiles,
+  sharedBackendTestConfig,
+} from "./vitest.base.config";
+
+process.env.VITEST_RUN_ID ??= `${process.pid}-${Date.now()}`;
 
 export default defineConfig({
   test: {
+    ...sharedBackendTestConfig,
+    name: "db-integration",
     testTimeout: 30000,
-    environment: "node",
-    globals: true,
+    hookTimeout: 60000,
     setupFiles: [
-      "./tests/config/setup.ts",
-      "./vitest.setup.ts",
+      ...backendSetupFiles,
       "./tests/config/integrationDBSetup.ts",
     ],
     include: [
       "tests/integration/**/*.{test,spec}.ts",
-      "tests/e2e/**/*.{test,spec}.ts",
       "tests/migration/**/*.{test,spec}.ts",
     ],
     exclude: [
       "tests/legacy/**/*",
+      "tests/integration/perf/**/*",
       // Exclude any ad-hoc debug test files if accidentally added in the future
       "tests/**/debug-*.test.ts",
     ],
-    coverage: {
-      provider: "v8",
-      reporter: ["text", "lcov", "html", "json-summary"],
-      thresholds: undefined,
-      exclude: [
-        "node_modules/",
-        "dist/",
-        "tests/",
-        "src/scripts/",
-        "scripts/",
-        "src/index.ts",
-        "src/types/api-responses.ts",
-        "**/*.d.ts",
-      ],
-    },
+    coverage: backendCoverage("coverage/db-integration"),
     globalSetup: "./tests/config/globalSetup.ts",
-    sequence: {
-      hooks: "list",
-    },
-    fileParallelism: false,
-    pool: "forks",
-    poolOptions: {
-      forks: {
-        singleFork: true,
-        isolate: true,
-      },
-    },
+    fileParallelism: true,
+    maxWorkers: 2,
+    minWorkers: 1,
   },
   resolve: {
     alias: {

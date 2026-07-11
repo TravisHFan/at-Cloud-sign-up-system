@@ -92,7 +92,7 @@ describe("Auto-unpublish when all roles become non-public", () => {
     await User.deleteMany({});
     await Event.deleteMany({});
     if (openedLocal && mongoose.connection.readyState !== 0) {
-      await mongoose.connection.close();
+      // Shared integration harness owns connection lifecycle.
     }
   });
 

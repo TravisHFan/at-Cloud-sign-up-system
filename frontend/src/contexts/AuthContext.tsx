@@ -125,26 +125,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Check if this is a first login and send welcome message
       // Move this to after successful login state is set
       try {
-        console.log(
-          "🎉 Checking welcome message status for user:",
-          authUser.id
-        );
         const hasReceived = await hasWelcomeMessageBeenSent(authUser.id);
-        console.log("🎉 Welcome message status:", { hasReceived });
 
         if (!hasReceived) {
-          console.log("🎉 Sending welcome message to new user...");
           await sendWelcomeMessage(authUser, true);
-          console.log("✅ Welcome message sent successfully");
-        } else {
-          console.log("ℹ️ User already received welcome message");
         }
       } catch (error) {
         console.error("❌ Error handling welcome message:", error);
-        // Don't fail login if welcome message fails, but ensure it's visible
-        if (error instanceof Error) {
-          console.error("Welcome message error details:", error.message);
-        }
+        // Welcome-message delivery must not fail an otherwise valid login.
       }
 
       return { success: true };

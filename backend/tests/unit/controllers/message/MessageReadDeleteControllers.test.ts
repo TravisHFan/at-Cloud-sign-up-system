@@ -22,7 +22,7 @@ vi.mock("../../../../src/services/infrastructure/SocketService", () => ({
   },
 }));
 
-vi.mock("../../../../src/services", () => ({
+vi.mock("../../../../src/services/infrastructure/CacheService", () => ({
   CachePatterns: {
     invalidateUserCache: vi.fn(),
   },
@@ -39,7 +39,7 @@ vi.mock("../../../../src/services/LoggerService", () => ({
 
 import Message from "../../../../src/models/Message";
 import { socketService } from "../../../../src/services/infrastructure/SocketService";
-import { CachePatterns } from "../../../../src/services";
+import { CachePatterns } from "../../../../src/services/infrastructure/CacheService";
 
 interface MockRequest {
   user?: {

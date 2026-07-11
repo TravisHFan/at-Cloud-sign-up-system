@@ -10,6 +10,7 @@ describe("Session expired prompt and redirect", () => {
   const originalLocation = window.location;
 
   beforeEach(() => {
+    vi.useFakeTimers();
     __resetSessionPromptFlag();
     // Fresh token to be cleared
     localStorage.setItem("authToken", "test-token");
@@ -22,6 +23,7 @@ describe("Session expired prompt and redirect", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
     // Restore original fetch if we changed it
     if (originalFetch) (globalThis as any).fetch = originalFetch;
@@ -39,8 +41,7 @@ describe("Session expired prompt and redirect", () => {
     expect(window.alert).toHaveBeenCalledWith(
       "Your session has expired. Please sign in again."
     );
-    // Allow microtask + setTimeout(0)
-    await new Promise((r) => setTimeout(r, 5));
+    await vi.runAllTimersAsync();
     const assign = (window.location as any).assign as ReturnType<typeof vi.fn>;
     expect(assign).toHaveBeenCalledTimes(1);
     expect(assign).toHaveBeenCalledWith("/#/login");
@@ -81,7 +82,7 @@ describe("Session expired prompt and redirect", () => {
     expect(window.alert).toHaveBeenCalledWith(
       "Your session has expired. Please sign in again."
     );
-    await new Promise((r) => setTimeout(r, 5));
+    await vi.runAllTimersAsync();
     const assign = (window.location as any).assign as ReturnType<typeof vi.fn>;
     expect(assign).toHaveBeenCalledTimes(1);
     expect(assign).toHaveBeenCalledWith("/#/login");

@@ -53,17 +53,3 @@ export async function retryRequest(
 
   throw lastError;
 }
-
-/**
- * Creates a wrapped request function that automatically retries on connection errors.
- *
- * Usage:
- * ```ts
- * const reliableRequest = createRetryableRequest(request(app));
- * const response = await reliableRequest.get('/api/users');
- * ```
- */
-export function createRetryableRequest(requestFn: typeof import("supertest")) {
-  // This is a factory pattern - for more complex scenarios
-  return requestFn;
-}

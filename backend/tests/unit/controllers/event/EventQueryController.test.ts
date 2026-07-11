@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { Request, Response } from "express";
 import { EventQueryController } from "../../../../src/controllers/event/EventQueryController";
 import { Event } from "../../../../src/models";
-import { CachePatterns } from "../../../../src/services";
+import { CachePatterns } from "../../../../src/services/infrastructure/CacheService";
 import { ResponseBuilderService } from "../../../../src/services/ResponseBuilderService";
 
 // Mock dependencies
@@ -11,13 +11,13 @@ vi.mock("../../../../src/models", () => ({
     findById: vi.fn(),
     find: vi.fn(),
     countDocuments: vi.fn(),
+    findByIdAndUpdate: vi.fn(),
   },
 }));
 
-vi.mock("../../../../src/services", () => ({
+vi.mock("../../../../src/services/infrastructure/CacheService", () => ({
   CachePatterns: {
     getEventListing: vi.fn(),
-    getEventListingOrdering: vi.fn(),
     getEventById: vi.fn(),
   },
 }));
@@ -42,8 +42,6 @@ vi.mock("../../../../src/services/CorrelatedLogger", () => ({
 
 vi.mock("../../../../src/controllers/eventController", () => ({
   EventController: {
-    updateAllEventStatusesHelper: vi.fn(),
-    updateEventStatusIfNeeded: vi.fn(),
     toIdString: vi.fn((id) => (id ? id.toString() : "")),
   },
 }));
@@ -113,6 +111,48 @@ describe("EventQueryController", () => {
       await EventQueryController.getAllEvents(req as Request, res as Response);
 
       expect(CachePatterns.getEventListing).toHaveBeenCalled();
+    });
+
+    it("should use projected lean pagination and start the count concurrently", async () => {
+      let resolvePage: (events: Array<{ _id: string }>) => void = () => {};
+      const pageResult = new Promise<Array<{ _id: string }>>((resolve) => {
+        resolvePage = resolve;
+      });
+      const query = {
+        select: vi.fn().mockReturnThis(),
+        populate: vi.fn().mockReturnThis(),
+        sort: vi.fn().mockReturnThis(),
+        skip: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        lean: vi.fn().mockReturnValue(pageResult),
+      };
+
+      vi.mocked(CachePatterns.getEventListing).mockImplementation(
+        async (_key, fetcher) => fetcher(),
+      );
+      vi.mocked(Event.find).mockReturnValue(query as any);
+      vi.mocked(Event.countDocuments).mockResolvedValue(1);
+      vi.mocked(
+        ResponseBuilderService.buildEventsWithRegistrations,
+      ).mockResolvedValue([]);
+
+      const responsePromise = EventQueryController.getAllEvents(
+        req as Request,
+        res as Response,
+      );
+      await Promise.resolve();
+
+      expect(Event.countDocuments).toHaveBeenCalledOnce();
+      const selectedFields = query.select.mock.calls[0][0] as string;
+      expect(selectedFields).toContain("title");
+      expect(selectedFields).toContain("roles");
+      expect(selectedFields).toContain("status");
+      expect(query.skip).toHaveBeenCalledWith(0);
+      expect(query.limit).toHaveBeenCalledWith(10);
+      expect(query.lean).toHaveBeenCalledOnce();
+
+      resolvePage([{ _id: "event-1" }]);
+      await responsePromise;
     });
 
     it("should handle status filtering", async () => {
@@ -330,24 +370,6 @@ describe("EventQueryController", () => {
       });
     });
 
-    it("should return 404 when event is not found from findById", async () => {
-      req.params = { id: "507f1f77bcf86cd799439011" };
-
-      // Event.findById returns null
-      const findByIdMock = vi.fn().mockReturnValue({
-        populate: vi.fn().mockResolvedValue(null),
-      });
-      vi.mocked(Event.findById).mockImplementation(findByIdMock);
-
-      await EventQueryController.getEventById(req as Request, res as Response);
-
-      expect(statusMock).toHaveBeenCalledWith(404);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        message: "Event not found.",
-      });
-    });
-
     it("should return 404 when buildEventWithRegistrations returns null", async () => {
       req.params = { id: "507f1f77bcf86cd799439011" };
 
@@ -369,7 +391,7 @@ describe("EventQueryController", () => {
       expect(statusMock).toHaveBeenCalledWith(404);
       expect(jsonMock).toHaveBeenCalledWith({
         success: false,
-        message: "Event not found or failed to build registration data.",
+        message: "Event not found.",
       });
     });
 
@@ -398,7 +420,7 @@ describe("EventQueryController", () => {
 
       await EventQueryController.getEventById(req as Request, res as Response);
 
-      expect(Event.findById).toHaveBeenCalledWith("507f1f77bcf86cd799439011");
+      expect(Event.findById).not.toHaveBeenCalled();
       expect(
         ResponseBuilderService.buildEventWithRegistrations,
       ).toHaveBeenCalled();
@@ -411,10 +433,9 @@ describe("EventQueryController", () => {
     it("should handle errors gracefully", async () => {
       req.params = { id: "507f1f77bcf86cd799439011" };
 
-      const findByIdMock = vi.fn().mockReturnValue({
-        populate: vi.fn().mockRejectedValue(new Error("Database error")),
-      });
-      vi.mocked(Event.findById).mockImplementation(findByIdMock);
+      vi.mocked(
+        ResponseBuilderService.buildEventWithRegistrations,
+      ).mockRejectedValue(new Error("Database error"));
 
       await EventQueryController.getEventById(req as Request, res as Response);
 
@@ -489,7 +510,7 @@ describe("EventQueryController", () => {
       ).toHaveBeenCalledWith("507f1f77bcf86cd799439011", undefined, undefined);
     });
 
-    it("should log multiple roles correctly", async () => {
+    it("should return multiple hydrated roles", async () => {
       req.params = { id: "507f1f77bcf86cd799439011" };
 
       const mockEvent = {
@@ -985,7 +1006,7 @@ describe("EventQueryController", () => {
 
       await EventQueryController.getAllEvents(req as Request, res as Response);
 
-      expect(sortMock).toHaveBeenCalledWith({ date: 1, time: 1 });
+      expect(sortMock).toHaveBeenCalledWith({ date: 1, time: 1, _id: 1 });
     });
 
     it("should sort by date with time as tie-breaker (descending)", async () => {
@@ -1014,7 +1035,7 @@ describe("EventQueryController", () => {
 
       await EventQueryController.getAllEvents(req as Request, res as Response);
 
-      expect(sortMock).toHaveBeenCalledWith({ date: -1, time: -1 });
+      expect(sortMock).toHaveBeenCalledWith({ date: -1, time: -1, _id: 1 });
     });
 
     it("should sort by title with date/time tie-breakers and apply collation", async () => {
@@ -1045,7 +1066,12 @@ describe("EventQueryController", () => {
       await EventQueryController.getAllEvents(req as Request, res as Response);
 
       expect(collationMock).toHaveBeenCalledWith({ locale: "en", strength: 2 });
-      expect(sortMock).toHaveBeenCalledWith({ title: 1, date: 1, time: 1 });
+      expect(sortMock).toHaveBeenCalledWith({
+        title: 1,
+        date: 1,
+        time: 1,
+        _id: 1,
+      });
     });
 
     it("should sort by organizer with title/date/time tie-breakers and apply collation", async () => {
@@ -1081,6 +1107,7 @@ describe("EventQueryController", () => {
         title: 1,
         date: 1,
         time: 1,
+        _id: 1,
       });
     });
 
@@ -1117,6 +1144,7 @@ describe("EventQueryController", () => {
         title: 1,
         date: 1,
         time: 1,
+        _id: 1,
       });
     });
   });
@@ -1394,11 +1422,8 @@ describe("EventQueryController", () => {
     });
   });
 
-  describe("getAllEvents - status filtering and updateEventStatus", () => {
-    it("should call updateAllEventStatusesHelper when status filter is provided", async () => {
-      const { EventController } =
-        await import("../../../../src/controllers/eventController");
-
+  describe("getAllEvents - read-only status handling", () => {
+    it("should not write statuses when a status filter is provided", async () => {
       vi.mocked(CachePatterns.getEventListing).mockImplementation(
         async (_key, fetcher) => {
           return await fetcher();
@@ -1422,13 +1447,10 @@ describe("EventQueryController", () => {
 
       await EventQueryController.getAllEvents(req as Request, res as Response);
 
-      expect(EventController.updateAllEventStatusesHelper).toHaveBeenCalled();
+      expect(Event.findByIdAndUpdate).not.toHaveBeenCalled();
     });
 
-    it("should call updateAllEventStatusesHelper when statuses filter is provided", async () => {
-      const { EventController } =
-        await import("../../../../src/controllers/eventController");
-
+    it("should not write statuses when multiple statuses are provided", async () => {
       vi.mocked(CachePatterns.getEventListing).mockImplementation(
         async (_key, fetcher) => {
           return await fetcher();
@@ -1452,7 +1474,7 @@ describe("EventQueryController", () => {
 
       await EventQueryController.getAllEvents(req as Request, res as Response);
 
-      expect(EventController.updateAllEventStatusesHelper).toHaveBeenCalled();
+      expect(Event.findByIdAndUpdate).not.toHaveBeenCalled();
     });
 
     it("should build $in filter when multi-statuses are provided", async () => {
@@ -1488,10 +1510,7 @@ describe("EventQueryController", () => {
       ]);
     });
 
-    it("should call updateEventStatusIfNeeded for each event when no status filter", async () => {
-      const { EventController } =
-        await import("../../../../src/controllers/eventController");
-
+    it("should not write individual statuses when no status filter is provided", async () => {
       vi.mocked(CachePatterns.getEventListing).mockImplementation(
         async (_key, fetcher) => {
           return await fetcher();
@@ -1530,16 +1549,11 @@ describe("EventQueryController", () => {
 
       await EventQueryController.getAllEvents(req as Request, res as Response);
 
-      // Should be called for each event
-      expect(EventController.updateEventStatusIfNeeded).toHaveBeenCalledTimes(
-        2,
-      );
+      expect(Event.findByIdAndUpdate).not.toHaveBeenCalled();
     });
 
     it("should NOT call updateEventStatusIfNeeded when status filter is provided", async () => {
-      const { EventController } =
-        await import("../../../../src/controllers/eventController");
-      vi.mocked(EventController.updateEventStatusIfNeeded).mockClear();
+      vi.mocked(Event.findByIdAndUpdate).mockClear();
 
       vi.mocked(CachePatterns.getEventListing).mockImplementation(
         async (_key, fetcher) => {
@@ -1569,7 +1583,7 @@ describe("EventQueryController", () => {
       await EventQueryController.getAllEvents(req as Request, res as Response);
 
       // Should NOT be called when status filter is present
-      expect(EventController.updateEventStatusIfNeeded).not.toHaveBeenCalled();
+      expect(Event.findByIdAndUpdate).not.toHaveBeenCalled();
     });
   });
 
@@ -1652,7 +1666,7 @@ describe("EventQueryController", () => {
 
       await EventQueryController.getAllEvents(req as Request, res as Response);
 
-      expect(sortMock).toHaveBeenCalledWith({ date: 1, time: 1 });
+      expect(sortMock).toHaveBeenCalledWith({ date: 1, time: 1, _id: 1 });
     });
 
     it("should work with default sortOrder (asc) when not specified", async () => {
@@ -1681,7 +1695,12 @@ describe("EventQueryController", () => {
 
       await EventQueryController.getAllEvents(req as Request, res as Response);
 
-      expect(sortMock).toHaveBeenCalledWith({ title: 1, date: 1, time: 1 });
+      expect(sortMock).toHaveBeenCalledWith({
+        title: 1,
+        date: 1,
+        time: 1,
+        _id: 1,
+      });
     });
   });
 
@@ -1759,16 +1778,13 @@ describe("EventQueryController", () => {
 
       req.query = {};
 
-      // The try/catch in fetcher should handle this and return empty events
       await EventQueryController.getAllEvents(req as Request, res as Response);
 
-      // Should still complete successfully with empty events
-      expect(jsonMock).toHaveBeenCalled();
+      expect(statusMock).toHaveBeenCalledWith(500);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: false,
+        message: "Failed to retrieve events.",
+      });
     });
   });
-
-  // Note: The production caching path (lines 181-266) is intentionally skipped
-  // in unit tests because it checks process.env.VITEST === "true". This path
-  // uses CachePatterns.getEventListingOrdering for optimized ID-based caching
-  // and should be tested via integration tests if needed.
 });

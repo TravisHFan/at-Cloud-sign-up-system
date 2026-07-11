@@ -1,5 +1,14 @@
 import { Router, Request, Response } from "express";
-import { ProgramController } from "../controllers/programController";
+import CreationController from "../controllers/programs/CreationController";
+import ListController from "../controllers/programs/ListController";
+import RetrievalController from "../controllers/programs/RetrievalController";
+import EventListController from "../controllers/programs/EventListController";
+import ParticipantsController from "../controllers/programs/ParticipantsController";
+import UpdateController from "../controllers/programs/UpdateController";
+import DeletionController from "../controllers/programs/DeletionController";
+import AdminEnrollController from "../controllers/programs/AdminEnrollController";
+import AdminUnenrollController from "../controllers/programs/AdminUnenrollController";
+import SelfUnenrollController from "../controllers/programs/SelfUnenrollController";
 import { authenticate, authenticateOptional } from "../middleware/auth";
 import { EmailService } from "../services/infrastructure/EmailServiceFacade";
 import { EmailRecipientUtils } from "../utils/emailRecipientUtils";
@@ -9,33 +18,33 @@ import mongoose from "mongoose";
 const router = Router();
 
 // Public list and get (with optional auth for contact info filtering)
-router.get("/", ProgramController.list);
-router.get("/:id", authenticateOptional, ProgramController.getById);
-router.get("/:id/events", ProgramController.listEvents);
+router.get("/", ListController.list);
+router.get("/:id", authenticateOptional, RetrievalController.getById);
+router.get("/:id/events", EventListController.listEvents);
 router.get(
   "/:id/participants",
   authenticateOptional,
-  ProgramController.getParticipants,
+  ParticipantsController.getParticipants,
 );
 
 // Authenticated admin-only operations are validated inside controller
-router.post("/", authenticate, ProgramController.create);
-router.put("/:id", authenticate, ProgramController.update);
-router.delete("/:id", authenticate, ProgramController.remove);
+router.post("/", authenticate, CreationController.create);
+router.put("/:id", authenticate, UpdateController.update);
+router.delete("/:id", authenticate, DeletionController.remove);
 
 // Admin enrollment operations
-router.post("/:id/admin-enroll", authenticate, ProgramController.adminEnroll);
+router.post("/:id/admin-enroll", authenticate, AdminEnrollController.adminEnroll);
 router.delete(
   "/:id/admin-enroll",
   authenticate,
-  ProgramController.adminUnenroll,
+  AdminUnenrollController.adminUnenroll,
 );
 router.get(
   "/:id/unenroll-preview",
   authenticate,
-  ProgramController.selfUnenrollPreview,
+  SelfUnenrollController.preview,
 );
-router.post("/:id/unenroll", authenticate, ProgramController.selfUnenroll);
+router.post("/:id/unenroll", authenticate, SelfUnenrollController.unenroll);
 
 // Email all participants (mentors, class reps, mentees) - authenticated
 router.post("/:id/email", authenticate, async (req: Request, res: Response) => {

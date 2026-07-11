@@ -1,5 +1,11 @@
 # Test Coverage Audit & Improvement Plan
 
+> Historical snapshot from November 2025. Its file inventory and metrics are
+> intentionally preserved for context but are no longer current. See
+> [CODEBASE_OPTIMIZATION_TODO.md](./CODEBASE_OPTIMIZATION_TODO.md) for the final
+> July 2026 results and [TEST_PROTECTION_MATRIX.md](./TEST_PROTECTION_MATRIX.md)
+> for the active protection model.
+
 **Date:** 2025-11-07  
 **Purpose:** Comprehensive analysis of test coverage status and systematic plan to achieve near-100% coverage
 

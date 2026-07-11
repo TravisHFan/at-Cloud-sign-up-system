@@ -1,15 +1,7 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import {
-  TrioTransaction,
-  TrioTransactionManager,
-} from "../../../../src/services/notifications/TrioTransaction";
+import { describe, it, expect, vi } from "vitest";
+import { TrioTransaction } from "../../../../src/services/notifications/TrioTransaction";
 
 describe("TrioTransaction - additional branches", () => {
-  beforeEach(() => {
-    (TrioTransactionManager as any).activeTransactions = new Map();
-    (TrioTransactionManager as any).completedTransactions = [];
-  });
-
   it("summary shows ongoing when not completed and types list", () => {
     const tx = new TrioTransaction();
     tx.addOperation("email", { id: "e1", rollback: vi.fn() });
@@ -44,18 +36,6 @@ describe("TrioTransaction - additional branches", () => {
       expect.stringContaining("already rolled back")
     );
     logSpy.mockRestore();
-  });
-
-  it("getStatistics returns zeros with no history (averageDuration=0)", () => {
-    const stats = TrioTransactionManager.getStatistics();
-    expect(stats).toEqual({
-      active: 0,
-      totalCompleted: 0,
-      committed: 0,
-      rolledBack: 0,
-      failed: 0,
-      averageDuration: 0,
-    });
   });
 
   it("commit catch-path sets status failed when an unexpected error occurs", async () => {

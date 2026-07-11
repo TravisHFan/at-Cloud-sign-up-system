@@ -399,7 +399,8 @@ programSchema.pre("validate", function (next) {
 // Indexes
 programSchema.index({ programType: 1 });
 programSchema.index({ createdBy: 1 });
-programSchema.index({ createdAt: -1 });
+programSchema.index({ createdAt: -1, _id: -1 });
+programSchema.index({ programType: 1, createdAt: -1, _id: -1 });
 
 export default mongoose.models.Program ||
   mongoose.model<IProgram>("Program", programSchema);

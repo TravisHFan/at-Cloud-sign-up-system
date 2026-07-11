@@ -4,14 +4,11 @@ import {
   useState,
   useEffect,
   useCallback,
+  useMemo,
 } from "react";
 import type { ReactNode } from "react";
 import { useToastReplacement } from "./NotificationModalContext";
 import type { Notification, SystemMessage } from "../types/notification";
-import {
-  getAllUsers as getCentralizedUsers,
-  getUserById,
-} from "../data/mockUserData";
 import { notificationService } from "../services/notificationService";
 import { systemMessageService } from "../services/systemMessageService";
 import { authService } from "../services/api";
@@ -25,9 +22,6 @@ interface NotificationContextType {
   unreadCount: number;
   markAsRead: (notificationId: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
-  addNotification: (
-    notification: Omit<Notification, "id" | "createdAt">
-  ) => void;
   removeNotification: (notificationId: string) => Promise<void>;
 
   // Combined notifications for bell dropdown (includes system messages converted to notifications)
@@ -38,45 +32,6 @@ interface NotificationContextType {
   systemMessages: SystemMessage[];
   markSystemMessageAsRead: (messageId: string) => Promise<void>;
   reloadSystemMessages: () => Promise<void>;
-  addSystemMessage: (
-    message: Omit<SystemMessage, "id" | "createdAt">
-  ) => Promise<void>;
-  addAutoSystemMessage: (
-    message: Omit<SystemMessage, "id" | "createdAt">
-  ) => Promise<void>;
-  deleteSystemMessage: (messageId: string) => void;
-  addRoleChangeSystemMessage: (data: {
-    targetUserName: string;
-    targetUserId: string;
-    fromSystemAuthLevel: string;
-    toSystemAuthLevel: string;
-    actorUserId: string;
-    actorName: string;
-  }) => void;
-
-  // User management
-  getAllUsers: () => Array<{
-    id: string;
-    firstName: string;
-    lastName: string;
-    username: string;
-    avatar?: string;
-    gender: "male" | "female";
-  }>;
-  getUserById: (userId: string) =>
-    | {
-        id: string;
-        firstName: string;
-        lastName: string;
-        username: string;
-        avatar?: string;
-        gender: "male" | "female";
-      }
-    | undefined;
-
-  // REMOVED: scheduleEventReminder
-  // This was a frontend remnant that caused duplicate bell notifications.
-  // Event reminders are now handled by the backend EventReminderScheduler.
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(
@@ -146,7 +101,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
 
   // Real-time WebSocket listeners for instant updates
   useEffect(() => {
-    if (!currentUser || !socket?.socket) return;
+    if (!currentUser || !socket.socket) return;
 
     type CreatorInfo = {
       firstName?: string;
@@ -397,20 +352,15 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
-    // Add event listeners - only once per socket connection
+    // On reconnect, fetch the latest messages to avoid missing any while offline.
+    // Skip the initial connection because the normal load effects already fetch.
     const socketInstance = socket.socket;
-
-    // Remove any existing listeners first to prevent duplicates
-    socketInstance.off("system_message_update");
-    socketInstance.off("bell_notification_update");
-    socketInstance.off("unread_count_update");
-
-    socketInstance.on("system_message_update", handleSystemMessageUpdate);
-    socketInstance.on("bell_notification_update", handleBellNotificationUpdate);
-    socketInstance.on("unread_count_update", handleUnreadCountUpdate);
-
-    // On reconnect, fetch the latest messages to avoid missing any while offline
+    let hasConnected = socketInstance.connected;
     const handleReconnect = async () => {
+      if (!hasConnected) {
+        hasConnected = true;
+        return;
+      }
       try {
         await loadSystemMessages();
         const data = await notificationService.getNotifications();
@@ -428,227 +378,137 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
         console.error("Failed to refresh after reconnect:", err);
       }
     };
+
+    socketInstance.on("system_message_update", handleSystemMessageUpdate);
+    socketInstance.on("bell_notification_update", handleBellNotificationUpdate);
+    socketInstance.on("unread_count_update", handleUnreadCountUpdate);
     socketInstance.on("connect", handleReconnect);
 
-    // Cleanup on unmount or dependency change
     return () => {
       socketInstance.off("system_message_update", handleSystemMessageUpdate);
       socketInstance.off(
         "bell_notification_update",
-        handleBellNotificationUpdate
+        handleBellNotificationUpdate,
       );
       socketInstance.off("unread_count_update", handleUnreadCountUpdate);
       socketInstance.off("connect", handleReconnect);
     };
   }, [
     currentUser,
-    socket?.socket,
+    socket.socket,
     loadSystemMessages,
     notification,
     updateUser,
   ]);
 
-  const markAsRead = async (notificationId: string) => {
-    try {
-      // Only make the API call - let WebSocket events handle all UI updates
-      await notificationService.markAsRead(notificationId);
-      // Removed manual state updates and loadSystemMessages() call
-      // WebSocket events will handle:
-      // - Bell notification read status update
-      // - System message read status update (if applicable)
-      // - Unread count updates
-    } catch (error) {
-      console.error("Failed to mark notification as read:", error);
-      notification.error("Failed to mark notification as read");
-    }
-  };
+  const markAsRead = useCallback(
+    async (notificationId: string) => {
+      try {
+        await notificationService.markAsRead(notificationId);
+      } catch (error) {
+        console.error("Failed to mark notification as read:", error);
+        notification.error("Failed to mark notification as read");
+      }
+    },
+    [notification],
+  );
 
-  const markAllAsRead = async () => {
+  const markAllAsRead = useCallback(async () => {
     try {
-      // Only make the API call - let WebSocket events handle all UI updates
       await notificationService.markAllAsRead();
-      // Removed manual state updates and loadSystemMessages() call
-      // WebSocket events will handle:
-      // - All bell notifications marked as read
-      // - All system messages marked as read (if applicable)
-      // - Unread count updates
     } catch (error) {
       console.error("Failed to mark all notifications as read:", error);
       notification.error("Failed to mark all notifications as read");
     }
-  };
+  }, [notification]);
 
-  const addNotification = (
-    notification: Omit<Notification, "id" | "createdAt">
-  ) => {
-    const newNotification: Notification = {
-      ...notification,
-      id: `local-${Date.now()}-${Math.random()}`,
-      createdAt: new Date().toISOString(),
-    };
-
-    setNotifications((prev) => [newNotification, ...prev]);
-  };
-
-  const removeNotification = async (notificationId: string) => {
-    try {
-      await notificationService.deleteNotification(notificationId);
-      // Refresh system messages to get updated bell notification states
-      await loadSystemMessages();
-      setNotifications((prev) =>
-        prev.filter((notification) => notification.id !== notificationId)
-      );
-    } catch (error) {
-      console.error("Failed to remove notification:", error);
-      notification.error("Failed to remove notification");
-    }
-  };
-
-  const markSystemMessageAsRead = async (messageId: string) => {
-    try {
-      // Only make the API call - let WebSocket events handle all UI updates
-      await systemMessageService.markAsRead(messageId);
-
-      // TEMPORARY: Add immediate manual state update to fix the UI issue
-      // Remove this once WebSocket events are confirmed working
-      setSystemMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === messageId
-            ? { ...msg, isRead: true, readAt: new Date().toISOString() }
-            : msg
-        )
-      );
-
-      // Also update the corresponding bell notification to decrease the count immediately
-      setNotifications((prev) =>
-        prev.map((notification) =>
-          notification.id === messageId
-            ? {
-                ...notification,
-                isRead: true,
-                readAt: new Date().toISOString(),
-              }
-            : notification
-        )
-      );
-
-      // Removed manual state updates - WebSocket events will handle:
-      // - System message read status update
-      // - Bell notification read status update
-      // - Unread count updates
-    } catch (error) {
-      console.error("Failed to mark system message as read:", error);
-      notification.error("Failed to mark system message as read");
-    }
-  };
-
-  const addSystemMessage = async (
-    _message: Omit<SystemMessage, "id" | "createdAt">
-  ): Promise<void> => {
-    console.warn(
-      "System messages should be created server-side by admin operations"
-    );
-    console.warn("This method is deprecated in user-centric architecture");
-    console.warn(
-      "System messages will automatically appear in user documents when created by admin"
-    );
-    throw new Error(
-      "System message creation not supported in user-centric mode"
-    );
-  };
-
-  const addAutoSystemMessage = async (
-    _message: Omit<SystemMessage, "id" | "createdAt">
-  ): Promise<void> => {
-    console.warn("Auto system messages should be created server-side");
-    console.warn("This method is deprecated in user-centric architecture");
-    console.warn(
-      "System messages will automatically appear in user documents when created by server"
-    );
-  };
-
-  const deleteSystemMessage = (_messageId: string) => {
-    console.warn(
-      "System message deletion should be handled server-side by admin operations"
-    );
-    console.warn("This method is deprecated in user-centric architecture");
-  };
-
-  const addRoleChangeSystemMessage = (_data: {
-    targetUserName: string;
-    targetUserId: string;
-    fromSystemAuthLevel: string;
-    toSystemAuthLevel: string;
-    actorUserId: string;
-    actorName: string;
-  }) => {
-    console.warn(
-      "Role change system messages should be created server-side during role update operations"
-    );
-    console.warn("This method is deprecated in user-centric architecture");
-    console.warn(
-      "System messages will automatically appear in user documents when roles are changed server-side"
-    );
-  };
-
-  const getAllUsers = () => {
-    return getCentralizedUsers().map((user) => ({
-      ...user,
-      avatar: user.avatar || undefined, // Convert null to undefined
-    }));
-  };
-
-  const getUserByIdWrapper = (userId: string) => {
-    const user = getUserById(userId);
-    if (!user) return undefined;
-    return {
-      ...user,
-      avatar: user.avatar || undefined, // Convert null to undefined
-    };
-  };
-
-  // REMOVED: scheduleEventReminder function
-  // This was a frontend remnant that created duplicate bell notifications.
-  // Event reminders are now handled by the backend scheduler which creates
-  // proper system messages that automatically become bell notifications.
-
-  // Compute values
-  const unreadCount = notifications.filter(
-    (notification) => !notification.isRead
-  ).length;
-
-  // Use only bell notifications for the dropdown - they already include system messages
-  // The unified system provides bell notifications that are the canonical source for the bell dropdown
-  const allNotifications = notifications.sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  const removeNotification = useCallback(
+    async (notificationId: string) => {
+      try {
+        await notificationService.deleteNotification(notificationId);
+        await loadSystemMessages();
+        setNotifications((prev) =>
+          prev.filter((item) => item.id !== notificationId),
+        );
+      } catch (error) {
+        console.error("Failed to remove notification:", error);
+        notification.error("Failed to remove notification");
+      }
+    },
+    [loadSystemMessages, notification],
   );
 
-  // Use only bell notifications for total count - they already include all relevant notifications
+  const markSystemMessageAsRead = useCallback(
+    async (messageId: string) => {
+      try {
+        await systemMessageService.markAsRead(messageId);
+        const readAt = new Date().toISOString();
+
+        setSystemMessages((prev) =>
+          prev.map((message) =>
+            message.id === messageId
+              ? { ...message, isRead: true, readAt }
+              : message,
+          ),
+        );
+        setNotifications((prev) =>
+          prev.map((item) =>
+            item.id === messageId
+              ? { ...item, isRead: true, readAt }
+              : item,
+          ),
+        );
+      } catch (error) {
+        console.error("Failed to mark system message as read:", error);
+        notification.error("Failed to mark system message as read");
+      }
+    },
+    [notification],
+  );
+
+  const unreadCount = useMemo(
+    () => notifications.filter((item) => !item.isRead).length,
+    [notifications],
+  );
+  const allNotifications = useMemo(
+    () =>
+      [...notifications].sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      ),
+    [notifications],
+  );
   const totalUnreadCount = unreadCount;
 
+  const contextValue = useMemo<NotificationContextType>(
+    () => ({
+      notifications,
+      unreadCount,
+      markAsRead,
+      markAllAsRead,
+      removeNotification,
+      allNotifications,
+      totalUnreadCount,
+      systemMessages,
+      markSystemMessageAsRead,
+      reloadSystemMessages: loadSystemMessages,
+    }),
+    [
+      notifications,
+      unreadCount,
+      markAsRead,
+      markAllAsRead,
+      removeNotification,
+      allNotifications,
+      totalUnreadCount,
+      systemMessages,
+      markSystemMessageAsRead,
+      loadSystemMessages,
+    ],
+  );
+
   return (
-    <NotificationContext.Provider
-      value={{
-        notifications,
-        unreadCount,
-        markAsRead,
-        markAllAsRead,
-        addNotification,
-        removeNotification,
-        allNotifications,
-        totalUnreadCount,
-        systemMessages,
-        markSystemMessageAsRead,
-        reloadSystemMessages: loadSystemMessages,
-        addSystemMessage,
-        addAutoSystemMessage,
-        addRoleChangeSystemMessage,
-        deleteSystemMessage,
-        getAllUsers,
-        getUserById: getUserByIdWrapper,
-        // scheduleEventReminder: removed - was frontend remnant causing duplicate bell notifications
-      }}
-    >
+    <NotificationContext.Provider value={contextValue}>
       {children}
     </NotificationContext.Provider>
   );

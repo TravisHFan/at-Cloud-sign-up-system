@@ -7,9 +7,9 @@
 import { Request, Response } from "express";
 import { User } from "../../models";
 import { EmailService } from "../../services/infrastructure/EmailServiceFacade";
-import { CachePatterns } from "../../services";
+import { CachePatterns } from "../../services/infrastructure/CacheService";
 import GuestMigrationService from "../../services/GuestMigrationService";
-import { createLogger } from "../../services";
+import { createLogger } from "../../services/LoggerService";
 import { UserDocLike, LoggerLike, toIdString } from "./types";
 
 export default class EmailVerificationController {

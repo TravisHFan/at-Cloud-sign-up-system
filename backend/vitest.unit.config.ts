@@ -1,59 +1,39 @@
 /// <reference types="vitest" />
 import { defineConfig } from "vitest/config";
+import {
+  backendCoverage,
+  backendSetupFiles,
+  sharedBackendTestConfig,
+} from "./vitest.base.config";
+import { coverageThresholds } from "../config/coverage-thresholds";
 
 const disableCoverageThresholds =
   process.env.VITEST_DISABLE_COVERAGE_THRESHOLDS === "true";
 
 export default defineConfig({
   test: {
+    ...sharedBackendTestConfig,
     testTimeout: 10000,
-    environment: "node",
-    globals: true,
-    setupFiles: ["./tests/config/setup.ts", "./vitest.setup.ts"],
+    setupFiles: backendSetupFiles,
     include: ["src/**/*.{test,spec}.ts", "tests/unit/**/*.{test,spec}.ts"],
     exclude: [
       "tests/legacy/**/*",
       "tests/integration/**/*",
+      "tests/http-contract/**/*",
       "tests/e2e/**/*",
       "tests/migration/**/*",
       // Exclude any ad-hoc debug test files if accidentally added in the future
       "tests/**/debug-*.test.ts",
     ],
-    coverage: {
-      provider: "v8",
-      reporter: ["text", "lcov", "html", "json-summary"],
-      thresholds: disableCoverageThresholds
+    coverage: backendCoverage(
+      "coverage/unit",
+      disableCoverageThresholds
         ? undefined
-        : {
-            lines: 90,
-            statements: 90,
-            functions: 90,
-            branches: 85,
-          },
-      exclude: [
-        "node_modules/",
-        "dist/",
-        "tests/",
-        "src/scripts/",
-        "scripts/",
-        "src/index.ts",
-        "src/types/api-responses.ts",
-        "**/*.d.ts",
-      ],
-    },
-    // Keep the conservative isolation settings until mock-polluted unit files
-    // are modernized in smaller follow-up passes.
-    sequence: {
-      hooks: "list",
-    },
-    fileParallelism: false,
-    pool: "forks",
-    poolOptions: {
-      forks: {
-        singleFork: true,
-        isolate: true,
-      },
-    },
+        : { ...coverageThresholds.backend },
+    ),
+    fileParallelism: true,
+    maxWorkers: 2,
+    minWorkers: 1,
   },
   resolve: {
     alias: {

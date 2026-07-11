@@ -429,6 +429,7 @@ export class WebhookController {
               const bundlePromoCode = await PromoCode.create({
                 code: generatedCode,
                 type: "bundle_discount",
+                applicableToType: "program",
                 discountAmount: bundleConfig.discountAmount,
                 ownerId: purchase.userId,
                 excludedProgramId: purchase.programId, // Can't use on same program

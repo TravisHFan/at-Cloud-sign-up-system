@@ -103,8 +103,6 @@ describe("Role assignment rejection rate limiting", () => {
           );
         }
       }
-      // slight delay to avoid overwhelming underlying server / parser in rapid loop
-      await new Promise((r) => setTimeout(r, 5));
     }
     expect(limited).toBe(true);
     const metrics = RejectionMetricsService.getAll();

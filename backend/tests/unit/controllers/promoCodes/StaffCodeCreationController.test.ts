@@ -4,12 +4,12 @@ import mongoose from "mongoose";
 import StaffCodeCreationController from "../../../../src/controllers/promoCodes/StaffCodeCreationController";
 import PromoCode from "../../../../src/models/PromoCode";
 import User from "../../../../src/models/User";
-import { EmailService } from "../../../../src/services";
+import { EmailService } from "../../../../src/services/infrastructure/EmailServiceFacade";
 
 // Mock dependencies
 vi.mock("../../../../src/models/PromoCode");
 vi.mock("../../../../src/models/User");
-vi.mock("../../../../src/services");
+vi.mock("../../../../src/services/infrastructure/EmailServiceFacade");
 vi.mock("../../../../src/controllers/unifiedMessageController", () => ({
   UnifiedMessageController: {
     createTargetedSystemMessage: vi.fn().mockResolvedValue({}),

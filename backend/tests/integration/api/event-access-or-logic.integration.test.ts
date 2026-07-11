@@ -23,7 +23,7 @@ describe("Event Access - OR Logic (Purchase ANY associated program)", () => {
   });
 
   afterAll(async () => {
-    await mongoose.connection.close();
+    // Shared integration harness owns connection lifecycle.
   });
 
   beforeEach(async () => {

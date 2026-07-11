@@ -206,7 +206,7 @@ export const mockRouterUtils = {
 export const submitForm = async (form: HTMLFormElement) => {
   const submitEvent = new Event("submit", { bubbles: true, cancelable: true });
   form.dispatchEvent(submitEvent);
-  await new Promise((resolve) => setTimeout(resolve, 0)); // Wait for async validation
+  await Promise.resolve(); // Flush async validation microtasks.
 };
 
 export const fillFormField = (

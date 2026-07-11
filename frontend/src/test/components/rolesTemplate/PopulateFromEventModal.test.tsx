@@ -4,6 +4,7 @@ import "@testing-library/jest-dom/vitest";
 import PopulateFromEventModal from "../../../../src/components/rolesTemplate/PopulateFromEventModal";
 import type { EventData } from "../../../../src/types/event";
 import { eventService } from "../../../../src/services/api";
+import { createDeferred } from "../../fixtures/deferred";
 
 vi.mock("../../../../src/services/api", () => ({
   eventService: {
@@ -527,25 +528,17 @@ describe("PopulateFromEventModal", () => {
   });
 
   it("displays loading state while fetching events", async () => {
-    vi.mocked(eventService.getEvents).mockImplementation(
-      () =>
-        new Promise((resolve) =>
-          setTimeout(
-            () =>
-              resolve({
-                events: [],
-                pagination: {
-                  currentPage: 1,
-                  totalPages: 0,
-                  totalEvents: 0,
-                  hasNext: false,
-                  hasPrev: false,
-                },
-              }),
-            100
-          )
-        )
-    );
+    const events = createDeferred<{
+      events: never[];
+      pagination: {
+        currentPage: number;
+        totalPages: number;
+        totalEvents: number;
+        hasNext: boolean;
+        hasPrev: boolean;
+      };
+    }>();
+    vi.mocked(eventService.getEvents).mockReturnValue(events.promise);
 
     render(
       <PopulateFromEventModal
@@ -557,6 +550,17 @@ describe("PopulateFromEventModal", () => {
     );
 
     expect(screen.getByText(/Loading/i)).toBeInTheDocument();
+
+    events.resolve({
+      events: [],
+      pagination: {
+        currentPage: 1,
+        totalPages: 0,
+        totalEvents: 0,
+        hasNext: false,
+        hasPrev: false,
+      },
+    });
 
     await waitFor(() => {
       expect(screen.queryByText(/Loading/i)).toBeNull();

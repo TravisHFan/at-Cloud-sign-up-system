@@ -38,6 +38,23 @@ export default tseslint.config([
       reportUnusedDisableDirectives: true,
     },
   },
+  {
+    files: ["src/services/api/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["./index", "../api", "../api/index"],
+              message:
+                "API modules must depend on their concrete peers, never the aggregate API surface.",
+            },
+          ],
+        },
+      ],
+    },
+  },
   // Relax rules in test files to reduce noise while keeping production strict
   {
     files: ["**/*.test.{ts,tsx}", "src/test/**/*.{ts,tsx}"],

@@ -1,5 +1,14 @@
 import { Router } from "express";
-import { AnalyticsController } from "../controllers/analyticsController";
+import OverviewAnalyticsController from "../controllers/analytics/OverviewAnalyticsController";
+import UserAnalyticsController from "../controllers/analytics/UserAnalyticsController";
+import EventAnalyticsController from "../controllers/analytics/EventAnalyticsController";
+import EngagementAnalyticsController from "../controllers/analytics/EngagementAnalyticsController";
+import AttendanceAnalyticsController from "../controllers/analytics/AttendanceAnalyticsController";
+import ProgramAnalyticsController from "../controllers/analytics/ProgramAnalyticsController";
+import DonationAnalyticsController from "../controllers/analytics/DonationAnalyticsController";
+import FinancialAnalyticsController from "../controllers/analytics/FinancialAnalyticsController";
+import TrendsAnalyticsController from "../controllers/analytics/TrendsAnalyticsController";
+import ExportAnalyticsController from "../controllers/analytics/ExportAnalyticsController";
 import { authenticate, authorizePermission } from "../middleware/auth";
 import { PERMISSIONS } from "../utils/roleUtils";
 import { analyticsLimiter, exportLimiter } from "../middleware/rateLimiting";
@@ -11,35 +20,35 @@ router.use(authenticate);
 router.use(authorizePermission(PERMISSIONS.VIEW_SYSTEM_ANALYTICS));
 
 // Analytics routes with rate limiting
-router.get("/", analyticsLimiter, AnalyticsController.getAnalytics);
-router.get("/users", analyticsLimiter, AnalyticsController.getUserAnalytics);
-router.get("/events", analyticsLimiter, AnalyticsController.getEventAnalytics);
+router.get("/", analyticsLimiter, OverviewAnalyticsController.getAnalytics);
+router.get("/users", analyticsLimiter, UserAnalyticsController.getUserAnalytics);
+router.get("/events", analyticsLimiter, EventAnalyticsController.getEventAnalytics);
 router.get(
   "/engagement",
   analyticsLimiter,
-  AnalyticsController.getEngagementAnalytics
+  EngagementAnalyticsController.getEngagementAnalytics
 );
 router.get(
   "/attendance",
   analyticsLimiter,
-  AnalyticsController.getAttendanceAnalytics
+  AttendanceAnalyticsController.getAttendanceAnalytics
 );
 router.get(
   "/programs",
   analyticsLimiter,
-  AnalyticsController.getProgramAnalytics
+  ProgramAnalyticsController.getProgramAnalytics
 );
 router.get(
   "/donations",
   analyticsLimiter,
-  AnalyticsController.getDonationAnalytics
+  DonationAnalyticsController.getDonationAnalytics
 );
 router.get(
   "/financial-summary",
   analyticsLimiter,
-  AnalyticsController.getFinancialSummary
+  FinancialAnalyticsController.getFinancialSummary
 );
-router.get("/trends", analyticsLimiter, AnalyticsController.getTrends);
-router.get("/export", exportLimiter, AnalyticsController.exportAnalytics);
+router.get("/trends", analyticsLimiter, TrendsAnalyticsController.getTrends);
+router.get("/export", exportLimiter, ExportAnalyticsController.exportAnalytics);
 
 export default router;

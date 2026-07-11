@@ -90,7 +90,7 @@ describe("Mentor Circle – Attendee eligibility (Participant & Guest)", () => {
       mongoose.connection.readyState === 1 &&
       process.env.VITEST_SCOPE !== "integration"
     ) {
-      await mongoose.connection.close();
+      // Shared integration harness owns connection lifecycle.
     }
   });
 

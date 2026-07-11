@@ -11,7 +11,7 @@ import {
 import Registration from "../models/Registration";
 import { ValidationUtils } from "../utils/validationUtils";
 import { authenticateOptional } from "../middleware/auth";
-import { findUtcInstantFromLocal } from "../shared/time/timezoneSearch";
+import { findUtcInstantFromLocal } from "@atcloud/shared-time";
 
 const router = Router();
 

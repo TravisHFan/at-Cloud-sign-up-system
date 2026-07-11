@@ -12,7 +12,12 @@ import type { ProgramRoles } from "../../types/program";
  * Handles program CRUD operations, events, and participants
  */
 class ProgramsApiClient extends BaseApiClient {
-  async listPrograms(params?: { type?: string; q?: string }): Promise<
+  async listPrograms(params?: {
+    type?: string;
+    q?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<
     Array<{
       id: string;
       title: string;
@@ -54,18 +59,13 @@ class ProgramsApiClient extends BaseApiClient {
       updatedAt: string;
     }>
   > {
-    const res = await this.request<unknown>(
-      `/programs${
-        params && (params.type || params.q)
-          ? `?${new URLSearchParams(
-              Object.entries(params).reduce((acc, [k, v]) => {
-                if (v != null && v !== "") acc[k] = String(v);
-                return acc;
-              }, {} as Record<string, string>)
-            ).toString()}`
-          : ""
-      }`
-    );
+    // Keep legacy array consumers compatible while ensuring every request is
+    // bounded. Callers can opt into any page up to the server's cap of 100.
+    const query = new URLSearchParams({ limit: "100" });
+    Object.entries(params || {}).forEach(([key, value]) => {
+      if (value != null && value !== "") query.set(key, String(value));
+    });
+    const res = await this.request<unknown>(`/programs?${query.toString()}`);
     type MentorLite = {
       userId: string;
       firstName?: string;

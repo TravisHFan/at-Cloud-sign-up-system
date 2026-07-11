@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { useUsers } from "./useUsersApi";
 import type { UserSearchFilters } from "../components/management/UserSearchAndFilter";
 import { useSocket } from "./useSocket";
+import { socketService } from "../services/socketService";
 
 export function useManagementFilters() {
   const [currentFilters, setCurrentFilters] = useState<UserSearchFilters>({
@@ -21,9 +22,7 @@ export function useManagementFilters() {
     useUsers({ autoFetch: false });
 
   // Get socket connection for real-time updates
-  const { socket } = useSocket({
-    authToken: localStorage.getItem("token") || undefined,
-  });
+  useSocket();
 
   // Handle filter changes
   const handleFiltersChange = useCallback(
@@ -73,33 +72,13 @@ export function useManagementFilters() {
 
   // Listen for real-time user updates
   useEffect(() => {
-    if (!socket) return;
-
-    const handleUserUpdate = (data: {
-      userId: string;
-      type: "role_changed" | "status_changed" | "deleted" | "profile_edited";
-      user: {
-        id: string;
-        role?: string;
-        avatar?: string;
-        phone?: string;
-        isAtCloudLeader?: boolean;
-        roleInAtCloud?: string;
-        isActive?: boolean;
-      };
-      changes?: Record<string, boolean>;
-    }) => {
-      console.log("Real-time user update received:", data);
+    const handleUserUpdate = () => {
       // Refresh the current page with current filters
       handleRefresh();
     };
 
-    socket.on("user_update", handleUserUpdate);
-
-    return () => {
-      socket.off("user_update", handleUserUpdate);
-    };
-  }, [socket, handleRefresh]);
+    return socketService.on("user_update", handleUserUpdate);
+  }, [handleRefresh]);
 
   // Initialize with default filters on mount
   useEffect(() => {

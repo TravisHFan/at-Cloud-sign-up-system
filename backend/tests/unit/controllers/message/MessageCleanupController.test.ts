@@ -9,14 +9,14 @@ vi.mock("../../../../src/models/Message", () => ({
   },
 }));
 
-vi.mock("../../../../src/services", () => ({
+vi.mock("../../../../src/services/infrastructure/CacheService", () => ({
   CachePatterns: {
     invalidateAllUserCaches: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
 import Message from "../../../../src/models/Message";
-import { CachePatterns } from "../../../../src/services";
+import { CachePatterns } from "../../../../src/services/infrastructure/CacheService";
 
 describe("MessageCleanupController", () => {
   let mockReq: Partial<Request>;

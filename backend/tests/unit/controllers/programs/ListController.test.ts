@@ -1,262 +1,114 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { Request, Response } from "express";
-import ListController from "../../../../src/controllers/programs/ListController";
-import { Program } from "../../../../src/models";
-import mongoose from "mongoose";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { Request, Response } from "express";
+import { Types } from "mongoose";
 
-// Mock dependencies
 vi.mock("../../../../src/models", () => ({
-  Program: {
-    find: vi.fn(),
-  },
+  Program: { find: vi.fn(), countDocuments: vi.fn() },
 }));
 
-describe("ListController", () => {
-  let mockReq: any;
-  let mockRes: Partial<Response>;
-  let statusMock: ReturnType<typeof vi.fn>;
-  let jsonMock: ReturnType<typeof vi.fn>;
+import ListController from "../../../../src/controllers/programs/ListController";
+import { Program } from "../../../../src/models";
+
+describe("program ListController", () => {
+  let query: {
+    select: ReturnType<typeof vi.fn>;
+    sort: ReturnType<typeof vi.fn>;
+    skip: ReturnType<typeof vi.fn>;
+    limit: ReturnType<typeof vi.fn>;
+    lean: ReturnType<typeof vi.fn>;
+  };
+  let response: Response;
+  let status: ReturnType<typeof vi.fn>;
+  let json: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
-
-    jsonMock = vi.fn();
-    statusMock = vi.fn().mockReturnValue({ json: jsonMock });
-
-    mockReq = {
-      query: {},
+    query = {
+      select: vi.fn().mockReturnThis(),
+      sort: vi.fn().mockReturnThis(),
+      skip: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      lean: vi.fn().mockResolvedValue([]),
     };
-
-    mockRes = {
-      status: statusMock as any,
-      json: jsonMock as any,
-    };
+    vi.mocked(Program.find).mockReturnValue(query as any);
+    vi.mocked(Program.countDocuments).mockResolvedValue(0);
+    json = vi.fn();
+    status = vi.fn().mockReturnValue({ json });
+    response = { status, json } as unknown as Response;
   });
 
-  describe("list", () => {
-    const programId1 = new mongoose.Types.ObjectId();
-    const programId2 = new mongoose.Types.ObjectId();
+  async function list(queryParams: Record<string, unknown> = {}) {
+    await ListController.list(
+      { query: queryParams } as unknown as Request,
+      response,
+    );
+  }
 
-    it("should return empty array when no programs exist", async () => {
-      const mockFind = vi.fn().mockReturnValue({
-        sort: vi.fn().mockReturnValue({
-          lean: vi.fn().mockResolvedValue([]),
-        }),
-      });
+  it("returns a projected, stable first page with pagination metadata", async () => {
+    await list();
 
-      vi.mocked(Program.find).mockImplementation(mockFind);
-
-      await ListController.list(mockReq as Request, mockRes as Response);
-
-      expect(statusMock).toHaveBeenCalledWith(200);
-      expect(jsonMock).toHaveBeenCalledWith({
+    expect(Program.find).toHaveBeenCalledWith({});
+    expect(query.select).toHaveBeenCalledOnce();
+    expect(query.sort).toHaveBeenCalledWith({ createdAt: -1, _id: -1 });
+    expect(query.skip).toHaveBeenCalledWith(0);
+    expect(query.limit).toHaveBeenCalledWith(20);
+    expect(json).toHaveBeenCalledWith(
+      expect.objectContaining({
         success: true,
         data: [],
-      });
+        pagination: expect.objectContaining({ currentPage: 1, limit: 20 }),
+      }),
+    );
+  });
+
+  it("applies type and escaped literal title filters", async () => {
+    await list({ type: "Webinar", q: "React (advanced).*" });
+
+    expect(Program.find).toHaveBeenCalledWith({
+      programType: "Webinar",
+      title: { $regex: "React \\(advanced\\)\\.\\*", $options: "i" },
     });
+  });
 
-    it("should return all programs when no filters provided", async () => {
-      const mockPrograms = [
-        {
-          _id: programId1,
-          title: "Program 1",
-          programType: "Workshop",
-        },
-        {
-          _id: programId2,
-          title: "Program 2",
-          programType: "Course",
-        },
-      ];
+  it("caps page size and computes the page offset", async () => {
+    await list({ page: "3", limit: "1000" });
 
-      const mockFind = vi.fn().mockReturnValue({
-        sort: vi.fn().mockReturnValue({
-          lean: vi.fn().mockResolvedValue(mockPrograms),
+    expect(query.skip).toHaveBeenCalledWith(200);
+    expect(query.limit).toHaveBeenCalledWith(100);
+  });
+
+  it("returns stable totals and transforms Mongo ids", async () => {
+    const id = new Types.ObjectId();
+    query.lean.mockResolvedValue([
+      { _id: id, title: "Program", programType: "Webinar" },
+    ]);
+    vi.mocked(Program.countDocuments).mockResolvedValue(41);
+
+    await list({ page: "2", limit: "20" });
+
+    expect(json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: [expect.objectContaining({ id: id.toString() })],
+        pagination: expect.objectContaining({
+          currentPage: 2,
+          totalPrograms: 41,
+          totalPages: 3,
+          hasNext: true,
+          hasPrev: true,
         }),
-      });
+      }),
+    );
+  });
 
-      vi.mocked(Program.find).mockImplementation(mockFind);
+  it("returns a controlled error when either page query fails", async () => {
+    query.lean.mockRejectedValue(new Error("database unavailable"));
 
-      await ListController.list(mockReq as Request, mockRes as Response);
+    await list();
 
-      expect(Program.find).toHaveBeenCalledWith({});
-      expect(statusMock).toHaveBeenCalledWith(200);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: true,
-        data: [
-          expect.objectContaining({
-            id: programId1.toString(),
-            title: "Program 1",
-            programType: "Workshop",
-            programRoles: expect.objectContaining({
-              teacherRoleName: "Mentor",
-              studentRoles: expect.any(Array),
-            }),
-          }),
-          expect.objectContaining({
-            id: programId2.toString(),
-            title: "Program 2",
-            programType: "Course",
-            programRoles: expect.objectContaining({
-              teacherRoleName: "Mentor",
-              studentRoles: expect.any(Array),
-            }),
-          }),
-        ],
-      });
-    });
-
-    it("should filter by program type", async () => {
-      mockReq.query = { type: "Workshop" };
-
-      const mockPrograms = [
-        {
-          _id: programId1,
-          title: "Workshop Program",
-          programType: "Workshop",
-        },
-      ];
-
-      const mockFind = vi.fn().mockReturnValue({
-        sort: vi.fn().mockReturnValue({
-          lean: vi.fn().mockResolvedValue(mockPrograms),
-        }),
-      });
-
-      vi.mocked(Program.find).mockImplementation(mockFind);
-
-      await ListController.list(mockReq as Request, mockRes as Response);
-
-      expect(Program.find).toHaveBeenCalledWith({ programType: "Workshop" });
-      expect(statusMock).toHaveBeenCalledWith(200);
-    });
-
-    it("should search by title using regex", async () => {
-      mockReq.query = { q: "React" };
-
-      const mockPrograms = [
-        {
-          _id: programId1,
-          title: "React Fundamentals",
-        },
-      ];
-
-      const mockFind = vi.fn().mockReturnValue({
-        sort: vi.fn().mockReturnValue({
-          lean: vi.fn().mockResolvedValue(mockPrograms),
-        }),
-      });
-
-      vi.mocked(Program.find).mockImplementation(mockFind);
-
-      await ListController.list(mockReq as Request, mockRes as Response);
-
-      expect(Program.find).toHaveBeenCalledWith({
-        title: { $regex: "React", $options: "i" },
-      });
-      expect(statusMock).toHaveBeenCalledWith(200);
-    });
-
-    it("should filter by both type and search query", async () => {
-      mockReq.query = { type: "Course", q: "Python" };
-
-      const mockPrograms = [
-        {
-          _id: programId1,
-          title: "Python Basics",
-          programType: "Course",
-        },
-      ];
-
-      const mockFind = vi.fn().mockReturnValue({
-        sort: vi.fn().mockReturnValue({
-          lean: vi.fn().mockResolvedValue(mockPrograms),
-        }),
-      });
-
-      vi.mocked(Program.find).mockImplementation(mockFind);
-
-      await ListController.list(mockReq as Request, mockRes as Response);
-
-      expect(Program.find).toHaveBeenCalledWith({
-        programType: "Course",
-        title: { $regex: "Python", $options: "i" },
-      });
-      expect(statusMock).toHaveBeenCalledWith(200);
-    });
-
-    it("should sort programs by createdAt descending", async () => {
-      const mockFind = vi.fn().mockReturnValue({
-        sort: vi.fn().mockReturnValue({
-          lean: vi.fn().mockResolvedValue([]),
-        }),
-      });
-
-      vi.mocked(Program.find).mockImplementation(mockFind);
-
-      await ListController.list(mockReq as Request, mockRes as Response);
-
-      const sortCall = mockFind.mock.results[0].value.sort;
-      expect(sortCall).toHaveBeenCalledWith({ createdAt: -1 });
-    });
-
-    it("should transform _id to id in response", async () => {
-      const mockPrograms = [
-        {
-          _id: programId1,
-          title: "Test Program",
-        },
-      ];
-
-      const mockFind = vi.fn().mockReturnValue({
-        sort: vi.fn().mockReturnValue({
-          lean: vi.fn().mockResolvedValue(mockPrograms),
-        }),
-      });
-
-      vi.mocked(Program.find).mockImplementation(mockFind);
-
-      await ListController.list(mockReq as Request, mockRes as Response);
-
-      const response = jsonMock.mock.calls[0][0];
-      expect(response.data[0]).toHaveProperty("id", programId1.toString());
-      expect(response.data[0]).not.toHaveProperty("_id");
-    });
-
-    it("should handle case-insensitive search", async () => {
-      mockReq.query = { q: "javascript" };
-
-      const mockFind = vi.fn().mockReturnValue({
-        sort: vi.fn().mockReturnValue({
-          lean: vi.fn().mockResolvedValue([]),
-        }),
-      });
-
-      vi.mocked(Program.find).mockImplementation(mockFind);
-
-      await ListController.list(mockReq as Request, mockRes as Response);
-
-      expect(Program.find).toHaveBeenCalledWith({
-        title: { $regex: "javascript", $options: "i" },
-      });
-    });
-
-    it("should handle database errors", async () => {
-      const mockFind = vi.fn().mockReturnValue({
-        sort: vi.fn().mockReturnValue({
-          lean: vi.fn().mockRejectedValue(new Error("Database error")),
-        }),
-      });
-
-      vi.mocked(Program.find).mockImplementation(mockFind);
-
-      await ListController.list(mockReq as Request, mockRes as Response);
-
-      expect(statusMock).toHaveBeenCalledWith(500);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        message: "Failed to list programs.",
-      });
+    expect(status).toHaveBeenCalledWith(500);
+    expect(json).toHaveBeenCalledWith({
+      success: false,
+      message: "Failed to list programs.",
     });
   });
 });

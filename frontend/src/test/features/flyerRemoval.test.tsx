@@ -265,7 +265,7 @@ describe("Flyer removal forms", () => {
     );
 
     if (!(_flyerInput as HTMLInputElement).value) {
-      await new Promise((r) => setTimeout(r, 15));
+      await Promise.resolve();
       if (!(_flyerInput as HTMLInputElement).value) {
         (_flyerInput as HTMLInputElement).value = "/uploads/prog-original.png";
       }

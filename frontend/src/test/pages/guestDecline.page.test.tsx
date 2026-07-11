@@ -3,6 +3,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import GuestDecline from "../../pages/GuestDecline";
 import * as guestApi from "../../services/guestApi";
+import { createDeferred } from "../fixtures/deferred";
 
 // Mock GuestApi methods
 vi.mock("../../services/guestApi", () => {
@@ -36,27 +37,21 @@ describe("GuestDecline Page", () => {
   }
 
   it("shows loading state while fetching decline info", async () => {
-    mockedApi.getDeclineInfo.mockResolvedValueOnce(
-      new Promise((resolve) =>
-        setTimeout(
-          () =>
-            resolve({
-              success: true,
-              data: {
-                registrationId: "r1",
-                eventTitle: "Loading Event",
-                roleName: "Guest",
-                eventDate: "2025-10-02",
-              },
-            }),
-          50
-        )
-      ) as any
-    );
+    const declineInfo = createDeferred<any>();
+    mockedApi.getDeclineInfo.mockReturnValueOnce(declineInfo.promise);
 
     renderWithToken("loadingtoken");
 
     expect(screen.getByText(/validating…/i)).toBeInTheDocument();
+    declineInfo.resolve({
+      success: true,
+      data: {
+        registrationId: "r1",
+        eventTitle: "Loading Event",
+        roleName: "Guest",
+        eventDate: "2025-10-02",
+      },
+    });
 
     await waitFor(() =>
       expect(screen.queryByText(/validating…/i)).not.toBeInTheDocument()

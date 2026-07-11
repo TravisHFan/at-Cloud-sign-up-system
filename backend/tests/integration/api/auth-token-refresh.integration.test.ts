@@ -70,7 +70,7 @@ describe("Token Refresh API Integration Tests", () => {
   });
 
   afterAll(async () => {
-    await mongoose.connection.close();
+    // Shared integration harness owns connection lifecycle.
   });
 
   describe("POST /api/auth/refresh-token", () => {

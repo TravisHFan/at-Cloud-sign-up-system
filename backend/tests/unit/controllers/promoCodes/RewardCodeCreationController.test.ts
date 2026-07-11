@@ -16,7 +16,7 @@ vi.mock("../../../../src/models/User", () => ({
   },
 }));
 
-vi.mock("../../../../src/services", () => ({
+vi.mock("../../../../src/services/infrastructure/EmailServiceFacade", () => ({
   EmailService: {
     sendStaffPromoCodeEmail: vi.fn(),
   },
@@ -30,7 +30,7 @@ vi.mock("../../../../src/controllers/unifiedMessageController", () => ({
 
 import PromoCode from "../../../../src/models/PromoCode";
 import User from "../../../../src/models/User";
-import { EmailService } from "../../../../src/services";
+import { EmailService } from "../../../../src/services/infrastructure/EmailServiceFacade";
 
 interface MockRequest {
   body: Record<string, unknown>;

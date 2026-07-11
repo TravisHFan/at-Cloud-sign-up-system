@@ -4,7 +4,7 @@ import AuditLog from "../../models/AuditLog";
 import { ROLES } from "../../utils/roleUtils";
 import { cleanupOldAvatar } from "../../utils/avatarCleanup";
 import { socketService } from "../../services/infrastructure/SocketService";
-import { CachePatterns } from "../../services";
+import { CachePatterns } from "../../services/infrastructure/CacheService";
 
 /**
  * AdminProfileEditController

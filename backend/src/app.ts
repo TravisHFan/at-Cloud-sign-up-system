@@ -5,7 +5,6 @@ import cookieParser from "cookie-parser";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import path from "path";
-import fs from "fs";
 import routes from "./routes";
 import ShortLinkService from "./services/ShortLinkService";
 import { ShortLinkMetricsService } from "./services/ShortLinkMetricsService";
@@ -30,7 +29,6 @@ import {
   ipSecurity,
   securityErrorHandler,
 } from "./middleware/security";
-import { socketService } from "./services/infrastructure/SocketService"; // used only in index, kept import compatibility if needed by tests in future
 import RequestMonitorService from "./middleware/RequestMonitorService";
 import ErrorHandlerMiddleware from "./middleware/errorHandler";
 import { requestCorrelation } from "./middleware/requestCorrelation";
@@ -82,8 +80,9 @@ app.use("/api/notifications", systemMessagesLimiter);
 
 // Stripe webhook endpoint needs raw body - must be before JSON parser
 // In test environment, use JSON parser instead to make testing easier
+const jsonParser = express.json({ limit: "10mb" });
 if (process.env.NODE_ENV === "test") {
-  app.use("/api/webhooks/stripe", express.json());
+  app.use("/api/webhooks/stripe", jsonParser);
 } else {
   app.use("/api/webhooks/stripe", express.raw({ type: "application/json" }));
 }
@@ -93,7 +92,7 @@ app.use((req, res, next) => {
   if (req.originalUrl.includes("/api/webhooks/stripe")) {
     return next();
   }
-  express.json({ limit: "10mb" })(req, res, next);
+  jsonParser(req, res, next);
 });
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());

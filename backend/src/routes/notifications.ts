@@ -1,6 +1,19 @@
 import { Router } from "express";
-import { UnifiedMessageController } from "../controllers/unifiedMessageController";
-import { EmailNotificationController } from "../controllers/emailNotificationController";
+import SystemMessagesRetrievalController from "../controllers/message/SystemMessagesRetrievalController";
+import SystemMessagesReadController from "../controllers/message/SystemMessagesReadController";
+import SystemMessagesCreationController from "../controllers/message/SystemMessagesCreationController";
+import SystemMessagesDeletionController from "../controllers/message/SystemMessagesDeletionController";
+import BellNotificationsRetrievalController from "../controllers/message/BellNotificationsRetrievalController";
+import BellNotificationsReadController from "../controllers/message/BellNotificationsReadController";
+import BellNotificationsBulkReadController from "../controllers/message/BellNotificationsBulkReadController";
+import BellNotificationsRemovalController from "../controllers/message/BellNotificationsRemovalController";
+import UnreadCountsController from "../controllers/message/UnreadCountsController";
+import MessageCleanupController from "../controllers/message/MessageCleanupController";
+import WelcomeMessageStatusController from "../controllers/message/WelcomeMessageStatusController";
+import WelcomeNotificationController from "../controllers/message/WelcomeNotificationController";
+import EventCreatedController from "../controllers/emailNotifications/EventCreatedController";
+import SystemAuthorizationChangeController from "../controllers/emailNotifications/SystemAuthorizationChangeController";
+import CoOrganizerAssignedController from "../controllers/emailNotifications/CoOrganizerAssignedController";
 import { authenticate } from "../middleware/auth";
 import {
   validateSystemMessage,
@@ -26,7 +39,7 @@ router.use(authenticate);
  * @query {number} [page=1] - Page number
  * @query {number} [limit=50] - Number of items per page
  */
-router.get("/system", UnifiedMessageController.getSystemMessages);
+router.get("/system", SystemMessagesRetrievalController.getSystemMessages);
 
 /**
  * @route PATCH /api/notifications/system/:messageId/read
@@ -37,7 +50,7 @@ router.patch(
   "/system/:messageId/read",
   [param("messageId").notEmpty().withMessage("Message ID is required")],
   handleValidationErrors,
-  UnifiedMessageController.markAsRead
+  SystemMessagesReadController.markSystemMessageAsRead
 );
 
 /**
@@ -49,7 +62,7 @@ router.post(
   "/system",
   validateSystemMessage,
   validateError,
-  UnifiedMessageController.createSystemMessage
+  SystemMessagesCreationController.createSystemMessage
 );
 
 /**
@@ -61,7 +74,7 @@ router.delete(
   "/system/:messageId",
   [param("messageId").notEmpty().withMessage("Message ID is required")],
   handleValidationErrors,
-  UnifiedMessageController.deleteMessage
+  SystemMessagesDeletionController.deleteSystemMessage
 );
 
 // ===== BELL NOTIFICATIONS =====
@@ -71,7 +84,7 @@ router.delete(
  * @desc Get bell notifications for current user
  * @access Private
  */
-router.get("/bell", UnifiedMessageController.getBellNotifications);
+router.get("/bell", BellNotificationsRetrievalController.getBellNotifications);
 
 /**
  * @route PATCH /api/notifications/bell/:messageId/read
@@ -82,7 +95,7 @@ router.patch(
   "/bell/:messageId/read",
   [param("messageId").notEmpty().withMessage("Message ID is required")],
   handleValidationErrors,
-  UnifiedMessageController.markBellNotificationAsRead
+  BellNotificationsReadController.markBellNotificationAsRead
 );
 
 /**
@@ -92,7 +105,7 @@ router.patch(
  */
 router.patch(
   "/bell/read-all",
-  UnifiedMessageController.markAllBellNotificationsAsRead
+  BellNotificationsBulkReadController.markAllBellNotificationsAsRead
 );
 
 /**
@@ -104,7 +117,7 @@ router.delete(
   "/bell/:messageId",
   [param("messageId").notEmpty().withMessage("Message ID is required")],
   handleValidationErrors,
-  UnifiedMessageController.removeBellNotification
+  BellNotificationsRemovalController.removeBellNotification
 );
 
 // ===== EMAIL NOTIFICATIONS =====
@@ -117,7 +130,7 @@ router.delete(
  */
 router.post(
   "/email/event-created",
-  EmailNotificationController.sendEventCreatedNotification
+  EventCreatedController.sendEventCreatedNotification
 );
 
 /**
@@ -127,7 +140,7 @@ router.post(
  */
 router.post(
   "/email/role-change",
-  EmailNotificationController.sendSystemAuthorizationChangeNotification
+  SystemAuthorizationChangeController.sendSystemAuthorizationChangeNotification
 );
 
 /**
@@ -137,7 +150,7 @@ router.post(
  */
 router.post(
   "/email/co-organizer-assigned",
-  EmailNotificationController.sendCoOrganizerAssignedNotification
+  CoOrganizerAssignedController.sendCoOrganizerAssignedNotification
 );
 
 // ===== UTILITY ENDPOINTS =====
@@ -147,14 +160,14 @@ router.post(
  * @desc Get unread counts for both notifications and system messages
  * @access Private
  */
-router.get("/unread-counts", UnifiedMessageController.getUnreadCounts);
+router.get("/unread-counts", UnreadCountsController.getUnreadCounts);
 
 /**
  * @route POST /api/notifications/cleanup
  * @desc Clean up expired notifications and messages
  * @access Private
  */
-router.post("/cleanup", UnifiedMessageController.cleanupExpiredMessages);
+router.post("/cleanup", MessageCleanupController.cleanupExpiredMessages);
 
 // ===== WELCOME SYSTEM =====
 
@@ -165,7 +178,7 @@ router.post("/cleanup", UnifiedMessageController.cleanupExpiredMessages);
  */
 router.get(
   "/welcome-status",
-  UnifiedMessageController.checkWelcomeMessageStatus
+  WelcomeMessageStatusController.checkWelcomeMessageStatus
 );
 
 /**
@@ -173,6 +186,6 @@ router.get(
  * @desc Send welcome notification to user
  * @access Private
  */
-router.post("/welcome", UnifiedMessageController.sendWelcomeNotification);
+router.post("/welcome", WelcomeNotificationController.sendWelcomeNotification);
 
 export default router;
