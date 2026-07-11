@@ -2,6 +2,9 @@
   "name": "cloud-event-signup-system",
   "version": "1.2.0",
   "description": "Full-stack event management system for ministry events",
+  "engines": {
+    "node": "22.x"
+  },
   "workspaces": [
     "backend",
     "frontend",
@@ -43,6 +46,18 @@
     "concurrently": "^8.2.2"
   },
   "devDependencies": {
-    "ts-prune": "^0.10.3"
+    "@types/express": "5.0.3",
+    "@types/express-serve-static-core": "5.0.7",
+    "@types/node": "24.0.15",
+    "ts-prune": "^0.10.3",
+    "typescript": "5.8.3"
+  },
+  "overrides": {
+    "@types/express": "5.0.3",
+    "@types/express-serve-static-core": "5.0.7",
+    "@types/node": "24.0.15",
+    "mongoose": "8.16.4",
+    "stripe": "19.1.0",
+    "typescript": "5.8.3"
   }
 }
