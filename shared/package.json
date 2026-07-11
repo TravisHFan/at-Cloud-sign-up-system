@@ -2,6 +2,9 @@
   "name": "@atcloud/shared-time",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": "22.x"
+  },
   "main": "dist/cjs/timezoneSearch.js",
   "module": "dist/esm/timezoneSearch.mjs",
   "types": "dist/cjs/timezoneSearch.d.ts",
@@ -24,6 +27,6 @@
     "prepare": "npm run build"
   },
   "devDependencies": {
-    "typescript": "~5.8.3"
+    "typescript": "5.8.3"
   }
 }
