@@ -90,7 +90,7 @@ NODE_ENV=production
    Region: Choose closest to your users
    Branch: main
    Root Directory: backend
-   Build Command: npm install && npm run build
+   Build Command: npm ci --include=dev && npm run build
    Start Command: npm start
    ```
 
@@ -118,7 +118,7 @@ NODE_ENV=production
    ```
    Name: atcloud-frontend
    Root Directory: frontend
-   Build Command: npm install && npm run build
+   Build Command: npm ci --include=dev && npm run build
    Publish Directory: dist
    ```
 

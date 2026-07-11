@@ -79,7 +79,7 @@ For the staging/production parity contract, see `docs/STAGING_PRODUCTION_PARITY.
    Service Type: Web Service
    Name: at-cloud-sign-up-system-backend
    Environment: Node
-   Build Command: npm install && npm run build
+   Build Command: npm ci --include=dev && npm run build
    Start Command: npm start
    ```
 
@@ -109,7 +109,7 @@ For the staging/production parity contract, see `docs/STAGING_PRODUCTION_PARITY.
    ```
    Service Type: Static Site
    Name: at-cloud-sign-up-system-frontend
-   Build Command: npm install && npm run build
+   Build Command: npm ci --include=dev && npm run build
    Publish Directory: dist
    ```
 

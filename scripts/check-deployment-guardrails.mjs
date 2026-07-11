@@ -158,12 +158,34 @@ function checkRenderTemplateContract() {
       fail(`render.yaml: expected frontend static-site contract "${required}".`);
     }
   }
+
+  const buildCommand = "buildCommand: npm ci --include=dev && npm run build";
+  const buildCommandCount = renderYaml.split(buildCommand).length - 1;
+  if (buildCommandCount !== 2) {
+    fail(
+      "render.yaml: backend and frontend builds must explicitly install devDependencies before compiling.",
+    );
+  }
+}
+
+function checkProductionBuildDependencies() {
+  const npmrc = read(".npmrc");
+  const includesDevDependencies = npmrc
+    .split(/\r?\n/)
+    .some((line) => line.trim() === "include=dev");
+
+  if (!includesDevDependencies) {
+    fail(
+      ".npmrc: Render sets NODE_ENV=production during builds, so npm must explicitly include devDependencies.",
+    );
+  }
 }
 
 checkHashRouterContract();
 checkInternalHardNavigations();
 checkAvatarAndUploadContracts();
 checkRenderTemplateContract();
+checkProductionBuildDependencies();
 
 if (failures.length > 0) {
   console.error("Deployment guardrail check failed:\n");
