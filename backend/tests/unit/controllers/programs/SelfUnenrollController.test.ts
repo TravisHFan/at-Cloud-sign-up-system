@@ -119,7 +119,10 @@ describe("SelfUnenrollController", () => {
       get: vi.fn().mockReturnValue("vitest"),
     };
 
-    await SelfUnenrollController.unenroll(req as any, mockRes as Response);
+    // Express stores controller methods as callbacks and invokes them without
+    // the class as their receiver.
+    const handler = SelfUnenrollController.unenroll;
+    await handler(req as any, mockRes as Response);
 
     expect(statusMock).toHaveBeenCalledWith(200);
     const response = jsonMock.mock.calls[0][0];
@@ -140,5 +143,55 @@ describe("SelfUnenrollController", () => {
       source: "program_unenroll",
       refundId: "re_unenroll_123",
     });
+  });
+
+  it("previews unenrollment when invoked as an Express callback", async () => {
+    const program: any = {
+      _id: programId,
+      title: "Test Program",
+      adminEnrollments: {
+        mentees: [],
+        classReps: [],
+      },
+    };
+    const purchase: any = {
+      _id: new mongoose.Types.ObjectId(),
+      userId,
+      purchaseType: "program",
+      programId: { _id: programId, title: "Test Program" },
+      status: "completed",
+      purchaseDate: new Date(),
+      finalPrice: 10000,
+      stripePaymentIntentId: "pi_program_preview_123",
+      isClassRep: false,
+    };
+
+    vi.mocked(Program.findById).mockResolvedValue(program as any);
+    mockPurchaseFindOneResult(purchase);
+
+    const req = {
+      params: { id: programId.toString() },
+      user: {
+        _id: userId,
+        id: userId.toString(),
+        role: "Participant",
+        email: "user@test.com",
+      },
+    };
+
+    const handler = SelfUnenrollController.preview;
+    await handler(req as any, mockRes as Response);
+
+    expect(statusMock).toHaveBeenCalledWith(200);
+    expect(jsonMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        data: expect.objectContaining({
+          enrollmentType: "mentee",
+          isPaid: true,
+          refundAmount: 10000,
+        }),
+      }),
+    );
   });
 });

@@ -29,7 +29,10 @@ type EnrollmentContext = {
 export default class SelfUnenrollController {
   static async preview(req: Request, res: Response): Promise<void> {
     try {
-      const context = await this.loadEnrollmentContext(req, res);
+      const context = await SelfUnenrollController.loadEnrollmentContext(
+        req,
+        res,
+      );
       if (!context) return;
 
       const { purchase, adminEnrollmentType } = context;
@@ -91,24 +94,30 @@ export default class SelfUnenrollController {
 
   static async unenroll(req: Request, res: Response): Promise<void> {
     try {
-      const context = await this.loadEnrollmentContext(req, res);
+      const context = await SelfUnenrollController.loadEnrollmentContext(
+        req,
+        res,
+      );
       if (!context) return;
 
       const { program, purchase, adminEnrollmentType } = context;
       const userId = req.user!._id as mongoose.Types.ObjectId;
 
       if (!purchase) {
-        const removedAdminEnrollment = this.removeAdminEnrollment(
-          program,
-          userId,
-        );
+        const removedAdminEnrollment =
+          SelfUnenrollController.removeAdminEnrollment(program, userId);
         if (removedAdminEnrollment) {
           await program.save();
         }
 
-        await this.writeAuditLog(req, program, adminEnrollmentType || "mentee", {
-          refundStatus: "not_applicable",
-        });
+        await SelfUnenrollController.writeAuditLog(
+          req,
+          program,
+          adminEnrollmentType || "mentee",
+          {
+            refundStatus: "not_applicable",
+          },
+        );
 
         res.status(200).json({
           success: true,
@@ -142,11 +151,16 @@ export default class SelfUnenrollController {
             reason: eligibility.reason,
           });
 
-        await this.writeAuditLog(req, program, enrollmentType, {
-          refundStatus: "pending_approval",
-          refundRequestId: String(request._id),
-          existingRequest: !created,
-        });
+        await SelfUnenrollController.writeAuditLog(
+          req,
+          program,
+          enrollmentType,
+          {
+            refundStatus: "pending_approval",
+            refundRequestId: String(request._id),
+            existingRequest: !created,
+          },
+        );
 
         res.status(200).json({
           success: true,
@@ -166,10 +180,8 @@ export default class SelfUnenrollController {
       }
 
       if (!eligibility.isEligible) {
-        const removedAdminEnrollment = this.removeAdminEnrollment(
-          program,
-          userId,
-        );
+        const removedAdminEnrollment =
+          SelfUnenrollController.removeAdminEnrollment(program, userId);
         if (removedAdminEnrollment) {
           await program.save();
         }
@@ -179,10 +191,15 @@ export default class SelfUnenrollController {
           "self_unenroll_no_refund",
         );
         await purchase.save();
-        await this.writeAuditLog(req, program, enrollmentType, {
-          refundStatus: "not_eligible",
-          reason: eligibility.reason,
-        });
+        await SelfUnenrollController.writeAuditLog(
+          req,
+          program,
+          enrollmentType,
+          {
+            refundStatus: "not_eligible",
+            reason: eligibility.reason,
+          },
+        );
 
         res.status(200).json({
           success: true,
@@ -199,7 +216,8 @@ export default class SelfUnenrollController {
         return;
       }
 
-      const removedAdminEnrollment = this.removeAdminEnrollment(program, userId);
+      const removedAdminEnrollment =
+        SelfUnenrollController.removeAdminEnrollment(program, userId);
       if (removedAdminEnrollment) {
         await program.save();
       }
@@ -253,10 +271,15 @@ export default class SelfUnenrollController {
           );
         }
 
-        await this.writeAuditLog(req, program, enrollmentType, {
-          refundStatus: "processing",
-          refundId: refund.id,
-        });
+        await SelfUnenrollController.writeAuditLog(
+          req,
+          program,
+          enrollmentType,
+          {
+            refundStatus: "processing",
+            refundId: refund.id,
+          },
+        );
 
         res.status(200).json({
           success: true,
@@ -293,10 +316,15 @@ export default class SelfUnenrollController {
           console.error("Failed to send refund failed email:", emailError);
         }
 
-        await this.writeAuditLog(req, program, enrollmentType, {
-          refundStatus: "failed",
-          reason: purchase.refundFailureReason,
-        });
+        await SelfUnenrollController.writeAuditLog(
+          req,
+          program,
+          enrollmentType,
+          {
+            refundStatus: "failed",
+            reason: purchase.refundFailureReason,
+          },
+        );
 
         res.status(200).json({
           success: true,
@@ -370,7 +398,8 @@ export default class SelfUnenrollController {
       .sort({ purchaseDate: -1 })
       .populate("programId", "title programType")) as PurchaseDocument | null;
 
-    const adminEnrollmentType = this.getAdminEnrollmentType(program, userId);
+    const adminEnrollmentType =
+      SelfUnenrollController.getAdminEnrollmentType(program, userId);
 
     if (!purchase && !adminEnrollmentType) {
       res.status(400).json({
